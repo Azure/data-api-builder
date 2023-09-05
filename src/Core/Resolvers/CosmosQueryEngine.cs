@@ -49,12 +49,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(
             IMiddlewareContext context,
-            IDictionary<string, object> parameters)
+            IDictionary<string, object> parameters,
+            string dataSourceName = "")
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
+
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
 
             CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
 
@@ -63,7 +69,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
 
-            Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
+            CosmosClient client = _clientProvider.Clients[dataSourceName];
+            Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure);
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
@@ -137,16 +144,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a list of Json back.
         /// </summary>
-        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters, string dataSourceName = "")
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
 
-            Container container = _clientProvider.Client.GetDatabase(structure.Database).GetContainer(structure.Container);
+            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            CosmosClient client = _clientProvider.Clients[dataSourceName];
+            Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
@@ -172,13 +184,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public Task<IActionResult> ExecuteAsync(FindRequestContext context)
+        public Task<IActionResult> ExecuteAsync(FindRequestContext context, string dataSourceName = "")
         {
             throw new NotImplementedException();
         }
 
         /// <inheritdoc />
-        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
+        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "")
         {
             throw new NotImplementedException();
         }

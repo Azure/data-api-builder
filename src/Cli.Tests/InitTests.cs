@@ -50,6 +50,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -72,6 +74,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 restPath: "/rest-endpoint",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -95,6 +99,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -119,6 +125,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -152,6 +160,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectSuccess, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));
@@ -188,6 +198,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectedResult, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));
@@ -196,16 +208,18 @@ namespace Cli.Tests
         /// <summary>
         /// Verify that if both REST and GraphQL is disabled, we will get error.
         /// </summary>
-        [DataRow(true, true, false, DisplayName = "Both REST and GraphQL disabled.")]
-        [DataRow(true, false, true, DisplayName = "REST disabled, and GraphQL enabled.")]
-        [DataRow(false, true, true, DisplayName = "REST enabled, and GraphQL disabled.")]
-        [DataRow(false, false, true, DisplayName = "Both REST and GraphQL are enabled.")]
+        [DataRow(CliBool.False, CliBool.False, false, DisplayName = "Both REST and GraphQL disabled.")]
+        [DataRow(CliBool.False, CliBool.True, true, DisplayName = "REST disabled, and GraphQL enabled.")]
+        [DataRow(CliBool.True, CliBool.False, true, DisplayName = "REST enabled, and GraphQL disabled.")]
+        [DataRow(CliBool.True, CliBool.True, true, DisplayName = "Both REST and GraphQL are enabled.")]
         [DataTestMethod]
         public void EnsureFailureWhenBothRestAndGraphQLAreDisabled(
-            bool RestDisabled,
-            bool GraphQLDisabled,
+            CliBool restEnabled,
+            CliBool graphQLEnabled,
             bool expectedResult)
         {
+            bool restDisabled = restEnabled is CliBool.False ? true : false;
+            bool graphQLDisabled = graphQLEnabled is CliBool.False ? true : false;
             InitOptions options = new(
                 databaseType: DatabaseType.MSSQL,
                 connectionString: "testconnectionstring",
@@ -216,8 +230,10 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restDisabled: RestDisabled,
-                graphqlDisabled: GraphQLDisabled,
+                restEnabled: restEnabled,
+                graphqlEnabled: graphQLEnabled,
+                restDisabled: restDisabled,
+                graphqlDisabled: graphQLDisabled,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectedResult, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));
@@ -240,6 +256,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -262,6 +280,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             // Config generated successfully for the first time.
@@ -311,6 +331,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: authenticationProvider,
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 audience: audience,
                 issuer: issuer,
                 config: TEST_RUNTIME_CONFIG_FILE);
@@ -340,6 +362,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
             Assert.AreEqual(true, TryGenerateConfig(initOptionsWithAllLowerCaseFileName, _runtimeConfigLoader!, _fileSystem!));
@@ -355,6 +379,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE.ToUpper());
             // Platform Dependent
@@ -378,6 +404,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 restPath: "abc",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -397,6 +425,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 graphQLPath: "abc",
                 config: TEST_RUNTIME_CONFIG_FILE);
 

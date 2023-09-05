@@ -1070,6 +1070,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>(),
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restEnabled: CliBool.True,
+                graphqlEnabled: CliBool.True,
                 config: config);
         }
     }

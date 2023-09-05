@@ -27,6 +27,8 @@ namespace Cli.Commands
             HostMode hostMode,
             IEnumerable<string>? corsOrigin,
             string authenticationProvider,
+            CliBool restEnabled,
+            CliBool graphqlEnabled,
             string? audience = null,
             string? issuer = null,
             string restPath = RestRuntimeOptions.DEFAULT_PATH,
@@ -46,6 +48,8 @@ namespace Cli.Commands
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
             AuthenticationProvider = authenticationProvider;
+            RestEnabled = restEnabled;
+            GraphQLEnabled = graphqlEnabled;
             Audience = audience;
             Issuer = issuer;
             RestPath = restPath;
@@ -81,6 +85,12 @@ namespace Cli.Commands
 
         [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
         public string AuthenticationProvider { get; }
+
+        [Option("rest.enabled", Required = false, HelpText = "Enables REST endpoint for all entities.")]
+        public CliBool RestEnabled { get; }
+
+        [Option("graphql.enabled", Default = CliBool.True, Required = false, HelpText = "Enables GraphQL endpoint for all entities.")]
+        public CliBool GraphQLEnabled { get; }
 
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
         public string? Audience { get; }

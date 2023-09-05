@@ -92,13 +92,28 @@ namespace Cli
             Dictionary<string, JsonElement> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
-            bool restDisabled = options.RestDisabled;
 
+            // If --rest.disabled flag is included in the init command, we log a warning to not use this flag as it is a deprecated feature.
+            if (options.RestDisabled is true)
+            {
+                _logger.LogWarning("The option --rest.disabled is deprecated and its support will be removed in future versions." +
+                    " We recommend to use the --rest.enabled option instead.");
+            }
+
+            // If --graphql.disabled flag is included in the init command, we log a warning to not use this flag as it is a deprecated feature.
+            if (options.GraphQLDisabled is true)
+            {
+                _logger.LogWarning("The option --graphql.disabled is deprecated and its support will be removed in future versions." +
+                    " We recommend to use the --graphql.enabled option instead.");
+            }
+
+            bool restEnabled = ValidateSemanticsOfEnabledDisabledOptions(options.RestDisabled, options.RestEnabled, ApiType.REST);
+            bool graphQLEnabled = ValidateSemanticsOfEnabledDisabledOptions(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL);
             switch (dbType)
             {
                 case DatabaseType.CosmosDB_NoSQL:
                     // If cosmosdb_nosql is specified, rest is disabled.
-                    restDisabled = true;
+                    restEnabled = false;
 
                     string? cosmosDatabase = options.CosmosNoSqlDatabase;
                     string? cosmosContainer = options.CosmosNoSqlContainer;
@@ -206,8 +221,8 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(!restDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
-                    GraphQL: new(!options.GraphQLDisabled, graphQLPath),
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
+                    GraphQL: new(graphQLEnabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -219,6 +234,39 @@ namespace Cli
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
 
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to validate that there is no mismatch in semantics of enabling/disabling the REST/GraphQL API(s)
+        /// based on the values supplied in the enabled/disabled options for the API in the init command.
+        /// </summary>
+        /// <param name="apiDisabledOptionValue">Value of disabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
+        /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
+        /// <param name="apiType">ApiType - REST/GraphQL.</param>
+        /// <exception cref="Exception">Thrown when the semantics of enabled/disabled options differ.</exception>
+        private static bool ValidateSemanticsOfEnabledDisabledOptions(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType)
+        {
+            if (!apiDisabledOptionValue)
+            {
+                // This indicates that the --api.disabled option was not included in the init command.
+                // In such a case, we honor the --api.enabled option.
+                return apiEnabledOptionValue == CliBool.False ? false : true;
+            }
+
+            if (apiEnabledOptionValue is CliBool.None)
+            {
+                return !apiDisabledOptionValue;
+            }
+
+            bool isApiEnabled = bool.Parse(apiEnabledOptionValue.ToString());
+            if (!apiDisabledOptionValue != isApiEnabled)
+            {
+                string apiName = apiType.ToString().ToLower();
+                throw new Exception($"Config generation failed due to mismatch in the semantics of enabling {apiType} API via " +
+                    $"--{apiName}.disabled and --{apiName}.enabled options");
+            }
+
+            return isApiEnabled;
         }
 
         /// <summary>

@@ -5,6 +5,7 @@ using System;
 using System.Data;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
+using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
@@ -15,8 +16,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
-    /// Unit tests for the environment variable
-    /// parser for the runtime configuration. These
+    /// Unit tests for deserializing the runtime configuration. These
     /// tests verify that we parse the config correctly
     /// when replacing environment variables. Also verify
     /// we throw the right exception when environment
@@ -112,6 +112,34 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     }
                                 }";
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
+        }
+
+        /// <summary>
+        /// Method to validate that comments are skipped in config file (and are ignored during deserialization).
+        /// </summary>
+        [TestMethod]
+        public void TestDefaultsCreatedForOptionalProps()
+        {
+            // Test with no runtime property
+            StringBuilder minJson = new(@"
+                                ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""@env('test-connection-string')""
+                                    },
+                                ""entities"": { }");
+            TryParseAndAssertOnDefaults("{" + minJson + "}");
+
+            // Test with an empty runtime property
+            minJson.Append(@", ""runtime"": ");
+            TryParseAndAssertOnDefaults("{" + minJson + "{ }}");
+
+            // Test with empty rest, graphql, host properties
+            minJson.Append(@"{ ""rest"": { }, ""graphql"": { }, ""host"" : ");
+            TryParseAndAssertOnDefaults("{" + minJson + "{ } } }", isHostSpecifiedButEmpty: true);
+
+            // Test with empty rest, graphql, and empty host sub-properties
+            minJson.Append(@"{ ""cors"": { }, ""authentication"": { } } }");
+            TryParseAndAssertOnDefaults("{" + minJson + "}", isHostSpecifiedButEmpty: false);
         }
 
         #endregion Positive Tests
@@ -286,6 +314,30 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
   }
 }
 ";
+        }
+
+        private static void TryParseAndAssertOnDefaults(string json, bool isHostSpecifiedButEmpty = false)
+        {
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig parsedConfig));
+            Assert.AreEqual(RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK, parsedConfig.Schema);
+            Assert.IsTrue(parsedConfig.Runtime.Rest.Enabled);
+            Assert.AreEqual(RestRuntimeOptions.DEFAULT_PATH, parsedConfig.Runtime.Rest.Path);
+            Assert.IsTrue(parsedConfig.Runtime.GraphQL.Enabled);
+            Assert.AreEqual(GraphQLRuntimeOptions.DEFAULT_PATH, parsedConfig.Runtime.GraphQL.Path);
+            Assert.IsTrue(parsedConfig.Runtime.GraphQL.AllowIntrospection);
+            Assert.AreEqual(HostMode.Development, parsedConfig.Runtime.Host.Mode);
+            if (isHostSpecifiedButEmpty)
+            {
+                Assert.IsNull(parsedConfig.Runtime.Host.Cors);
+                Assert.IsNull(parsedConfig.Runtime.Host.Authentication);
+            }
+            else
+            {
+                Assert.AreEqual(0, parsedConfig.Runtime.Host.Cors.Origins.Length);
+                Assert.IsFalse(parsedConfig.Runtime.Host.Cors.AllowCredentials);
+                Assert.AreEqual(EasyAuthType.StaticWebApps.ToString(), parsedConfig.Runtime.Host.Authentication.Provider);
+                Assert.IsNull(parsedConfig.Runtime.Host.Authentication.Jwt);
+            }
         }
 
         #endregion Helper Functions

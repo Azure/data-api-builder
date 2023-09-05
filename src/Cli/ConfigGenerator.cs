@@ -256,9 +256,11 @@ namespace Cli
 
             if (apiEnabledOptionValue is CliBool.None)
             {
+                // This means that the --api.enabled option was not included in the init command.
                 return !apiDisabledOptionValue;
             }
 
+            // We hit this code only when both --api.enabled and --api.disabled flags are included in the init command.
             bool isApiEnabled = bool.Parse(apiEnabledOptionValue.ToString());
             if (!apiDisabledOptionValue != isApiEnabled)
             {

@@ -33,7 +33,7 @@ public record HostOptions(CorsOptions? Cors, AuthenticationOptions? Authenticati
         if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
             || AuthenticationOptions.SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
         {
-            AuthenticationOptions = new(Provider: authenticationProvider, null);
+            AuthenticationOptions = new(Provider: authenticationProvider, Jwt: null);
         }
         else
         {

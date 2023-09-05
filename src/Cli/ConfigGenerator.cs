@@ -107,8 +107,13 @@ namespace Cli
                     " We recommend to use the --graphql.enabled option instead.");
             }
 
-            bool restEnabled = IsApiEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST);
-            bool graphQLEnabled = IsApiEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL);
+            bool restEnabled, graphQLEnabled;
+            if (!TryDetermineIfApiIsEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST, out restEnabled) ||
+                !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled))
+            {
+                return false;
+            }
+
             switch (dbType)
             {
                 case DatabaseType.CosmosDB_NoSQL:
@@ -244,32 +249,36 @@ namespace Cli
         /// <param name="apiDisabledOptionValue">Value of disabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
         /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
         /// <param name="apiType">ApiType - REST/GraphQL.</param>
+        /// <param name="isApiEnabled">Boolean value indicating whether the API endpoint is enabled or not.</param>
         /// <exception cref="Exception">Thrown when the semantics of enabled/disabled options differ.</exception>
-        private static bool IsApiEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType)
+        private static bool TryDetermineIfApiIsEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType, out bool isApiEnabled)
         {
             if (!apiDisabledOptionValue)
             {
+                isApiEnabled = apiEnabledOptionValue == CliBool.False ? false : true;
                 // This indicates that the --api.disabled option was not included in the init command.
                 // In such a case, we honor the --api.enabled option.
-                return apiEnabledOptionValue == CliBool.False ? false : true;
+                return true;
             }
 
             if (apiEnabledOptionValue is CliBool.None)
             {
                 // This means that the --api.enabled option was not included in the init command.
-                return !apiDisabledOptionValue;
+                isApiEnabled =!apiDisabledOptionValue;
+                return true;
             }
 
             // We hit this code only when both --api.enabled and --api.disabled flags are included in the init command.
-            bool isApiEnabled = bool.Parse(apiEnabledOptionValue.ToString());
+            isApiEnabled = bool.Parse(apiEnabledOptionValue.ToString());
             if (!apiDisabledOptionValue != isApiEnabled)
             {
                 string apiName = apiType.ToString().ToLower();
-                throw new Exception($"Config generation failed due to mismatch in the semantics of enabling {apiType} API via " +
+                _logger.LogError($"Config generation failed due to mismatch in the semantics of enabling {apiType} API via " +
                     $"--{apiName}.disabled and --{apiName}.enabled options");
+                return false;
             }
 
-            return isApiEnabled;
+            return true;
         }
 
         /// <summary>

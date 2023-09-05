@@ -89,7 +89,7 @@ namespace Cli.Commands
         [Option("rest.enabled", Required = false, HelpText = "Enables REST endpoint for all entities.")]
         public CliBool RestEnabled { get; }
 
-        [Option("graphql.enabled", Default = CliBool.True, Required = false, HelpText = "Enables GraphQL endpoint for all entities.")]
+        [Option("graphql.enabled", Required = false, HelpText = "Enables GraphQL endpoint for all entities.")]
         public CliBool GraphQLEnabled { get; }
 
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]

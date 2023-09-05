@@ -107,8 +107,8 @@ namespace Cli
                     " We recommend to use the --graphql.enabled option instead.");
             }
 
-            bool restEnabled = ValidateSemanticsOfEnabledDisabledOptions(options.RestDisabled, options.RestEnabled, ApiType.REST);
-            bool graphQLEnabled = ValidateSemanticsOfEnabledDisabledOptions(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL);
+            bool restEnabled = IsApiEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST);
+            bool graphQLEnabled = IsApiEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL);
             switch (dbType)
             {
                 case DatabaseType.CosmosDB_NoSQL:
@@ -237,14 +237,15 @@ namespace Cli
         }
 
         /// <summary>
-        /// Helper method to validate that there is no mismatch in semantics of enabling/disabling the REST/GraphQL API(s)
+        /// Helper method to determine if the api is enabled or not based on the enabled/disabled options in the dab init command.
+        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL API(s)
         /// based on the values supplied in the enabled/disabled options for the API in the init command.
         /// </summary>
         /// <param name="apiDisabledOptionValue">Value of disabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
         /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
         /// <param name="apiType">ApiType - REST/GraphQL.</param>
         /// <exception cref="Exception">Thrown when the semantics of enabled/disabled options differ.</exception>
-        private static bool ValidateSemanticsOfEnabledDisabledOptions(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType)
+        private static bool IsApiEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType)
         {
             if (!apiDisabledOptionValue)
             {

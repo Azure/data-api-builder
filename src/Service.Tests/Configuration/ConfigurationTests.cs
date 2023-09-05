@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -727,7 +728,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
-            Assert.IsNotNull(cosmosClientProvider.Client);
+            Assert.IsNotNull(cosmosClientProvider.Clients);
+            Assert.IsTrue(cosmosClientProvider.Clients.Any());
         }
 
         [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MSSQL)]
@@ -2176,7 +2178,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     // exception. To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property
                     // from the token, if it's not valid, then we will throw an exception from our code before it
                     // initiating a client. Uses a valid fake JWT access token for testing purposes.
-                    RuntimeConfig overrides = new(null, new DataSource(DatabaseType.CosmosDB_NoSQL, "AccountEndpoint=https://localhost:8081/;", new()), null, null);
+                    RuntimeConfig overrides = new(
+                        Schema: null,
+                        DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, "AccountEndpoint=https://localhost:8081/;", new()),
+                        Runtime: null,
+                        Entities: new(new Dictionary<string, Entity>()));
 
                     configParams = configParams with
                     {
@@ -2226,10 +2232,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
             RuntimeConfig overrides = new(
-                null,
-                new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
-                null,
-                null);
+                Schema: null,
+                DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
+                Runtime: null,
+                Entities: new(new Dictionary<string, Entity>()));
 
             return new(
                 File.ReadAllText(cosmosFile),
@@ -2261,7 +2267,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             else if (configurationEndpoint == CONFIGURATION_ENDPOINT_V2)
             {
-                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.MSSQL, connectionString, new()), null, null);
+                RuntimeConfig overrides = new(
+                    Schema: null,
+                    DataSource: new DataSource(DatabaseType.MSSQL, connectionString, new()),
+                    Runtime: null,
+                    Entities: new(new Dictionary<string, Entity>()));
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,
@@ -2456,7 +2466,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
-            Assert.IsNotNull(cosmosClientProvider.Client);
+            Assert.IsNotNull(cosmosClientProvider.Clients);
+            Assert.IsTrue(cosmosClientProvider.Clients.Any());
         }
 
         /// <summary>

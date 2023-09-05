@@ -949,7 +949,7 @@ namespace Cli
         /// It will use the config provided by the user, else based on the environment value
         /// it will either merge the config if base config and environmentConfig is present
         /// else it will choose a single config based on precedence (left to right) of
-        /// overrides &lt; environmentConfig &lt; defaultConfig
+        /// overrides > environmentConfig > defaultConfig
         /// Also preforms validation to check connection string is not null or empty.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
@@ -966,14 +966,18 @@ namespace Cli
                 return false;
             }
 
-            loader.UpdateBaseConfigFileName(runtimeConfigFile);
+            loader.UpdateConfigFileName(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
-                _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
+                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
+            }
+            else
+            {
+                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))

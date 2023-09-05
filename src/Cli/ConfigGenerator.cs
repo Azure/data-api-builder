@@ -264,7 +264,7 @@ namespace Cli
             if (apiEnabledOptionValue is CliBool.None)
             {
                 // This means that the --api.enabled option was not included in the init command.
-                isApiEnabled =!apiDisabledOptionValue;
+                isApiEnabled = !apiDisabledOptionValue;
                 return true;
             }
 

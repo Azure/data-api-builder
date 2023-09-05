@@ -165,7 +165,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             catch (CredentialUnavailableException ex)
             {
                 string correlationId = HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext);
-                QueryExecutorLogger.LogWarning("{CorrelationId} Failed to retrieve a managed identity access token using DefaultAzureCredential: {message}", correlationId, ex.Message);
+                QueryExecutorLogger.LogWarning(
+                    exception: ex,
+                    message: "{correlationId} Failed to retrieve a managed identity access token using DefaultAzureCredential.",
+                    correlationId);
             }
 
             return _defaultAccessToken?.Token;

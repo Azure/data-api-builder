@@ -21,28 +21,40 @@ using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 
-[TestClass]
+[TestClass, TestCategory(TestCategory.MSSQL)]
 public class TelemetryTests
 {
     private const string TEST_APP_INSIGHTS_CONN_STRING = "InstrumentationKey=testKey;IngestionEndpoint=https://unitTest.com/;LiveEndpoint=https://unittest2.com/";
 
     private readonly static TelemetryOptions _testTelemetryOptions = new(new ApplicationInsightsOptions(true, TEST_APP_INSIGHTS_CONN_STRING));
 
-    [TestMethod]
-    public async Task TestTrackTelemetryEventsForNonHostedScenario()
+    private const string CONFIG_WITH_TELEMETRY = "dab-telemetry-test-config.json";
+    private static RuntimeConfig _configuration;
+
+    [ClassInitialize]
+    public static void SetUpTelemetryInconfig(TestContext testContext)
     {
         DataSource dataSource = new(DatabaseType.MSSQL,
             GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-        RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
-        configuration = configuration with { Runtime = configuration.Runtime with { Telemetry = _testTelemetryOptions } };
+        _configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+        _configuration = _configuration with { Runtime = _configuration.Runtime with { Telemetry = _testTelemetryOptions } };
 
-        const string CUSTOM_CONFIG = "custom-config.json";
-        File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+        File.WriteAllText(CONFIG_WITH_TELEMETRY, _configuration.ToJson());
+    }
 
+    [ClassCleanup]
+    public static void CleanUpTelemetryConfig()
+    {
+        File.Delete(CONFIG_WITH_TELEMETRY);
+    }
+
+    [TestMethod]
+    public async Task TestTrackTelemetryEventsForNonHostedScenario()
+    {
         string[] args = new[]
         {
-            $"--ConfigFileName={CUSTOM_CONFIG}"
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
         };
 
         TestServer server = new(Program.CreateWebHostBuilder(args));
@@ -98,18 +110,9 @@ public class TelemetryTests
     [TestMethod]
     public async Task TestTrackTelemetryEventsForHostedScenario()
     {
-        DataSource dataSource = new(DatabaseType.MSSQL,
-            GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-        RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
-        configuration = configuration with { Runtime = configuration.Runtime with { Telemetry = _testTelemetryOptions } };
-
-        const string CUSTOM_CONFIG = "custom-config.json";
-        File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
-
         string[] args = new[]
         {
-            $"--ConfigFileName={CUSTOM_CONFIG}"
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
         };
 
         // Instantiate new server with no runtime config for post-startup configuration hydration tests.
@@ -121,7 +124,7 @@ public class TelemetryTests
 
         using (HttpClient client = server.CreateClient())
         {
-            JsonContent content = GetPostStartupConfigParams(TestCategory.MSSQL, configuration, "/configuration");
+            JsonContent content = GetPostStartupConfigParams(TestCategory.MSSQL, _configuration, "/configuration");
 
             HttpResponseMessage postResult =
             await client.PostAsync("/configuration", content);
@@ -159,18 +162,9 @@ public class TelemetryTests
     [TestMethod]
     public async Task TestErrorCaughtEventIsSentForErrors()
     {
-        DataSource dataSource = new(DatabaseType.MSSQL,
-            GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-        RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
-        configuration = configuration with { Runtime = configuration.Runtime with { Telemetry = _testTelemetryOptions } };
-
-        const string CUSTOM_CONFIG = "custom-config.json";
-        File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
-
         string[] args = new[]
         {
-            $"--ConfigFileName={CUSTOM_CONFIG}"
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
         };
 
         TestServer server = new(Program.CreateWebHostBuilder(args));

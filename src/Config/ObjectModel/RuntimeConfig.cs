@@ -11,6 +11,8 @@ public record RuntimeConfig
     [JsonPropertyName("$schema")]
     public string Schema;
 
+    public const string DEFAULT_CONFIG_SCHEMA_LINK = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
+
     public DataSource DataSource;
 
     public RuntimeOptions Runtime;
@@ -18,9 +20,9 @@ public record RuntimeConfig
     public RuntimeEntities Entities;
 
     [JsonConstructor]
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeEntities Entities, RuntimeOptions? Runtime = null)
+    public RuntimeConfig(string? Schema, DataSource DataSource, RuntimeEntities Entities, RuntimeOptions? Runtime = null)
     {
-        this.Schema = Schema;
+        this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
 
         this.DataSource = DataSource;
         this.Runtime = Runtime ??

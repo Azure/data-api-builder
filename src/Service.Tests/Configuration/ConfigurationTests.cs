@@ -2270,8 +2270,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 RuntimeConfig overrides = new(
                     Schema: null,
                     DataSource: new DataSource(DatabaseType.MSSQL, connectionString, new()),
-                    Runtime: null,
-                    Entities: new(new Dictionary<string, Entity>()));
+                    Entities: new(new Dictionary<string, Entity>()),
+                    Runtime: null);
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,

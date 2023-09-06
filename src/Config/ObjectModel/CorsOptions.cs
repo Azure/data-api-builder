@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
@@ -9,4 +11,16 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Origins">List of allowed origins.</param>
 /// <param name="AllowCredentials">
 /// Whether to set Access-Control-Allow-Credentials CORS header.</param>
-public record CorsOptions(string[] Origins, bool AllowCredentials = false);
+public record CorsOptions
+{
+    public string[] Origins;
+
+    public bool AllowCredentials;
+
+    [JsonConstructor]
+    public CorsOptions(string[]? Origins, bool AllowCredentials = false)
+    {
+        this.Origins = Origins is null ? new string[] { } : Origins.ToArray();
+        this.AllowCredentials = AllowCredentials;
+    }
+}

@@ -1994,7 +1994,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             else if (configurationEndpoint == CONFIGURATION_ENDPOINT_V2)
             {
-                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.MSSQL, connectionString, new()), null, null);
+                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.MSSQL, connectionString, new()),
+                    Entities: null, runtimeConfig.Runtime);
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,

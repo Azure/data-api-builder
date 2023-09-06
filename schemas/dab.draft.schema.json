@@ -161,7 +161,7 @@
             "mode": {
               "description": "Set if running in Development or Production mode",
               "type": "string",
-              "default": "production",
+              "default": "development",
               "enum": [
                 "production",
                 "development"

@@ -127,7 +127,7 @@ public class TelemetryTests
     [DataTestMethod]
     [DataRow(CONFIGURATION_ENDPOINT)]
     [DataRow(CONFIGURATION_ENDPOINT_V2)]
-    public async Task TestTrackTelemetryEventsForHostedScenario()
+    public async Task TestTrackTelemetryEventsForHostedScenario(string configurationEndpoint)
     {
         string[] args = new[]
         {
@@ -143,7 +143,7 @@ public class TelemetryTests
 
         using (HttpClient client = server.CreateClient())
         {
-            JsonContent content = GetPostStartupConfigParams(TestCategory.MSSQL, _configuration, "/configuration");
+            JsonContent content = GetPostStartupConfigParams(TestCategory.MSSQL, _configuration, configurationEndpoint);
 
             HttpResponseMessage postResult =
             await client.PostAsync("/configuration", content);

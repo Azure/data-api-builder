@@ -21,6 +21,9 @@ using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 
+/// <summary>
+/// Contains tests for telemetry functionality.
+/// </summary>
 [TestClass, TestCategory(TestCategory.MSSQL)]
 public class TelemetryTests
 {
@@ -31,6 +34,9 @@ public class TelemetryTests
     private const string CONFIG_WITH_TELEMETRY = "dab-telemetry-test-config.json";
     private static RuntimeConfig _configuration;
 
+    /// <summary>
+    /// Sets up the test environment by creating a runtime config with telemetry options.
+    /// </summary>
     [ClassInitialize]
     public static void SetUpTelemetryInconfig(TestContext testContext)
     {
@@ -43,12 +49,19 @@ public class TelemetryTests
         File.WriteAllText(CONFIG_WITH_TELEMETRY, _configuration.ToJson());
     }
 
+    /// <summary>
+    /// Cleans up the test environment by deleting the runtime config with telemetry options.
+    /// </summary>
     [ClassCleanup]
     public static void CleanUpTelemetryConfig()
     {
         File.Delete(CONFIG_WITH_TELEMETRY);
     }
 
+    /// <summary>
+    /// Tests that telemetry events are tracked for non-hosted scenarios.
+    /// Makes a REST and GraphQL requests and asserts on the telemetry items.
+    /// </summary>
     [TestMethod]
     public async Task TestTrackTelemetryEventsForNonHostedScenario()
     {
@@ -107,7 +120,13 @@ public class TelemetryTests
             && ((EventTelemetry)item).Properties["RestEntityActionOperation"] == "Read"));
     }
 
-    [TestMethod]
+    /// <summary>
+    /// Tests that telemetry events are tracked for hosted scenarios.
+    /// Makes a REST and GraphQL requests and asserts on the telemetry items using supported configuration endpoints.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(CONFIGURATION_ENDPOINT)]
+    [DataRow(CONFIGURATION_ENDPOINT_V2)]
     public async Task TestTrackTelemetryEventsForHostedScenario()
     {
         string[] args = new[]
@@ -159,6 +178,11 @@ public class TelemetryTests
             && ((EventTelemetry)item).Properties["RestEntityActionOperation"] == "Read"));
     }
 
+    /// <summary>
+    /// Tests that telemetry events are tracked whenever error is caught.
+    /// In this test we try to query an entity without appropriate access and
+    /// assert on the failure message in the telemetry event sent to Application Insights.
+    /// </summary>
     [TestMethod]
     public async Task TestErrorCaughtEventIsSentForErrors()
     {
@@ -201,6 +225,9 @@ public class TelemetryTests
             && ((EventTelemetry)item).Properties["Message"].Contains("Authorization Failure: Access Not Allowed.")));
     }
 
+    /// <summary>
+    /// The class is a custom telemetry channel to capture telemetry items and assert on them.
+    /// </summary>
     private class CustomTelemetryChannel : ITelemetryChannel
     {
         private readonly List<ITelemetry> _telemetryItems;

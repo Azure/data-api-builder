@@ -68,8 +68,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const int RETRY_WAIT_SECONDS = 1;
 
         // TODO: Remove the old endpoint once we've updated all callers to use the new one.
-        private const string CONFIGURATION_ENDPOINT = "/configuration";
-        private const string CONFIGURATION_ENDPOINT_V2 = "/configuration/v2";
+        public const string CONFIGURATION_ENDPOINT = "/configuration";
+        public const string CONFIGURATION_ENDPOINT_V2 = "/configuration/v2";
 
         /// <summary>
         /// A valid REST API request body with correct parameter types for all the fields.

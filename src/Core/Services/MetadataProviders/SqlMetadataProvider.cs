@@ -35,7 +35,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly DatabaseType _databaseType;
 
-        private readonly RuntimeEntities _entities;
+        private readonly IReadOnlyDictionary<string, Entity> _entities;
+
+        protected readonly string _dataSourceName;
 
         // Dictionary containing mapping of graphQL stored procedure exposed query/mutation name
         // to their corresponding entity names defined in the config.
@@ -63,6 +65,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
+        protected IQueryManagerFactory EngineFactory { get; init; }
+
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
@@ -73,14 +77,15 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
-            IQueryExecutor queryExecutor,
-            IQueryBuilder queryBuilder,
-            ILogger<ISqlMetadataProvider> logger)
+            IQueryManagerFactory engineFactory,
+            ILogger<ISqlMetadataProvider> logger,
+            string dataSourceName)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _runtimeConfigProvider = runtimeConfigProvider;
-            _databaseType = runtimeConfig.DataSource.DatabaseType;
-            _entities = runtimeConfig.Entities;
+            _dataSourceName = dataSourceName;
+            _databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            _entities = runtimeConfig.Entities.Where(x => string.Equals(runtimeConfig.GetDataSourceNameFromEntityName(x.Key), _dataSourceName, StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value);
             _logger = logger;
             foreach ((string key, Entity _) in _entities)
             {
@@ -96,8 +101,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
             ConnectionString = runtimeConfig.DataSource.ConnectionString;
             EntitiesDataSet = new();
-            SqlQueryBuilder = queryBuilder;
-            QueryExecutor = queryExecutor;
+            EngineFactory = engineFactory;
+            SqlQueryBuilder = EngineFactory.GetQueryBuilder(_databaseType);
+            QueryExecutor = EngineFactory.GetQueryExecutor(_databaseType);
         }
 
         /// <inheritdoc />
@@ -277,7 +283,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             await conn.OpenAsync();
 
             string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
@@ -840,7 +846,9 @@ namespace Azure.DataApiBuilder.Core.Services
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: queryForResultSetDetails,
                 parameters: null!,
-                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
+                dataSourceName: _dataSourceName);
+
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
 
             // Iterate through each row returned by the query which corresponds to
@@ -997,7 +1005,6 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
-
             PopulateColumnDefinitionWithHasDefault(
                 sourceDefinition,
                 columnsInTable);
@@ -1118,7 +1125,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // for non-MySql DB types, this will throw an exception
                 // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
-                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             }
             catch (Exception ex)
             {
@@ -1151,25 +1158,26 @@ namespace Azure.DataApiBuilder.Core.Services
 
         internal string GetTablePrefix(string databaseName, string schemaName)
         {
+            IQueryBuilder queryBuilder = GetQueryBuilder();
             StringBuilder tablePrefix = new();
 
             if (!string.IsNullOrEmpty(databaseName))
             {
                 // Determine databaseName for prefix.
-                databaseName = SqlQueryBuilder.QuoteIdentifier(databaseName);
+                databaseName = queryBuilder.QuoteIdentifier(databaseName);
                 tablePrefix.Append(databaseName);
 
                 if (!string.IsNullOrEmpty(schemaName))
                 {
                     // Determine schemaName for prefix.
-                    schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
+                    schemaName = queryBuilder.QuoteIdentifier(schemaName);
                     tablePrefix.Append($".{schemaName}");
                 }
             }
             else if (!string.IsNullOrEmpty(schemaName))
             {
                 // Determine schemaName for prefix.
-                schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
+                schemaName = queryBuilder.QuoteIdentifier(schemaName);
                 // Database name is empty we just need the schema name.
                 tablePrefix.Append(schemaName);
             }
@@ -1189,7 +1197,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             await conn.OpenAsync();
             // We can specify the Catalog, Schema, Table Name, Column Name to get
             // the specified column(s).
@@ -1255,7 +1263,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count);
+                ((BaseSqlQueryBuilder)GetQueryBuilder()).BuildForeignKeyInfoQuery(tableNames.Count);
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
@@ -1266,7 +1274,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
+            PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata, null, null, _dataSourceName);
 
             if (PairToFkDefinition is not null)
             {
@@ -1495,6 +1503,12 @@ namespace Azure.DataApiBuilder.Core.Services
         public bool IsDevelopmentMode()
         {
             return _runtimeConfigProvider.GetConfig().Runtime.Host.Mode is HostMode.Development;
+        }
+
+        /// <inheritdoc />
+        public string GetDatabaseSourceName()
+        {
+            return _dataSourceName;
         }
     }
 }

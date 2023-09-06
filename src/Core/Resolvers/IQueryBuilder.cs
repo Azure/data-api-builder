@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel;
+
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     // <summary>
@@ -63,6 +65,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="databaseObjectName">Name of stored-procedure</param>
         /// <returns></returns>
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName);
+
+        /// <summary>
+        /// Derives the database type of the query builder.
+        /// </summary>
+        /// <returns>databaseType.</returns>
+        public DatabaseType DeriveDatabaseType();
 
         /// <summary>
         /// Adds database specific quotes to string identifier

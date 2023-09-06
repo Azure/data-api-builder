@@ -32,12 +32,13 @@ namespace Azure.DataApiBuilder.Core.Services
     /// </summary>
     public class GraphQLSchemaCreator
     {
-        private readonly IQueryEngine _queryEngine;
-        private readonly IMutationEngine _mutationEngine;
-        private readonly ISqlMetadataProvider _sqlMetadataProvider;
+        private readonly IQueryEngineFactory _queryEngineFactory;
+        private readonly IMutationEngineFactory _mutationEngineFactory;
+        private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly DatabaseType _databaseType;
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -49,19 +50,20 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="authorizationResolver">Authorization information for the runtime, to be applied to the GraphQL schema.</param>
         public GraphQLSchemaCreator(
             RuntimeConfigProvider runtimeConfigProvider,
-            IQueryEngine queryEngine,
-            IMutationEngine mutationEngine,
-            ISqlMetadataProvider sqlMetadataProvider,
+            IQueryEngineFactory queryEngineFactory,
+            IMutationEngineFactory mutationEngineFactory,
+            IMetadataProviderFactory metadataProviderFactory,
             IAuthorizationResolver authorizationResolver)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
             _databaseType = runtimeConfig.DataSource.DatabaseType;
             _entities = runtimeConfig.Entities;
-            _queryEngine = queryEngine;
-            _mutationEngine = mutationEngine;
-            _sqlMetadataProvider = sqlMetadataProvider;
+            _queryEngineFactory = queryEngineFactory;
+            _mutationEngineFactory = mutationEngineFactory;
+            _metadataProviderFactory = metadataProviderFactory;
             _authorizationResolver = authorizationResolver;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -77,9 +79,10 @@ namespace Azure.DataApiBuilder.Core.Services
         private ISchemaBuilder Parse(
             ISchemaBuilder sb,
             DocumentNode root,
-            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
-            Dictionary<string, DatabaseObject> dbObjects)
+            Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
+            (DocumentNode queryNode, DocumentNode mutationNode) = GenerateQueryAndMutationNodes(root, inputTypes);
+
             return sb
                 .AddDocument(root)
                 .AddAuthorizeDirectiveType()
@@ -93,13 +96,38 @@ namespace Azure.DataApiBuilder.Core.Services
                 .AddType<OrderByType>()
                 .AddType<DefaultValueType>()
                 // Generate the GraphQL queries from the provided objects
-                .AddDocument(QueryBuilder.Build(root, _databaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, dbObjects))
+                .AddDocument(queryNode)
                 // Generate the GraphQL mutations from the provided objects
-                .AddDocument(MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap, dbObjects))
+                .AddDocument(mutationNode)
                 // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
                 .ModifyOptions(o => o.EnableOneOf = true)
                 // Add our custom middleware for GraphQL resolvers
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine));
+                .Use((services, next) => new ResolverMiddleware(next, _queryEngineFactory, _mutationEngineFactory, _runtimeConfigProvider));
+        }
+
+        /// <summary>
+        /// Generate the GraphQL schema query and mutation nodes from the provided database.
+        /// </summary>
+        /// <param name="root"></param>
+        /// <param name="inputTypes"></param>
+        /// <returns></returns>
+        public (DocumentNode, DocumentNode) GenerateQueryAndMutationNodes(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
+        {
+            Dictionary<string, DatabaseObject> dbObjects = new();
+
+            // Merge the entityToDBObjects for queryNode generation for all entities.
+            foreach ((string name, _) in _entities)
+            {
+                ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name));
+                dbObjects.Union(metadataprovider.EntityToDatabaseObject);
+            }
+            // Generate the GraphQL queries from the provided objects
+            DocumentNode queryNode = QueryBuilder.Build(root, _databaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, dbObjects);
+
+            // Generate the GraphQL mutations from the provided objects
+            DocumentNode mutationNode = MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap, dbObjects);
+
+            return (queryNode, mutationNode);
         }
 
         /// <summary>
@@ -119,7 +147,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 _ => throw new NotImplementedException($"This database type {_databaseType} is not yet implemented.")
             };
 
-            return Parse(schemaBuilder, root, inputTypes, _sqlMetadataProvider.EntityToDatabaseObject);
+            return Parse(schemaBuilder, root, inputTypes);
         }
 
         /// <summary>
@@ -144,13 +172,16 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
-                if (_sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(entityName, out DatabaseObject? databaseObject))
+                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+                ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+
+                if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(entityName, out DatabaseObject? databaseObject))
                 {
                     // Collection of role names allowed to access entity, to be added to the authorize directive
                     // of the objectTypeDefinitionNode. The authorize Directive is one of many directives created.
                     IEnumerable<string> rolesAllowedForEntity = _authorizationResolver.GetRolesForEntity(entityName);
                     Dictionary<string, IEnumerable<string>> rolesAllowedForFields = new();
-                    SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
+                    SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
                     bool isStoredProcedure = entity.Source.Type is EntitySourceType.StoredProcedure;
                     foreach (string column in sourceDefinition.Columns.Keys)
                     {
@@ -208,9 +239,16 @@ namespace Azure.DataApiBuilder.Core.Services
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects()
         {
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
-            DocumentNode root = ((CosmosSqlMetadataProvider)_sqlMetadataProvider).GraphQLSchemaRoot;
+            DocumentNode? root = null;
 
-            IEnumerable<ObjectTypeDefinitionNode> objectNodes = root.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
+            foreach ((string name, _) in _entities)
+            {
+                ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name));
+                DocumentNode currentNode = ((CosmosSqlMetadataProvider)metadataProvider).GraphQLSchemaRoot;
+                root = root is null ? currentNode : root.WithDefinitions(root.Definitions.Concat(currentNode.Definitions).ToImmutableList());
+            }
+
+            IEnumerable<ObjectTypeDefinitionNode> objectNodes = root!.Definitions.Where(d => d is ObjectTypeDefinitionNode).Cast<ObjectTypeDefinitionNode>();
             foreach (ObjectTypeDefinitionNode node in objectNodes)
             {
                 InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);

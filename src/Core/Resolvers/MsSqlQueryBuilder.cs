@@ -256,5 +256,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             "WHERE is_hidden is not NULL AND is_hidden = 0";
             return query;
         }
+
+        /// <inheritdoc />
+        public DatabaseType DeriveDatabaseType()
+        {
+            return DatabaseType.MSSQL;
+        }
     }
 }

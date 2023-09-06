@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -22,9 +23,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
-        private readonly ISqlMetadataProvider _sqlMetadataProvider;
-        private readonly IQueryExecutor _queryExecutor;
-        private readonly IQueryBuilder _queryBuilder;
+        private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
+        private readonly IQueryManagerFactory _queryFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly ILogger<IQueryEngine> _logger;
@@ -35,18 +35,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // Constructor.
         // </summary>
         public SqlQueryEngine(
-            IQueryExecutor queryExecutor,
-            IQueryBuilder queryBuilder,
-            ISqlMetadataProvider sqlMetadataProvider,
+            IQueryManagerFactory queryFactory,
+            IMetadataProviderFactory sqlMetadataProviderFactory,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider)
         {
-            _queryExecutor = queryExecutor;
-            _queryBuilder = queryBuilder;
-            _sqlMetadataProvider = sqlMetadataProvider;
+            _queryFactory = queryFactory;
+            _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
             _httpContextAccessor = httpContextAccessor;
             _authorizationResolver = authorizationResolver;
             _gQLFilterParser = gQLFilterParser;
@@ -64,10 +62,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if empty</param>
         public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "")
         {
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
+
             SqlQueryStructure structure = new(
                 context,
                 parameters,
-                _sqlMetadataProvider,
+                _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName),
                 _authorizationResolver,
                 _runtimeConfigProvider,
                 _gQLFilterParser);
@@ -92,11 +92,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "")
         {
-            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
-                    _sqlMetadataProvider,
+                    sqlMetadataProvider,
                     _authorizationResolver,
                     _gQLFilterParser,
                     parameters);
@@ -110,20 +112,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 SqlQueryStructure structure = new(
                     context,
                     parameters,
-                    _sqlMetadataProvider,
+                    sqlMetadataProvider,
                     _authorizationResolver,
                     _runtimeConfigProvider,
                     _gQLFilterParser);
 
-                string queryString = _queryBuilder.Build(structure);
-                List<JsonDocument>? jsonListResult =
-                    await _queryExecutor.ExecuteQueryAsync(
-                        sqltext: queryString,
-                        parameters: structure.Parameters,
-                        dataReaderHandler: _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
-                        httpContext: _httpContextAccessor.HttpContext!,
-                        args: null,
-                        dataSourceName: dataSourceName);
+                List<JsonDocument>? jsonListResult = await ExecuteListAsync(structure, dataSourceName);
 
                 if (jsonListResult is null)
                 {
@@ -139,20 +133,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the FindRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         // </summary>
-        public async Task<IActionResult> ExecuteAsync(FindRequestContext context, string datasourceName = "")
+        public async Task<IActionResult> ExecuteAsync(FindRequestContext context)
         {
+            // for REST API scenarios, use the default datasource
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SqlQueryStructure structure = new(
                 context,
-                _sqlMetadataProvider,
+                sqlMetadataProvider,
                 _authorizationResolver,
                 _runtimeConfigProvider,
                 _gQLFilterParser,
                 _httpContextAccessor.HttpContext!);
-            using JsonDocument? queryJson = await ExecuteAsync(structure, datasourceName);
+            using JsonDocument? queryJson = await ExecuteAsync(structure, dataSourceName);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
-            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context) :
-                                       FormatFindResult(queryJson, context);
+            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context, sqlMetadataProvider) :
+                                       FormatFindResult(queryJson, context, sqlMetadataProvider);
         }
 
         /// <summary>
@@ -161,9 +159,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "")
         {
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
             SqlExecuteStructure structure = new(
                 context.EntityName,
-                _sqlMetadataProvider,
+                _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName),
                 _authorizationResolver,
                 _gQLFilterParser,
                 context.ResolvedParameters);
@@ -172,69 +171,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If no rows/empty result set, return an empty json array
             return queryJson is null ? OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :
                                        OkResponse(queryJson.RootElement.Clone());
-        }
-
-        /// <summary>
-        /// Format the results from a Find operation. Check if there is a requirement
-        /// for a nextLink, and if so, add this value to the array of JsonElements to
-        /// be used as part of the response.
-        /// </summary>
-        /// <param name="jsonDoc">The JsonDocument from the query.</param>
-        /// <param name="context">The RequestContext.</param>
-        /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
-        private OkObjectResult FormatFindResult(JsonDocument jsonDoc, FindRequestContext context)
-        {
-            JsonElement jsonElement = jsonDoc.RootElement.Clone();
-
-            // If the results are not a collection or if the query does not have a next page
-            // no nextLink is needed, return JsonDocument as is
-            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
-            {
-                // Clones the root element to a new JsonElement that can be
-                // safely stored beyond the lifetime of the original JsonDocument.
-                return OkResponse(jsonElement);
-            }
-
-            // More records exist than requested, we know this by requesting 1 extra record,
-            // that extra record is removed here.
-            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
-
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
-                               orderByColumns: context.OrderByClauseOfBackingColumns,
-                               primaryKey: _sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
-                               entityName: context.EntityName,
-                               schemaName: context.DatabaseObject.SchemaName,
-                               tableName: context.DatabaseObject.Name,
-                               sqlMetadataProvider: _sqlMetadataProvider);
-
-            // nextLink is the URL needed to get the next page of records using the same query options
-            // with $after base64 encoded for opaqueness
-            string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext!.Request).Split('?')[0];
-
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            // If the base route is not empty, we need to insert it into the URI before the rest path.
-            string? baseRoute = runtimeConfig.Runtime.BaseRoute;
-            if (!string.IsNullOrWhiteSpace(baseRoute))
-            {
-                HttpRequest request = _httpContextAccessor.HttpContext!.Request;
-
-                // Path is of the form ....restPath/pathNameForEntity. We want to insert the base route before the restPath.
-                // Finally, it will be of the form: .../baseRoute/restPath/pathNameForEntity.
-                path = UriHelper.BuildAbsolute(
-                    scheme: request.Scheme,
-                    host: request.Host,
-                    pathBase: baseRoute,
-                    path: request.Path);
-            }
-
-            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
-                                  path,
-                                  nvc: context!.ParsedQueryString,
-                                  after);
-            rootEnumerated = rootEnumerated.Append(nextLink);
-            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
         }
 
         /// <summary>
@@ -312,15 +248,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName = "")
+        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName)
         {
+            DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
+            IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
+
             // Open connection and execute query using _queryExecutor
-            string queryString = _queryBuilder.Build(structure);
+            string queryString = queryBuilder.Build(structure);
             JsonDocument? jsonDocument =
-                await _queryExecutor.ExecuteQueryAsync(
+                await queryExecutor.ExecuteQueryAsync(
                     sqltext: queryString,
                     parameters: structure.Parameters,
-                    dataReaderHandler: _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                    dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
                     httpContext: _httpContextAccessor.HttpContext!,
                     args: null,
                     dataSourceName: dataSourceName);
@@ -332,15 +272,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
         // As such, this could feasibly be moved to the mutation engine. 
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName = "")
+        private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName)
         {
-            string queryString = _queryBuilder.Build(structure);
+            DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
+            IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
+            string queryString = queryBuilder.Build(structure);
 
             JsonArray? resultArray =
-                await _queryExecutor.ExecuteQueryAsync(
+                await queryExecutor.ExecuteQueryAsync(
                     sqltext: queryString,
                     parameters: structure.Parameters,
-                    dataReaderHandler: _queryExecutor.GetJsonArrayAsync,
+                    dataReaderHandler: queryExecutor.GetJsonArrayAsync,
                     httpContext: _httpContextAccessor.HttpContext!,
                     args: null,
                     dataSourceName: dataSourceName);
@@ -359,6 +302,99 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return jsonDocument;
+        }
+
+        private async Task<List<JsonDocument>?> ExecuteListAsync(SqlQueryStructure structure, string dataSourceName)
+        {
+            DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
+            IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
+
+            string queryString = queryBuilder.Build(structure);
+
+            List<JsonDocument>? jsonListResult =
+                await queryExecutor.ExecuteQueryAsync(
+                    sqltext: queryString,
+                    parameters: structure.Parameters,
+                    dataReaderHandler: queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
+                    httpContext: _httpContextAccessor.HttpContext!,
+                    args: null,
+                    dataSourceName: dataSourceName);
+            return jsonListResult;
+        }
+
+        /// <summary>
+        /// Returns the data source name if it is valid. If not, returns the default data source name.
+        /// </summary>
+        /// <param name="dataSourceName">datasourceName.</param>
+        /// <returns>datasourceName.</returns>
+        private string GetValidatedDataSourceName(string dataSourceName)
+        {
+            // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
+            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
+        }
+
+        /// <summary>
+        /// Format the results from a Find operation. Check if there is a requirement
+        /// for a nextLink, and if so, add this value to the array of JsonElements to
+        /// be used as part of the response.
+        /// </summary>
+        /// <param name="jsonDoc">The JsonDocument from the query.</param>
+        /// <param name="context">The RequestContext.</param>
+        /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
+        private OkObjectResult FormatFindResult(JsonDocument jsonDoc, FindRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            JsonElement jsonElement = jsonDoc.RootElement.Clone();
+
+            // If the results are not a collection or if the query does not have a next page
+            // no nextLink is needed, return JsonDocument as is
+            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            {
+                // Clones the root element to a new JsonElement that can be
+                // safely stored beyond the lifetime of the original JsonDocument.
+                return OkResponse(jsonElement);
+            }
+
+            // More records exist than requested, we know this by requesting 1 extra record,
+            // that extra record is removed here.
+            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            string after = SqlPaginationUtil.MakeCursorFromJsonElement(
+                               element: rootEnumerated.Last(),
+                               orderByColumns: context.OrderByClauseOfBackingColumns,
+                               primaryKey: sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
+                               entityName: context.EntityName,
+                               schemaName: context.DatabaseObject.SchemaName,
+                               tableName: context.DatabaseObject.Name,
+                               sqlMetadataProvider: sqlMetadataProvider);
+
+            // nextLink is the URL needed to get the next page of records using the same query options
+            // with $after base64 encoded for opaqueness
+            string path = UriHelper.GetEncodedUrl(_httpContextAccessor.HttpContext!.Request).Split('?')[0];
+
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            // If the base route is not empty, we need to insert it into the URI before the rest path.
+            string? baseRoute = runtimeConfig.Runtime.BaseRoute;
+            if (!string.IsNullOrWhiteSpace(baseRoute))
+            {
+                HttpRequest request = _httpContextAccessor.HttpContext!.Request;
+
+                // Path is of the form ....restPath/pathNameForEntity. We want to insert the base route before the restPath.
+                // Finally, it will be of the form: .../baseRoute/restPath/pathNameForEntity.
+                path = UriHelper.BuildAbsolute(
+                    scheme: request.Scheme,
+                    host: request.Host,
+                    pathBase: baseRoute,
+                    path: request.Path);
+            }
+
+            JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
+                                  path,
+                                  nvc: context!.ParsedQueryString,
+                                  after);
+            rootEnumerated = rootEnumerated.Append(nextLink);
+            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
         }
     }
 }

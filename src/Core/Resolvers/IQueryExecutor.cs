@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using System.Text.Json.Nodes;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Http;
 
@@ -119,5 +120,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameterEntry">Entry corresponding to current database parameter to be created.</param>
         /// <param name="parameter">Parameter sent to database.</param>
         public void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter);
+
+        /// <summary>
+        /// Gets the database type for the current query executor.
+        /// </summary>
+        /// <returns>database type.</returns>
+        public DatabaseType DeriveDatabaseType();
     }
 }

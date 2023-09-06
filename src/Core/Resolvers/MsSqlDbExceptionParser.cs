@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using System.Net;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.Data.SqlClient;
 
@@ -84,6 +85,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             string errorNumber = ((SqlException)e).Number.ToString();
             return TransientExceptionCodes.Contains(errorNumber);
+        }
+
+        /// <inheritdoc />
+        public override DatabaseType DeriveDatabaseType()
+        {
+            return DatabaseType.MSSQL;
         }
     }
 }

@@ -224,5 +224,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             throw new NotImplementedException();
         }
+
+        /// <inheritdoc />
+        public DatabaseType DeriveDatabaseType()
+        {
+            return DatabaseType.PostgreSQL;
+        }
     }
 }

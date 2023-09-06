@@ -5,11 +5,14 @@
 using System;
 using System.Collections.Generic;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Language;
@@ -110,8 +113,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             Mock<IQueryBuilder> _queryBuilder = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             Mock<ILogger<SqlMutationEngine>> _mutationEngineLogger = new();
+            Mock<RuntimeConfigLoader> mockFileLoader = new();
+            RuntimeConfigProvider provider = new(mockFileLoader.Object);
             DefaultHttpContext context = new();
             Mock<GQLFilterParser> _gQLFilterParser = new(_sqlMetadataProvider.Object);
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            Mock<IQueryManagerFactory> _queryManagerFactory = new();
+
+            _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder.Object);
+            _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor.Object);
+
+            Mock<IQueryEngineFactory> _queryEngineFactory = new();
+            _queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(_queryEngine.Object);
+
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
@@ -124,14 +141,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 )).Returns(isAuthorized);
 
             return new SqlMutationEngine(
-                _queryEngine.Object,
-                _queryExecutor.Object,
-                _queryBuilder.Object,
-                _sqlMetadataProvider.Object,
+                _queryManagerFactory.Object,
+                _metadataProviderFactory.Object,
+                _queryEngineFactory.Object,
                 _authorizationResolver.Object,
                 _gQLFilterParser.Object,
-                httpContextAccessor.Object
-                );
+                httpContextAccessor.Object,
+                provider);
         }
     }
 }

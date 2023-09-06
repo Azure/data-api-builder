@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using System.Net;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -120,6 +121,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return HttpStatusCode.InternalServerError;
+        }
+
+        /// <inheritdoc />
+        public override DatabaseType DeriveDatabaseType()
+        {
+            return DatabaseType.PostgreSQL;
         }
     }
 }

@@ -4,6 +4,7 @@
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -17,12 +18,18 @@ namespace Azure.DataApiBuilder.Core.Services
     public class MsSqlMetadataProvider :
         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>
     {
+        public MsSqlMetadataProvider(IServiceProvider serviceProvider, string dataSourceName)
+            : base(serviceProvider.GetRequiredService<RuntimeConfigProvider>(), serviceProvider.GetRequiredService<IQueryManagerFactory>(), serviceProvider.GetRequiredService<ILogger<ISqlMetadataProvider>>(), dataSourceName)
+        {
+
+        }
+
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
-            IQueryExecutor queryExecutor,
-            IQueryBuilder sqlQueryBuilder,
-            ILogger<ISqlMetadataProvider> logger)
-            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
+            IQueryManagerFactory engineFactory,
+            ILogger<ISqlMetadataProvider> logger,
+            string dataSourceName)
+            : base(runtimeConfigProvider, engineFactory, logger, dataSourceName)
         {
         }
 

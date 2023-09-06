@@ -105,7 +105,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IQueryExecutor> queryExecutor = new();
             IQueryBuilder queryBuilder = new MsSqlQueryBuilder();
 
-            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryExecutor.Object, queryBuilder, sqlMetadataLogger);
+            Mock<IQueryManagerFactory> engineFactory = new();
+            engineFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
+            engineFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
+
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, engineFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().GetDefaultDataSourceName());
             string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
             Assert.AreEqual(tableprefix, expectedPrefix);
         }
@@ -160,16 +164,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
-
+            string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             try
             {
                 ISqlMetadataProvider sqlMetadataProvider = databaseType switch
                 {
-                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
                     _ => throw new ArgumentException($"Invalid database type: {databaseType}")
                 };
 

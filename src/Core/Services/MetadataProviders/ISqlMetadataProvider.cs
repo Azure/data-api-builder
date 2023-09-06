@@ -174,5 +174,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// mode, it returns false.
         /// </summary>
         public bool IsDevelopmentMode();
+
+        /// <summary>
+        /// Returns the name of the dataSource.
+        /// </summary>
+        /// <returns>DataSourceName</returns>
+        public string GetDatabaseSourceName();
     }
 }

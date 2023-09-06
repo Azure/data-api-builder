@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -128,47 +129,58 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<SqlMutationEngine>> mutationEngineLogger = new();
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            Mock<IQueryManagerFactory> queryManagerFactory = new();
+            Mock<IQueryEngineFactory> queryEngineFactory = new();
 
             MsSqlQueryExecutor queryExecutor = new(
                 provider,
                 dbExceptionParser.Object,
                 queryExecutorLogger.Object,
                 httpContextAccessor.Object);
+
+            queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
+            queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
+
             Mock<MsSqlMetadataProvider> sqlMetadataProvider = new(
                 provider,
-                queryExecutor,
-                queryBuilder,
-                sqlMetadataLogger.Object);
+                queryManagerFactory.Object,
+                sqlMetadataLogger.Object,
+                provider.GetConfig().GetDefaultDataSourceName());
             string outParam;
             sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
             Dictionary<string, string> _pathToEntityMock = new() { { entityName, entityName } };
             sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam))
                                .Callback(new metaDataCallback((string entityPath, out string entity) => _ = _pathToEntityMock.TryGetValue(entityPath, out entity)))
                                .Returns((string entityPath, out string entity) => _pathToEntityMock.TryGetValue(entityPath, out entity));
+
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(sqlMetadataProvider.Object);
+
             Mock<IAuthorizationService> authorizationService = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
             AuthorizationResolver authorizationResolver = new(provider, sqlMetadataProvider.Object);
             GQLFilterParser gQLFilterParser = new(sqlMetadataProvider.Object);
             SqlQueryEngine queryEngine = new(
-                queryExecutor,
-                queryBuilder,
-                sqlMetadataProvider.Object,
+                queryManagerFactory.Object,
+                metadataProviderFactory.Object,
                 httpContextAccessor.Object,
                 authorizationResolver,
                 gQLFilterParser,
                 queryEngineLogger.Object,
                 provider);
 
+            queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(queryEngine);
+
             SqlMutationEngine mutationEngine =
                 new(
-                queryEngine,
-                queryExecutor,
-                queryBuilder,
-                sqlMetadataProvider.Object,
+                queryManagerFactory.Object,
+                metadataProviderFactory.Object,
+                queryEngineFactory.Object,
                 authorizationResolver,
                 gQLFilterParser,
-                httpContextAccessor.Object);
+                httpContextAccessor.Object,
+                provider);
 
             // Setup REST Service
             _restService = new RestService(

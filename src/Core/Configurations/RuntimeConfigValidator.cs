@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
@@ -622,7 +623,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// between source and target entity must be defined in the DB.
         /// </summary>
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
-        public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
         {
             _logger.LogInformation("Validating Relationship Section in Config...");
 
@@ -644,6 +645,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
+
+                string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(databaseName);
 
                 foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
                 {
@@ -765,10 +769,12 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// the parameters that are specified for the stored procedure in DB.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Current use by dab workflow")]
-        public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
         {
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
+                string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
                 // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
                 // so if the schema is not correct we will halt the engine
                 // but for rest we can do it when a request is made and only fail that particular request.

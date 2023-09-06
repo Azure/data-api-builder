@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
@@ -86,65 +88,10 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<SqlQueryEngine>();
             });
 
-            services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetConfig();
-
-                return runtimeConfig.DataSource.DatabaseType switch
-                {
-                    DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider),
-                    DatabaseType.MSSQL or DatabaseType.PostgreSQL or DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider),
-                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
-                };
-            });
-
-            services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetConfig();
-
-                return runtimeConfig.DataSource.DatabaseType switch
-                {
-                    DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider),
-                    DatabaseType.MSSQL or DatabaseType.PostgreSQL or DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider),
-                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
-                };
-            });
-
             services.AddSingleton<ILogger<IQueryExecutor>>(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<IQueryExecutor>();
-            });
-            services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetConfig();
-
-                return runtimeConfig.DataSource.DatabaseType switch
-                {
-                    DatabaseType.CosmosDB_NoSQL => null!,
-                    DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider),
-                    DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlQueryExecutor>(serviceProvider),
-                    DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryExecutor>(serviceProvider),
-                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
-                };
-            });
-
-            services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetConfig();
-
-                return runtimeConfig.DataSource.DatabaseType switch
-                {
-                    DatabaseType.CosmosDB_NoSQL => null!,
-                    DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider),
-                    DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgresQueryBuilder>(serviceProvider),
-                    DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider),
-                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
-                };
             });
 
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
@@ -153,34 +100,119 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<ISqlMetadataProvider>();
             });
 
-            services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetConfig();
+            HashSet<DatabaseType> databaseTypes = new();
 
-                return runtimeConfig.DataSource.DatabaseType switch
+            foreach ((string dataSourceName, DataSource dataSource) in configProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
+            {
+                // registerations per database type
+                if (!databaseTypes.Contains(dataSource.DatabaseType))
                 {
-                    DatabaseType.CosmosDB_NoSQL => ActivatorUtilities.GetServiceOrCreateInstance<CosmosSqlMetadataProvider>(serviceProvider),
-                    DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider),
-                    DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider),
-                    DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider),
-                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
-                };
+                    // Register a queryExecutor for the database type.
+                    services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
+                    {
+
+                        return dataSource.DatabaseType switch
+                        {
+                            DatabaseType.CosmosDB_NoSQL => null!,
+                            DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider),
+                            DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlQueryExecutor>(serviceProvider),
+                            DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryExecutor>(serviceProvider),
+                            _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
+                        };
+                    });
+
+                    // Register a queryBuilder for the database type.
+                    services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
+                    {
+                        return dataSource.DatabaseType switch
+                        {
+                            DatabaseType.CosmosDB_NoSQL => null!,
+                            DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider),
+                            DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgresQueryBuilder>(serviceProvider),
+                            DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider),
+                            _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
+                        };
+                    });
+
+                    services.AddSingleton<DbExceptionParser>(implementationFactory: (serviceProvider) =>
+                    {
+                        return dataSource.DatabaseType switch
+                        {
+                            DatabaseType.CosmosDB_NoSQL => null!,
+                            DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider),
+                            DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlDbExceptionParser>(serviceProvider),
+                            DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider),
+                            _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
+                        };
+                    });
+
+                    databaseTypes.Add(dataSource.DatabaseType);
+
+                }
+
+                // Register a metadataProvider for each database type.
+                services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
+                {
+                    return dataSource.DatabaseType switch
+                    {
+                        DatabaseType.CosmosDB_NoSQL => null!,
+                        DatabaseType.MSSQL => new MsSqlMetadataProvider(serviceProvider, dataSourceName),
+                        DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(serviceProvider, dataSourceName),
+                        DatabaseType.MySQL => new MySqlMetadataProvider(serviceProvider, dataSourceName),
+                        _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
+                    };
+                });
+
+            }
+
+            // Determine what query and mutation engines are needed.
+            bool sqlEngineNeeded = databaseTypes.Where(x => x == DatabaseType.MSSQL || x == DatabaseType.PostgreSQL || x == DatabaseType.MySQL).Any();
+            bool cosmosEngineNeeded = databaseTypes.Where(x => x == DatabaseType.CosmosDB_NoSQL).Any();
+
+            if (sqlEngineNeeded)
+            {
+                services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
+                {
+                    return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
+                });
+
+                services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+                {
+                    return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
+                });
+            }
+
+            if (cosmosEngineNeeded)
+            {
+                services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
+                {
+                    return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
+                });
+
+                services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
+                {
+                    return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
+                });
+            }
+
+            services.AddSingleton<IQueryManagerFactory>(implementationFactory: (serviceProvider) =>
+            {
+                return ActivatorUtilities.GetServiceOrCreateInstance<QueryManagerFactory>(serviceProvider);
             });
 
-            services.AddSingleton<DbExceptionParser>(implementationFactory: (serviceProvider) =>
+            services.AddSingleton<IQueryEngineFactory>(implementationFactory: (serviceProvider) =>
             {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetConfig();
+                return ActivatorUtilities.GetServiceOrCreateInstance<QueryEngineFactory>(serviceProvider);
+            });
 
-                return runtimeConfig.DataSource.DatabaseType switch
-                {
-                    DatabaseType.CosmosDB_NoSQL => null!,
-                    DatabaseType.MSSQL => ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider),
-                    DatabaseType.PostgreSQL => ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlDbExceptionParser>(serviceProvider),
-                    DatabaseType.MySQL => ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider),
-                    _ => throw new NotSupportedException(runtimeConfig.DataSource.DatabaseTypeNotSupportedMessage),
-                };
+            services.AddSingleton<IMutationEngineFactory>(implementationFactory: (serviceProvider) =>
+            {
+                return ActivatorUtilities.GetServiceOrCreateInstance<MutationEngineFactory>(serviceProvider);
+            });
+
+            services.AddSingleton<IMetadataProviderFactory>(implementationFactory: (serviceProvider) =>
+            {
+                return ActivatorUtilities.GetServiceOrCreateInstance<MetadataProviderFactory>(serviceProvider);
             });
 
             services.AddSingleton<GraphQLSchemaCreator>();
@@ -570,12 +602,12 @@ namespace Azure.DataApiBuilder.Service
                     RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
-                ISqlMetadataProvider sqlMetadataProvider =
-                    app.ApplicationServices.GetRequiredService<ISqlMetadataProvider>();
+                IMetadataProviderFactory sqlMetadataProviderFactory =
+                    app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
 
-                if (sqlMetadataProvider is not null)
+                if (sqlMetadataProviderFactory is not null)
                 {
-                    await sqlMetadataProvider.InitializeAsync();
+                    await sqlMetadataProviderFactory.InitializeAsync();
                 }
 
                 // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
@@ -598,10 +630,10 @@ namespace Azure.DataApiBuilder.Service
                 if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
+                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProviderFactory!);
                 }
 
-                runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProvider!);
+                runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProviderFactory!);
 
                 // Attempt to create OpenAPI document.
                 // Errors must not crash nor halt the intialization of the engine

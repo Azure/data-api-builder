@@ -325,6 +325,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(parsedConfig.Runtime.GraphQL.Enabled);
             Assert.AreEqual(GraphQLRuntimeOptions.DEFAULT_PATH, parsedConfig.Runtime.GraphQL.Path);
             Assert.IsTrue(parsedConfig.Runtime.GraphQL.AllowIntrospection);
+            Assert.IsNull(parsedConfig.Runtime.BaseRoute);
             Assert.AreEqual(HostMode.Development, parsedConfig.Runtime.Host.Mode);
             if (isHostSpecifiedButEmpty)
             {

@@ -160,7 +160,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns></returns>
     public string GetFileName(string? environmentValue, bool considerOverrides)
     {
-        // If the baseConfigFileName contains a path, we need to insure that is not lost. for example: baseConfigFileName = "config/dab-config.json"
+        // If the baseConfigFileName contains a path, we need to ensure that it is not lost. for example: baseConfigFileName = "config/dab-config.json"
         // in this case, we need to get the directory name and the file name without extension and then combine them back. Else, we will lose the path
         // and the file will be searched in the current directory.
         string fileNameWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFileName) ?? string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName));

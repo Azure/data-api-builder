@@ -58,7 +58,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         _fileSystem = fileSystem;
         _baseConfigFileName = baseConfigFileName;
         ConfigFileName = GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
-        // If fileName based on environment is empty, then use the default config file name.
+        // If file for environment is not found, then the baseConfigFile is used as the final configFile for runtime engine.
         if (string.IsNullOrWhiteSpace(ConfigFileName))
         {
             ConfigFileName = baseConfigFileName;

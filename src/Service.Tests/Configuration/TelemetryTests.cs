@@ -146,7 +146,7 @@ public class TelemetryTests
             JsonContent content = GetPostStartupConfigParams(TestCategory.MSSQL, _configuration, configurationEndpoint);
 
             HttpResponseMessage postResult =
-            await client.PostAsync("/configuration", content);
+            await client.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);

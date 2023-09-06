@@ -22,5 +22,6 @@ public record RuntimeOptions
             corsOrigin: null,
             EasyAuthType.StaticWebApps.ToString(),
             audience: null, issuer: null);
+        this.BaseRoute = BaseRoute;
     }
 }

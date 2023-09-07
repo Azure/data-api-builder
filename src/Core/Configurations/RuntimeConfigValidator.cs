@@ -719,7 +719,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                                 string.Join(",", fKDef.ReferencingColumns) : string.Empty;
 
                             _logger.LogDebug(
-                                message: "{entityName}: {sourceDBOName}({referencedSourceColumns}) related to {cardinality} " +
+                                message: "{entityName}: {sourceDBOName}({referencedSourceColumns}) is related to {cardinality} " +
                                 "{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
                                 "{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})",
                                 entityName,

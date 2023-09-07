@@ -133,30 +133,6 @@ namespace Cli
         }
 
         /// <summary>
-        /// Returns the Serialization option used to convert objects into JSON.
-        /// Not escaping any special unicode characters.
-        /// Ignoring properties with null values.
-        /// Keeping all the keys in lowercase.
-        /// </summary>
-        public static JsonSerializerOptions GetSerializationOptions()
-        {
-            JsonSerializerOptions? options = new()
-            {
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = new LowerCaseNamingPolicy(),
-                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing
-                // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
-                // it will throw an exception.
-                ReadCommentHandling = JsonCommentHandling.Skip
-            };
-
-            options.Converters.Add(new JsonStringEnumConverter(namingPolicy: new LowerCaseNamingPolicy()));
-            return options;
-        }
-
-        /// <summary>
         /// Returns true on successful parsing of mappings Dictionary from IEnumerable list.
         /// Returns false in case the format of the input is not correct.
         /// </summary>

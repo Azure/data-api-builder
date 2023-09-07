@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Config;
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 {
     // This stores either the default config name e.g. dab-config.json
-    // or user provided config file which could a relative file path, absolute file path or simply the file name assumed to be in current directory.
+    // or user provided config file which could be a relative file path, absolute file path or simply the file name assumed to be in current directory.
     private string _baseConfigFilePath;
 
     private readonly IFileSystem _fileSystem;

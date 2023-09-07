@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text;
+using System.Text.RegularExpressions;
+
 namespace Cli.Tests;
 
 /// <summary>
@@ -117,6 +120,73 @@ public class ConfigGeneratorTests
                 Times.Once
             );
         }
+    }
+
+    /// <summary>
+    /// Test to verify creation of initial config with special characters
+    /// such as [!,@,#,$,%,^,&,*, ,(,)] in connection-string or graphql api
+    /// </summary>
+    [TestMethod]
+    public void TestSpecialCharactersInConnectionString()
+    {
+        HandleConfigFileCreationAndDeletion(TEST_RUNTIME_CONFIG_FILE, configFilePresent: false);
+        InitOptions options = new(
+            databaseType: DatabaseType.MSSQL,
+            connectionString: "A!string@with#some$special%characters^to&check*proper(serialization).'",
+            cosmosNoSqlDatabase: null,
+            cosmosNoSqlContainer: null,
+            graphQLSchemaPath: null,
+            graphQLPath: "/An_",
+            setSessionContext: false,
+            hostMode: HostMode.Production,
+            corsOrigin: null,
+            authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+            config: TEST_RUNTIME_CONFIG_FILE);
+
+        StringBuilder expectedRuntimeConfigJson = new(
+        @"{" +
+            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+            @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""A!string@with#some$special%characters^to&check*proper(serialization).'"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+           ""runtime"": {
+                ""rest"": {
+                  ""enabled"": true,
+                  ""path"": ""/api""
+                  },
+                ""graphql"": {
+                  ""enabled"": true,
+                  ""path"": ""/An_"",
+                  ""allow-introspection"": true
+                  },
+                ""host"": {
+                  ""cors"": {
+                    ""origins"": [],
+                    ""allow-credentials"": false
+                        },
+                  ""authentication"": {
+                    ""provider"": ""StaticWebApps""
+                        },
+                  ""mode"": ""production""
+                  }
+              },
+              ""entities"": {}
+            }");
+
+        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
+        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace(" ", string.Empty);
+
+        Assert.IsTrue(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
+
+        StringBuilder actualRuntimeConfigJson = new(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE, Encoding.Default));
+        actualRuntimeConfigJson = actualRuntimeConfigJson.Replace(" ", string.Empty);
+        actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\r\n", string.Empty);
+
+        Assert.AreEqual(expectedRuntimeConfigJson, actualRuntimeConfigJson);
     }
 
     /// <summary>

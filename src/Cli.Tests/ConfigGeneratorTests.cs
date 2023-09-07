@@ -176,16 +176,14 @@ public class ConfigGeneratorTests
               ""entities"": {}
             }");
 
-        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
-        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace(" ", string.Empty);
-
         Assert.IsTrue(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 
         StringBuilder actualRuntimeConfigJson = new(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE, Encoding.Default));
-        actualRuntimeConfigJson = actualRuntimeConfigJson.Replace(" ", string.Empty);
-        actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\r\n", string.Empty);
 
-        Assert.AreEqual(expectedRuntimeConfigJson.ToString(), actualRuntimeConfigJson.ToString());
+        JToken expectedRuntimeConfigJsonToken = JToken.Parse(expectedRuntimeConfigJson.ToString());
+        JToken actualRuntimeConfigJsonToken = JToken.Parse(actualRuntimeConfigJson.ToString());
+
+        Assert.IsTrue(JToken.DeepEquals(expectedRuntimeConfigJsonToken, actualRuntimeConfigJsonToken));
     }
 
     /// <summary>

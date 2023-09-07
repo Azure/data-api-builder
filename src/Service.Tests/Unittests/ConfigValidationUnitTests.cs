@@ -2054,7 +2054,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
             fileSystem.AddEmptyFile(finalConfigFilePath);
-            FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem, baseConfigFileName: baseConfigFilePath);
+            FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem, baseConfigFilePath: baseConfigFilePath);
             Assert.AreEqual(finalConfigFilePath, runtimeConfigLoader.GetFileName(environmentValue: environmentValue, considerOverrides: false));
         }
 

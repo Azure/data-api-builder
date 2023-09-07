@@ -27,7 +27,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 {
     // This stores either the default config name e.g. dab-config.json
     // or user provided config file.
-    private string _baseConfigFileName;
+    private string _baseConfigFilePath;
 
     private readonly IFileSystem _fileSystem;
 
@@ -45,24 +45,20 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public const string DEFAULT_CONFIG_FILE_NAME = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
 
     /// <summary>
-    /// Stores the config file name actually loaded by the engine.
+    /// Stores the config file actually loaded by the engine.
     /// It could be the base config file (e.g. dab-config.json), any of its derivatives with
     /// environment specific suffixes (e.g. dab-config.Development.json) or the user provided
     /// config file name.
+    /// It could also be the config file provided by the user.
     /// </summary>
-    public string ConfigFileName { get; internal set; }
+    public string ConfigFilePath { get; internal set; }
 
-    public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFileName = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
+    public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
         : base(connectionString)
     {
         _fileSystem = fileSystem;
-        _baseConfigFileName = baseConfigFileName;
-        ConfigFileName = GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
-        // If file for environment is not found, then the baseConfigFile is used as the final configFile for runtime engine.
-        if (string.IsNullOrWhiteSpace(ConfigFileName))
-        {
-            ConfigFileName = baseConfigFileName;
-        }
+        _baseConfigFilePath = baseConfigFilePath;
+        ConfigFilePath = GetFinalConfigFilePath();
     }
 
     /// <summary>
@@ -104,7 +100,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
-        return TryLoadConfig(ConfigFileName, out config, replaceEnvVar);
+        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
     }
 
     /// <summary>
@@ -150,6 +146,29 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
+    /// This method returns the final config file name that will be used by the runtime engine.
+    /// </summary>
+    private string GetFinalConfigFilePath()
+    {
+        if(!string.Equals(_baseConfigFilePath, DEFAULT_CONFIG_FILE_NAME))
+        {
+            // user provided config file is honoured.
+            return _baseConfigFilePath;
+        }
+
+        // ConfigFile not explicitly provided by user, so we need to get the config file name based on environment.
+        string configFilePath = GetFileNameForEnvironment(Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME), false);
+
+        // If file for environment is not found, then the baseConfigFile is used as the final configFile for runtime engine.
+        if (string.IsNullOrWhiteSpace(configFilePath))
+        {
+            return _baseConfigFilePath;
+        }
+
+        return configFilePath;
+    }
+
+    /// <summary>
     /// Generates the config file name and a corresponding overridden file name,
     /// With precedence given to overridden file name, returns that name
     /// if the file exists in the current directory, else an empty string.
@@ -160,24 +179,24 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns></returns>
     public string GetFileName(string? environmentValue, bool considerOverrides)
     {
-        // If the baseConfigFileName contains a path, we need to ensure that it is not lost. for example: baseConfigFileName = "config/dab-config.json"
+        // If the baseConfigFilePath contains directory info, we need to ensure that it is not lost. for example: baseConfigFilePath = "config/dab-config.json"
         // in this case, we need to get the directory name and the file name without extension and then combine them back. Else, we will lose the path
         // and the file will be searched in the current directory.
-        string fileNameWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFileName) ?? string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName));
-        string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFileName);
-        string configFileName =
+        string filePathWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFilePath) ?? string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFilePath));
+        string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFilePath);
+        string configFilePath =
             !string.IsNullOrEmpty(environmentValue)
-            ? $"{fileNameWithoutExtension}.{environmentValue}"
-            : $"{fileNameWithoutExtension}";
-        string configFileNameWithExtension = $"{configFileName}{fileExtension}";
-        string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
+            ? $"{filePathWithoutExtension}.{environmentValue}"
+            : $"{filePathWithoutExtension}";
+        string configFileNameWithExtension = $"{configFilePath}{fileExtension}";
+        string overriddenConfigFileNameWithExtension = GetOverriddenName(configFilePath);
 
-        if (considerOverrides && DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
+        if (considerOverrides && DoesFileExistInDirectory(overriddenConfigFileNameWithExtension))
         {
             return overriddenConfigFileNameWithExtension;
         }
 
-        if (DoesFileExistInCurrentDirectory(configFileNameWithExtension))
+        if (DoesFileExistInDirectory(configFileNameWithExtension))
         {
             return configFileNameWithExtension;
         }
@@ -185,9 +204,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         return string.Empty;
     }
 
-    private static string GetOverriddenName(string fileName)
+    private static string GetOverriddenName(string filePath)
     {
-        return $"{fileName}.overrides{CONFIG_EXTENSION}";
+        return $"{filePath}.overrides{CONFIG_EXTENSION}";
     }
 
     /// <summary>
@@ -199,10 +218,16 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         return $"{fileName}.{environmentValue}{CONFIG_EXTENSION}";
     }
 
-    public bool DoesFileExistInCurrentDirectory(string fileName)
+    /// <summary>
+    /// Checks if the file exists in the directory.
+    /// Works for both relative and absolute paths.
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <returns>True if file is found, else false.</returns>
+    public bool DoesFileExistInDirectory(string filePath)
     {
         string currentDir = _fileSystem.Directory.GetCurrentDirectory();
-        return _fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, fileName));
+        return _fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, filePath));
     }
 
     /// <summary>
@@ -265,9 +290,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// to be updated. This is commonly done when the CLI is starting up.
     /// </summary>
     /// <param name="fileName"></param>
-    public void UpdateConfigFileName(string fileName)
+    public void UpdateConfigFilePath(string filePath)
     {
-        _baseConfigFileName = fileName;
-        ConfigFileName = fileName;
+        _baseConfigFilePath = filePath;
+        ConfigFilePath = filePath;
     }
 }

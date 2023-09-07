@@ -362,7 +362,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 _metadataProviderFactory.Object);
             Mock<SqlQueryStructure> structure = new(
                 context,
-                _metadataProviderFactory.Object,
+                _sqlMetadataProvider,
                 authorizationResolver,
                 runtimeConfigProvider,
                 new GQLFilterParser(runtimeConfigProvider, _metadataProviderFactory.Object),

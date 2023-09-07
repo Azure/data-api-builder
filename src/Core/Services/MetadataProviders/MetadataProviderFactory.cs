@@ -49,7 +49,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             foreach ((_, ISqlMetadataProvider provider) in _metadataProviders)
             {
-                await provider.InitializeAsync();
+                if (provider is not null)
+                {
+                    await provider.InitializeAsync();
+                }
             }
         }
 

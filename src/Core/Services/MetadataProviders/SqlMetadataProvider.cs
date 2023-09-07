@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            ConnectionString = runtimeConfig.DataSource.ConnectionString;
+            ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
             EntitiesDataSet = new();
             EngineFactory = engineFactory;
             SqlQueryBuilder = EngineFactory.GetQueryBuilder(_databaseType);

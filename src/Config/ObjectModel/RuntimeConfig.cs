@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -18,6 +19,8 @@ public record RuntimeConfig
     public RuntimeOptions Runtime { get; init; }
 
     public RuntimeEntities Entities { get; init; }
+
+    public IEnumerable<string>? DataSourceFiles { get; init; }
 
     private string _defaultDataSourceName;
 
@@ -50,21 +53,36 @@ public record RuntimeConfig
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="Entities">Entities</param>
     [JsonConstructor]
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities)
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, IEnumerable<string>? DataSourceFiles = null)
     {
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = Entities;
         this._dataSourceNameToDataSource = new Dictionary<string, DataSource>();
         this._defaultDataSourceName = Guid.NewGuid().ToString();
         this._dataSourceNameToDataSource.Add(this._defaultDataSourceName, this.DataSource);
-
         this._entityNameToDataSourceName = new Dictionary<string, string>();
+        IFileSystem fileSystem = new FileSystem();
+        FileSystemRuntimeConfigLoader loader = new(fileSystem);
+
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, this._defaultDataSourceName);
         }
+
+        IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
+
+        foreach (string dataSourceFile in DataSourceFiles ?? Enumerable.Empty<string>())
+        {
+            if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
+            {
+                this._dataSourceNameToDataSource = this._dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                this._entityNameToDataSourceName = this._entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                allEntities = allEntities.Concat(config.Entities.ToList());
+            }
+        }
+
+        this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
 
     }
 

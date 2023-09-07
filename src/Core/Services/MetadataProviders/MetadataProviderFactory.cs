@@ -56,6 +56,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public IEnumerable<ISqlMetadataProvider> ListMetadataProviders()
         {
             return _metadataProviders.Values;
-        }   
+        }
     }
 }

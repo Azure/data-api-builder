@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Cli.Tests;
 
@@ -186,7 +185,7 @@ public class ConfigGeneratorTests
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace(" ", string.Empty);
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\r\n", string.Empty);
 
-        Assert.AreEqual(expectedRuntimeConfigJson, actualRuntimeConfigJson);
+        Assert.AreEqual(expectedRuntimeConfigJson.ToString(), actualRuntimeConfigJson.ToString());
     }
 
     /// <summary>

@@ -119,10 +119,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
             DefaultHttpContext context = new();
-            Mock<GQLFilterParser> _gQLFilterParser = new(_sqlMetadataProvider.Object);
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
 
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            Mock<GQLFilterParser> _gQLFilterParser = new(provider, _metadataProviderFactory.Object);
 
             Mock<IQueryManagerFactory> _queryManagerFactory = new();
 

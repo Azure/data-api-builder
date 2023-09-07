@@ -3,9 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -130,30 +128,6 @@ namespace Cli
             public override string ConvertName(string name) => name.ToLower();
 
             public static string ConvertName(Enum name) => name.ToString().ToLower();
-        }
-
-        /// <summary>
-        /// Returns the Serialization option used to convert objects into JSON.
-        /// Not escaping any special unicode characters.
-        /// Ignoring properties with null values.
-        /// Keeping all the keys in lowercase.
-        /// </summary>
-        public static JsonSerializerOptions GetSerializationOptions()
-        {
-            JsonSerializerOptions? options = new()
-            {
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = new LowerCaseNamingPolicy(),
-                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing
-                // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
-                // it will throw an exception.
-                ReadCommentHandling = JsonCommentHandling.Skip
-            };
-
-            options.Converters.Add(new JsonStringEnumConverter(namingPolicy: new LowerCaseNamingPolicy()));
-            return options;
         }
 
         /// <summary>

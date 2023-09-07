@@ -4,8 +4,10 @@
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -23,15 +25,17 @@ namespace Azure.DataApiBuilder.Core.Models
     {
         public static readonly string NullStringValue = "NULL";
 
-        private readonly ISqlMetadataProvider _metadataProvider;
+        private readonly RuntimeConfigProvider _configProvider;
+        private readonly IMetadataProviderFactory _metadataProviderFactory;
 
         /// <summary>
         /// Constructor for the filter parser.
         /// </summary>
         /// <param name="metadataProvider">The metadata provider of the respective database.</param>
-        public GQLFilterParser(ISqlMetadataProvider metadataProvider)
+        public GQLFilterParser(RuntimeConfigProvider runtimeConfigProvider, IMetadataProviderFactory metadataProviderFactory)
         {
-            _metadataProvider = metadataProvider;
+            _configProvider = runtimeConfigProvider;
+            _metadataProviderFactory = metadataProviderFactory;
         }
 
         /// <summary>
@@ -53,7 +57,11 @@ namespace Azure.DataApiBuilder.Core.Models
             string schemaName = queryStructure.DatabaseObject.SchemaName;
             string sourceName = queryStructure.DatabaseObject.Name;
             string sourceAlias = queryStructure.SourceAlias;
+            string entityName = queryStructure.EntityName;
             SourceDefinition sourceDefinition = queryStructure.GetUnderlyingSourceDefinition();
+
+            string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
 
@@ -123,7 +131,7 @@ namespace Azure.DataApiBuilder.Core.Models
                     // {  comics ( filter: { myseries: { name: { eq: 'myName' } } } ) { <field selection> } }
                     string backingColumnName = name;
 
-                    _metadataProvider.TryGetBackingColumn(queryStructure.EntityName, field: name, out string? resolvedBackingColumnName);
+                    metadataProvider.TryGetBackingColumn(queryStructure.EntityName, field: name, out string? resolvedBackingColumnName);
 
                     // When runtime configuration defines relationship metadata,
                     // an additional field on the entity representing GraphQL type
@@ -182,7 +190,7 @@ namespace Azure.DataApiBuilder.Core.Models
                             // This path will only be exercised for CosmosDb_NoSql
                             queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
                             queryStructure.SourceAlias = sourceName + "." + backingColumnName;
-                            string? nestedFieldType = _metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
+                            string? nestedFieldType = metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
 
                             if (nestedFieldType is null)
                             {
@@ -192,7 +200,7 @@ namespace Azure.DataApiBuilder.Core.Models
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                             }
 
-                            queryStructure.EntityName = _metadataProvider.GetEntityName(nestedFieldType);
+                            queryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldType);
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
@@ -254,7 +262,11 @@ namespace Azure.DataApiBuilder.Core.Models
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            string nestedFilterEntityName = _metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
+            string entityName = queryStructure.EntityName;
+            string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+
+            string nestedFilterEntityName = metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
 
             // Validate that the field referenced in the nested input filter can be accessed.
             bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
@@ -278,7 +290,7 @@ namespace Azure.DataApiBuilder.Core.Models
             // and an additional predicate to reflect the join between main query and this exists subquery.
             SqlExistsQueryStructure existsQuery = new(
                 GetHttpContextFromMiddlewareContext(ctx),
-                _metadataProvider,
+                metadataProvider,
                 queryStructure.AuthorizationResolver,
                 this,
                 predicatesForExistsQuery,

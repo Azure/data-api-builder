@@ -5,7 +5,6 @@ using System.Net;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 
@@ -20,10 +19,6 @@ namespace Azure.DataApiBuilder.Core.Services
     public class PostgreSqlMetadataProvider :
         SqlMetadataProvider<NpgsqlConnection, NpgsqlDataAdapter, NpgsqlCommand>
     {
-        public PostgreSqlMetadataProvider(IServiceProvider serviceProvider, string dataSourceName)
-            : base(serviceProvider.GetRequiredService<RuntimeConfigProvider>(), serviceProvider.GetRequiredService<IQueryManagerFactory>(), serviceProvider.GetRequiredService<ILogger<ISqlMetadataProvider>>(), dataSourceName)
-        {
-        }
 
         public PostgreSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,

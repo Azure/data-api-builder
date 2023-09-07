@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests;
@@ -123,7 +124,10 @@ type Sun @model(name:""Sun"") {
         RuntimeConfigProvider provider = new(loader);
 
         ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);
-        IAuthorizationResolver authorizationResolverCosmos = new AuthorizationResolver(provider, cosmosSqlMetadataProvider);
+        Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+        metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(cosmosSqlMetadataProvider);
+
+        IAuthorizationResolver authorizationResolverCosmos = new AuthorizationResolver(provider, metadataProviderFactory.Object);
 
         return new WebApplicationFactory<Startup>()
             .WithWebHostBuilder(builder =>

@@ -169,11 +169,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
+                // Setup Mock engine Factory
+                Mock<IQueryManagerFactory> queryManagerFactory = new();
+                queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
                 ISqlMetadataProvider sqlMetadataProvider = databaseType switch
                 {
-                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
-                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
-                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
                     _ => throw new ArgumentException($"Invalid database type: {databaseType}")
                 };
 

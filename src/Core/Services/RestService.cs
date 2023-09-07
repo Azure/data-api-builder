@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -24,27 +25,27 @@ namespace Azure.DataApiBuilder.Core.Services
     /// </summary>
     public class RestService
     {
-        private readonly IQueryEngine _queryEngine;
-        private readonly IMutationEngine _mutationEngine;
+        private readonly IQueryEngineFactory _queryEngineFactory;
+        private readonly IMutationEngineFactory _mutationEngineFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
-        private readonly ISqlMetadataProvider _sqlMetadataProvider;
+        private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public RestService(
-            IQueryEngine queryEngine,
-            IMutationEngine mutationEngine,
-            ISqlMetadataProvider sqlMetadataProvider,
+            IQueryEngineFactory queryEngineFactory,
+            IMutationEngineFactory mutationEngineFactory,
+            IMetadataProviderFactory sqlMetadataProviderFactory,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
             RuntimeConfigProvider runtimeConfigProvider
             )
         {
-            _queryEngine = queryEngine;
-            _mutationEngine = mutationEngine;
+            _queryEngineFactory = queryEngineFactory;
+            _mutationEngineFactory = mutationEngineFactory;
             _httpContextAccessor = httpContextAccessor;
             _authorizationService = authorizationService;
-            _sqlMetadataProvider = sqlMetadataProvider;
+            _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
         }
 
@@ -60,8 +61,10 @@ namespace Azure.DataApiBuilder.Core.Services
             EntityActionOperation operationType,
             string? primaryKeyRoute)
         {
-            RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
-            DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            RequestValidator.ValidateEntity(entityName, sqlMetadataProvider.EntityToDatabaseObject.Keys);
+            DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
             if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
             {
@@ -125,7 +128,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             RequestValidator.ValidateInsertRequestContext(
                             (InsertRequestContext)context,
-                            _sqlMetadataProvider);
+                            sqlMetadataProvider);
                         }
 
                         break;
@@ -149,7 +152,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
                             RequestValidator.
-                                ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                                ValidateUpsertRequestContext((UpsertRequestContext)context, sqlMetadataProvider);
                         }
 
                         break;
@@ -165,18 +168,18 @@ namespace Azure.DataApiBuilder.Core.Services
                     // After parsing primary key, the Context will be populated with the
                     // correct PrimaryKeyValuePairs.
                     RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                    RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
+                    RequestValidator.ValidatePrimaryKey(context, sqlMetadataProvider);
                 }
 
                 if (!string.IsNullOrWhiteSpace(queryString))
                 {
                     context.ParsedQueryString = HttpUtility.ParseQueryString(queryString);
-                    RequestParser.ParseQueryString(context, _sqlMetadataProvider);
+                    RequestParser.ParseQueryString(context, sqlMetadataProvider);
                 }
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
-            RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
+            RequestValidator.ValidateRequestContext(context, sqlMetadataProvider);
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
             // Stored procedures do not yet have semantics defined for column-level permissions
@@ -188,14 +191,14 @@ namespace Azure.DataApiBuilder.Core.Services
             switch (operationType)
             {
                 case EntityActionOperation.Read:
-                    return await DispatchQuery(context);
+                    return await DispatchQuery(context, sqlMetadataProvider.GetDatabaseType());
                 case EntityActionOperation.Insert:
                 case EntityActionOperation.Delete:
                 case EntityActionOperation.Update:
                 case EntityActionOperation.UpdateIncremental:
                 case EntityActionOperation.Upsert:
                 case EntityActionOperation.UpsertIncremental:
-                    return await DispatchMutation(context);
+                    return await DispatchMutation(context, sqlMetadataProvider.GetDatabaseType());
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             };
@@ -205,12 +208,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Dispatch execution of a request context to the query engine
         /// The two overloads to ExecuteAsync take FindRequestContext and StoredProcedureRequestContext
         /// </summary>
-        private Task<IActionResult> DispatchQuery(RestRequestContext context)
+        private Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
         {
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
             return context switch
             {
-                FindRequestContext => _queryEngine.ExecuteAsync((FindRequestContext)context),
-                StoredProcedureRequestContext => _queryEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                FindRequestContext => queryEngine.ExecuteAsync((FindRequestContext)context),
+                StoredProcedureRequestContext => queryEngine.ExecuteAsync((StoredProcedureRequestContext)context),
                 _ => throw new NotSupportedException("This operation is not yet supported."),
             };
         }
@@ -219,12 +223,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Dispatch execution of a request context to the mutation engine
         /// The two overloads to ExecuteAsync take StoredProcedureRequestContext and RestRequestContext
         /// </summary>
-        private Task<IActionResult?> DispatchMutation(RestRequestContext context)
+        private Task<IActionResult?> DispatchMutation(RestRequestContext context, DatabaseType databaseType)
         {
+            IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(databaseType);
             return context switch
             {
-                StoredProcedureRequestContext => _mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context),
-                _ => _mutationEngine.ExecuteAsync(context)
+                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                _ => mutationEngine.ExecuteAsync(context)
             };
         }
 
@@ -242,6 +247,9 @@ namespace Azure.DataApiBuilder.Core.Services
             string requestBody,
             out RestRequestContext context)
         {
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+
             switch (operationType)
             {
 
@@ -293,7 +301,7 @@ namespace Azure.DataApiBuilder.Core.Services
             ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
 
             // Validate the request parameters
-            RequestValidator.ValidateStoredProcedureRequestContext((StoredProcedureRequestContext)context, _sqlMetadataProvider);
+            RequestValidator.ValidateStoredProcedureRequestContext((StoredProcedureRequestContext)context, sqlMetadataProvider);
         }
 
         /// <summary>
@@ -431,8 +439,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// (and optionally primary key).</param>
         /// <returns>entity name associated with entity path and primary key route.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string routeAfterPathBase)
+        public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string routeAfterPathBase, string dataSourceName = "")
         {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
             // this means we have a non empty primary key route which we save. Otherwise, save
             // primary key route as empty string. Entity Path will always be the element at index 0.
@@ -444,7 +459,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityPath = entityPathAndPKRoute[0];
             string primaryKeyRoute = entityPathAndPKRoute.Length == maxNumberOfElementsFromSplit ? entityPathAndPKRoute[1] : string.Empty;
 
-            if (!_sqlMetadataProvider.TryGetEntityNameFromPath(entityPath, out string? entityName))
+            if (!sqlMetadataProvider.TryGetEntityNameFromPath(entityPath, out string? entityName))
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid Entity path: {entityPath}.",

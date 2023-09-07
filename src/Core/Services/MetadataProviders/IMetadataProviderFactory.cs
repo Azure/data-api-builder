@@ -17,6 +17,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public ISqlMetadataProvider GetMetadataProvider(string dataSourceName);
 
         /// <summary>
+        /// Lists the metadata providers.
+        /// </summary>
+        /// <returns>IEnumerable of metadataproviders.</returns>
+        public IEnumerable<ISqlMetadataProvider> ListMetadataProviders();
+
+        /// <summary>
         /// Initializes the metadata providers.
         /// </summary>
         /// <returns>Task.</returns>

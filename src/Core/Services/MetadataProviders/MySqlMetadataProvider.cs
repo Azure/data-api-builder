@@ -6,7 +6,6 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 
@@ -19,11 +18,6 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         public const string MYSQL_INVALID_CONNECTION_STRING_MESSAGE = "Format of the initialization string";
         public const string MYSQL_INVALID_CONNECTION_STRING_OPTIONS = "GetOptionForKey";
-
-        public MySqlMetadataProvider(IServiceProvider serviceProvider, string dataSourceName)
-            : base(serviceProvider.GetRequiredService<RuntimeConfigProvider>(), serviceProvider.GetRequiredService<IQueryManagerFactory>(), serviceProvider.GetRequiredService<ILogger<ISqlMetadataProvider>>(), dataSourceName)
-        {
-        }
 
         public MySqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,

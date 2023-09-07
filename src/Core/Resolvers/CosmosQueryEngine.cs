@@ -7,6 +7,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -22,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class CosmosQueryEngine : IQueryEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-        private readonly ISqlMetadataProvider _metadataStoreProvider;
+        private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly CosmosQueryBuilder _queryBuilder;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly IAuthorizationResolver _authorizationResolver;
@@ -32,12 +33,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public CosmosQueryEngine(
             CosmosClientProvider clientProvider,
-            ISqlMetadataProvider metadataStoreProvider,
+            IMetadataProviderFactory metadataProviderFactory,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser)
         {
             _clientProvider = clientProvider;
-            _metadataStoreProvider = metadataStoreProvider;
+            _metadataProviderFactory = metadataProviderFactory;
             _queryBuilder = new CosmosQueryBuilder();
             _gQLFilterParser = gQLFilterParser;
             _authorizationResolver = authorizationResolver;
@@ -62,7 +63,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
-            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+
+            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
@@ -71,7 +74,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
-            (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure);
+            (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure, metadataStoreProvider);
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {
@@ -156,7 +159,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
-            CosmosQueryStructure structure = new(context, parameters, _metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
@@ -262,9 +266,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
-        private async Task<string> GetPartitionKeyPath(Container container)
+        private static async Task<string> GetPartitionKeyPath(Container container, ISqlMetadataProvider metadataStoreProvider)
         {
-            string partitionKeyPath = _metadataStoreProvider.GetPartitionKeyPath(container.Database.Id, container.Id);
+            string partitionKeyPath = metadataStoreProvider.GetPartitionKeyPath(container.Database.Id, container.Id);
             if (partitionKeyPath is not null)
             {
                 return partitionKeyPath;
@@ -272,16 +276,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             ContainerResponse properties = await container.ReadContainerAsync();
             partitionKeyPath = properties.Resource.PartitionKeyPath;
-            _metadataStoreProvider.SetPartitionKeyPath(container.Database.Id, container.Id, partitionKeyPath);
+            metadataStoreProvider.SetPartitionKeyPath(container.Database.Id, container.Id, partitionKeyPath);
 
             return partitionKeyPath;
         }
 
 #nullable enable
-        private async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure)
+        private async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure, ISqlMetadataProvider metadataStoreProvider)
         {
             string? partitionKeyValue = null, idValue = null;
-            string partitionKeyPath = await GetPartitionKeyPath(container);
+            string partitionKeyPath = await GetPartitionKeyPath(container, metadataStoreProvider);
 
             foreach (KeyValuePair<string, object?> parameterEntry in parameters)
             {

@@ -2,8 +2,14 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -19,9 +25,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Initializes a new instance of the <see cref="QueryEngineFactory"/> class.
         /// </summary>
         /// <param name="queryEngines">queryEngines.</param>
-        public QueryEngineFactory(IEnumerable<IQueryEngine> queryEngines)
+        public QueryEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
+            IQueryManagerFactory queryManagerFactory,
+            IMetadataProviderFactory metadataProviderFactory,
+            CosmosClientProvider cosmosClientProvider,
+            IHttpContextAccessor contextAccessor,
+            IAuthorizationResolver authorizationResolver,
+            GQLFilterParser gQLFilterParser,
+            ILogger<IQueryEngine> logger)
         {
-            _queryEngines = queryEngines;
+            _queryEngines = new List<IQueryEngine>();
+
+            bool sqlEngineNeeded = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Any
+                (x => x.Value.DatabaseType == DatabaseType.MSSQL || x.Value.DatabaseType == DatabaseType.PostgreSQL || x.Value.DatabaseType == DatabaseType.MySQL);
+
+            if (sqlEngineNeeded)
+            {
+                _queryEngines = _queryEngines.Append(new SqlQueryEngine(queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider));
+            }
+
+            bool cosmosEngineNeeded = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Any
+                (x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL || x.Value.DatabaseType == DatabaseType.CosmosDB_PostgreSQL);
+
+            if (cosmosEngineNeeded)
+            {
+
+                _queryEngines = _queryEngines.Append(new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser));
+            }
+
         }
 
         /// <summary>

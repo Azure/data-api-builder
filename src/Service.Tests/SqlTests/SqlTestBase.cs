@@ -48,6 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
         protected static Mock<IQueryManagerFactory> _queryManagerFactory;
         protected static Mock<IQueryEngineFactory> _queryEngineFactory;
+        protected static Mock<IMetadataProviderFactory> _metadataProviderFactory;
         protected static DbExceptionParser _dbExceptionParser;
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
@@ -107,10 +108,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
             _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 
+            // Setup Mock metadataprovider Factory
+            _metadataProviderFactory = new Mock<IMetadataProviderFactory>();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider);
+
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
-            _gQLFilterParser = new(_sqlMetadataProvider);
+            _gQLFilterParser = new(runtimeConfigProvider, _metadataProviderFactory.Object);
+
             await ResetDbStateAsync();
 
             // Execute additional queries, if any.
@@ -124,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(
                 runtimeConfigProvider,
-                _sqlMetadataProvider);
+                _metadataProviderFactory.Object);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>

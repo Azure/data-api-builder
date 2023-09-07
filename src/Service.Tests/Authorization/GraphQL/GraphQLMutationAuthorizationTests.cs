@@ -4,6 +4,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -113,8 +114,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             Mock<IQueryBuilder> _queryBuilder = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             Mock<ILogger<SqlMutationEngine>> _mutationEngineLogger = new();
-            Mock<RuntimeConfigLoader> mockFileLoader = new();
-            RuntimeConfigProvider provider = new(mockFileLoader.Object);
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(string.Empty));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
             DefaultHttpContext context = new();
             Mock<GQLFilterParser> _gQLFilterParser = new(_sqlMetadataProvider.Object);
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();

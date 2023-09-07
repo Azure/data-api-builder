@@ -3,7 +3,10 @@
 
 using System.Net;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -20,16 +23,47 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Initiates an instance of QueryManagerFactory
         /// </summary>
-        /// <param name="queryBuilders">queryBuilders.</param>
-        /// <param name="queryExecutors">queryExecutors.</param>
-        /// <param name="dbExceptionsParsers">dbExceptionParsers.</param>
-        public QueryManagerFactory(IEnumerable<IQueryBuilder> queryBuilders,
-            IEnumerable<IQueryExecutor> queryExecutors,
-            IEnumerable<DbExceptionParser> dbExceptionsParsers)
+        /// <param name="runtimeConfigProvider">runtimeconfigprovider.</param>
+        /// <param name="logger">logger.</param>
+        /// <param name="contextAccessor">httpcontextaccessor.</param>
+        public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor)
         {
-            _queryBuilders = queryBuilders.ToDictionary(provider => provider.DeriveDatabaseType(), provider => provider);
-            _queryExecutors = queryExecutors.ToDictionary(provider => provider.DeriveDatabaseType(), provider => provider);
-            _dbExceptionsParsers = dbExceptionsParsers.ToDictionary(provider => provider.DeriveDatabaseType(), provider => provider);
+            _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
+            _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();
+            _dbExceptionsParsers = new Dictionary<DatabaseType, DbExceptionParser>();
+            foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
+            {
+                IQueryBuilder? queryBuilder = null;
+                IQueryExecutor? queryExecutor = null;
+                DbExceptionParser? exceptionParser = null;
+
+                switch (dataSource.DatabaseType)
+                {
+                    case DatabaseType.CosmosDB_NoSQL:
+                        break;
+                    case DatabaseType.MSSQL:
+                        queryBuilder = new MsSqlQueryBuilder();
+                        exceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+                        queryExecutor = new MsSqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
+                        break;
+                    case DatabaseType.MySQL:
+                        queryBuilder = new MySqlQueryBuilder();
+                        exceptionParser = new MySqlDbExceptionParser(runtimeConfigProvider);
+                        queryExecutor = new MySqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
+                        break;
+                    case DatabaseType.PostgreSQL:
+                        queryBuilder = new PostgresQueryBuilder();
+                        exceptionParser = new PostgreSqlDbExceptionParser(runtimeConfigProvider);
+                        queryExecutor = new PostgreSqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
+                        break;
+                    default:
+                        throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage);
+                }
+
+                _queryBuilders.TryAdd(dataSource.DatabaseType, queryBuilder!);
+                _queryExecutors.TryAdd(dataSource.DatabaseType, queryExecutor!);
+                _dbExceptionsParsers.TryAdd(dataSource.DatabaseType, exceptionParser!);
+            }
         }
 
         /// <inheritdoc />

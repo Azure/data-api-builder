@@ -2,7 +2,11 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
@@ -11,9 +15,22 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     {
         private readonly IDictionary<string, ISqlMetadataProvider> _metadataProviders;
 
-        public MetadataProviderFactory(IEnumerable<ISqlMetadataProvider> metadataProviders)
+        public MetadataProviderFactory(RuntimeConfigProvider runtimeConfigProvider, IQueryManagerFactory engineFactory, ILogger<ISqlMetadataProvider> logger)
         {
-            _metadataProviders = metadataProviders.ToDictionary(provider => provider.GetDatabaseSourceName(), provider => provider);
+            _metadataProviders = new Dictionary<string, ISqlMetadataProvider>();
+            foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
+            {
+                ISqlMetadataProvider metadataProvider = dataSource.DatabaseType switch
+                {
+                    DatabaseType.CosmosDB_NoSQL => null!,
+                    DatabaseType.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),
+                    DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),
+                    DatabaseType.MySQL => new MySqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),
+                    _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
+                };
+
+                _metadataProviders.TryAdd(dataSourceName, metadataProvider);
+            }
         }
 
         /// <inheritdoc />
@@ -35,5 +52,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 await provider.InitializeAsync();
             }
         }
+
+        public IEnumerable<ISqlMetadataProvider> ListMetadataProviders()
+        {
+            return _metadataProviders.Values;
+        }   
     }
 }

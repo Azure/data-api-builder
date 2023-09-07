@@ -159,8 +159,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IAuthorizationService> authorizationService = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
-            AuthorizationResolver authorizationResolver = new(provider, sqlMetadataProvider.Object);
-            GQLFilterParser gQLFilterParser = new(sqlMetadataProvider.Object);
+            AuthorizationResolver authorizationResolver = new(provider, metadataProviderFactory.Object);
+            GQLFilterParser gQLFilterParser = new(provider, metadataProviderFactory.Object);
             SqlQueryEngine queryEngine = new(
                 queryManagerFactory.Object,
                 metadataProviderFactory.Object,
@@ -182,11 +182,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 httpContextAccessor.Object,
                 provider);
 
+            Mock<IMutationEngineFactory> mutationEngineFactory = new();
+            mutationEngineFactory.Setup(x => x.GetMutationEngine(It.IsAny<DatabaseType>())).Returns(mutationEngine);
+
             // Setup REST Service
             _restService = new RestService(
-                queryEngine,
-                mutationEngine,
-                sqlMetadataProvider.Object,
+                queryEngineFactory.Object,
+                mutationEngineFactory.Object,
+                metadataProviderFactory.Object,
                 httpContextAccessor.Object,
                 authorizationService.Object,
                 provider);

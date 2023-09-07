@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (!configuration.ListAllDataSources().Any(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
             {
-                throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
+                return;
             }
 
             IEnumerable<KeyValuePair<string, DataSource>> cosmosDb = configuration.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL);

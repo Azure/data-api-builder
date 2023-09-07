@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Humanizer;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -53,8 +54,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             metadataProvider.Setup(x => x.GetEntityName(It.IsAny<string>()))
                 .Returns((string entity) => entity);
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(metadataProvider.Object);
 
-            return new AuthorizationResolver(runtimeConfigProvider, metadataProvider.Object);
+            return new AuthorizationResolver(runtimeConfigProvider, metadataProviderFactory.Object);
         }
 
         /// <summary>

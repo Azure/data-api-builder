@@ -150,7 +150,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     private string GetFinalConfigFilePath()
     {
-        if(!string.Equals(_baseConfigFilePath, DEFAULT_CONFIG_FILE_NAME))
+        if (!string.Equals(_baseConfigFilePath, DEFAULT_CONFIG_FILE_NAME))
         {
             // user provided config file is honoured.
             return _baseConfigFilePath;

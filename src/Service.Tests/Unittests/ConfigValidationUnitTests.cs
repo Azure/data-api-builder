@@ -2019,43 +2019,68 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// This test checks that the final config used by runtime engine doesn't lose the directory information
-        /// if provided in the base config file path when loading the config based on the environment.
-        /// </summary>
-        /// <param name="addDirectory"></param>
+        /// if provided by the user.
+        /// It also validates that if config file is provided by the user, it will be used directly irrespective of
+        /// environment variable being set or not. 
+        /// When user doesn't provide a config file, we check if environment variable is set and if it is, we use
+        /// the config file specified by the environment variable, else we use the default config file.
+        /// <param name="IsDifferentDirectory"></param>
         /// <param name="environmentValue"></param>
+        /// <param name="isAbsolutePath"></param>
         /// <param name="baseConfigFilePath"></param>
         /// <param name="finalConfigFilePath"></param>
         [DataTestMethod]
-        [DataRow(false, "", false, "current-dir-dab-config.json", "current-dir-dab-config.json", DisplayName = "Config file in the current directory")]
-        [DataRow(true, "", false, "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.json", DisplayName = "Config file in a different directory")]
-        [DataRow(false, "Test", false, "current-dir-dab-config.json", "current-dir-dab-config.Test.json", DisplayName = "Config file in the current directory with non-empty environment value")]
-        [DataRow(true, "Test", false, "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.Test.json", DisplayName = "Config file in a different directory with non-empty environment value")]
-        [DataRow(false, "", true, "current-dir-dab-config.json", "current-dir-dab-config.json", DisplayName = "Config file in the current directory using absolute path")]
-        [DataRow(true, "", true, "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.json", DisplayName = "Config file in a different directory using absolute path")]
-        [DataRow(false, "Test", true, "current-dir-dab-config.json", "current-dir-dab-config.Test.json", DisplayName = "Config file in the current directory with non-empty environment value using absolute path")]
-        [DataRow(true, "Test", true, "test\\diff-dir-dab-config.json", "test\\diff-dir-dab-config.Test.json", DisplayName = "Config file in a different directory with non-empty environment value using absolute path")]
-        public void TestDirectoryInfoIsRetainedInFinalConfig(
-            bool IsDifferentDirectory,
+        [DataRow("my-config.json", "", false, false, null, "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is not set")]
+        [DataRow("test-configs/my-config.json", "", true, false, null, "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is not set")]
+        [DataRow("my-config.json", "Test", false, false, "my-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set")]
+        [DataRow("test-configs/my-config.json", "Test", true, false, "test-configs/my-config.Test.json", "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is set")]
+        [DataRow("my-config.json", "Test", false, false, "dab-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set and environment file is present")]
+        [DataRow("test-configs/my-config.json", "Test", true, false, "test-configs/dab-config.Test.json", "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is set and environment file is present")]
+        [DataRow("my-config.json", "", false, true, null, "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is not set and absolute path is provided")]
+        [DataRow("test-configs/my-config.json", "", true, true, null, "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is not set and absolute path is provided")]
+        [DataRow("my-config.json", "Test", false, true, "my-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set and absolute path is provided")]
+        [DataRow("test-configs/my-config.json", "Test", true, true, "test-configs/my-config.Test.json", "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is set and absolute path is provided")]
+        [DataRow("my-config.json", "Test", false, true, "dab-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set and environment file is present and absolute path is provided")]
+        [DataRow("test-configs/my-config.json", "Test", true, true, "test-configs/dab-config.Test.json", "test-configs/my-config.json", DisplayName = "Config file in the different directory provided by user and environment variable is set and environment file is present and absolute path is provided")]
+        [DataRow(null, "", false, false, null, "dab-config.json", DisplayName = "Config file not provided by user and environment variable is not set")]
+        [DataRow(null, "Test", false, false, "dab-config.Test.json", "dab-config.json", DisplayName = "Config file not provided by user and environment variable is set and environment file is present")]
+        [DataRow(null, "Test", false, false, null, "dab-config.json", DisplayName = "Config file not provided by user and environment variable is set and environment file is not present")]
+        public void TestCorrectConfigFileIsSelectedForRuntimeEngine(
+            string userProvidedConfigFilePath,
             string environmentValue,
+            bool IsDifferentDirectory,
             bool isAbsolutePath,
-            string baseConfigFilePath,
+            string environmentFile,
             string finalConfigFilePath)
         {
             MockFileSystem fileSystem = new();
             if (IsDifferentDirectory)
             {
-                fileSystem.AddDirectory("test");
+                fileSystem.AddDirectory("test-configs");
             }
 
             if (isAbsolutePath)
             {
-                baseConfigFilePath = fileSystem.Path.GetFullPath(baseConfigFilePath);
+                userProvidedConfigFilePath = fileSystem.Path.GetFullPath(userProvidedConfigFilePath);
                 finalConfigFilePath = fileSystem.Path.GetFullPath(finalConfigFilePath);
             }
 
-            fileSystem.AddEmptyFile(finalConfigFilePath);
-            FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem, baseConfigFilePath: baseConfigFilePath);
-            Assert.AreEqual(finalConfigFilePath, runtimeConfigLoader.GetFileName(environmentValue: environmentValue, considerOverrides: false));
+            if (environmentFile is not null)
+            {
+                fileSystem.AddEmptyFile(environmentFile);
+            }
+
+            FileSystemRuntimeConfigLoader runtimeConfigLoader;
+            if (userProvidedConfigFilePath is not null)
+            {
+                runtimeConfigLoader = new(fileSystem, userProvidedConfigFilePath);
+            }
+            else
+            {
+                runtimeConfigLoader = new(fileSystem);
+            }
+
+            Assert.AreEqual(finalConfigFilePath, runtimeConfigLoader.ConfigFilePath);
         }
 
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()

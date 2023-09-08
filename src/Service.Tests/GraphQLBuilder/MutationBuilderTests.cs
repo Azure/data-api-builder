@@ -929,7 +929,7 @@ type Baz @model(name:""Baz"") {
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
             {
                 { "Foo", DatabaseType.MSSQL },
-                { "Bar", DatabaseType.MSSQL }
+                { "Baz", DatabaseType.MSSQL }
             };
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
@@ -968,7 +968,7 @@ type Baz @model(name:""Baz""){
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
             {
                 { "Foo", DatabaseType.CosmosDB_NoSQL },
-                { "Bar", DatabaseType.CosmosDB_NoSQL }
+                { "Baz", DatabaseType.CosmosDB_NoSQL }
             };
             DocumentNode mutationRoot = MutationBuilder.Build(
                     root,
@@ -1029,7 +1029,8 @@ type Foo @model(name:""Foo"") {{
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
             {
-                { "Foo", DatabaseType.CosmosDB_NoSQL }
+                { "Foo", DatabaseType.CosmosDB_NoSQL },
+                { "Bar", DatabaseType.CosmosDB_NoSQL }
             };
 
             DocumentNode mutationRoot = MutationBuilder.Build(

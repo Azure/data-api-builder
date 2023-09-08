@@ -735,17 +735,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngineFactory));
-            Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory) server.Services.GetService(typeof(IQueryEngineFactory));
+            Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MSSQL), typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngineFactory));
-            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory) server.Services.GetService(typeof(IMutationEngineFactory));
+            Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.MSSQL), typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryManagerFactory));
-            Assert.IsInstanceOfType(queryBuilder, typeof(MsSqlQueryBuilder));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory) server.Services.GetService(typeof(IQueryManagerFactory));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.MSSQL), typeof(MsSqlQueryBuilder));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.MSSQL), typeof(MsSqlQueryExecutor));
 
-            object sqlMetadataProvider = server.Services.GetService(typeof(IMetadataProviderFactory));
-            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory) server.Services.GetService(typeof(IMetadataProviderFactory));
+            Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(MsSqlMetadataProvider)));
         }
 
         [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.POSTGRESQL)]
@@ -754,17 +755,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngineFactory));
-            Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
+            Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.PostgreSQL), typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngineFactory));
-            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
+            Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.PostgreSQL), typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryManagerFactory));
-            Assert.IsInstanceOfType(queryBuilder, typeof(PostgresQueryBuilder));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IQueryManagerFactory));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.PostgreSQL), typeof(PostgresQueryBuilder));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.PostgreSQL), typeof(PostgreSqlQueryExecutor));
 
-            object sqlMetadataProvider = server.Services.GetService(typeof(IMetadataProviderFactory));
-            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory)server.Services.GetService(typeof(IMetadataProviderFactory));
+            Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(PostgreSqlMetadataProvider)));
         }
 
         [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MYSQL)]
@@ -773,17 +775,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngineFactory));
-            Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
+            Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MySQL), typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngineFactory));
-            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
+            Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.MySQL), typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryManagerFactory));
-            Assert.IsInstanceOfType(queryBuilder, typeof(MySqlQueryBuilder));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IQueryManagerFactory));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.MySQL), typeof(MySqlQueryBuilder));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.MySQL), typeof(MySqlQueryExecutor));
 
-            object sqlMetadataProvider = server.Services.GetService(typeof(IMetadataProviderFactory));
-            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory)server.Services.GetService(typeof(IMetadataProviderFactory));
+            Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(MySqlMetadataProvider)));
         }
 
         [TestMethod("Validates that trying to override configs that are already set fail."), TestCategory(TestCategory.COSMOSDBNOSQL)]

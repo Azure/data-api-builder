@@ -148,7 +148,7 @@ type foo @model(name:""foo"") {
                     roles);
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
             {
-                { "Foo", DatabaseType.CosmosDB_NoSQL }
+                { "foo", DatabaseType.CosmosDB_NoSQL }
             };
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,

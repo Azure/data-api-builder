@@ -735,17 +735,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            QueryEngineFactory queryEngineFactory = (QueryEngineFactory) server.Services.GetService(typeof(IQueryEngineFactory));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MSSQL), typeof(SqlQueryEngine));
 
-            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory) server.Services.GetService(typeof(IMutationEngineFactory));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
             Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.MSSQL), typeof(SqlMutationEngine));
 
-            QueryManagerFactory queryManagerFactory = (QueryManagerFactory) server.Services.GetService(typeof(IQueryManagerFactory));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IQueryManagerFactory));
             Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.MSSQL), typeof(MsSqlQueryBuilder));
             Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.MSSQL), typeof(MsSqlQueryExecutor));
 
-            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory) server.Services.GetService(typeof(IMetadataProviderFactory));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory)server.Services.GetService(typeof(IMetadataProviderFactory));
             Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(MsSqlMetadataProvider)));
         }
 

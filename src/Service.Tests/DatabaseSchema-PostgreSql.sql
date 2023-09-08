@@ -222,7 +222,7 @@ CREATE TABLE books_sold (
   id int PRIMARY KEY,
   book_name TEXT,
   copies_sold INT DEFAULT 0,
-  last_sold_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  last_sold_on TIMESTAMP DEFAULT '9999-12-31 23:59:59.997',
   last_sold_on_date TIMESTAMP GENERATED ALWAYS AS (last_sold_on) STORED
 );
 

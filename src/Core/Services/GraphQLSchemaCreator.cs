@@ -124,8 +124,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name);
                 if (!dataSourceNames.Contains(dataSourceName))
                 {
-                    // union db objects per metadata provider
-                    dbObjects.Union(metadataprovider.EntityToDatabaseObject);
+                    dbObjects = dbObjects.Concat(metadataprovider.EntityToDatabaseObject).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                     dataSourceNames.Add(dataSourceName);
                 }
 

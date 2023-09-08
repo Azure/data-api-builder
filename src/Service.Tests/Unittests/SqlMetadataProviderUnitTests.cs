@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
-            string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = runtimeConfig.GetDefaultDataSourceName();
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             try

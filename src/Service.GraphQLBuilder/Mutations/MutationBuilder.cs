@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <returns>Mutations DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
-            DatabaseType databaseType,
+            Dictionary<string, DatabaseType> databaseTypes,
             RuntimeEntities entities,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
             Dictionary<string, DatabaseObject>? dbObjects = null)
@@ -74,9 +74,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     }
                     else
                     {
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
                     }
                 }
             }

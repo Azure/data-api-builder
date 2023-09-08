@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// <returns>Queries DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
-            DatabaseType databaseType,
+            Dictionary<string, DatabaseType> databaseTypes,
             RuntimeEntities entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         if (rolesAllowedForRead.Any())
                         {
                             queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
-                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
+                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseTypes[entityName], entity, rolesAllowedForRead));
                         }
 
                         if (paginationReturnType is not null)

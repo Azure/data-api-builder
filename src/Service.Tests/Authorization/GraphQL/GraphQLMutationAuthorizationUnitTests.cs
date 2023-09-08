@@ -40,9 +40,14 @@ type Foo @model(name: ""Foo""){
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.MSSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.MSSQL,
+                entityNameToDatabasetype,
                 entities: new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: new string[] { "Foo" },

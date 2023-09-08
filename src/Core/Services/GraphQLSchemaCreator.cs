@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -35,7 +36,6 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IQueryEngineFactory _queryEngineFactory;
         private readonly IMutationEngineFactory _mutationEngineFactory;
         private readonly IMetadataProviderFactory _metadataProviderFactory;
-        private readonly DatabaseType _databaseType;
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
@@ -57,7 +57,6 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
-            _databaseType = runtimeConfig.DataSource.DatabaseType;
             _entities = runtimeConfig.Entities;
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
@@ -114,18 +113,20 @@ namespace Azure.DataApiBuilder.Core.Services
         public (DocumentNode, DocumentNode) GenerateQueryAndMutationNodes(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             Dictionary<string, DatabaseObject> dbObjects = new();
+            Dictionary<string, DatabaseType> entityToDatabaseType = new ();
 
             // Merge the entityToDBObjects for queryNode generation for all entities.
             foreach ((string name, _) in _entities)
             {
                 ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name));
                 dbObjects.Union(metadataprovider.EntityToDatabaseObject);
+                entityToDatabaseType.TryAdd(name, metadataprovider.GetDatabaseType());
             }
             // Generate the GraphQL queries from the provided objects
-            DocumentNode queryNode = QueryBuilder.Build(root, _databaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, dbObjects);
+            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, dbObjects);
 
             // Generate the GraphQL mutations from the provided objects
-            DocumentNode mutationNode = MutationBuilder.Build(root, _databaseType, _entities, _authorizationResolver.EntityPermissionsMap, dbObjects);
+            DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, dbObjects);
 
             return (queryNode, mutationNode);
         }
@@ -138,14 +139,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns>The <c>ISchemaBuilder</c> for HotChocolate, with the generated GraphQL schema</returns>
         public ISchemaBuilder InitializeSchemaAndResolvers(ISchemaBuilder schemaBuilder)
         {
-            (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = _databaseType switch
-            {
-                DatabaseType.CosmosDB_NoSQL => GenerateCosmosGraphQLObjects(),
-                DatabaseType.MSSQL or
-                DatabaseType.PostgreSQL or
-                DatabaseType.MySQL => GenerateSqlGraphQLObjects(_entities),
-                _ => throw new NotImplementedException($"This database type {_databaseType} is not yet implemented.")
-            };
+            (DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = GenerateGraphQLObjects();
 
             return Parse(schemaBuilder, root, inputTypes);
         }
@@ -236,12 +230,17 @@ namespace Azure.DataApiBuilder.Core.Services
             return (new DocumentNode(nodes.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
         }
 
-        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects()
+        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects(RuntimeEntities entities)
         {
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
             DocumentNode? root = null;
 
-            foreach ((string name, _) in _entities)
+            if (entities.Count() == 0)
+            {
+                return (new DocumentNode(new List<IDefinitionNode>()), inputObjects);
+            }
+
+            foreach ((string name, _) in entities)
             {
                 ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name));
                 DocumentNode currentNode = ((CosmosSqlMetadataProvider)metadataProvider).GraphQLSchemaRoot;
@@ -255,6 +254,41 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return (root.WithDefinitions(root.Definitions.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
+        }
+
+        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateGraphQLObjects()
+        {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            IDictionary<string, Entity> cosmosEntities = new Dictionary<string, Entity>();
+            IDictionary<string, Entity> sqlEntities = new Dictionary<string, Entity>();
+
+            foreach((string entityName, Entity entity) in runtimeConfig.Entities)
+            {
+                DataSource ds = runtimeConfig.GetDataSourceFromEntityName(entityName);
+
+                switch (ds.DatabaseType)
+                {
+                    case DatabaseType.CosmosDB_NoSQL or DatabaseType.CosmosDB_PostgreSQL:
+                        cosmosEntities.TryAdd(entityName, entity);
+                        break;
+                    case DatabaseType.MSSQL or DatabaseType.MySQL or DatabaseType.PostgreSQL:
+                        sqlEntities.TryAdd(entityName, entity);
+                        break;
+                    default:
+                        throw new NotImplementedException($"This database type {ds.DatabaseType} is not yet implemented.");
+                }
+            }
+
+            RuntimeEntities cosmos = new (new ReadOnlyDictionary<string,Entity>(cosmosEntities));
+            RuntimeEntities sql = new(new ReadOnlyDictionary<string, Entity>(sqlEntities));
+
+            (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) cosmosResult = GenerateCosmosGraphQLObjects(cosmos);
+            (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) sqlResult = GenerateSqlGraphQLObjects(sql);
+
+            // Merge the inputObjects from both cosmos and sql
+            Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = cosmosResult.Item2.Concat(sqlResult.Item2).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            return (new DocumentNode(cosmosResult.Item1.Definitions.Concat(sqlResult.Item1.Definitions).ToImmutableList()), inputObjects);
         }
     }
 }

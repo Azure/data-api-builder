@@ -78,8 +78,13 @@ type Foo @model(name:""Foo"") {
                     new string[] { "Foo" },
                     new EntityActionOperation[] { EntityActionOperation.Create },
                     roles);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabasetype,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -105,10 +110,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(
                 () => MutationBuilder.Build(root,
-                    DatabaseType.CosmosDB_NoSQL,
+                    entityNameToDatabasetype,
                     new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                     entityPermissionsMap: _entityPermissions
                     ),
@@ -131,10 +140,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabasetype,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -159,9 +172,14 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.MSSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.MSSQL,
+                entityNameToDatabasetype,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -189,10 +207,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabasetype,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -222,10 +244,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabasetype,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -249,10 +275,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -282,10 +312,14 @@ type Bar @model(name:""Bar""){
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabasetype,
                 new(new Dictionary<string, Entity> {
                     { "Foo", GenerateEmptyEntity() with { GraphQL = new("Foo", "Foos") } },
                     { "Bar", GenerateEmptyEntity() with { GraphQL = new("Bar", "Bars") } }
@@ -315,9 +349,13 @@ type Bar @model(name:""Bar""){
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -356,9 +394,15 @@ type Bar @model(name:""Bar""){
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL },
+                { "Bar", DatabaseType.CosmosDB_NoSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -397,9 +441,15 @@ type Bar @model(name:""Bar"") {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL },
+                { "Bar", DatabaseType.CosmosDB_NoSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -440,9 +490,15 @@ type Bar @model(name:""Bar""){
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL },
+                { "Bar", DatabaseType.CosmosDB_NoSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -483,9 +539,15 @@ type Bar @model(name:""Bar""){
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL },
+                { "Bar", DatabaseType.CosmosDB_NoSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -520,11 +582,15 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.MSSQL },
+            };
 
             Entity entity = GenerateEmptyEntity();
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.MSSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -551,11 +617,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
             Entity entity = GenerateEmptyEntity();
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -584,9 +653,12 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode mutationRoot = MutationBuilder.Build(root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -622,8 +694,12 @@ type Foo @model(name:""Foo"") {
                     new string[] { "Foo" },
                     new EntityActionOperation[] { EntityActionOperation.Delete },
                     roles);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode mutationRoot = MutationBuilder.Build(root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -658,9 +734,13 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -683,10 +763,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -728,9 +812,13 @@ type Foo @model(name:""Foo"") {
                     new string[] { "Foo" },
                     new EntityActionOperation[] { EntityActionOperation.Update },
                     roles);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -836,9 +924,14 @@ type Baz @model(name:""Baz"") {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.MSSQL },
+                { "Bar", DatabaseType.MSSQL }
+            };
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.MSSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -870,10 +963,14 @@ type Baz @model(name:""Baz""){
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL },
+                { "Bar", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode mutationRoot = MutationBuilder.Build(
                     root,
-                    DatabaseType.CosmosDB_NoSQL,
+                    entityNameToDatabaseType,
                     new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } }),
                     entityPermissionsMap: _entityPermissions
                     );
@@ -903,10 +1000,13 @@ type Foo @model(name:""Foo"") {{
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -925,10 +1025,14 @@ type Foo @model(name:""Foo"") {{
         private (DocumentNode mutationRoot, FieldDefinitionNode field) GenerateTestMutationFieldNodes(string gql)
         {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Bar", GenerateEmptyEntity() } }),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -980,9 +1084,13 @@ type Foo @model(name:""Foo"") {{
                                 ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
                                 : GraphQLTestHelpers.GenerateEntityWithSingularPlural(entityName, entityName.Pluralize());
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { entityName, DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.CosmosDB_NoSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { entityName, entity } }),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -1064,9 +1172,14 @@ type Foo @model(name:""Foo"") {{
                 }
             };
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { entityName, DatabaseType.MSSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.MSSQL,
+                entityNameToDatabaseType,
                 new(new Dictionary<string, Entity> { { entityName, entity } }),
                 entityPermissionsMap: _entityPermissions,
                 dbObjects: new Dictionary<string, DatabaseObject> { { entityName, spDbObj } }

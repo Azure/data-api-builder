@@ -101,12 +101,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
             _restControllerLogger = new Mock<ILogger<RestController>>().Object;
 
-            SetUpSQLMetadataProvider(runtimeConfigProvider);
-
             // Setup Mock engine Factory
             _queryManagerFactory = new Mock<IQueryManagerFactory>();
             _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
             _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            // Setup Mock metadataprovider Factory
+            _metadataProviderFactory = new Mock<IMetadataProviderFactory>();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider);
 
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
@@ -117,12 +123,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             // Execute additional queries, if any.
             await ExecuteQueriesOnDbAsync(customQueries);
-
-            await _sqlMetadataProvider.InitializeAsync();
-
-            // Setup Mock metadataprovider Factory
-            _metadataProviderFactory = new Mock<IMetadataProviderFactory>();
-            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider);
 
             // sets the database name using the connection string
             SetDatabaseNameFromConnectionString(runtimeConfig.DataSource.ConnectionString);

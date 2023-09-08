@@ -61,7 +61,7 @@ public class RuntimeConfigLoaderTests
     }
 
     [DataTestMethod]
-    [DataRow("dab-config.CosmosDb_NoSql.json", new string[] {"dab-config.MsSql.json", "dab-config.MySql.json", "dab-config.PostgreSql.json" })]
+    [DataRow("dab-config.CosmosDb_NoSql.json", new string[] { "dab-config.MsSql.json", "dab-config.MySql.json", "dab-config.PostgreSql.json" })]
     public async Task FailLoadMultiDataSourceConfigDuplicateEntities(string configPath, IEnumerable<string> dataSourceFiles)
     {
         string fileContents = await File.ReadAllTextAsync(configPath);
@@ -70,7 +70,7 @@ public class RuntimeConfigLoaderTests
         JObject baseJsonObject = JObject.Parse(fileContents);
 
         // Create a new JArray to hold the values to be appended
-        JArray valuesToAppend = new (dataSourceFiles);
+        JArray valuesToAppend = new(dataSourceFiles);
 
         // Add or append the values to the base JSON
         baseJsonObject.Add("data-source-files", valuesToAppend);

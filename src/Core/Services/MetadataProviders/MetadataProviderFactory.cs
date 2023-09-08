@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using System.Net;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -15,14 +16,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     {
         private readonly IDictionary<string, ISqlMetadataProvider> _metadataProviders;
 
-        public MetadataProviderFactory(RuntimeConfigProvider runtimeConfigProvider, IQueryManagerFactory engineFactory, ILogger<ISqlMetadataProvider> logger)
+        public MetadataProviderFactory(RuntimeConfigProvider runtimeConfigProvider, IQueryManagerFactory engineFactory, ILogger<ISqlMetadataProvider> logger, IFileSystem fileSystem)
         {
             _metadataProviders = new Dictionary<string, ISqlMetadataProvider>();
             foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
             {
                 ISqlMetadataProvider metadataProvider = dataSource.DatabaseType switch
                 {
-                    DatabaseType.CosmosDB_NoSQL => null!,
+                    DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(runtimeConfigProvider, fileSystem),
                     DatabaseType.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),
                     DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),
                     DatabaseType.MySQL => new MySqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),

@@ -33,14 +33,11 @@ using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using MySqlConnector;
-using Npgsql;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 
@@ -738,19 +735,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngine));
+            object queryEngine = server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
+            object mutationEngine = server.Services.GetService(typeof(IMutationEngineFactory));
             Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
+            object queryBuilder = server.Services.GetService(typeof(IQueryManagerFactory));
             Assert.IsInstanceOfType(queryBuilder, typeof(MsSqlQueryBuilder));
 
-            object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
-            Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<SqlConnection>));
-
-            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            object sqlMetadataProvider = server.Services.GetService(typeof(IMetadataProviderFactory));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
         }
 
@@ -760,19 +754,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngine));
+            object queryEngine = server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
+            object mutationEngine = server.Services.GetService(typeof(IMutationEngineFactory));
             Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
+            object queryBuilder = server.Services.GetService(typeof(IQueryManagerFactory));
             Assert.IsInstanceOfType(queryBuilder, typeof(PostgresQueryBuilder));
 
-            object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
-            Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
-
-            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            object sqlMetadataProvider = server.Services.GetService(typeof(IMetadataProviderFactory));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
         }
 
@@ -782,19 +773,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngine));
+            object queryEngine = server.Services.GetService(typeof(IQueryEngineFactory));
             Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
+            object mutationEngine = server.Services.GetService(typeof(IMutationEngineFactory));
             Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
+            object queryBuilder = server.Services.GetService(typeof(IQueryManagerFactory));
             Assert.IsInstanceOfType(queryBuilder, typeof(MySqlQueryBuilder));
 
-            object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
-            Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<MySqlConnection>));
-
-            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
+            object sqlMetadataProvider = server.Services.GetService(typeof(IMetadataProviderFactory));
             Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
         }
 

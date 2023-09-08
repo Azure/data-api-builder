@@ -314,7 +314,8 @@ type Bar @model(name:""Bar""){
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
             {
-                { "Foo", DatabaseType.CosmosDB_NoSQL }
+                { "Foo", DatabaseType.CosmosDB_NoSQL },
+                { "Bar", DatabaseType.CosmosDB_NoSQL }
             };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
@@ -351,7 +352,8 @@ type Bar @model(name:""Bar""){
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
             {
-                { "Foo", DatabaseType.CosmosDB_NoSQL }
+                { "Foo", DatabaseType.CosmosDB_NoSQL },
+                { "Bar", DatabaseType.CosmosDB_NoSQL }
             };
 
             DocumentNode mutationRoot = MutationBuilder.Build(root,

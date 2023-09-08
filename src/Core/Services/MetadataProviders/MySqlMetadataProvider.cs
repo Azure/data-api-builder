@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             catch
             {
-                logger.LogWarning("Could not determine database name from the connection string. Defaulting it to 'mysql'.");
+                logger.LogWarning("Could not determine database name from the connection string. The default database name 'mysql' will be used.");
             }
         }
 

@@ -1454,7 +1454,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="reader">The DbDataReader.</param>
         /// <param name="args">Arguments to this function. This parameter is unused in this method.
-        /// This is added so that the method conforms with the Fucnc delegate's signature.</param>
+        /// This is added so that the method conforms with the Func delegate's signature.</param>
         /// <returns>List of read-only fields present in the table.</returns>
         private async Task<List<string>>
             SummarizeReadOnlyFieldsMetadata(DbDataReader reader, List<string>? args = null)

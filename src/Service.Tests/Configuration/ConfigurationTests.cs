@@ -2446,14 +2446,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static void ValidateCosmosDbSetup(TestServer server)
         {
-            object metadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
-            Assert.IsInstanceOfType(metadataProvider, typeof(CosmosSqlMetadataProvider));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
+            Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.CosmosDB_NoSQL), typeof(SqlQueryEngine));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngine));
-            Assert.IsInstanceOfType(queryEngine, typeof(CosmosQueryEngine));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
+            Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.CosmosDB_NoSQL), typeof(SqlMutationEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
-            Assert.IsInstanceOfType(mutationEngine, typeof(CosmosMutationEngine));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory)server.Services.GetService(typeof(IMetadataProviderFactory));
+            Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(CosmosSqlMetadataProvider)));
 
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);

@@ -417,9 +417,9 @@ type Table @model(name: ""table"") {
         /// <param name="expectedQueryNamesForList"> Expected name for the query to fetch all items </param>
         /// <param name="expectedNameInDescription">Expected name in the description for both the queries</param>
         [DataTestMethod]
-        [DataRow($"{GraphQLTestHelpers.BOOK_GQL}{GraphQLTestHelpers.PEOPLE_GQL}", new string[] {"Book", "People"}, null, null, new string[] { "book_by_pk", "people_by_pk" }, new string[] { "books", "peoples" }, new string[] { "Book", "People" },
+        [DataRow($"{GraphQLTestHelpers.BOOK_GQL}{GraphQLTestHelpers.PEOPLE_GQL}", new string[] { "Book", "People" }, null, null, new string[] { "book_by_pk", "people_by_pk" }, new string[] { "books", "peoples" }, new string[] { "Book", "People" },
             DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
-        [DataRow($"{GraphQLTestHelpers.BOOK_GQL}{GraphQLTestHelpers.PEOPLE_GQL}", new string[] { "Book", "People" }, new string[] {"book", "Person"}, new string[] {"books", "People"}, new string[] { "book_by_pk", "person_by_pk" }, new string[] { "books", "people" }, new string[] { "book", "Person" },
+        [DataRow($"{GraphQLTestHelpers.BOOK_GQL}{GraphQLTestHelpers.PEOPLE_GQL}", new string[] { "Book", "People" }, new string[] { "book", "Person" }, new string[] { "books", "People" }, new string[] { "book_by_pk", "person_by_pk" }, new string[] { "books", "people" }, new string[] { "book", "Person" },
             DisplayName = "Query name and description validation for single and plural names defined not defined")]
         public void ValidateQueriesAreCreatedWithRightNameForMultiDataSource(
             string gql,
@@ -441,13 +441,13 @@ type Table @model(name: ""table"") {
             Dictionary<string, DatabaseType> entityNameToDatabaseType = new();
             Dictionary<string, Entity> entityNameToEntity = new();
 
-            for (int i=0; i<entityNames.Length; i++)
+            for (int i = 0; i < entityNames.Length; i++)
             {
                 Entity entity = (singularNames is not null)
                     ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularNames[i], pluralNames[i])
                     : GraphQLTestHelpers.GenerateEmptyEntity();
                 entityNameToEntity.TryAdd(entityNames[i], entity);
-                entityNameToDatabaseType.TryAdd(entityNames[i], i%2 == 0 ? DatabaseType.CosmosDB_NoSQL : DatabaseType.MSSQL);
+                entityNameToDatabaseType.TryAdd(entityNames[i], i % 2 == 0 ? DatabaseType.CosmosDB_NoSQL : DatabaseType.MSSQL);
             }
 
             DocumentNode queryRoot = QueryBuilder.Build(

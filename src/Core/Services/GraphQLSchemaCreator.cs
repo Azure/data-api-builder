@@ -113,7 +113,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public (DocumentNode, DocumentNode) GenerateQueryAndMutationNodes(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
             Dictionary<string, DatabaseObject> dbObjects = new();
-            Dictionary<string, DatabaseType> entityToDatabaseType = new ();
+            Dictionary<string, DatabaseType> entityToDatabaseType = new();
 
             // Merge the entityToDBObjects for queryNode generation for all entities.
             foreach ((string name, _) in _entities)
@@ -262,7 +262,7 @@ namespace Azure.DataApiBuilder.Core.Services
             IDictionary<string, Entity> cosmosEntities = new Dictionary<string, Entity>();
             IDictionary<string, Entity> sqlEntities = new Dictionary<string, Entity>();
 
-            foreach((string entityName, Entity entity) in runtimeConfig.Entities)
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 DataSource ds = runtimeConfig.GetDataSourceFromEntityName(entityName);
 
@@ -279,7 +279,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            RuntimeEntities cosmos = new (new ReadOnlyDictionary<string,Entity>(cosmosEntities));
+            RuntimeEntities cosmos = new(new ReadOnlyDictionary<string, Entity>(cosmosEntities));
             RuntimeEntities sql = new(new ReadOnlyDictionary<string, Entity>(sqlEntities));
 
             (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) cosmosResult = GenerateCosmosGraphQLObjects(cosmos);

@@ -115,11 +115,20 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, DatabaseObject> dbObjects = new();
             Dictionary<string, DatabaseType> entityToDatabaseType = new();
 
+            HashSet<string> dataSourceNames = new();
+
             // Merge the entityToDBObjects for queryNode generation for all entities.
             foreach ((string name, _) in _entities)
             {
                 ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name));
-                dbObjects.Union(metadataprovider.EntityToDatabaseObject);
+                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name);
+                if (!dataSourceNames.Contains(dataSourceName))
+                {
+                    // union db objects per metadata provider
+                    dbObjects.Union(metadataprovider.EntityToDatabaseObject);
+                    dataSourceNames.Add(dataSourceName);
+                }
+
                 entityToDatabaseType.TryAdd(name, metadataprovider.GetDatabaseType());
             }
             // Generate the GraphQL queries from the provided objects

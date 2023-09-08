@@ -183,20 +183,41 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             JsonElement jsonElement = jsonDoc.RootElement.Clone();
 
+            IEnumerable<string> extraProperties = (jsonElement.ValueKind is not JsonValueKind.Array)
+                                                  ? DetermineExtraFieldsInResponse(jsonElement, context)
+                                                  : DetermineExtraFieldsInResponse(jsonElement.EnumerateArray().Last(), context);
+
             // If the results are not a collection or if the query does not have a next page
             // no nextLink is needed, return JsonDocument as is
             if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
             {
                 // Clones the root element to a new JsonElement that can be
                 // safely stored beyond the lifetime of the original JsonDocument.
+
+                if(jsonElement.ValueKind is not JsonValueKind.Array)
+                {
+                    jsonElement = RemoveExtraFieldsInResponse(jsonElement, extraProperties);
+                }
+                else
+                {
+                    List<JsonElement> jsonList = jsonElement.EnumerateArray().ToList();
+                    for (int i = 0; i < jsonList.Count(); i++)
+                    {
+                        jsonList[i] = RemoveExtraFieldsInResponse(jsonList[i], extraProperties);
+                    }
+
+                    jsonElement = JsonSerializer.SerializeToElement(jsonList.AsEnumerable());
+                }
+
                 return OkResponse(jsonElement);
             }
 
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
-            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray().ToList();
 
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() -1);
+            
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
                                element: rootEnumerated.Last(),
                                orderByColumns: context.OrderByClauseOfBackingColumns,
@@ -230,9 +251,70 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                   path,
                                   nvc: context!.ParsedQueryString,
                                   after);
-            rootEnumerated = rootEnumerated.Append(nextLink);
-            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
+
+            List<JsonElement> rootEnumeratedList = rootEnumerated.ToList();
+            Console.WriteLine(rootEnumeratedList.Count());
+            for(int i = 0; i < rootEnumeratedList.Count(); i++)
+            {
+                rootEnumeratedList[i] = RemoveExtraFieldsInResponse(rootEnumeratedList[i], extraProperties);
+            }
+
+            IEnumerable<JsonElement> retval = rootEnumeratedList.Append(nextLink);
+            return OkResponse(JsonSerializer.SerializeToElement(retval));
         }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="jsonElement"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
+        private static IEnumerable<string> DetermineExtraFieldsInResponse(JsonElement jsonElement, FindRequestContext context)
+        {
+            HashSet<string> fieldsToBeReturned = new(context.FieldsToBeReturned);
+            HashSet<string> fieldsPresentInResponse = new();
+
+            if (jsonElement.ValueKind is not JsonValueKind.Array)
+            {
+                foreach (JsonProperty property in jsonElement.EnumerateObject())
+                {
+                    fieldsPresentInResponse.Add(property.Name);
+                }
+            }
+            else
+            {
+                foreach (JsonProperty property in jsonElement.EnumerateArray().Last().EnumerateObject())
+                {
+                    fieldsPresentInResponse.Add(property.Name);
+                }
+            }
+
+            return fieldsPresentInResponse.Except(fieldsToBeReturned);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="jsonElement"></param>
+        /// <param name="extraProperties"></param>
+        /// <returns></returns>
+        private static JsonElement RemoveExtraFieldsInResponse(JsonElement jsonElement, IEnumerable<string> extraProperties)
+        {
+            JsonObject? jsonObject = JsonObject.Create(jsonElement);
+            if (jsonObject is null)
+            {
+                return jsonElement;
+            }
+
+            foreach (string extraProperty in extraProperties)
+            {
+                jsonObject.Remove(extraProperty);
+            }
+
+            return JsonSerializer.SerializeToElement(jsonObject);
+        }
+
+        
 
         /// <summary>
         /// Helper function returns an OkObjectResult with provided arguments in a
@@ -321,7 +403,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _httpContextAccessor.HttpContext!);
             return jsonDocument;
         }
-
+        
         // <summary>
         // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend.
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).

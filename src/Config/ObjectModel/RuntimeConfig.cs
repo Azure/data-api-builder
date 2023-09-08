@@ -81,21 +81,29 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null)
         {
-            // Iterate through all the datasource files and load the config.
-            IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-
-            foreach (string dataSourceFile in DataSourceFiles.SourceFiles ?? Enumerable.Empty<string>())
+            try
             {
-                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
-                {
-                    this._dataSourceNameToDataSource = this._dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                    this._entityNameToDataSourceName = this._entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                    allEntities = allEntities.Concat(config.Entities.ToList());
-                }
-            }
+                // Iterate through all the datasource files and load the config.
+                IFileSystem fileSystem = new FileSystem();
+                FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+                foreach (string dataSourceFile in DataSourceFiles.SourceFiles ?? Enumerable.Empty<string>())
+                {
+                    if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
+                    {
+                        this._dataSourceNameToDataSource = this._dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        this._entityNameToDataSourceName = this._entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        allEntities = allEntities.Concat(config.Entities.ToList());
+                    }
+                }
+
+                this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+            }
+            catch (Exception e)
+            {
+                // Errors could include invalid sub file paths, duplicated entity names, etc.
+                throw new DataApiBuilderException($"Error while loading datasource files: {e.Message}", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
         }
 
     }

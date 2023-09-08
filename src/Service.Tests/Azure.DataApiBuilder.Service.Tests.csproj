@@ -13,6 +13,10 @@
     <None Remove="dab-config.MsSql.json" />
     <None Remove="dab-config.MySql.json" />
     <None Remove="dab-config.PostgreSql.json" />
+    <None Remove="Multidab-config.CosmosDb_NoSql.json" />
+    <None Remove="Multidab-config.MsSql.json" />
+    <None Remove="Multidab-config.MySql.json" />
+    <None Remove="Multidab-config.PostgreSql.json" />
   </ItemGroup>
 
   <ItemGroup>

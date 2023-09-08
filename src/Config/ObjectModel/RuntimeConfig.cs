@@ -20,7 +20,7 @@ public record RuntimeConfig
 
     public RuntimeEntities Entities { get; init; }
 
-    public IEnumerable<string>? DataSourceFiles { get; init; }
+    public DataSourceFiles? DataSourceFiles { get; init; }
 
     private string _defaultDataSourceName;
 
@@ -52,37 +52,51 @@ public record RuntimeConfig
     /// <param name="DataSource">Default datasource.</param>
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="Entities">Entities</param>
+    /// <param name="DataSourceFiles">List of datasource files for multiple db scenario.</param></param>
     [JsonConstructor]
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, IEnumerable<string>? DataSourceFiles = null)
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, DataSourceFiles? DataSourceFiles = null)
     {
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this._dataSourceNameToDataSource = new Dictionary<string, DataSource>();
+        this.Entities = Entities;
         this._defaultDataSourceName = Guid.NewGuid().ToString();
-        this._dataSourceNameToDataSource.Add(this._defaultDataSourceName, this.DataSource);
+
+        // we will set them up with default values
+        this._dataSourceNameToDataSource = new Dictionary<string, DataSource>
+        {
+            { this._defaultDataSourceName, this.DataSource }
+        };
+
         this._entityNameToDataSourceName = new Dictionary<string, string>();
-        IFileSystem fileSystem = new FileSystem();
-        FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, this._defaultDataSourceName);
         }
 
+        // Multiple database scenario.
+        this.DataSourceFiles = DataSourceFiles;
         IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
 
-        foreach (string dataSourceFile in DataSourceFiles ?? Enumerable.Empty<string>())
+        if (DataSourceFiles is not null)
         {
-            if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
-            {
-                this._dataSourceNameToDataSource = this._dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                this._entityNameToDataSourceName = this._entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                allEntities = allEntities.Concat(config.Entities.ToList());
-            }
-        }
+            // Iterate through all the datasource files and load the config.
+            IFileSystem fileSystem = new FileSystem();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-        this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+            foreach (string dataSourceFile in DataSourceFiles.SourceFiles ?? Enumerable.Empty<string>())
+            {
+                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
+                {
+                    this._dataSourceNameToDataSource = this._dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    this._entityNameToDataSourceName = this._entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    allEntities = allEntities.Concat(config.Entities.ToList());
+                }
+            }
+
+            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+        }
 
     }
 

@@ -230,19 +230,19 @@ namespace Azure.DataApiBuilder.Core.Services
             return (new DocumentNode(nodes.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
         }
 
-        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects(RuntimeEntities entities)
+        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects(HashSet<string> dataSourceNames)
         {
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
             DocumentNode? root = null;
 
-            if (entities.Count() == 0)
+            if (dataSourceNames.Count() == 0)
             {
                 return (new DocumentNode(new List<IDefinitionNode>()), inputObjects);
             }
 
-            foreach ((string name, _) in entities)
+            foreach (string dataSourceName in dataSourceNames)
             {
-                ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name));
+                ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 DocumentNode currentNode = ((CosmosSqlMetadataProvider)metadataProvider).GraphQLSchemaRoot;
                 root = root is null ? currentNode : root.WithDefinitions(root.Definitions.Concat(currentNode.Definitions).ToImmutableList());
             }
@@ -259,7 +259,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateGraphQLObjects()
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            IDictionary<string, Entity> cosmosEntities = new Dictionary<string, Entity>();
+            HashSet<string> cosmosDataSourceNames = new();
             IDictionary<string, Entity> sqlEntities = new Dictionary<string, Entity>();
 
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
@@ -269,7 +269,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 switch (ds.DatabaseType)
                 {
                     case DatabaseType.CosmosDB_NoSQL or DatabaseType.CosmosDB_PostgreSQL:
-                        cosmosEntities.TryAdd(entityName, entity);
+                        cosmosDataSourceNames.Add(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName));
                         break;
                     case DatabaseType.MSSQL or DatabaseType.MySQL or DatabaseType.PostgreSQL:
                         sqlEntities.TryAdd(entityName, entity);
@@ -279,10 +279,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            RuntimeEntities cosmos = new(new ReadOnlyDictionary<string, Entity>(cosmosEntities));
             RuntimeEntities sql = new(new ReadOnlyDictionary<string, Entity>(sqlEntities));
 
-            (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) cosmosResult = GenerateCosmosGraphQLObjects(cosmos);
+            (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) cosmosResult = GenerateCosmosGraphQLObjects(cosmosDataSourceNames);
             (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) sqlResult = GenerateSqlGraphQLObjects(sql);
 
             // Merge the inputObjects from both cosmos and sql

@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 case EntityActionOperation.UpdateIncremental:
                 case EntityActionOperation.Upsert:
                 case EntityActionOperation.UpsertIncremental:
-                    return await DispatchMutation(context, sqlMetadataProvider.GetDatabaseType());
+                    return await DispatchMutation(context, sqlMetadataProvider);
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
             };
@@ -223,12 +223,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Dispatch execution of a request context to the mutation engine
         /// The two overloads to ExecuteAsync take StoredProcedureRequestContext and RestRequestContext
         /// </summary>
-        private Task<IActionResult?> DispatchMutation(RestRequestContext context, DatabaseType databaseType)
+        private Task<IActionResult?> DispatchMutation(RestRequestContext context, ISqlMetadataProvider metadataProvider)
         {
-            IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(databaseType);
+            IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(metadataProvider.GetDatabaseType());
             return context switch
             {
-                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, metadataProvider.GetDatabaseSourceName()),
                 _ => mutationEngine.ExecuteAsync(context)
             };
         }

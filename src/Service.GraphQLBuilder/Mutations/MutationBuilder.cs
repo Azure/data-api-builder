@@ -65,9 +65,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             }
                             else
                             {
-                                string? dbObjectsString = dbObjects is null ? string.Empty : dbObjects.ToString();
                                 throw new DataApiBuilderException(
-                                    message: $"GraphQL schema creation for stored procedures requires the associated database object's schema metadata. {nameof(dbObjects)} Value: {dbObjectsString}",
+                                    message: $"GraphQL schema creation for stored procedures requires the associated database object's schema metadata.",
                                     statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                             }

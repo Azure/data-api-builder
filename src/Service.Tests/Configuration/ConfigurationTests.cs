@@ -1489,6 +1489,90 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Test to validate that when the property rest.request-body-strict is ommitted from the rest runtime section in config file, we operate in the default mode
+        /// where we don't allow any extraneous fields in the request body i.e. rest.request-body-strict = true.
+        /// </summary>
+        /// <param name="includeExtraneousFieldInRequestBody">Boolean value indicating whether or not to include extraneous field in request body.</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(false, DisplayName = "Mutation operation passes when no extraneous field is included in request body and rest.request-body-strict is omitted from the rest runtime section in the config file.")]
+        [DataRow(true, DisplayName = "Mutation operation fails when an extraneous field is included in request body and rest.request-body-strict is omitted from the rest runtime section in the config file.")]
+        public async Task ValidateStrictModeAsDefaultForRestRequestBody(bool includeExtraneousFieldInRequestBody)
+        {
+            string entityJson = @"
+            {
+                ""entities"": {
+                    ""Book"": {
+                        ""source"": {
+                        ""object"": ""books"",
+                        ""type"": ""table""
+                        },
+                        ""permissions"": [
+                        {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                            {
+                                ""action"": ""*""
+                            }
+                            ]
+                        }
+                        ]
+                    }
+                }
+            }";
+
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
+            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Post);
+                string requestBody = @"{
+                        ""title"": ""Harry Potter and the Order of Phoenix"",
+                        ""publisher_id"": 1234";
+
+                if (includeExtraneousFieldInRequestBody)
+                {
+                    requestBody += @",
+                    ""extraField"": 12";
+                }
+
+                requestBody += "}";
+                       
+
+                JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
+                HttpRequestMessage request = new(httpMethod, "api/Book")
+                {
+                    Content = JsonContent.Create(requestBodyElement)
+                };
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (includeExtraneousFieldInRequestBody)
+                {
+                    // Assert that including an extraneous field in request body while operating in strict mode leads to a bad request exception. 
+                    Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+                }
+                else
+                {
+                    // When no extraneous fields are included in request body, the operation executes successfully.
+                    Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+                    string locationHeader = response.Headers.Location.AbsoluteUri;
+
+                    // Delete the new record created as part of this test.
+                    HttpRequestMessage cleanupRequest = new(HttpMethod.Delete, locationHeader);
+                    await client.SendAsync(cleanupRequest);
+                }
+            }
+        }
+
+        /// <summary>
         /// Validates the Location header field returned for a POST request when it results in a 201 response. The idea behind returning
         /// a Location header is to provide a URL against which a GET request can be performed to fetch the details of the new item.
         /// Base Route is configured in the config file used for this test. So, it is expected that the Location header returned will contain the base-route.

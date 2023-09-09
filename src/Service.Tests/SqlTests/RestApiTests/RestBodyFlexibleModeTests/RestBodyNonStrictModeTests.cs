@@ -19,6 +19,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 
         /// <summary>
         /// Test to validate that extraneous fields are allowed in request body when we operate in runtime.rest.request-body-strict = false.
+        /// When PK fields are specified both in URI and in the request body, precedence is given to the values specified for the fields in the URI.
+        /// This single test validates the functionality for PUT, PATCH and and POST requests.
         /// </summary>
         [TestMethod]
         public virtual async Task MutationsTestWithExtraneousFieldsInRequestBody()
@@ -133,6 +135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 
         /// <summary>
         /// Test to validate that extraneous fields are not allowed in primary key even when we operate in runtime.rest.request-body-strict = false.
+        /// Since primary keys are allowed for PUT/PATCH/DELETE mutations, we need to test only for those operations. 
         /// </summary>
         [TestMethod]
         public virtual async Task MutationsTestWithExtraneousFieldsInPrimaryKey()
@@ -168,6 +171,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                     sqlQuery: null,
                     operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    exceptionExpected: true,
+                    expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                );
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/1/non_existing_field/1",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: null,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",

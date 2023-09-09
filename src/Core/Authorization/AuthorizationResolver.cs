@@ -23,6 +23,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
     public class AuthorizationResolver : IAuthorizationResolver
     {
         private readonly ISqlMetadataProvider _metadataProvider;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         public const string WILDCARD = "*";
         public const string CLAIM_PREFIX = "@claims.";
         public const string FIELD_PREFIX = "@item.";
@@ -31,7 +32,6 @@ namespace Azure.DataApiBuilder.Core.Authorization
         public const string ROLE_AUTHENTICATED = "authenticated";
 
         public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public AuthorizationResolver(
             RuntimeConfigProvider runtimeConfigProvider,

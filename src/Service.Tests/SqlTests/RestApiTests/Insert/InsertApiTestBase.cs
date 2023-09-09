@@ -580,8 +580,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Verifies that we throw an exception when an extraneous field provided in the request body
-        /// does not map to a valid backing column in the table.
+        /// Verifies that we throw an exception when an extraneous field that does not map to a backing column in the table
+        /// is provided in the request body for an INSERT operation. This test validates the behavior of rest.request-body-strict when it is:
+        /// 1. Included in runtime config (and set to true)
+        /// 2. Excluded from runtime config(defaults to true)
         /// </summary>
         [TestMethod]
         public async Task InsertOneTestWithExtraneousFieldsInRequestBody()

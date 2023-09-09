@@ -775,12 +775,19 @@ public class EndToEndTests
     /// </summary>
     /// <param name="isRequestBodyStrict">Value of the rest.request-body-strict flag in the init command.</param>
     [DataTestMethod]
-    [DataRow(false, DisplayName = "REST request body allows extraneous fields.")]
-    [DataRow(true, DisplayName = "REST request body doesn't allow extraneous fields.")]
-    public void TestRestRequestBodyStrictMode(bool isRequestBodyStrict)
+    [DataRow(true, false, DisplayName = "dab init command specifies --rest.request-body-strict as false - REST request body allows extraneous fields.")]
+    [DataRow(true, true, DisplayName = "dab init command specifies --rest.request-body-strict as true - REST request body doesn't allow extraneous fields.")]
+    [DataRow(false, true, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body doesn't allow extraneous fields.")]
+    public void TestRestRequestBodyStrictMode(bool includeRestRequestBodyStrictFlag, bool isRequestBodyStrict)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
-            "--connection-string", SAMPLE_TEST_CONN_STRING, "--rest.request-body-strict", isRequestBodyStrict.ToString() };
+            "--connection-string", SAMPLE_TEST_CONN_STRING};
+
+        if (includeRestRequestBodyStrictFlag)
+        {
+            string[] restRequestBodyArgs = { "--rest.request-body-strict", isRequestBodyStrict.ToString() };
+            initArgs = initArgs.Concat(restRequestBodyArgs).ToArray();
+        }
 
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 

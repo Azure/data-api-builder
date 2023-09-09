@@ -68,9 +68,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Builds the query to determine the number of enabled triggers on a database table.
         /// Needed only for MsSql.
         /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        string GetQueryToGetEnabledTriggers() => throw new NotImplementedException();
+        string BuildFetchEnabledTriggersQuery() => throw new NotImplementedException();
 
         /// <summary>
         /// Adds database specific quotes to string identifier

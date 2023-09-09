@@ -46,9 +46,10 @@ namespace Azure.DataApiBuilder.Core.Services
             return TypeHelper.GetSystemTypeFromSqlDbType(sqlType);
         }
 
-        public override async Task PopulateTriggerMetadataForTable(string schemaName, string tableName, SourceDefinition sourceDefinition)
+        /// <inheritdoc/>
+        public override async Task PopulateTriggerMetadataForTable(string entityName, string schemaName, string tableName, SourceDefinition sourceDefinition)
         {
-            string queryToGetNumberOfEnabledTriggers = SqlQueryBuilder.GetQueryToGetEnabledTriggers();
+            string enumerateEnabledTriggers = SqlQueryBuilder.BuildFetchEnabledTriggersQuery();
             Dictionary<string, DbConnectionParam> parameters = new()
             {
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0", new(schemaName, DbType.String) },
@@ -56,8 +57,8 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
-                sqltext: queryToGetNumberOfEnabledTriggers,
-                parameters: parameters!,
+                sqltext: enumerateEnabledTriggers,
+                parameters: parameters,
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
 
@@ -67,11 +68,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 if ("UPDATE".Equals(type_desc))
                 {
                     sourceDefinition.IsUpdateDMLTriggerEnabled = true;
+                    _logger.LogInformation($"An update trigger is enabled for the entity: {entityName}");
                 }
 
                 if ("INSERT".Equals(type_desc))
                 {
                     sourceDefinition.IsInsertDMLTriggerEnabled = true;
+                    _logger.LogInformation($"An insert trigger is enabled for the entity: {entityName}");
                 }
             }
         }

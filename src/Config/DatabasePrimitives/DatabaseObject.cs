@@ -155,13 +155,18 @@ public class SourceDefinition
         new(StringComparer.InvariantCultureIgnoreCase);
 
     /// <summary>
-    /// Indicates whether there is an update trigger enabled on the table.
+    /// Indicates whether an update trigger enabled on the table.
+    /// The default value must be kept as false, meaning by default we assume no trigger is enabled.
+    /// Based on whether trigger is enabled, we use either OUTPUT (when no trigger is enabled) / or SELECT (when a trigger is enabled),
+    /// to return the data after a mutation operation.
     /// </summary>
     public bool IsUpdateDMLTriggerEnabled;
 
     /// <summary>
-    /// Indicates whether there is an insert trigger enabled on the table.
-    /// </summary>
+    /// Indicates whether an insert trigger enabled on the table.
+    /// The default value must be kept as false, meaning by default we assume no trigger is enabled.
+    /// Based on whether trigger is enabled, we use either OUTPUT (when no trigger is enabled) / or SELECT (when a trigger is enabled),
+    /// to return the data after a mutation operation.
     public bool IsInsertDMLTriggerEnabled;
 
     /// <summary>

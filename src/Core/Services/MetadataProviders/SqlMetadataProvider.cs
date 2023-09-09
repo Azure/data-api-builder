@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
-        private readonly ILogger<ISqlMetadataProvider> _logger;
+        protected readonly ILogger<ISqlMetadataProvider> _logger;
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -350,13 +350,14 @@ namespace Azure.DataApiBuilder.Core.Services
         public abstract Type SqlToCLRType(string sqlType);
 
         /// <summary>
-        /// Helper method to populate metadata about whether insert/update DML triggers are enabled for a table.
+        /// Updates a table's SourceDefinition object's metadata with whether any enabled insert/update DML triggers exist for the table.
         /// This method is only called for tables in MsSql.
         /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
         /// <param name="schemaName">Name of the schema in which the table is present.</param>
         /// <param name="tableName">Name of the table.</param>
-        /// <param name="sourceDefinition">Table definition.</param>
-        public virtual Task PopulateTriggerMetadataForTable(string schemaName, string tableName, SourceDefinition sourceDefinition)
+        /// <param name="sourceDefinition">Table definition to update.</param>
+        public virtual Task PopulateTriggerMetadataForTable(string entityName, string schemaName, string tableName, SourceDefinition sourceDefinition)
         {
             throw new NotImplementedException();
         }
@@ -978,7 +979,7 @@ namespace Azure.DataApiBuilder.Core.Services
             _entities.TryGetValue(entityName, out Entity? entity);
             if (GetDatabaseType() is DatabaseType.MSSQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
-                await PopulateTriggerMetadataForTable(schemaName, tableName, sourceDefinition);
+                await PopulateTriggerMetadataForTable(entityName, schemaName, tableName, sourceDefinition);
             }
 
             using DataTableReader reader = new(dataTable);

@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         private static Dictionary<string, string> _queryMap = new()
         {
             {
-                "InsertOneWithNonExistingFieldInRequestBody",
+                "InsertOneWithExtraneousFieldsInRequestBody",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 3 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOneWithPKFieldsInRequestBody",
+                "PutOneWithExtraneousFieldsInRequestBody",
                 $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
@@ -33,23 +33,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "PutOneWithNonExistingFieldInRequestBody",
-                $"SELECT [categoryid], [pieceid], [categoryName], [piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 2 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] = 10  AND [piecesRequired] = 5 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOneWithPKFieldsInRequestBody",
-                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
-                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +
-                $"AND [piecesAvailable] is NULL AND [piecesRequired] = 0 " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
-            },
-            {
-                "PatchOneWithNonExistingFieldInRequestBody",
+                "PatchOneWithExtraneousFieldsInRequestBody",
                 $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
                 $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
                 $"WHERE [categoryid] = 1 AND [pieceid] = 1 AND [categoryName] = 'SciFi' " +

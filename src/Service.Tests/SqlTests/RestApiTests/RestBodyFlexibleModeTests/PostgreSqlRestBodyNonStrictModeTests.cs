@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         private static Dictionary<string, string> _queryMap = new()
         {
             {
-                "InsertOneWithNonExistingFieldInRequestBody",
+                "InsertOneWithExtraneousFieldsInRequestBody",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PutOneWithPKFieldsInRequestBody",
+                "PutOneWithExtraneousFieldsInRequestBody",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
@@ -41,31 +41,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
-                "PutOneWithNonExistingFieldInRequestBody",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
-                        FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 2 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
-                            AND ""piecesAvailable"" = 10 AND ""piecesRequired"" = 5
-                    ) AS subq
-                "
-            },
-            {
-                "PatchOneWithPKFieldsInRequestBody",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
-                        FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 1 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
-                            AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 0
-                    ) AS subq
-                "
-            },
-            {
-                "PatchOneWithNonExistingFieldInRequestBody",
+                "PatchOneWithExtraneousFieldsInRequestBody",
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (

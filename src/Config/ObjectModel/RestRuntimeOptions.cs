@@ -11,7 +11,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// for all entities will be exposed.</param>
 /// <param name="RequestBodyStrict">Boolean property indicating whether extraneous fields are allowed in request body.
 /// The default value is true - meaning we don't allow extraneous fields by default in the rest request body.
-/// The default value should not be changed.</param>
+/// Changing the default value is a breaking change.</param>
 public record RestRuntimeOptions(bool Enabled = true, string Path = RestRuntimeOptions.DEFAULT_PATH, bool RequestBodyStrict = true)
 {
     public const string DEFAULT_PATH = "/api";

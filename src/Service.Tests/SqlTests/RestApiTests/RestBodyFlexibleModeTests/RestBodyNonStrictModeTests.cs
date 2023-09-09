@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: null,
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    sqlQuery: GetQuery("InsertOneWithNonExistingFieldInRequestBody"),
+                    sqlQuery: GetQuery("InsertOneWithExtraneousFieldsInRequestBody"),
                     operationType: EntityActionOperation.Insert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                sqlQuery: GetQuery("PutOneWithPKFieldsInRequestBody"),
+                sqlQuery: GetQuery("PutOneWithExtraneousFieldsInRequestBody"),
                 operationType: EntityActionOperation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                sqlQuery: GetQuery("PutOneWithNonExistingFieldInRequestBody"),
+                sqlQuery: GetQuery("PutOneWithExtraneousFieldsInRequestBody"),
                 operationType: EntityActionOperation.Upsert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.OK
@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    sqlQuery: GetQuery("PatchOneWithPKFieldsInRequestBody"),
+                    sqlQuery: GetQuery("PatchOneWithExtraneousFieldsInRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     primaryKeyRoute: "categoryid/1/pieceid/1",
                     queryString: null,
                     entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
-                    sqlQuery: GetQuery("PatchOneWithNonExistingFieldInRequestBody"),
+                    sqlQuery: GetQuery("PatchOneWithExtraneousFieldsInRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK

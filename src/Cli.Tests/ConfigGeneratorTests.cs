@@ -155,7 +155,8 @@ public class ConfigGeneratorTests
            ""runtime"": {
                 ""rest"": {
                   ""enabled"": true,
-                  ""path"": ""/api""
+                  ""path"": ""/api"",
+                  ""request-body-strict"": true
                   },
                 ""graphql"": {
                   ""enabled"": true,
@@ -177,8 +178,8 @@ public class ConfigGeneratorTests
             }");
 
         expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace(" ", string.Empty);
-        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
         expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\r\n", string.Empty);
+        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
 
         Assert.IsTrue(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 
@@ -189,7 +190,9 @@ public class ConfigGeneratorTests
 
         // Comparing explicit strings here since parsing these into JSON would lose
         // the test scenario of verifying escaped chars are not written to the file system.
-        Assert.AreEqual(expectedRuntimeConfigJson.ToString(), actualRuntimeConfigJson.ToString());
+        string a = expectedRuntimeConfigJson.ToString();
+        string b = actualRuntimeConfigJson.ToString();
+        Assert.AreEqual(a, b);
     }
 
     /// <summary>

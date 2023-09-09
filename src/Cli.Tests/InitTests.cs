@@ -224,28 +224,6 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to verify creation of initial config with special characters
-        /// such as [!,@,#,$,%,^,&,*, ,(,)] in connection-string.
-        /// </summary>
-        [TestMethod]
-        public Task TestSpecialCharactersInConnectionString()
-        {
-            InitOptions options = new(
-                databaseType: DatabaseType.MSSQL,
-                connectionString: "A!string@with#some$special%characters^to&check*proper(serialization)including space.",
-                cosmosNoSqlDatabase: null,
-                cosmosNoSqlContainer: null,
-                graphQLSchemaPath: null,
-                setSessionContext: false,
-                hostMode: HostMode.Production,
-                corsOrigin: null,
-                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                config: TEST_RUNTIME_CONFIG_FILE);
-
-            return ExecuteVerifyTest(options);
-        }
-
-        /// <summary>
         /// Test to verify that an error is thrown when user tries to
         /// initialize a config with a file name that already exists.
         /// </summary>

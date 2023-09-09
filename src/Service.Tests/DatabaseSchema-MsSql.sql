@@ -258,12 +258,12 @@ CREATE TABLE mappedbookmarks
 
 create table books_sold
 (
-  [id] int PRIMARY KEY not null,
-  [book_name] varchar(50),
-  [row_version] rowversion,
-  [copies_sold] int default 0,
-  [last_sold_on] datetime2(7) DEFAULT '1999-01-08 10:23:54',
-  [last_sold_on_date] as last_sold_on,
+    id int PRIMARY KEY not null,
+    book_name varchar(50),
+    row_version rowversion,
+    copies_sold int default 0,
+    last_sold_on datetime2(7) DEFAULT '1999-01-08 10:23:54',
+    last_sold_on_date as last_sold_on,
 )
 
 ALTER TABLE books
@@ -471,7 +471,7 @@ SET IDENTITY_INSERT authors_history OFF
 INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 5000, 'Anonymous'), (2, 'Comics', 10000, 'Anonymous'),
 (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
 
-INSERT INTO books_sold(id,book_name,last_sold_on) values(1,'Awesome Book',GETDATE());
+INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GETDATE());
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');

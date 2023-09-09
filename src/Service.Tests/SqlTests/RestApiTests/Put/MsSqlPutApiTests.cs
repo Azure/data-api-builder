@@ -266,7 +266,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         public async Task PutOneWithRowversionFieldMissingFromRequestBody()
         {
             // Validate successful execution of a PUT update when a rowversion field (here 'row_version')
-            // is missing from the request body.
+            // is missing from the request body. Successful execution of the PUT request confirms that we did not
+            // attempt to NULL out the 'row_version' field.
             string requestBody = @"
             {
                 ""book_name"": ""Another Awesome Book"",
@@ -286,7 +287,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
 
             // Validate successful execution of a PUT insert when a rowversion field (here 'row_version')
-            // is missing from the request body.
+            // is missing from the request body. Successful execution of the PUT request confirms that we did not
+            // attempt to NULL out the 'row_version' field.
             requestBody = @"
             {
                 ""book_name"": ""Best seller"",

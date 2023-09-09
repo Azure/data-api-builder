@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         public async Task PatchOneWithRowversionFieldMissingFromRequestBody()
         {
             // Validate successful execution of a PATCH update when a rowversion field (here 'row_version')
-            // is missing from the request body.
+            // is missing from the request body. A PATCH update request should not try to update any field which is not provided in the request body.
             string requestBody = @"
             {
                 ""book_name"": ""Another Awesome Book"",
@@ -242,7 +242,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
 
             // Validate successful execution of a PATCH insert when a rowversion field (here 'row_version')
-            // is missing from the request body.
+            // is missing from the request body.Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'row_version' field while inserting the record.
             requestBody = @"
             {
                 ""book_name"": ""Best seller"",

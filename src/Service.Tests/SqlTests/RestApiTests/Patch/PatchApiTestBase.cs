@@ -306,8 +306,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         public virtual async Task PatchOneWithComputedFieldMissingFromRequestBody()
         {
             // Validate successful execution of a PATCH update when a computed field (here 'last_sold_on_date')
-            // is missing from the request body. In such a case we don't try to put NULL value for such a field while performing
-            // the update.
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
             string requestBody = @"
             {
                 ""book_name"": ""New book"",
@@ -326,8 +326,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
 
             // Validate successful execution of a PATCH insert when a computed field (here 'last_sold_on_date')
-            // is missing from the request body. In such a case we don't try to put NULL value for such a field while performing
-            // the insert.
+            // is missing from the request body. Successful execution of the PATCH request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
             requestBody = @"
             {
                 ""book_name"": ""New book"",

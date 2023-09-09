@@ -420,7 +420,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         public virtual async Task PutOneWithComputedFieldMissingFromRequestBody()
         {
             // Validate successful execution of a PUT update when a computed field (here 'last_sold_on_update')
-            // is missing from the request body.
+            // is missing from the request body. Successful execution of the PUT request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
             string requestBody = @"
             {
                 ""book_name"": ""New book"",
@@ -439,7 +440,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 );
 
             // Validate successful execution of a PUT insert when a computed field (here 'last_sold_on_update')
-            // is missing from the request body.
+            // is missing from the request body. Successful execution of the PUT request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
             requestBody = @"
             {
                 ""book_name"": ""New book"",

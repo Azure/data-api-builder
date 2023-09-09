@@ -94,8 +94,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         [TestMethod]
         public virtual async Task InsertOneWithComputedFieldMissingInRequestBody()
         {
-            // Validate successful execution of a POST request when a computed field (here 'last_sold_on_update')
-            // is missing from the request body.
+            // Validate successful execution of a POST request when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the POST request confirms that we did not
+            // attempt to provide a value for the 'last_sold_on_date' field.
             string requestBody = @"
             {
                 ""id"": 2,

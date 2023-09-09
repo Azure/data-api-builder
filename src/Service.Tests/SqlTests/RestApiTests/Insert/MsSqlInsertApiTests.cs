@@ -280,7 +280,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         public async Task InsertOneWithRowversionFieldMissingFromRequestBody()
         {
             // Validate successful execution of a POST request when a rowversion field (here 'row_version')
-            // is missing from the request body.
+            // is missing from the request body. Successful execution of the POST request confirms that we did not
+            // attempt to provide a value for the 'row_version' field.
             string requestBody = @"
             {
                 ""id"": 2,
@@ -304,7 +305,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
         /// <summary>
         /// Test to validate that whenever a rowversion field is included in the request body, we throw a BadRequest exception
-        /// as it is not allowed to provide value (to insert) for a rowversion field.
+        /// as it is not allowed to provide value (not even null value) for a rowversion field.
         /// </summary>
         [TestMethod]
         public async Task InsertOneWithRowversionFieldInRequestBody()

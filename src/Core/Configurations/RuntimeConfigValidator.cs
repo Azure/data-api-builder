@@ -96,13 +96,16 @@ namespace Azure.DataApiBuilder.Core.Configurations
             IFileSystem fileSystem,
             ILogger logger)
         {
-            // Connection string can't be null or empty
-            if (string.IsNullOrWhiteSpace(runtimeConfig.DataSource.ConnectionString))
+            foreach (DataSource dataSource in runtimeConfig.ListAllDataSources())
             {
-                throw new DataApiBuilderException(
-                    message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                // Connection string can't be null or empty
+                if (string.IsNullOrWhiteSpace(dataSource.ConnectionString))
+                {
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
             }
 
             ValidateDatabaseType(runtimeConfig, fileSystem, logger);
@@ -119,26 +122,29 @@ namespace Azure.DataApiBuilder.Core.Configurations
         {
             // Schema file should be present in the directory if not specified in the config
             // when using CosmosDB_NoSQL database.
-            if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            foreach (DataSource dataSource in runtimeConfig.ListAllDataSources())
             {
-                CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
-                    runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
-                    throw new DataApiBuilderException(
-                        "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
-                        HttpStatusCode.ServiceUnavailable,
-                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-
-                if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
                 {
-                    throw new DataApiBuilderException(
-                        "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
-                        HttpStatusCode.ServiceUnavailable,
-                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                }
+                    CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
+                        dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
+                        throw new DataApiBuilderException(
+                            "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
+                            HttpStatusCode.ServiceUnavailable,
+                            DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
 
-                if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
-                {
-                    throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                    if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                    {
+                        throw new DataApiBuilderException(
+                            "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
+                            HttpStatusCode.ServiceUnavailable,
+                            DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
+                    {
+                        throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                    }
                 }
             }
         }
@@ -390,12 +396,13 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateRestURI(RuntimeConfig runtimeConfig)
         {
-            // CosmosDB_NoSQL does not support rest. No need to do any validations.
-            if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            if (runtimeConfig.ListAllDataSources().All(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
             {
+                // if all dbs are cosmos no rest support.
                 return;
             }
 
+            // validate the rest path.
             string restPath = runtimeConfig.Runtime.Rest.Path;
             if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
             {
@@ -404,6 +411,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
+
         }
 
         /// <summary>
@@ -551,7 +559,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             }
                         }
 
-                        if (runtimeConfig.DataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                        DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
+
+                        if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The Create action does not support defining a database policy." +
@@ -614,7 +624,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
         public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
         {
-            _logger.LogInformation("Validating Relationship Section in Config...");
+            _logger.LogInformation("Validating entity relationships.");
 
             // Loop through each entity in the config and verify its relationship.
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
@@ -707,9 +717,21 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             string referencingTargetColumns = relationship.LinkingTargetFields is not null ? string.Join(",", relationship.LinkingTargetFields) :
                                 sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedTargetRelationshipPair, out fKDef) ?
                                 string.Join(",", fKDef.ReferencingColumns) : string.Empty;
-                            _logger.LogDebug($"{entityName}: {sourceDBOName}({referencedSourceColumns}) related to {cardinality} " +
-                                $"{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
-                                $"{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})");
+
+                            _logger.LogDebug(
+                                message: "{entityName}: {sourceDBOName}({referencedSourceColumns}) is related to {cardinality} " +
+                                "{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
+                                "{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})",
+                                entityName,
+                                sourceDBOName,
+                                referencedSourceColumns,
+                                cardinality,
+                                relationship.TargetEntity,
+                                targetDBOName,
+                                referencedTargetColumns,
+                                relationship.LinkingObject,
+                                referencingSourceColumns,
+                                referencingTargetColumns);
                         }
                     }
 
@@ -719,9 +741,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
                         if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(sourceDatabaseObject, targetDatabaseObject))
                         {
                             throw new DataApiBuilderException(
-                            message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
 
@@ -743,8 +765,17 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             string.Join(",", fKDef.ReferencedColumns) :
                             sqlMetadataProvider.PairToFkDefinition!.TryGetValue(targetSourceRelationshipPair, out fKDef) ?
                             string.Join(",", fKDef.ReferencingColumns) : string.Empty;
-                        _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
-                            $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
+
+                        _logger.LogDebug(
+                            message: "{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} {relationshipTargetEntity}: {targetDBOName}({targetColumns}).",
+                            entityName,
+                            sourceDBOName,
+                            sourceColumns,
+                            cardinality,
+                            relationship.TargetEntity,
+                            targetDBOName,
+                            targetColumns
+                            );
                     }
                 }
             }

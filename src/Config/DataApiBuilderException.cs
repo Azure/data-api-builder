@@ -97,7 +97,11 @@ namespace Azure.DataApiBuilder.Service.Exceptions
             /// <summary>
             /// Global REST endpoint disabled in runtime configuration.
             /// </summary>
-            GlobalRestEndpointDisabled
+            GlobalRestEndpointDisabled,
+            /// <summary>
+            /// DataSource not found for multiple db scenario.
+            /// </summary>
+            DataSourceNotFound,
         }
 
         public HttpStatusCode StatusCode { get; }

@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using Azure.Core;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.Identity;
@@ -26,16 +27,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
+        /// Key: datasource name, Value: access token for this datasource.
         /// </summary>
-        private readonly string? _accessTokenFromController;
+        private readonly Dictionary<string, string?> _accessTokensFromConfiguration;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
         /// <summary>
-        /// The MySql specific connection string builder.
+        /// The MySql specific connection string builders.
+        /// Key: datasource name, Value: connection string builder for this datasource.
         /// </summary>
-        public override MySqlConnectionStringBuilder ConnectionStringBuilder
-            => (MySqlConnectionStringBuilder)base.ConnectionStringBuilder;
+        public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
+            => base.ConnectionStringBuilders;
 
         /// <summary>
         /// The saved cached access token obtained from DefaultAzureCredentials
@@ -43,7 +46,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
-        private bool _attemptToSetAccessToken;
+        /// <summary>
+        /// DatasourceName to boolean value indicating if access token should be set for db.
+        /// </summary>
+        private Dictionary<string, bool> _dataSourceAccessTokenUsage;
 
         public MySqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -52,20 +58,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
-                  new MySqlConnectionStringBuilder(runtimeConfigProvider.GetConfig().DataSource.ConnectionString),
                   runtimeConfigProvider,
                   httpContextAccessor)
         {
-            _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
-            _attemptToSetAccessToken =
-                ShouldManagedIdentityAccessBeAttempted();
+            _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
+            _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
+            IEnumerable<KeyValuePair<string, DataSource>> mysqldbs = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MySQL);
 
-            // Force always allow user variables
-            ConnectionStringBuilder.AllowUserVariables = true;
-
-            if (runtimeConfigProvider.IsLateConfigured)
+            foreach ((string dataSourceName, DataSource dataSource) in mysqldbs)
             {
-                ConnectionStringBuilder.SslMode = MySqlSslMode.VerifyFull;
+
+                MySqlConnectionStringBuilder builder = new(dataSource.ConnectionString)
+                {
+                    // Force always allow user variables;
+                    AllowUserVariables = true
+                };
+
+                if (runtimeConfigProvider.IsLateConfigured)
+                {
+                    builder.SslMode = MySqlSslMode.VerifyFull;
+                }
+
+                ConnectionStringBuilders.TryAdd(dataSourceName, builder);
+                _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
             }
         }
 
@@ -76,15 +91,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName = "")
         {
+            // using default datasource name for first db - maintaining backward compatibility for single db scenario.
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
+            _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
+
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptToSetAccessToken)
+            if (setAccessToken)
             {
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
-                string? accessToken = _accessTokenFromController ??
+                _accessTokensFromConfiguration.TryGetValue(dataSourceName, out string? accessTokenFromController);
+                string? accessToken = accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());
@@ -109,10 +134,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// a System.InvalidOperationException.
         /// 2. It is NOT a Windows Integrated Security scenario.
         /// </summary>
-        private bool ShouldManagedIdentityAccessBeAttempted()
+        private static bool ShouldManagedIdentityAccessBeAttempted(MySqlConnectionStringBuilder builder)
         {
-            return !string.IsNullOrEmpty(ConnectionStringBuilder.UserID) &&
-                string.IsNullOrEmpty(ConnectionStringBuilder.Password);
+            return !string.IsNullOrEmpty(builder.UserID) &&
+                string.IsNullOrEmpty(builder.Password);
         }
 
         /// <summary>
@@ -121,8 +146,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>True if valid, false otherwise.</returns>
         private bool IsDefaultAccessTokenValid()
         {
-            return _defaultAccessToken is not null &&
-                ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(DateTimeOffset.Now) > 0;
+            return _defaultAccessToken is not null && ((AccessToken)_defaultAccessToken).ExpiresOn.CompareTo(DateTimeOffset.Now) > 0;
         }
 
         /// <summary>
@@ -136,15 +160,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             try
             {
-                _defaultAccessToken =
-                    await AzureCredential.GetTokenAsync(
-                        new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                _defaultAccessToken = await AzureCredential.GetTokenAsync(new TokenRequestContext(new[] { DATABASE_SCOPE }));
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
-                    $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
-                    $" failed due to: \n{ex}");
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext);
+                QueryExecutorLogger.LogWarning(
+                    exception: ex,
+                    message: "{correlationId} Failed to retrieve a managed identity access token using DefaultAzureCredential.",
+                    correlationId);
             }
 
             return _defaultAccessToken?.Token;

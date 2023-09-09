@@ -89,10 +89,11 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers
                 // Does not raise or rethrow a DataApiBuilder exception because
                 // the authentication handler caller will return a 401 unauthorized
                 // response to the client.
-                logger.LogError($"Failure processing the StaticWebApps EasyAuth header.\n" +
-                    $"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
-                    $"{error.Message}\n" +
-                    $"{error.StackTrace}");
+                logger.LogError(
+                    exception: error,
+                    message: "{correlationId} Failure processing the StaticWebApps EasyAuth header due to:\n{errorMessage}",
+                    HttpContextExtensions.GetLoggerCorrelationId(context),
+                    error.Message);
             }
 
             return identity;

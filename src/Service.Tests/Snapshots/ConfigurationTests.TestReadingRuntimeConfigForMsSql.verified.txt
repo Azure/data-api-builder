@@ -2367,7 +2367,7 @@
         },
         GraphQL: {
           Singular: FteData,
-          Plural: FteDatas,
+          Plural: FteData,
           Enabled: true
         },
         Rest: {
@@ -2393,7 +2393,7 @@
         },
         GraphQL: {
           Singular: InternData,
-          Plural: InternDatas,
+          Plural: InternData,
           Enabled: true
         },
         Rest: {

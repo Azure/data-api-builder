@@ -33,14 +33,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// The managed identity Access Token string obtained
         /// from the configuration controller.
+        /// Key: datasource name, Value: access token for this datasource.
         /// </summary>
-        private readonly string? _accessTokenFromController;
+        private readonly Dictionary<string, string?> _accessTokensFromConfiguration;
 
         /// <summary>
-        /// The MsSql specific connection string builder.
+        /// The MsSql specific connection string builders.
+        /// Key: datasource name, Value: connection string builder for this datasource.
         /// </summary>
-        public override SqlConnectionStringBuilder ConnectionStringBuilder
-            => (SqlConnectionStringBuilder)base.ConnectionStringBuilder;
+        public override IDictionary<string, DbConnectionStringBuilder> ConnectionStringBuilders
+            => base.ConnectionStringBuilders;
 
         public DefaultAzureCredential AzureCredential { get; set; } = new();
 
@@ -50,9 +52,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private AccessToken? _defaultAccessToken;
 
-        private bool _attemptToSetAccessToken;
+        /// <summary>
+        /// DatasourceName to boolean value indicating if access token should be set for db.
+        /// </summary>
+        private Dictionary<string, bool> _dataSourceAccessTokenUsage;
 
-        private bool _isSessionContextEnabled;
+        /// <summary>
+        /// DatasourceName to boolean value indicating if session context should be set for db.
+        /// </summary>
+        private Dictionary<string, bool> _dataSourceToSessionContextUsage;
 
         public MsSqlQueryExecutor(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -61,22 +69,30 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IHttpContextAccessor httpContextAccessor)
             : base(dbExceptionParser,
                   logger,
-                  new SqlConnectionStringBuilder(runtimeConfigProvider.GetConfig().DataSource.ConnectionString),
                   runtimeConfigProvider,
                   httpContextAccessor)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
+            _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
+            _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
+            _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;
 
-            if (runtimeConfigProvider.IsLateConfigured)
+            foreach ((string dataSourceName, DataSource dataSource) in mssqldbs)
             {
-                ConnectionStringBuilder.Encrypt = SqlConnectionEncryptOption.Mandatory;
-                ConnectionStringBuilder.TrustServerCertificate = false;
-            }
+                SqlConnectionStringBuilder builder = new(dataSource.ConnectionString);
 
-            MsSqlOptions? msSqlOptions = runtimeConfig.DataSource.GetTypedOptions<MsSqlOptions>();
-            _isSessionContextEnabled = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
-            _accessTokenFromController = runtimeConfigProvider.ManagedIdentityAccessToken;
-            _attemptToSetAccessToken = ShouldManagedIdentityAccessBeAttempted();
+                if (runtimeConfigProvider.IsLateConfigured)
+                {
+                    builder.Encrypt = SqlConnectionEncryptOption.Mandatory;
+                    builder.TrustServerCertificate = false;
+                }
+
+                ConnectionStringBuilders.TryAdd(dataSourceName, builder);
+                MsSqlOptions? msSqlOptions = dataSource.GetTypedOptions<MsSqlOptions>();
+                _dataSourceToSessionContextUsage[dataSourceName] = msSqlOptions is null ? false : msSqlOptions.SetSessionContext;
+                _dataSourceAccessTokenUsage[dataSourceName] = ShouldManagedIdentityAccessBeAttempted(builder);
+            }
         }
 
         /// <summary>
@@ -86,17 +102,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// provided in the runtime configuration.
         /// </summary>
         /// <param name="conn">The supplied connection to modify for managed identity access.</param>
-        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn)
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
+        public override async Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName = "")
         {
+            // using default datasource name for first db - maintaining backward compatibility for single db scenario.
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
+            _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
+
             // Only attempt to get the access token if the connection string is in the appropriate format
-            if (_attemptToSetAccessToken)
+            if (setAccessToken)
             {
                 SqlConnection sqlConn = (SqlConnection)conn;
 
                 // If the configuration controller provided a managed identity access token use that,
                 // else use the default saved access token if still valid.
                 // Get a new token only if the saved token is null or expired.
-                string? accessToken = _accessTokenFromController ??
+                _accessTokensFromConfiguration.TryGetValue(dataSourceName, out string? accessTokenFromController);
+                string? accessToken = accessTokenFromController ??
                     (IsDefaultAccessTokenValid() ?
                         ((AccessToken)_defaultAccessToken!).Token :
                         await GetAccessTokenAsync());
@@ -117,12 +143,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// a System.InvalidOperationException.
         /// 2. It is NOT a Windows Integrated Security scenario.
         /// </summary>
-        private bool ShouldManagedIdentityAccessBeAttempted()
+        private static bool ShouldManagedIdentityAccessBeAttempted(SqlConnectionStringBuilder builder)
         {
-            return string.IsNullOrEmpty(ConnectionStringBuilder.UserID) &&
-                string.IsNullOrEmpty(ConnectionStringBuilder.Password) &&
-                ConnectionStringBuilder.Authentication == SqlAuthenticationMethod.NotSpecified &&
-                !ConnectionStringBuilder.IntegratedSecurity;
+            return string.IsNullOrEmpty(builder.UserID) &&
+                string.IsNullOrEmpty(builder.Password) &&
+                builder.Authentication == SqlAuthenticationMethod.NotSpecified &&
+                !builder.IntegratedSecurity;
         }
 
         /// <summary>
@@ -146,15 +172,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             try
             {
-                _defaultAccessToken =
-                    await AzureCredential.GetTokenAsync(
-                        new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                _defaultAccessToken = await AzureCredential.GetTokenAsync(new TokenRequestContext(new[] { DATABASE_SCOPE }));
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
-                    $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
-                    $" failed due to: \n{ex}");
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext);
+                QueryExecutorLogger.LogWarning(
+                    message: "{correlationId} Failed to retrieve a managed identity access token using DefaultAzureCredential due to:\n{errorMessage}",
+                    correlationId,
+                    ex.Message);
             }
 
             return _defaultAccessToken?.Token;
@@ -166,11 +192,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters)
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName = "")
         {
-            if (httpContext is null || !_isSessionContextEnabled)
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
+            if (httpContext is null || !_dataSourceToSessionContextUsage[dataSourceName])
             {
                 return string.Empty;
             }

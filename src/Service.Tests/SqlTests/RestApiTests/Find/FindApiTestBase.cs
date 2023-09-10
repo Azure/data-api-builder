@@ -137,28 +137,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: "?$select=categoryid,categoryName",
-                entityNameOrPath: _Composite_NonAutoGenPK_TableName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=categoryid,categoryName",
-                entityNameOrPath: _Composite_NonAutoGenPK_TableName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("FindWithSelectFieldsWithSomePKOnTableWithCompositePK")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: "?$select=categoryName",
-                entityNameOrPath: _Composite_NonAutoGenPK_TableName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK")
             );
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=categoryName",
-                entityNameOrPath: _Composite_NonAutoGenPK_TableName,
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTableWithCompositePK")
             );
         }
@@ -252,7 +252,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 primaryKeyRoute: "id/1",
                 queryString: "?$select=title",
                 entityNameOrPath: _simple_all_books,
-                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithouKeyFieldsOnView")
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsOnViewWithoutKeyFields")
             );
 
             await SetupAndRunRestApiTest(

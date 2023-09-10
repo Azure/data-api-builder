@@ -824,7 +824,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
-                "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnView",
+                "FindByIdTestWithSelectFieldsOnViewWithoutKeyFields",
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (

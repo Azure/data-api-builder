@@ -464,7 +464,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
-                "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnView",
+                "FindByIdTestWithSelectFieldsOnViewWithoutKeyFields",
                 $"SELECT [title] FROM { _simple_all_books } " +
                 $"WHERE [id] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

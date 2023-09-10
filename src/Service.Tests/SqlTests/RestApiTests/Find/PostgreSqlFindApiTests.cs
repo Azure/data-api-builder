@@ -949,7 +949,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
                         SELECT categoryid, ""categoryName"" FROM " + _simple_subset_stocks + @"
-                        ORDER BY piecesAvailable, categoryid, pieceid
+                        ORDER BY ""piecesAvailable"", categoryid, pieceid
                     ) AS subq
                 "
             },

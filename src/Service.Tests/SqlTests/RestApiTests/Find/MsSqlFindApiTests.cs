@@ -491,17 +491,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
                 $"SELECT [categoryName] FROM {_simple_subset_stocks} " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindByIdWithSelectFieldsWithoutPKOnTable",
-                $"SELECT [title] FROM { _integrationEntityName } " +
+                $"SELECT [title] FROM { _integrationTableName } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindWithSelectFieldsWithoutPKOnTable",
-                $"SELECT [title] FROM { _integrationEntityName } " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"SELECT [title] FROM { _integrationTableName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK",
@@ -527,14 +527,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "FindWithSelectAndOrderbyQueryStringsOnViews",
                 $"SELECT [categoryid], [categoryName]" +
                 $"FROM {_simple_subset_stocks} " +
-                $"ORDER BY [piecesAvailable] ASC, [categoryid] ASC, [pieceid] ASC" +
+                $"ORDER BY [piecesAvailable] ASC, [categoryid] ASC, [pieceid] ASC " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindWithSelectAndOrderbyQueryStringsOnTables",
                 $"SELECT [id], [title]" +
                 $"FROM {_integrationTableName} " +
-                $"ORDER BY [publisher_id] ASC, [id] ASC" +
+                $"ORDER BY [publisher_id] ASC, [id] ASC " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             }
         };

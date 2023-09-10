@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$select=id,title",
+                queryString: "?$select=title",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTable")
             );

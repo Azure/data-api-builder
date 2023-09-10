@@ -414,7 +414,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithPrimaryKeyContainingForeignKey",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'book_id', book_id, 'content', content) AS data
+                    SELECT JSON_OBJECT('id', id, 'content', content) AS data
                     FROM (
                         SELECT id, book_id, content
                         FROM reviews" + @"
@@ -737,7 +737,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithSingleMappedFieldsToBeReturned",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('Scientific Name', species)) AS data
                   FROM (
                       SELECT treeId, species
                       FROM " + _integrationMappingTable + @"

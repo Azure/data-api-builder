@@ -397,7 +397,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, book_id, content
+                        SELECT id, content
                         FROM reviews" + @"
                         WHERE id = 567 AND book_id = 1
                         ORDER BY id asc
@@ -735,7 +735,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT  ""treeId"" AS ""treeId"", ""species"" AS ""Scientific Name""
+                        SELECT ""species"" AS ""Scientific Name""
                         FROM " + _integrationMappingTable + @"
                     ) AS subq
                 "
@@ -965,7 +965,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
                         SELECT id, title FROM " + _simple_all_books + @"
-                        WHERE id = 1
                         ORDER BY publisher_id, id
                     ) AS subq
                 "

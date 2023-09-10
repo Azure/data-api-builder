@@ -219,7 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindTestWithPrimaryKeyContainingForeignKey",
-                $"SELECT [id], [content], [book_id] FROM reviews " +
+                $"SELECT [id], [content] FROM reviews " +
                 $"WHERE id = 567 AND book_id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

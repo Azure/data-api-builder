@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
-                "FindByIdTestWithQueryStringFieldsOnView",
+                "FindByIdTestWithSelectFieldsOnView",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title) AS data
                   FROM (

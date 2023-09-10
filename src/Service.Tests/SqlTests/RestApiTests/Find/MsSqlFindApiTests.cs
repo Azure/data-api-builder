@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
-                "FindByIdTestWithQueryStringFieldsOnView",
+                "FindByIdTestWithSelectFieldsOnView",
                 $"SELECT[id], [title] FROM { _simple_all_books } " +
                 $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
@@ -398,7 +398,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindTestWithSingleMappedFieldsToBeReturned",
-                $"SELECT [species] AS [Scientific Name], [treeId] FROM { _integrationMappingTable } " +
+                $"SELECT [species] AS [Scientific Name] FROM { _integrationMappingTable } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
@@ -462,6 +462,80 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"SELECT [id], [category], [revenue], [accessible_role] FROM { _tableWithSecurityPolicy } " +
                 $"WHERE [id] = 3 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnView",
+                $"SELECT [title] FROM { _simple_all_books } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestWithSelectFieldsWithoutKeyFieldsOnView",
+                $"SELECT [title] FROM { _simple_all_books } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
+                $"SELECT categoryid, categoryName FROM {_simple_subset_stocks} " +
+                $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
+                $"SELECT categoryid, categoryName FROM {_simple_subset_stocks} " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
+                $"SELECT categoryName FROM {_simple_subset_stocks} " +
+                $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
+                $"SELECT categoryName FROM {_simple_subset_stocks} " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindByIdWithSelectFieldsWithoutPKOnTable",
+                $"SELECT [title] FROM { _integrationEntityName } " +
+                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindWithSelectFieldsWithoutPKOnTable",
+                $"SELECT [title] FROM { _integrationEntityName } " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK",
+                $"SELECT categoryid, categoryName FROM {_Composite_NonAutoGenPK_TableName} " +
+                $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindWithSelectFieldsWithSomePKOnTableWithCompositePK",
+                $"SELECT categoryid, categoryName FROM {_Composite_NonAutoGenPK_TableName} " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK",
+                $"SELECT categoryName FROM {_Composite_NonAutoGenPK_TableName} " +
+                $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "FindWithSelectFieldsWithoutPKOnTableWithCompositePK",
+                $"SELECT categoryName FROM {_Composite_NonAutoGenPK_TableName} " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindWithSelectAndOrderbyQueryStringsOnViews",
+                $"SELECT [categoryid], [categoryName]" +
+                $"FROM {_simple_subset_stocks} " +
+                $"ORDER BY [piecesAvailable] ASC, [categoryid] ASC, [pieceid] ASC" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindWithSelectAndOrderbyQueryStringsOnTables",
+                $"SELECT [id], [title]" +
+                $"FROM {_integrationTableName} " +
+                $"ORDER BY [publisher_id] ASC, [id] ASC" +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             }
         };
         #region Test Fixture Setup

@@ -114,6 +114,77 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindOnTableWithUniqueCharacters"));
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindWithSelectQueryStringOnTables()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=title",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTable")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=id,title",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTable")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_TableName,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_TableName,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithSomePKOnTableWithCompositePK")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_TableName,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_TableName,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindWithSelectAndOrderByQueryStrings()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=id,title&$orderby=publisher_id",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindWithSelectAndOrderbyQueryStringsOnTables")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName&$orderby=piecesAvailable",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindWithSelectAndOrderbyQueryStringsOnViews")
+            );
+
+        }
+
         ///<summary>
         /// Tests the Rest Api for GET operations on Database Views,
         /// either simple or composite.
@@ -148,6 +219,56 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: GetQuery("FindBooksPubViewComposite")
             );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithoutKeyFieldsOnView")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=id,title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsOnView")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithouKeyFieldsOnView")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields")
+            );
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields")
+            );
+
         }
 
         ///<summary>
@@ -162,13 +283,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$filter=id ge 4",
                 entityNameOrPath: _simple_all_books,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilterOnView")
-            );
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/1",
-                queryString: "?$select=id,title",
-                entityNameOrPath: _simple_all_books,
-                sqlQuery: GetQuery("FindByIdTestWithQueryStringFieldsOnView")
             );
 
             await SetupAndRunRestApiTest(

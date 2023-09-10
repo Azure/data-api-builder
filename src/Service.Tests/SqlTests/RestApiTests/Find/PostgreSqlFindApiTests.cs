@@ -830,7 +830,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     FROM (
                         SELECT title FROM " + _simple_all_books + @"
                         WHERE id = 1
-                        ORDER BY id
                     ) AS subq
                 "
             },
@@ -849,9 +848,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryid, categoryName FROM " + _simple_subset_stocks + @"
+                        SELECT categoryid, ""categoryName"" FROM " + _simple_subset_stocks + @"
                         WHERE categoryid = 1 AND pieceid = 1
-                        ORDER BY categoryid, pieceid
                     ) AS subq
                 "
             },
@@ -860,7 +858,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryid, categoryName FROM " + _simple_subset_stocks + @"
+                        SELECT categoryid, ""categoryName"" FROM " + _simple_subset_stocks + @"
                         ORDER BY categoryid, pieceid
                     ) AS subq
                 "
@@ -870,9 +868,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryName FROM " + _simple_subset_stocks + @"
+                        SELECT ""categoryName"" FROM " + _simple_subset_stocks + @"
                         WHERE categoryid = 1 AND pieceid = 1
-                        ORDER BY categoryid, pieceid
                     ) AS subq
                 "
             },
@@ -881,7 +878,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryName FROM " + _simple_subset_stocks + @"
+                        SELECT ""categoryName"" FROM " + _simple_subset_stocks + @"
                         ORDER BY categoryid, pieceid
                     ) AS subq
                 "
@@ -893,7 +890,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     FROM (
                         SELECT title FROM " + _integrationTableName + @"
                         WHERE id = 1
-                        ORDER BY id
                     ) AS subq
                 "
             },
@@ -912,9 +908,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryid, categoryName FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 1 AND pieceid = 1        
-                        ORDER BY categoryid, pieceid
+                        SELECT categoryid, ""categoryName"" FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1
                     ) AS subq
                 "
             },
@@ -923,7 +918,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryid, categoryName FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        SELECT categoryid, ""categoryName"" FROM " + _Composite_NonAutoGenPK_TableName + @"
                         ORDER BY categoryid, pieceid
                     ) AS subq
                 "
@@ -933,9 +928,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryName FROM " + _Composite_NonAutoGenPK_TableName + @"
-                        WHERE categoryid = 1 AND pieceid = 1        
-                        ORDER BY categoryid, pieceid
+                        SELECT ""categoryName"" FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1
                     ) AS subq
                 "
             },
@@ -944,7 +938,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryName FROM " + _Composite_NonAutoGenPK_TableName + @"        
+                        SELECT ""categoryName"" FROM " + _Composite_NonAutoGenPK_TableName + @"        
                         ORDER BY categoryid, pieceid
                     ) AS subq
                 "
@@ -954,7 +948,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                  @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT categoryid, categoryName FROM " + _simple_subset_stocks + @"
+                        SELECT categoryid, ""categoryName"" FROM " + _simple_subset_stocks + @"
                         ORDER BY piecesAvailable, categoryid, pieceid
                     ) AS subq
                 "

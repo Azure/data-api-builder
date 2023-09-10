@@ -466,7 +466,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnView",
                 $"SELECT [title] FROM { _simple_all_books } " +
-                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"WHERE [id] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithSelectFieldsWithoutKeyFieldsOnView",
@@ -475,22 +475,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
-                $"SELECT categoryid, categoryName FROM {_simple_subset_stocks} " +
+                $"SELECT [categoryid], [categoryName] FROM {_simple_subset_stocks} " +
                 $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
-                $"SELECT categoryid, categoryName FROM {_simple_subset_stocks} " +
+                $"SELECT [categoryid], [categoryName] FROM {_simple_subset_stocks} " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
-                $"SELECT categoryName FROM {_simple_subset_stocks} " +
-                $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"SELECT [categoryName] FROM {_simple_subset_stocks} " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
-                $"SELECT categoryName FROM {_simple_subset_stocks} " +
+                $"SELECT [categoryName] FROM {_simple_subset_stocks} " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -505,22 +505,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK",
-                $"SELECT categoryid, categoryName FROM {_Composite_NonAutoGenPK_TableName} " +
-                $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"SELECT [categoryid], [categoryName] FROM {_Composite_NonAutoGenPK_TableName} " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindWithSelectFieldsWithSomePKOnTableWithCompositePK",
-                $"SELECT categoryid, categoryName FROM {_Composite_NonAutoGenPK_TableName} " +
+                $"SELECT [categoryid], [categoryName] FROM {_Composite_NonAutoGenPK_TableName} " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK",
-                $"SELECT categoryName FROM {_Composite_NonAutoGenPK_TableName} " +
-                $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"SELECT [categoryName] FROM {_Composite_NonAutoGenPK_TableName} " +
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindWithSelectFieldsWithoutPKOnTableWithCompositePK",
-                $"SELECT categoryName FROM {_Composite_NonAutoGenPK_TableName} " +
+                $"SELECT [categoryName] FROM {_Composite_NonAutoGenPK_TableName} " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {

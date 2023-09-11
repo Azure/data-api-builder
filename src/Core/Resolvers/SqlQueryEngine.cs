@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // When there are no rows returned from the database, the jsonElement will be an empty array.
             // In that case, the response is returned as is.
-            if(jsonElement.ValueKind is JsonValueKind.Array && jsonElement.EnumerateArray().Count() == 0)
+            if (jsonElement.ValueKind is JsonValueKind.Array && jsonElement.EnumerateArray().Count() == 0)
             {
                 return OkResponse(jsonElement);
             }
@@ -207,7 +207,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() -1);
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
 
             // The fields such as primary keys, fields in $orderby clause that are retrieved in addition to the
             // fields requested in the $select clause are required for calculating the $after element which is part of nextLink.
@@ -312,12 +312,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private static JsonElement RemoveExtraFieldsInResponseWithSingleItem(JsonElement jsonElement, IEnumerable<string> extraFields)
         {
             JsonObject? jsonObject = JsonObject.Create(jsonElement);
-            
+
             if (jsonObject is null)
             {
                 throw new DataApiBuilderException(message: "While processing your request the server ran into an unexpected error",
                                                   statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError );
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             foreach (string extraField in extraFields)
@@ -415,7 +415,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _httpContextAccessor.HttpContext!);
             return jsonDocument;
         }
-        
+
         // <summary>
         // Given the SqlExecuteStructure structure, obtains the query text and executes it against the backend.
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).

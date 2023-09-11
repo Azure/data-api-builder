@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             // Since we added the config file to the filesystem above after the config loader was initialized
             // in TestInitialize, we need to update the ConfigfileName, otherwise it will be an empty string.
-            _runtimeConfigLoader.UpdateConfigFileName(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
 
             try
             {
@@ -75,7 +75,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 new MockFileData(config.ToJson())
             );
 
-            _runtimeConfigLoader.UpdateConfigFileName(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
 
             try
             {
@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 new MockFileData(config.ToJson())
             );
 
-            _runtimeConfigLoader.UpdateConfigFileName(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
 
             try
             {
@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 new MockFileData(config.ToJson())
             );
 
-            _runtimeConfigLoader.UpdateConfigFileName(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 new MockFileData(config.ToJson())
             );
 
-            _runtimeConfigLoader.UpdateConfigFileName(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            _runtimeConfigLoader.UpdateConfigFilePath(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {

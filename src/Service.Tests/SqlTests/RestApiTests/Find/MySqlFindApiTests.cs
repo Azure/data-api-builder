@@ -857,8 +857,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
                     FROM (
                         SELECT categoryid, categoryName
-                        FROM " + _simple_subset_stocks +
-                        @" ORDER BY categoryid asc, pieceid asc    
+                        FROM " + _simple_subset_stocks + @"    
                     ) AS subq
                 "
             },
@@ -867,8 +866,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_OBJECT('categoryName', categoryName) AS data
                     FROM (
-                        SELECT categoryName FROM " + _simple_subset_stocks
-                        + @" WHERE categoryid = 1 AND pieceid = 1 ORDER BY categoryid asc, pieceid asc
+                        SELECT categoryName ROW_NUMBER() OVER(ORDER BY categoryid asc, pieceid asc)
+                        FROM " + _simple_subset_stocks
+                        + @" WHERE categoryid = 1 AND pieceid = 1
                     ) AS subq
                 "
             },
@@ -887,7 +887,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('title', title)) AS data
                   FROM (
                       SELECT title FROM " + _integrationTableName +
-                      @" ORDER BY id asc
+                      @"
                   ) AS subq"
             },
             {
@@ -895,9 +895,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName) AS data
                     FROM (
-                        SELECT categoryid, categoryName
+                        SELECT categoryid, categoryName, ROW_NUMBER() OVER (categoryid asc, pieceid asc)
                         FROM " + _Composite_NonAutoGenPK_TableName +
-                        @" WHERE categoryid = 1 AND pieceid = 1 ORDER BY categoryid asc, pieceid asc    
+                        @" WHERE categoryid = 1 AND pieceid = 1
                     ) AS subq
                 "
             },
@@ -906,9 +906,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
                     FROM (
-                        SELECT categoryid, categoryName
-                        FROM " + _Composite_NonAutoGenPK_TableName +
-                        @" ORDER BY categoryid asc, pieceid asc    
+                        SELECT categoryid, categoryName, ROW_NUMBER() OVER (order by categoryid, pieceid)
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
                     ) AS subq
                 "
             },
@@ -928,9 +927,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryName', categoryName)) AS data
                     FROM (
-                        SELECT categoryName
+                        SELECT categoryName, ROW_NUMBER() OVER (order by categoryid, pieceid)
                         FROM " + _Composite_NonAutoGenPK_TableName +
-                        @" ORDER BY categoryid asc, pieceid asc    
+                        @"    
                     ) AS subq
                 "
             },
@@ -939,20 +938,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
                     FROM (
-                        SELECT categoryid, categoryName
-                        FROM " + _simple_subset_stocks +
-                        @" ORDER BY piecesAvailable asc, categoryid asc, pieceid asc    
+                        SELECT categoryid, categoryName, ROW_NUMBER() OVER (ORDER BY piecesAvailable asc, categoryid asc, pieceid asc)
+                        FROM " + _simple_subset_stocks + @"     
                     ) AS subq
                 "
             },
             {
                 "FindWithSelectAndOrderbyQueryStringsOnTables",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title)) AS data
-                  FROM (
-                      SELECT id, title FROM " + _integrationTableName +
-                      @" ORDER BY publisher_id asc, id asc
-                  ) AS subq"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title)) AS data
+                    FROM (
+                        SELECT id, title, ROW_NUMBER() OVER (ORDER BY publisher_id asc, id asc)  FROM "
+                        + _integrationTableName + @" 
+                    ) AS subq
+                "
             }
         };
 

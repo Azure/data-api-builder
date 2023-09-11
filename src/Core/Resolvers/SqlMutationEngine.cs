@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -80,6 +81,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new NotSupportedException("Returning list types from mutations not supported");
             }
 
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
             string graphqlMutationName = context.Selection.Field.Name.Value;
             IOutputType outputType = context.Selection.Field.Type;
             string entityName = outputType.TypeName();
@@ -211,8 +213,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// QueryStructure built does not depend on Operation enum, thus not useful to use
         /// PerformMutationOperation method.
         /// </summary>
-        public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName)
+        public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "")
         {
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
@@ -993,6 +996,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             IsolationLevel = isolationLevel
                         },
                         TransactionScopeAsyncFlowOption.Enabled);
+        }
+
+        /// <summary>
+        /// Returns the data source name if it is valid. If not, returns the default data source name.
+        /// </summary>
+        /// <param name="dataSourceName">datasourceName.</param>
+        /// <returns>datasourceName.</returns>
+        private string GetValidatedDataSourceName(string dataSourceName)
+        {
+            // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
+            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
         }
     }
 }

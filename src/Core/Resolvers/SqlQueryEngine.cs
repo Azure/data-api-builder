@@ -7,6 +7,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using HotChocolate.Resolvers;
@@ -297,8 +298,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                _logger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext)}" +
-                    "Did not return enough rows.");
+                _logger.LogInformation(
+                    message: "{correlationId} Result set did not have any rows.",
+                    HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext));
             }
 
             return jsonDocument;

@@ -29,9 +29,10 @@ namespace Azure.DataApiBuilder.Core.Models
         private readonly IMetadataProviderFactory _metadataProviderFactory;
 
         /// <summary>
-        /// Constructor for the filter parser.
+        /// Constructor for GQLFilterParser
         /// </summary>
-        /// <param name="metadataProvider">The metadata provider of the respective database.</param>
+        /// <param name="runtimeConfigProvider">runtimeConfig provider</param>
+        /// <param name="metadataProviderFactory">metadataProvider factory.</param>
         public GQLFilterParser(RuntimeConfigProvider runtimeConfigProvider, IMetadataProviderFactory metadataProviderFactory)
         {
             _configProvider = runtimeConfigProvider;
@@ -182,7 +183,8 @@ namespace Azure.DataApiBuilder.Core.Models
                                 filterArgumentObject.Fields[name],
                                 subfields,
                                 predicates,
-                                queryStructure);
+                                queryStructure,
+                                metadataProvider);
                         }
                         else
                         {
@@ -250,7 +252,8 @@ namespace Azure.DataApiBuilder.Core.Models
             InputField filterField,
             List<ObjectFieldNode> subfields,
             List<PredicateOperand> predicates,
-            BaseQueryStructure queryStructure)
+            BaseQueryStructure queryStructure,
+            ISqlMetadataProvider metadataProvider)
         {
             string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.GetTarget(filterField);
 
@@ -261,10 +264,6 @@ namespace Azure.DataApiBuilder.Core.Models
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
-
-            string entityName = queryStructure.EntityName;
-            string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
-            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             string nestedFilterEntityName = metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
 

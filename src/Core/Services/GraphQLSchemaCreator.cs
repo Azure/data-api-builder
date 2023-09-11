@@ -8,7 +8,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
@@ -44,9 +44,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
         /// </summary>
         /// <param name="runtimeConfigProvider">Runtime config provided for the instance.</param>
-        /// <param name="queryEngine">SQL or Cosmos query engine to be used by resolvers.</param>
-        /// <param name="mutationEngine">SQL or Cosmos mutation engine to be used by resolvers.</param>
-        /// <param name="sqlMetadataProvider">Metadata provider used when generating the SQL-based GraphQL schema. Ignored if the runtime is Cosmos.</param>
+        /// <param name="queryEngineFactory">QueryEngineFactory to retreive query engine to be used by resolvers.</param>
+        /// <param name="mutationEngineFactory">MutationEngineFactory to retreive mutation engine to be used by resolvers.</param>
+        /// <param name="metadataProviderFactory">MetadataProviderFactory to get metadata provider used when generating the SQL-based GraphQL schema. Ignored if the runtime is Cosmos.</param>
         /// <param name="authorizationResolver">Authorization information for the runtime, to be applied to the GraphQL schema.</param>
         public GraphQLSchemaCreator(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -67,19 +67,18 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Take the raw GraphQL objects and generate the full schema from them.
-        ///
         /// At this point, we're somewhat agnostic to whether the runtime is Cosmos or SQL
         /// as we're working with GraphQL object types, regardless of where they came from.
         /// </summary>
         /// <param name="sb">Schema builder</param>
         /// <param name="root">Root document containing the GraphQL object and input types.</param>
         /// <param name="inputTypes">Reference table of the input types for query lookup.</param>
-        /// <param name="dbObjects">Database metadata such as parameters</param>
         private ISchemaBuilder Parse(
             ISchemaBuilder sb,
             DocumentNode root,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
+            // Generate the Query and the Mutation Node.
             (DocumentNode queryNode, DocumentNode mutationNode) = GenerateQueryAndMutationNodes(root, inputTypes);
 
             return sb
@@ -120,8 +119,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // Merge the entityToDBObjects for queryNode generation for all entities.
             foreach ((string name, _) in _entities)
             {
-                ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name));
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name);
+                ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 if (!dataSourceNames.Contains(dataSourceName))
                 {
                     dbObjects = dbObjects.Concat(metadataprovider.EntityToDatabaseObject).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -295,6 +294,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Merge the inputObjects from both cosmos and sql
             Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = cosmosResult.Item2.Concat(sqlResult.Item2).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
+            // Merge the definitions from both cosmos and sql
             return (new DocumentNode(cosmosResult.Item1.Definitions.Concat(sqlResult.Item1.Definitions).ToImmutableList()), inputObjects);
         }
     }

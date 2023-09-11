@@ -625,7 +625,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
         public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
         {
-            _logger.LogInformation("Validating Relationship Section in Config...");
+            _logger.LogInformation("Validating entity relationships.");
 
             // Loop through each entity in the config and verify its relationship.
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
@@ -721,9 +721,21 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             string referencingTargetColumns = relationship.LinkingTargetFields is not null ? string.Join(",", relationship.LinkingTargetFields) :
                                 sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedTargetRelationshipPair, out fKDef) ?
                                 string.Join(",", fKDef.ReferencingColumns) : string.Empty;
-                            _logger.LogDebug($"{entityName}: {sourceDBOName}({referencedSourceColumns}) related to {cardinality} " +
-                                $"{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
-                                $"{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})");
+
+                            _logger.LogDebug(
+                                message: "{entityName}: {sourceDBOName}({referencedSourceColumns}) is related to {cardinality} " +
+                                "{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
+                                "{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})",
+                                entityName,
+                                sourceDBOName,
+                                referencedSourceColumns,
+                                cardinality,
+                                relationship.TargetEntity,
+                                targetDBOName,
+                                referencedTargetColumns,
+                                relationship.LinkingObject,
+                                referencingSourceColumns,
+                                referencingTargetColumns);
                         }
                     }
 
@@ -733,9 +745,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
                         if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(sourceDatabaseObject, targetDatabaseObject))
                         {
                             throw new DataApiBuilderException(
-                            message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
 
@@ -757,8 +769,17 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             string.Join(",", fKDef.ReferencedColumns) :
                             sqlMetadataProvider.PairToFkDefinition!.TryGetValue(targetSourceRelationshipPair, out fKDef) ?
                             string.Join(",", fKDef.ReferencingColumns) : string.Empty;
-                        _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
-                            $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
+
+                        _logger.LogDebug(
+                            message: "{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} {relationshipTargetEntity}: {targetDBOName}({targetColumns}).",
+                            entityName,
+                            sourceDBOName,
+                            sourceColumns,
+                            cardinality,
+                            relationship.TargetEntity,
+                            targetDBOName,
+                            targetColumns
+                            );
                     }
                 }
             }

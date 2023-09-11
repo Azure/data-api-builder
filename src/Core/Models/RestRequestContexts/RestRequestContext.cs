@@ -151,10 +151,11 @@ namespace Azure.DataApiBuilder.Core.Models
             {
                 // Exception not rethrown as returning false here is gracefully handled by caller,
                 // which will result in a 403 Unauthorized response to the client.
-                logger.LogError($"ERROR IN ODATA_AST_COLUMN_VISITOR TRAVERSAL\n" +
-                    $"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
-                    $"{e.Message}\n" +
-                    $"{e.StackTrace}");
+                logger.LogError(
+                    exception: e,
+                    message: "{correlationId} Error in ODATA_AST_COLUMN_VISITOR traversal due to:\n{e.Message}",
+                    HttpContextExtensions.GetLoggerCorrelationId(context),
+                    e.Message);
 
                 throw new DataApiBuilderException(
                     message: "$filter query parameter is not well formed.",

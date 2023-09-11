@@ -3,7 +3,7 @@
 
 using Azure.DataApiBuilder.Config.ObjectModel;
 
-namespace Azure.DataApiBuilder.Core.Resolvers
+namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
     /// <summary>
     /// QueryEngineFactory interface.

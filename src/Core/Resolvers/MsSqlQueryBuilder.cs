@@ -307,7 +307,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     insertQuery.Append($"OUTPUT {columnsToBeReturned}");
                 }
                 // If an insert trigger is enabled but there was no update trigger enabled,
-                // we need to generated columns to be returned without 'Inserted' prefix.
+                // we need to generate columnsToBeReturned without the 'Inserted' prefix on each column.
                 else if (!isUpdateTriggerEnabled)
                 {
                     // This is again just an optimisation. If update trigger was enabled, then the columnsToBeReturned would

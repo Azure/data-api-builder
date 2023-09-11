@@ -58,10 +58,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
-            }
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
@@ -154,10 +151,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
-            }
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
@@ -393,6 +387,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             byte[] base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
             return Encoding.UTF8.GetString(base64EncodedBytes);
+        }
+
+        private string GetValidatedDataSourceName(string dataSourceName)
+        {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
+            return dataSourceName;
         }
     }
 }

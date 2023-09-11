@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// Creates a DocumentNode containing FieldDefinitionNodes representing mutations
         /// </summary>
         /// <param name="root">Root of GraphQL schema</param>
-        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
+        /// <param name="databaseTypes">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
         /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
         /// <param name="dbObjects">Database object metadata</param>

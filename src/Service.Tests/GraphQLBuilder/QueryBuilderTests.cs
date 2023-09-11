@@ -328,100 +328,30 @@ type Table @model(name: ""table"") {
         /// This test validates that this naming convention is followed for the queries when the schema is generated.
         /// </summary>
         /// <param name="gql">Type definition for the entity</param>
-        /// <param name="entityName">Name of the entity</param>
-        /// <param name="singularName">Singular name provided by the user</param>
-        /// <param name="pluralName">Plural name provided by the user</param>
-        /// <param name="expectedQueryNameForPK"> Expected name for the primary key query</param>
-        /// <param name="expectedQueryNameForList"> Expected name for the query to fetch all items </param>
-        /// <param name="expectedNameInDescription">Expected name in the description for both the queries</param>
-        [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", null, null, "book_by_pk", "books", "Book",
-            DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
-        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", "book", "books", "book_by_pk", "books", "book",
-            DisplayName = "Query name and description validation for singular entity name with singular plural defined")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "books_by_pk", "books", "Books",
-            DisplayName = "Query name and description validation for plural entity name with singular plural not defined")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "books", "book_by_pk", "books", "book",
-            DisplayName = "Query name and description validation for plural entity name with singular plural defined")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "books", "book",
-            DisplayName = "Query name and description validations for plural entity name with singular defined")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "person_by_pk", "people", "Person",
-            DisplayName = "Query name and description validation for indirect plural entity name with singular and plural name defined")]
-        public void ValidateQueriesAreCreatedWithRightName(
-            string gql,
-            string entityName,
-            string singularName,
-            string pluralName,
-            string expectedQueryNameForPK,
-            string expectedQueryNameForList,
-            string expectedNameInDescription
-            )
-        {
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-            Dictionary<string, EntityMetadata> entityPermissionsMap
-                = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { entityName },
-                    new EntityActionOperation[] { EntityActionOperation.Read },
-                    new string[] { "anonymous", "authenticated" });
-
-            Entity entity = (singularName is not null)
-                                ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
-                                : GraphQLTestHelpers.GenerateEmptyEntity();
-
-            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
-            {
-                { entityName, DatabaseType.CosmosDB_NoSQL }
-            };
-            DocumentNode queryRoot = QueryBuilder.Build(
-                root,
-                entityNameToDatabaseType,
-                new(new Dictionary<string, Entity> { { entityName, entity } }),
-                inputTypes: new(),
-                entityPermissionsMap: entityPermissionsMap
-                );
-
-            ObjectTypeDefinitionNode query = GetQueryNode(queryRoot);
-            Assert.IsNotNull(query);
-
-            // Two queries - 1) Query for an item using PK 2) Query for all items should be created.
-            // Check to validate the count of queries created.
-            Assert.AreEqual(2, query.Fields.Count);
-
-            // Name and Description validations for the query for fetching by PK.
-            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForPK));
-            FieldDefinitionNode pkQueryFieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForPK);
-            string expectedPKQueryDescription = $"Get a {expectedNameInDescription} from the database by its ID/primary key";
-            Assert.AreEqual(expectedPKQueryDescription, pkQueryFieldNode.Description.Value);
-
-            // Name and Description validations for the query for fetching all items.
-            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForList));
-            FieldDefinitionNode allItemsQueryFieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForList);
-            string expectedAllQueryDescription = $"Get a list of all the {expectedNameInDescription} items from the database";
-            Assert.AreEqual(expectedAllQueryDescription, allItemsQueryFieldNode.Description.Value);
-        }
-
-        /// <summary>
-        /// We assume that the user will provide a singular name for the entity. Users have the option of providing singular and
-        /// plural names for an entity in the config to have more control over the graphql schema generation.
-        /// When singular and plural names are specified by the user, these names will be used for generating the
-        /// queries and mutations in the schema.
-        /// When singular and plural names are not provided, the queries and mutations will be generated with the entity's name.
-        /// Further, the queries and descriptions will get generated with the same case as defined by the user.
-        /// This test validates that this naming convention is followed for the queries when the schema is generated.
-        /// </summary>
-        /// <param name="gql">Type definition for the entity</param>
-        /// <param name="entityNames">Name of the entity</param>
+        /// <param name="entityNames">Names of the entities</param>
         /// <param name="singularNames">Singular name provided by the user</param>
-        /// <param name="pluralNames">Plural name provided by the user</param>
-        /// <param name="expectedQueryNamesForPK"> Expected name for the primary key query</param>
-        /// <param name="expectedQueryNamesForList"> Expected name for the query to fetch all items </param>
-        /// <param name="expectedNameInDescription">Expected name in the description for both the queries</param>
+        /// <param name="pluralNames">Plural names provided by the user</param>
+        /// <param name="expectedQueryNamesForPK"> Expected names for the primary key query</param>
+        /// <param name="expectedQueryNamesForList"> Expected names for the query to fetch all items </param>
+        /// <param name="expectedNameInDescription">Expected names in the description for both the queries</param>
         [DataTestMethod]
+        [DataRow(GraphQLTestHelpers.BOOK_GQL, new string[] { "Book" }, null, null, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "Book" },
+            DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
+        [DataRow(GraphQLTestHelpers.BOOK_GQL, new string[] { "Book" }, new string[] { "book" }, new string[] { "books" }, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "book" },
+            DisplayName = "Query name and description validation for singular entity name with singular plural defined")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, new string[] { "Books" }, null, null, new string[] { "books_by_pk" }, new string[] { "books" }, new string[] { "Books" },
+            DisplayName = "Query name and description validation for plural entity name with singular plural not defined")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, new string[] { "Books" }, new string[] { "book" }, new string[] { "books" }, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "book" },
+            DisplayName = "Query name and description validation for plural entity name with singular plural defined")]
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, new string[] { "Books" }, new string[] { "book" }, new string[] { "" }, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "book" },
+            DisplayName = "Query name and description validations for plural entity name with singular defined")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "person_by_pk" }, new string[] { "people" }, new string[] { "Person" },
+            DisplayName = "Query name and description validation for indirect plural entity name with singular and plural name defined")]
         [DataRow($"{GraphQLTestHelpers.BOOK_GQL}{GraphQLTestHelpers.PEOPLE_GQL}", new string[] { "Book", "People" }, null, null, new string[] { "book_by_pk", "people_by_pk" }, new string[] { "books", "peoples" }, new string[] { "Book", "People" },
             DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
         [DataRow($"{GraphQLTestHelpers.BOOK_GQL}{GraphQLTestHelpers.PEOPLE_GQL}", new string[] { "Book", "People" }, new string[] { "book", "Person" }, new string[] { "books", "People" }, new string[] { "book_by_pk", "person_by_pk" }, new string[] { "books", "people" }, new string[] { "book", "Person" },
             DisplayName = "Query name and description validation for single and plural names defined not defined")]
-        public void ValidateQueriesAreCreatedWithRightNameForMultiDataSource(
+        public void ValidateQueriesAreCreatedWithRightName(
             string gql,
             string[] entityNames,
             string[] singularNames,
@@ -463,7 +393,7 @@ type Table @model(name: ""table"") {
 
             // Two queries - 1) Query for an item using PK 2) Query for all items should be created.
             // Check to validate the count of queries created.
-            Assert.AreEqual(4, query.Fields.Count);
+            Assert.AreEqual(2 * entityNames.Length, query.Fields.Count);
 
             for (int i = 0; i < entityNames.Length; i++)
             {

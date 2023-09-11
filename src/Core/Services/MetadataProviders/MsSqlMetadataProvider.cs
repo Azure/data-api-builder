@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 

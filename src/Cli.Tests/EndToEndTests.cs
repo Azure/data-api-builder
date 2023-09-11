@@ -770,10 +770,12 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to validate that whenever the flag rest.request-body-strict is included in the init command,
-    /// the runtimeconfig is initialized such that the runtime allows extraneous fields in the request body for REST.
+    /// Test to validate that whenever the option rest.request-body-strict is included in the init command,
+    /// the runtimeconfig is initialized with the appropriate value of the above option in the rest runtime section, as it is assigned in the init command.
+    /// When the above mentioned option is not included in the init command, the default behavior - that of not allowing any extraneous fields in request body, is observed.
     /// </summary>
-    /// <param name="isRequestBodyStrict">Value of the rest.request-body-strict flag in the init command.</param>
+    /// <param name="includeRestRequestBodyStrictFlag">Whether or not to include --rest.request-body-strict option in the init command.</param>
+    /// <param name="isRequestBodyStrict">Value of the rest.request-body-strict option in the init command.</param>
     [DataTestMethod]
     [DataRow(true, false, DisplayName = "dab init command specifies --rest.request-body-strict as false - REST request body allows extraneous fields.")]
     [DataRow(true, true, DisplayName = "dab init command specifies --rest.request-body-strict as true - REST request body doesn't allow extraneous fields.")]

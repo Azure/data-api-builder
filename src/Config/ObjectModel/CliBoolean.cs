@@ -8,7 +8,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     /// where if a boolean option is included in the CLI command, it is set as true.
     /// Doesn't matter what value do we specify for the option, that value is ignored.
     /// </summary>
-    public enum CliBool
+    public enum CliBoolean
     {
         // The enum value None is required to determine whether a value was provided for a CLI option. In case the option is not included in the init command,
         // the enum gets assigned a value of an uninitialized enum i.e. 0 (here 'None').

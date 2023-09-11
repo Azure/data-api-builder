@@ -34,7 +34,7 @@ namespace Cli.Commands
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
-            CliBool restRequestBodyStrict = CliBool.True,
+            CliBoolean restRequestBodyStrict = CliBoolean.True,
             string? config = null)
             : base(config)
         {
@@ -105,8 +105,8 @@ namespace Cli.Commands
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
-        [Option("rest.request-body-strict", Default = CliBool.True, Required = false, HelpText = "When set to true, allows extraneous fields in the request body for REST.")]
-        public CliBool RestRequestBodyStrict { get; }
+        [Option("rest.request-body-strict", Required = false, HelpText = "When set to true, allows extraneous fields in the request body for REST.")]
+        public CliBoolean RestRequestBodyStrict { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

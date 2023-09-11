@@ -1489,8 +1489,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Test to validate that when the property rest.request-body-strict is ommitted from the rest runtime section in config file, we operate in the default mode
-        /// where we don't allow any extraneous fields in the request body i.e. rest.request-body-strict = true.
+        /// Test to validate that when the property rest.request-body-strict is absent from the rest runtime section in config file, DAB runs in strict mode.
+        /// In strict mode, presence of extra fields in the request body is not permitted and leads to HTTP 400 - BadRequest error.
         /// </summary>
         /// <param name="includeExtraneousFieldInRequestBody">Boolean value indicating whether or not to include extraneous field in request body.</param>
         [DataTestMethod]

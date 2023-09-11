@@ -190,9 +190,7 @@ public class ConfigGeneratorTests
 
         // Comparing explicit strings here since parsing these into JSON would lose
         // the test scenario of verifying escaped chars are not written to the file system.
-        string a = expectedRuntimeConfigJson.ToString();
-        string b = actualRuntimeConfigJson.ToString();
-        Assert.AreEqual(a, b);
+        Assert.AreEqual(expectedRuntimeConfigJson.ToString(), actualRuntimeConfigJson.ToString());
     }
 
     /// <summary>

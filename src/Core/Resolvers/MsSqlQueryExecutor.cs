@@ -173,15 +173,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             try
             {
-                _defaultAccessToken =
-                    await AzureCredential.GetTokenAsync(
-                        new TokenRequestContext(new[] { DATABASE_SCOPE }));
+                _defaultAccessToken = await AzureCredential.GetTokenAsync(new TokenRequestContext(new[] { DATABASE_SCOPE }));
             }
             catch (CredentialUnavailableException ex)
             {
-                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
-                    $"Attempt to retrieve a managed identity access token using DefaultAzureCredential" +
-                    $" failed due to: \n{ex}");
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext);
+                QueryExecutorLogger.LogWarning(
+                    message: "{correlationId} Failed to retrieve a managed identity access token using DefaultAzureCredential due to:\n{errorMessage}",
+                    correlationId,
+                    ex.Message);
             }
 
             return _defaultAccessToken?.Token;

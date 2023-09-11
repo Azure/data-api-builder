@@ -115,7 +115,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// 
+        /// Validates different scenarios with $select clause for Find API requests.
+        /// All the Find requests are executed on tables.
         /// </summary>
         [TestMethod]
         public virtual async Task FindWithSelectQueryStringOnTables()
@@ -164,7 +165,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// 
+        /// Validates the repsonse when both $select and $orderby query strings are
+        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// fields requested in $select clause.
+        /// The behaviour is validated against tables and views.
         /// </summary>
         [TestMethod]
         public virtual async Task FindWithSelectAndOrderByQueryStrings()

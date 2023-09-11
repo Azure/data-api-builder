@@ -856,7 +856,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
                     FROM (
-                        SELECT categoryid, categoryName
+                        SELECT categoryid, categoryName, ROW_NUMBER() OVER(ORDER BY categoryid asc, pieceid asc)
                         FROM " + _simple_subset_stocks + @"    
                     ) AS subq
                 "
@@ -866,9 +866,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_OBJECT('categoryName', categoryName) AS data
                     FROM (
-                        SELECT categoryName ROW_NUMBER() OVER(ORDER BY categoryid asc, pieceid asc)
+                        SELECT categoryName
                         FROM " + _simple_subset_stocks
                         + @" WHERE categoryid = 1 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryName', categoryName)) AS data
+                    FROM (
+                        SELECT categoryName, ROW_NUMBER() OVER(ORDER BY categoryid asc, pieceid asc)
+                        FROM " + _simple_subset_stocks
+                        + @"
                     ) AS subq
                 "
             },
@@ -895,7 +906,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName) AS data
                     FROM (
-                        SELECT categoryid, categoryName, ROW_NUMBER() OVER (categoryid asc, pieceid asc)
+                        SELECT categoryid, categoryName
                         FROM " + _Composite_NonAutoGenPK_TableName +
                         @" WHERE categoryid = 1 AND pieceid = 1
                     ) AS subq

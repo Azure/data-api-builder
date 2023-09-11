@@ -257,9 +257,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// However, these fields are not required in the response.
         /// This function helps to determine those additional fields that are present in the response.
         /// </summary>
-        /// <param name="response"></param>
-        /// <param name="context"></param>
-        /// <returns></returns>
+        /// <param name="response">Response json retrieved from the database</param>
+        /// <param name="context">FindRequestContext for the GET request.</param>
+        /// <returns>Additional fields that are present in the response</returns>
         private static IEnumerable<string> DetermineExtraFieldsInResponse(JsonElement response, FindRequestContext context)
         {
             // context.FieldsToBeReturned will contain the fields requested in the $select clause.
@@ -292,6 +292,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="jsonElementList">List of Json Elements with extra fields</param>
         /// <param name="extraFields">Additional fields that needs to be removed from the list of Json elements</param>
+        /// <returns>List of Json Elements after removing the additional fields</returns>
         private static List<JsonElement> RemoveExtraFieldsInResponseWithMultipleItems(List<JsonElement> jsonElementList, IEnumerable<string> extraFields)
         {
             for (int i = 0; i < jsonElementList.Count(); i++)
@@ -307,6 +308,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="jsonElement"> Json Element with extra fields</param>
         /// <param name="extraFields">Additional fields that needs to be removed from the Json element</param>
+        /// <returns>Json Element after removing the additional fields</returns>
         private static JsonElement RemoveExtraFieldsInResponseWithSingleItem(JsonElement jsonElement, IEnumerable<string> extraFields)
         {
             JsonObject? jsonObject = JsonObject.Create(jsonElement);

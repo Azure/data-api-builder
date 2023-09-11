@@ -6,6 +6,7 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -26,15 +27,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly CosmosClientProvider _clientProvider;
         private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public CosmosMutationEngine(
             CosmosClientProvider clientProvider,
             IMetadataProviderFactory metadataProviderFactory,
-            IAuthorizationResolver authorizationResolver)
+            IAuthorizationResolver authorizationResolver,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
             _clientProvider = clientProvider;
             _metadataProviderFactory = metadataProviderFactory;
             _authorizationResolver = authorizationResolver;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         private async Task<JObject> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver, string dataSourceName = "")
@@ -310,7 +314,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object?> parameters,
             string dataSourceName = "")
         {
-            dataSourceName = GetValidatedDataSourceName(dataSourceName);
+            dataSourceName = string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
             string entityName = metadataProvider.GetEntityName(graphQLType);

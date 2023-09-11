@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
             if (cosmosEngineNeeded)
             {
-                _mutationEngines = _mutationEngines.Append(new CosmosMutationEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver));
+                _mutationEngines = _mutationEngines.Append(new CosmosMutationEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, runtimeConfigProvider));
             }
         }
 

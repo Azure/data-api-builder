@@ -854,7 +854,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
                 @"
-                    SELECT JSON_ARRAYAGG((JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
                     FROM (
                         SELECT categoryid, categoryName
                         FROM " + _simple_subset_stocks +
@@ -884,7 +884,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindWithSelectFieldsWithoutPKOnTable",
                 @"
-                  SELECT JSON_ARRAYAGG((JSON_OBJECT('title', title)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('title', title)) AS data
                   FROM (
                       SELECT title FROM " + _integrationTableName +
                       @" ORDER BY id asc
@@ -948,7 +948,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindWithSelectAndOrderbyQueryStringsOnTables",
                 @"
-                  SELECT JSON_ARRAYAGG((JSON_OBJECT('id', id, 'title', title)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title)) AS data
                   FROM (
                       SELECT id, title FROM " + _integrationTableName +
                       @" ORDER BY publisher_id asc, id asc

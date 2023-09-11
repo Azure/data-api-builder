@@ -239,7 +239,7 @@ namespace Azure.DataApiBuilder.Service
                         _logger.LogError("Exiting the runtime engine...");
                     }
 
-                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {fileSystemRuntimeConfigLoader.ConfigFileName}");
+                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {fileSystemRuntimeConfigLoader.ConfigFilePath}");
                 }
             }
             else

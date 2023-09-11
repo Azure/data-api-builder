@@ -199,14 +199,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
 
-            // For each attempt logger is invoked twice. Currently we have hardcoded the number of attempts.
+            // For each attempt logger is invoked once. Currently we have hardcoded the number of attempts.
             // Once we have number of retry attempts specified in config, we will make it dynamic.
-            Assert.AreEqual(2 * maxAttempts, queryExecutorLogger.Invocations.Count);
+            Assert.AreEqual(maxAttempts, queryExecutorLogger.Invocations.Count);
         }
 
         /// <summary>
-        /// Test to validate that when a query successfully executes within allowed number of retries, we get back the result
-        /// without giving anymore retries.
+        /// Validates that a query successfully executes within two retries by checking that the SqlQueryExecutor logger
+        /// was invoked the expected number of times.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
@@ -252,9 +252,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     dataReaderHandler: null,
                     args: null);
 
-            // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
-            // An additional information log is added when the query executes successfully in a retry attempt.
-            Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);
+            // The logger is invoked three (3) times, once for each of the following events:
+            // The query fails on the first attempt (log event 1).
+            // The query fails on the second attempt/first retry (log event 2).
+            // The query succeeds on the third attempt/second retry (log event 3).
+            Assert.AreEqual(3, queryExecutorLogger.Invocations.Count);
         }
 
         [TestCleanup]

@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _authorizationResolver = authorizationResolver;
         }
 
-        private async Task<JObject> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver, string dataSourceName)
+        private async Task<JObject> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver, string dataSourceName = "")
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -308,8 +308,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>JSON object result</returns>
         public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object?> parameters,
-            string dataSourceName)
+            string dataSourceName = "")
         {
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
             string entityName = metadataProvider.GetEntityName(graphQLType);

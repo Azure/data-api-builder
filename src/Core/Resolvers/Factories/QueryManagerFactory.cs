@@ -8,10 +8,10 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
-namespace Azure.DataApiBuilder.Core.Resolvers
+namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
     /// <summary>
-    /// QueryManagerFactory interface.
+    /// QueryManagerFactory. Implements IQueryManagerFactory
     /// Used to get the appropriate query builder, query executor and exception parser and  based on the database type.
     /// </summary>
     public class QueryManagerFactory : IQueryManagerFactory
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
             _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();
             _dbExceptionsParsers = new Dictionary<DatabaseType, DbExceptionParser>();
-            foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
+            foreach (DataSource dataSource in runtimeConfigProvider.GetConfig().ListAllDataSources())
             {
                 IQueryBuilder? queryBuilder = null;
                 IQueryExecutor? queryExecutor = null;

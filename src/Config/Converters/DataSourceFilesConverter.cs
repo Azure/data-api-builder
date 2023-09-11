@@ -7,6 +7,9 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
+/// <summary>
+/// Converter for DataSourceFiles
+/// </summary>
 class DataSourceFilesConverter : JsonConverter<DataSourceFiles>
 {
     /// <inheritdoc/>

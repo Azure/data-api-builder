@@ -10,7 +10,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 
-namespace Azure.DataApiBuilder.Core.Resolvers
+namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
     /// <summary>
     /// MutationEngineFactory class.
@@ -46,7 +46,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 (x => x.Value.DatabaseType == DatabaseType.MSSQL || x.Value.DatabaseType == DatabaseType.PostgreSQL || x.Value.DatabaseType == DatabaseType.MySQL);
             if (sqlEngineNeeded)
             {
-
                 _mutationEngines = _mutationEngines.Append(new SqlMutationEngine(queryManagerFactory, metadataProviderFactory, queryEngineFactory, authorizationResolver, gQLFilterParser, httpContextAccessor, runtimeConfigProvider));
             }
 

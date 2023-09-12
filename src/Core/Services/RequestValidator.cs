@@ -154,7 +154,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // If query string or body contains extra parameters that don't exist
             // TO DO: If the request header contains x-ms-must-match custom header with value of "ignore"
             // this should not throw any error. Tracked by issue #158.
-            if (extraFields.Count > 0)
+            if (extraFields.Count > 0 && IsRequestBodyStrict())
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid request. Contained unexpected fields: {string.Join(", ", extraFields)}" +

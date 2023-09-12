@@ -136,7 +136,8 @@
             },
             "request-body-strict": {
               "type": "boolean",
-              "description": "Allow extraneous fields in request body."
+              "description": "Allow extraneous fields in request body.",
+              "default": true
             }
           }
         },

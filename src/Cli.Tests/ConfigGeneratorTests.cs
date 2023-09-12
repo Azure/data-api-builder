@@ -184,6 +184,8 @@ public class ConfigGeneratorTests
         Assert.IsTrue(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 
         StringBuilder actualRuntimeConfigJson = new(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE, Encoding.Default));
+        // The order of these replacements should be identical to the ones being done with expectedRuntimeConfigJson to ensure that
+        // the replacements done are identical.
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace(" ", string.Empty);
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\r\n", string.Empty);
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\n", string.Empty);

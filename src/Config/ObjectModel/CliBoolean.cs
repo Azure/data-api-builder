@@ -4,9 +4,9 @@
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
     /// <summary>
-    /// Class to represent boolean values in CLI. This is required over primitive boolean types because of the limitation of the args library
+    /// Class to represent boolean values in CLI. This is required over primitive boolean types because of the limitation of the CommandLineParser library
     /// where if a boolean option is included in the CLI command, it is set as true.
-    /// Doesn't matter what value do we specify for the option, that value is ignored.
+    /// Doesn't matter what value we specify for the option as that value is ignored.
     /// </summary>
     public enum CliBoolean
     {

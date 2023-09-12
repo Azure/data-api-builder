@@ -19,7 +19,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
 
         /// <summary>
         /// Test to validate that extraneous fields are allowed in request body when we operate in runtime.rest.request-body-strict = false.
-        /// When PK fields are specified both in URI and in the request body, precedence is given to the values specified for the fields in the URI.
+        /// When PK fields are specified both in URI and in the request body, the values specified for the fields in the URI are honored,
+        /// and the values specified in the request body are ignored.
         /// This single test validates the functionality for PUT, PATCH and and POST requests.
         /// </summary>
         [TestMethod]

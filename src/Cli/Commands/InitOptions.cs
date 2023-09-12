@@ -105,6 +105,8 @@ namespace Cli.Commands
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
+        // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
+        // included in the init command.
         [Option("rest.request-body-strict", Required = false, HelpText = "When set to true, allows extraneous fields in the request body for REST.")]
         public CliBoolean RestRequestBodyStrict { get; }
 

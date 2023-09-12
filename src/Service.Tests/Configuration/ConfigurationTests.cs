@@ -1545,8 +1545,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 }
 
                 requestBody += "}";
-                       
-
                 JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
                 HttpRequestMessage request = new(httpMethod, "api/Book")
                 {

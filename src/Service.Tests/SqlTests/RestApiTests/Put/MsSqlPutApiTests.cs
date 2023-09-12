@@ -101,13 +101,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             {
                 "PutOneUpdateWithRowversionFieldMissingFromRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 1 AND [book_name] = 'Another Awesome Book' " +
-                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL AND [row_version] is NOT NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "PutOneInsertWithRowversionFieldMissingFromRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Best seller' " +
-                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL AND [row_version] is NOT NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
@@ -268,7 +268,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         {
             // Validate successful execution of a PUT update when a rowversion field (here 'row_version')
             // is missing from the request body. Successful execution of the PUT request confirms that we did not
-            // attempt to NULL out the 'row_version' field.
+            // attempt to NULL out the 'row_version' field. Had DAB attempted to NULL out the 'row_version' field,
+            // we would have got an exception as we cannot provide a value for a field with sql server type of 'rowversion'.
             string requestBody = @"
             {
                 ""book_name"": ""Another Awesome Book"",
@@ -289,7 +290,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
             // Validate successful execution of a PUT insert when a rowversion field (here 'row_version')
             // is missing from the request body. Successful execution of the PUT request confirms that we did not
-            // attempt to NULL out the 'row_version' field.
+            // attempt to NULL out the 'row_version' field. Had DAB attempted to NULL out the 'row_version' field,
+            // we would have got an exception as we cannot provide a value for a field with sql server type of 'rowversion'.
             requestBody = @"
             {
                 ""book_name"": ""Best seller"",

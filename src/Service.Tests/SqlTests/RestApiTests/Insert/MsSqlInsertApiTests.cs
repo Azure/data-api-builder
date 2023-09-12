@@ -185,7 +185,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             {
                 "InsertOneWithRowversionFieldMissingFromRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Another Awesome Book' " +
-                $"AND [copies_sold] = 100 AND [last_sold_on] = '2023-08-28 12:36:08.8666667' AND [last_sold_on_date] = '2023-08-28 12:36:08.8666667' " +
+                $"AND [copies_sold] = 100 AND [last_sold_on] = '2023-08-28 12:36:08.8666667' " +
+                $"AND [last_sold_on_date] = '2023-08-28 12:36:08.8666667' AND [row_version] is NOT NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
@@ -282,7 +283,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         {
             // Validate successful execution of a POST request when a rowversion field (here 'row_version')
             // is missing from the request body. Successful execution of the POST request confirms that we did not
-            // attempt to provide a value for the 'row_version' field.
+            // attempt to provide a value for the 'row_version' field. Had DAB provided a value for 'row_version' field,
+            // we would have got a BadRequest exception as we cannot provide a value for a field with sql server type of 'rowversion'.
             string requestBody = @"
             {
                 ""id"": 2,

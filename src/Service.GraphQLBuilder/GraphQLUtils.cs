@@ -189,6 +189,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         modelName = dir.GetArgument<string>(ModelDirectiveType.ModelNameArgument).ToString();
                         return modelName is not null;
                     }
+
                 }
             }
 

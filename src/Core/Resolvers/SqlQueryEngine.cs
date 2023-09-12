@@ -196,17 +196,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             IEnumerable<string> extraFieldsInResponse = (jsonElement.ValueKind is not JsonValueKind.Array)
                                                   ? DetermineExtraFieldsInResponse(jsonElement, context)
-                                                  : DetermineExtraFieldsInResponse(jsonElement.EnumerateArray().Last(), context);
+                                                  : DetermineExtraFieldsInResponse(jsonElement.EnumerateArray().First(), context);
+
+            int countOfExtraFieldsInResponse = extraFieldsInResponse.Count();
 
             // If the results are not a collection or if the query does not have a next page
             // no nextLink is needed. So, the response is returned after removing the extra fields.
             if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
             {
-                return jsonElement.ValueKind is JsonValueKind.Array ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(jsonElement.EnumerateArray().ToList(), extraFieldsInResponse)))
-                                                                    : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(jsonElement, extraFieldsInResponse));
+                // If there are no additional fields present, the response is returned directly. When there
+                // are extra fields, they are removed before returning the response.
+                if (countOfExtraFieldsInResponse == 0)
+                {
+                    return OkResponse(jsonElement);
+                }
+                else
+                {
+                    return jsonElement.ValueKind is JsonValueKind.Array ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(jsonElement.EnumerateArray().ToList(), extraFieldsInResponse)))
+                                                                        : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(jsonElement, extraFieldsInResponse));
+                }
             }
 
-            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray().ToList();
+            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
 
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
@@ -249,7 +260,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                   nvc: context!.ParsedQueryString,
                                   after);
 
-            rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated.ToList(), extraFieldsInResponse);
+            // When there are extra fields present, they are removed before returning the response.
+            if (countOfExtraFieldsInResponse > 0)
+            {
+                rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated.ToList(), extraFieldsInResponse);
+            }
+
             return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated.Append(nextLink)));
         }
 
@@ -267,19 +283,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             HashSet<string> fieldsPresentInResponse = new();
 
-            if (response.ValueKind is not JsonValueKind.Array)
+            foreach (JsonProperty property in response.EnumerateObject())
             {
-                foreach (JsonProperty property in response.EnumerateObject())
-                {
-                    fieldsPresentInResponse.Add(property.Name);
-                }
-            }
-            else
-            {
-                foreach (JsonProperty property in response.EnumerateArray().Last().EnumerateObject())
-                {
-                    fieldsPresentInResponse.Add(property.Name);
-                }
+                fieldsPresentInResponse.Add(property.Name);
             }
 
             // context.FieldsToBeReturned will contain the fields requested in the $select clause.

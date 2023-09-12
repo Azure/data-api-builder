@@ -88,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             {
                 "PutOneUpdateWithComputedFieldMissingFromRequestBody",
                 $"SELECT * FROM { _tableWithReadOnlyFields } " +
-                $"WHERE [id] = 1 AND [book_name] = 'New book' AND [copies_sold] = 101 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL " +
+                $"WHERE [id] = 1 AND [book_name] = 'New book' AND [copies_sold] = 101 AND [last_sold_on] = '2023-09-12 05:30:30' AND [last_sold_on_date] = '2023-09-12 05:30:30' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {

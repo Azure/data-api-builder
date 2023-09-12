@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         /// Test to validate that even when an update DML trigger is enabled on a table, we still return the
         /// latest data as it is present after the trigger gets executed. Whenever an update DML trigger is enabled,
         /// we use a subsequent SELECT query to get the data instead of using OUTPUT clause. To validate that the data is returned
-        /// as it, is after the trigger is executed, we use the values which are updated by the trigger in the WHERE predicates of the verifying sql query.
+        /// after the trigger is executed, we use the new values (written by the trigger) in the WHERE predicates of the verifying sql query.
         /// </summary>
         [TestMethod]
         public async Task PatchOneUpdateInTableWithUpdateTrigger()
@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
         /// <summary>
         /// Test to validate that even when an insert DML trigger is enabled on a table, we still return the
-        /// latest data as it is present after the trigger gets executed. Whenever an insert DML trigger is enabled,
+        /// latest data (values written by trigger). Whenever an insert DML trigger is enabled,
         /// we use a subsequent SELECT query to get the data instead of using OUTPUT clause.
         /// </summary>
         [TestMethod]

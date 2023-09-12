@@ -150,6 +150,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Since we created a temporary table, it will be dropped automatically as the session terminates.
                 // So, we don't need to explicitly drop the temporary table.
                 insertQuery.Append(";");
+
+                /* An example final insert query with trigger would look something like:
+                 * -- Creation of temporary table
+                 * SELECT [nonautogen_id] INTO [dbo].[#table_T] FROM [dbo].[table] WHERE 0 = 1;
+                 * -- Insertion of values into the actual table
+                 * INSERT INTO [dbo].[table] ([field1], [field2], [field3]) OUTPUT Inserted.[nonautogen_id] INTO [dbo].[#table_T]
+                 * -- Values to insert into the table.
+                 * VALUES(@param1, @param2, @param3);
+                 * -- Subsequent select query to get back data.
+                 * SELECT [dbo].[table].[id] AS [id], [dbo].[table].[nonautogen_id] AS [nonautogen_id], [dbo].[table].[field1] AS [field1], [dbo].[table].[field2] AS [field2], [dbo].[table].[field3] AS [field3]
+                 * FROM [dbo].[table]
+                 * -- INNER JOIN for non-autogen PK field
+                 * INNER JOIN [dbo].[#table_T] ON [dbo].[table].[nonautogen_id] = [dbo].[#table_T].[nonautogen_id]
+                 * -- WHERE clause for autogen PK field
+                 * WHERE [dbo].[table].[autogen_id] = SCOPE_IDENTITY();
+                 */
             }
 
             return insertQuery.ToString();
@@ -199,6 +215,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 updateQuery.Append($"WHERE {predicates};");
                 updateQuery.Append($"SELECT {columnsToBeReturned} FROM {tableName} WHERE {predicates};");
+                /* An example final update query on a table with update trigger enabled would look like:
+                 *  UPDATE [dbo].[table] SET [dbo].[table].[field1] = @param3
+                 *  WHERE ([field3] != @param0) AND [dbo].[table].[id] = @param1 AND [dbo].[table].[nonautogen_id] = @param2;
+                 *  -- Subsequent select query.
+                 *  SELECT [id] AS [id], [nonautogen_id] AS [nonautogen_id], [field1] AS [field1], [field2] AS [field2], [field3] AS [field3]
+                 *  FROM [dbo].[table] WHERE ([field3] != @param0) AND [dbo].[table].[id] = @param1 AND [dbo].[table].[nonautogen_id] = @param2;
+                 */
             }
             else
             {
@@ -337,6 +360,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // End the ELSE block.
                 upsertQuery.Append("END");
             }
+            /* An example final upsert query on a table with update/insert triggers enabled would look like:
+             * DECLARE @ROWS_TO_UPDATE int;
+             * SET @ROWS_TO_UPDATE = (SELECT COUNT(*) as cnt_rows_to_update FROM [dbo].[table] WHERE [dbo].[table].[pkField1] = @param0 AND [dbo].[table].[pkField2] = @param1);
+             * SELECT COUNT(*) as cnt_rows_to_update FROM [dbo].[table] WHERE [dbo].[table].[pkField1] = @param0 AND [dbo].[table].[pkField2] = @param1;
+             * IF @ROWS_TO_UPDATE = 1
+             * BEGIN UPDATE [dbo].[table]
+             * SET [dbo].[table].[field3] = @param2, [dbo].[table].[field4] = @param3
+             * WHERE [dbo].[table].[pkField1] = @param0 AND [dbo].[table].[pkField2] = @param1;
+             * -- Subsequent select query.
+             * SELECT [pkField1] AS [pkField1], [pkField2] AS [pkField2], [field3] AS [field3], [field4] AS [field4] FROM [dbo].[table]
+             * WHERE [dbo].[table].[pkField1] = @param0 AND [dbo].[table].[pkField2] = @param1;
+             * END
+             * ELSE BEGIN
+             * INSERT INTO [dbo].[table] ([pkField1], [pkField2], [field3]) VALUES(@param0, @param1, @param2);
+             * -- Subsequent select query.
+             * SELECT [pkField1] AS [pkField1], [pkField2] AS [pkField2], [field3] AS [field3], [field4] AS [field4] from [dbo].[table]
+             * WHERE [dbo].[table].[pkField1] = @param0 AND [dbo].[table].[pkField2] = @param1;
+             * END
+             */
 
             return upsertQuery.ToString();
         }

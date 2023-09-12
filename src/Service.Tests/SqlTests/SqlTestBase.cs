@@ -67,13 +67,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// This is a helper that is called from the non abstract versions of
         /// this class.
         /// </summary>
-        /// <param name="context"></param>
         /// <param name="customQueries">Test specific queries to be executed on database.</param>
         /// <param name="customEntities">Test specific entities to be added to database.</param>
         /// <param name="isRestBodyStrict">When false, allows extraneous fields in REST request body.</param>
         /// <returns></returns>
         protected async static Task InitializeTestFixture(
-            TestContext context,
             List<string> customQueries = null,
             List<string[]> customEntities = null,
             bool isRestBodyStrict = true)

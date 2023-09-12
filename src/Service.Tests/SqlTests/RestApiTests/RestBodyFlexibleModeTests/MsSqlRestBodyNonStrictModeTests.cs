@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             DatabaseEngine = TestCategory.MSSQL;
 
             // Set rest.request-body-strict = false to simulate scenario when we operate in non-strict mode for fields in request body.
-            await InitializeTestFixture(context: null, isRestBodyStrict: false);
+            await InitializeTestFixture(isRestBodyStrict: false);
         }
 
         [TestCleanup]

@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service
 
             // Register a TelemetryClient instance and custom ITelemetryInitializer implementation with the dependency injection
             services.AddSingleton<TelemetryClient>();
-            services.AddSingleton<ITelemetryInitializer, MyTelemetryInitializer>();
+            services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {

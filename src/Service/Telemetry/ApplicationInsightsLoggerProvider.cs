@@ -14,6 +14,8 @@ public class ApplicationInsightsLoggerProvider : ILoggerProvider
 {
     private readonly TelemetryClient _telemetryClient;
 
+    public static readonly string ERROR_CAUGHT_EVENT_NAME = "ErrorCaught";
+
     public ApplicationInsightsLoggerProvider(TelemetryClient telemetryClient)
     {
         _telemetryClient = telemetryClient;
@@ -64,7 +66,7 @@ public class ApplicationInsightsLoggerProvider : ILoggerProvider
                 IDictionary<string, string> properties = (state as IEnumerable<KeyValuePair<string, object>>)?.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? string.Empty) ?? new Dictionary<string, string>();
                 properties["CategoryName"] = _categoryName;
                 properties["Message"] = formatter(state, exception);
-                _telemetryClient.TrackEvent("ErrorCaught", properties);
+                _telemetryClient.TrackEvent(ERROR_CAUGHT_EVENT_NAME, properties);
             }
         }
     }

@@ -197,9 +197,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Insert a new record into a table with insert trigger enabled.
-        /// <code>Check: </code> The record gets inserted correctly and the correct data as it is after the trigger
-        /// gets executed, is returned.
+        /// Test to validate that when an insert DML trigger is enabled on a table, we still return the
+        /// latest data as it is present after the trigger gets executed. Whenever an insert DML trigger is enabled,
+        /// we use a subsequent SELECT query to get the data instead of using OUTPUT clause. To validate that the data is returned
+        /// as it is after the trigger is executed, we use the values which are updated by the trigger in the WHERE predicates of the verifying sql query.
+        /// </summary>
         [TestMethod]
         public async Task InsertMutationWithTrigger()
         {
@@ -239,9 +241,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Update a record in a table with update trigger enabled.
-        /// <code>Check: </code> The record gets updated correctly and the correct data as it is after the trigger
-        /// gets executed, is returned.
+        /// Test to validate that even when an update DML trigger is enabled on a table, we still return the
+        /// latest data as it is present after the trigger gets executed. Whenever an update DML trigger is enabled,
+        /// we use a subsequent SELECT query to get the data instead of using OUTPUT clause. To validate that the data is returned
+        /// as it is after the trigger is executed, we use the values which are updated by the trigger in the WHERE predicates of the verifying sql query.
+        /// </summary>
         [TestMethod]
         public async Task UpdateMutationWithTrigger()
         {

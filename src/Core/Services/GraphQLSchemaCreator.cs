@@ -16,7 +16,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
-using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -39,7 +38,6 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly DatabaseType _databaseType;
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
-        private readonly TelemetryClient? _telemetryClient;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -54,8 +52,7 @@ namespace Azure.DataApiBuilder.Core.Services
             IQueryEngine queryEngine,
             IMutationEngine mutationEngine,
             ISqlMetadataProvider sqlMetadataProvider,
-            IAuthorizationResolver authorizationResolver,
-            TelemetryClient? telemetryClient = null)
+            IAuthorizationResolver authorizationResolver)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
@@ -65,7 +62,6 @@ namespace Azure.DataApiBuilder.Core.Services
             _mutationEngine = mutationEngine;
             _sqlMetadataProvider = sqlMetadataProvider;
             _authorizationResolver = authorizationResolver;
-            _telemetryClient = telemetryClient;
         }
 
         /// <summary>
@@ -103,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
                 .ModifyOptions(o => o.EnableOneOf = true)
                 // Add our custom middleware for GraphQL resolvers
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine, _telemetryClient));
+                .Use((services, next) => new ResolverMiddleware(next, _queryEngine, _mutationEngine));
         }
 
         /// <summary>

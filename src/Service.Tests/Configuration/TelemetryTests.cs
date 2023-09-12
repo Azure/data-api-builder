@@ -1,13 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.ApplicationInsights;
@@ -59,126 +57,6 @@ public class TelemetryTests
     }
 
     /// <summary>
-    /// Tests that telemetry events are tracked for non-hosted scenarios.
-    /// Makes a REST and GraphQL requests and asserts on the telemetry items.
-    /// </summary>
-    [TestMethod]
-    public async Task TestTrackTelemetryEventsForNonHostedScenario()
-    {
-        string[] args = new[]
-        {
-            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
-        };
-
-        TestServer server = new(Program.CreateWebHostBuilder(args));
-        TelemetryClient telemetryClient = server.Services.GetService<TelemetryClient>();
-        TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
-        List<ITelemetry> telemetryItems = new();
-        telemetryConfiguration.TelemetryChannel = new CustomTelemetryChannel(telemetryItems);
-
-        using (HttpClient client = server.CreateClient())
-        {
-            string query = @"{
-                book_by_pk(id: 1) {
-                    id,
-                    title,
-                    publisher_id
-                }
-            }";
-
-            object payload = new { query };
-
-            HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
-            {
-                Content = JsonContent.Create(payload)
-            };
-
-            HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
-            Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
-
-            HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
-            HttpResponseMessage restResponse = await client.SendAsync(restRequest);
-            Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
-        }
-
-        // Asserting on TrackEvent telemetry items.
-        Assert.AreEqual(2, telemetryItems.Count());
-
-        Assert.IsTrue(telemetryItems.Any(item =>
-            item is EventTelemetry
-            && ((EventTelemetry)item).Name == "GraphQLRequestReceived"
-            && ((EventTelemetry)item).Properties["GraphQLOperation"] == "Query"
-            && ((EventTelemetry)item).Properties["GraphQLEntityOperationName"] == "book_by_pk"
-            && ((EventTelemetry)item).Properties["GraphQLRequestMethod"] == "POST"));
-
-        Assert.IsTrue(telemetryItems.Any(item =>
-            item is EventTelemetry
-            && ((EventTelemetry)item).Name == "RestRequestReceived"
-            && ((EventTelemetry)item).Properties["RestRequestMethod"] == "GET"
-            && ((EventTelemetry)item).Properties["RestRoute"] == "api/Book"
-            && ((EventTelemetry)item).Properties["RestEntityName"] == "Book"
-            && ((EventTelemetry)item).Properties["RestEntityActionOperation"] == "Read"));
-    }
-
-    /// <summary>
-    /// Tests that telemetry events are tracked for hosted scenarios.
-    /// Makes a REST and GraphQL requests and asserts on the telemetry items using supported configuration endpoints.
-    /// </summary>
-    [DataTestMethod]
-    [DataRow(CONFIGURATION_ENDPOINT)]
-    [DataRow(CONFIGURATION_ENDPOINT_V2)]
-    public async Task TestTrackTelemetryEventsForHostedScenario(string configurationEndpoint)
-    {
-        string[] args = new[]
-        {
-            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
-        };
-
-        // Instantiate new server with no runtime config for post-startup configuration hydration tests.
-        TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
-        TelemetryClient telemetryClient = server.Services.GetService<TelemetryClient>();
-        TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
-        List<ITelemetry> telemetryItems = new();
-        telemetryConfiguration.TelemetryChannel = new CustomTelemetryChannel(telemetryItems);
-
-        using (HttpClient client = server.CreateClient())
-        {
-            JsonContent content = GetPostStartupConfigParams(TestCategory.MSSQL, _configuration, configurationEndpoint);
-
-            HttpResponseMessage postResult =
-            await client.PostAsync(configurationEndpoint, content);
-            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
-
-            HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client);
-
-            Assert.AreEqual(expected: HttpStatusCode.OK, actual: restResponseCode);
-
-            HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client);
-
-            Assert.AreEqual(expected: HttpStatusCode.OK, actual: graphqlResponseCode);
-
-        }
-
-        // Asserting on TrackEvent telemetry items.
-        Assert.AreEqual(2, telemetryItems.Count());
-
-        Assert.IsTrue(telemetryItems.Any(item =>
-            item is EventTelemetry
-            && ((EventTelemetry)item).Name == "GraphQLRequestReceived"
-            && ((EventTelemetry)item).Properties["GraphQLOperation"] == "Query"
-            && ((EventTelemetry)item).Properties["GraphQLEntityOperationName"] == "book_by_pk"
-            && ((EventTelemetry)item).Properties["GraphQLRequestMethod"] == "POST"));
-
-        Assert.IsTrue(telemetryItems.Any(item =>
-            item is EventTelemetry
-            && ((EventTelemetry)item).Name == "RestRequestReceived"
-            && ((EventTelemetry)item).Properties["RestRequestMethod"] == "GET"
-            && ((EventTelemetry)item).Properties["RestRoute"] == "api/Book"
-            && ((EventTelemetry)item).Properties["RestEntityName"] == "Book"
-            && ((EventTelemetry)item).Properties["RestEntityActionOperation"] == "Read"));
-    }
-
-    /// <summary>
     /// Tests that telemetry events are tracked whenever error is caught.
     /// In this test we try to query an entity without appropriate access and
     /// assert on the failure message in the telemetry event sent to Application Insights.
@@ -209,20 +87,14 @@ public class TelemetryTests
         }
 
         // Asserting on TrackEvent telemetry items.
-        Assert.AreEqual(3, telemetryItems.Count());
+        Assert.AreEqual(1, telemetryItems.Count());
 
         Assert.IsTrue(telemetryItems.Any(item =>
             item is EventTelemetry
-            && ((EventTelemetry)item).Name == "RestRequestReceived"
-            && ((EventTelemetry)item).Properties["RestRequestMethod"] == "POST"
-            && ((EventTelemetry)item).Properties["RestRoute"] == "api/Publisher/id/1"
-            && ((EventTelemetry)item).Properties["RestEntityName"] == "Publisher"
-            && ((EventTelemetry)item).Properties["RestEntityActionOperation"] == "Insert"));
-
-        Assert.IsTrue(telemetryItems.Any(item =>
-            item is EventTelemetry
-            && ((EventTelemetry)item).Name == "ErrorCaught"
-            && ((EventTelemetry)item).Properties["Message"].Contains("Authorization Failure: Access Not Allowed.")));
+            && ((EventTelemetry)item).Name.Equals("ErrorCaught")
+            && ((EventTelemetry)item).Properties["CategoryName"].Equals("Azure.DataApiBuilder.Service.Controllers.RestController")
+            && ((EventTelemetry)item).Properties.ContainsKey("correlationId")
+            && ((EventTelemetry)item).Properties["Message"].Contains("Error handling REST request.")));
     }
 
     /// <summary>
@@ -242,12 +114,10 @@ public class TelemetryTests
         public string EndpointAddress { get; set; }
 
         public void Dispose()
-        {
-        }
+        { }
 
         public void Flush()
-        {
-        }
+        { }
 
         public void Send(ITelemetry item)
         {

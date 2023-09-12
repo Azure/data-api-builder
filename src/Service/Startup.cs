@@ -560,6 +560,7 @@ namespace Azure.DataApiBuilder.Service
                 if (string.IsNullOrWhiteSpace(_applicationInsightsOptions.ConnectionString))
                 {
                     _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
+                    return;
                 }
 
                 _telemetryClient = app.ApplicationServices.GetRequiredService<TelemetryClient>();
@@ -601,6 +602,10 @@ namespace Azure.DataApiBuilder.Service
             {
                 RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
                 RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+
+                // Configure Application Insights Telemetry
+                ConfigureApplicationInsightsTelemetry(app, runtimeConfigProvider);
+
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
@@ -632,9 +637,6 @@ namespace Azure.DataApiBuilder.Service
 
                 RestService restService =
                     app.ApplicationServices.GetRequiredService<RestService>();
-
-                // Configure Application Insights Telemetry
-                ConfigureApplicationInsightsTelemetry(app, runtimeConfigProvider);
 
                 if (graphQLSchemaCreator is null || restService is null)
                 {

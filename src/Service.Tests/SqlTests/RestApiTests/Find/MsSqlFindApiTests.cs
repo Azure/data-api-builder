@@ -466,7 +466,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindByIdTestWithSelectFieldsOnViewWithoutKeyFields",
                 $"SELECT [title] FROM { _simple_all_books } " +
-                $"WHERE [id] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"WHERE [id] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithSelectFieldsWithoutKeyFieldsOnView",
@@ -476,7 +477,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
                 $"SELECT [categoryid], [categoryName] FROM {_simple_subset_stocks} " +
-                $"WHERE categoryid = 1 AND pieceid = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"WHERE categoryid = 1 AND pieceid = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
@@ -486,7 +488,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
                 $"SELECT [categoryName] FROM {_simple_subset_stocks} " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
@@ -496,7 +499,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindByIdWithSelectFieldsWithoutPKOnTable",
                 $"SELECT [title] FROM { _integrationTableName } " +
-                $"WHERE id = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"WHERE id = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindWithSelectFieldsWithoutPKOnTable",
@@ -506,7 +510,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK",
                 $"SELECT [categoryid], [categoryName] FROM {_Composite_NonAutoGenPK_TableName} " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindWithSelectFieldsWithSomePKOnTableWithCompositePK",
@@ -516,7 +521,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK",
                 $"SELECT [categoryName] FROM {_Composite_NonAutoGenPK_TableName} " +
-                $"WHERE [categoryid] = 1 AND [pieceid] = 1 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"WHERE [categoryid] = 1 AND [pieceid] = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "FindWithSelectFieldsWithoutPKOnTableWithCompositePK",

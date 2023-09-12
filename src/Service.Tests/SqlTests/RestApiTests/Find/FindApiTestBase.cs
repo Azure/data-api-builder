@@ -121,6 +121,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public virtual async Task FindWithSelectQueryStringOnTables()
         {
+            // Validates that a Find request on a single item with $select with only non-PK fields
+            // returns only the selected fields and does not contain PK fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: "?$select=title",
@@ -128,6 +130,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTable")
             );
 
+            // Validates that a Find request on a list of items with $select with only non-PK fields
+            // returns only those fields and does not contain PK fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=title",
@@ -135,6 +139,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTable")
             );
 
+            // Validates that a Find request against a table with a composite PK on a single item
+            // with $select containing some PK fields returns only the selected fields
+            // and does not contain all the PK fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: "?$select=categoryid,categoryName",
@@ -142,6 +149,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK")
             );
 
+            // Validates that a Find request against a table with a composite PK on a list of items
+            // with $select containing some PK fields returns only the selected fields
+            // and does not contain all the PK fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=categoryid,categoryName",
@@ -149,6 +159,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindWithSelectFieldsWithSomePKOnTableWithCompositePK")
             );
 
+            // Validates that a Find request against a table with a composite PK on a single item
+            // with $select containing no PK fields returns only the selected fields
+            // and does not contain any PK fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: "?$select=categoryName",
@@ -156,6 +169,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK")
             );
 
+            // Validates that a Find request against a table with a composite PK on a list of items
+            // with $select containing no PK fields returns only the selected fields
+            // and does not contain any PK fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=categoryName",
@@ -173,6 +189,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public virtual async Task FindWithSelectAndOrderByQueryStrings()
         {
+            // Validates that a Find request on a table with $select and $orderby query strings
+            // returns only the fields selected in $select query string and does not contain
+            // $orderby fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=id,title&$orderby=publisher_id",
@@ -180,6 +199,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindWithSelectAndOrderbyQueryStringsOnTables")
             );
 
+            // Validates that a Find request on a view with $select and $orderby query strings
+            // returns only the fields selected in $select query string and does not contain
+            // $orderby fields. 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=categoryid,categoryName&$orderby=piecesAvailable",
@@ -224,6 +246,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindBooksPubViewComposite")
             );
 
+            // Validates that a Find request against a view on a list of items with
+            // $select with only non-key fields
+            // returns only the selected fields and does not contain key fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=title",
@@ -231,6 +256,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindTestWithSelectFieldsWithoutKeyFieldsOnView")
             );
 
+            // Validates that a Find request against a view with multiple key-fields on a list of items with
+            // $select with some key fields
+            // returns only the selected fields and does not contain all the key fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=categoryid,categoryName",
@@ -238,6 +266,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields")
             );
 
+            // Validates that a Find request against a view with multiple key fields on a list of items with
+            // $select with no key fields
+            // returns only the selected fields and does not contain any key fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=categoryName",
@@ -245,6 +276,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields")
             );
 
+            // Validates that a Find request against a view on a single item with
+            // $select with key and non-key fields
+            // returns only the selected fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: "?$select=id,title",
@@ -252,6 +286,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindByIdTestWithSelectFieldsOnView")
             );
 
+            // Validates that a Find request against a view on a single item with
+            // $select with only non-key fields
+            // returns only the selected fields and does not contain key fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/1",
                 queryString: "?$select=title",
@@ -259,6 +296,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindByIdTestWithSelectFieldsOnViewWithoutKeyFields")
             );
 
+            // Validates that a Find request against a view with multiple key-fields on a single item with
+            // $select with some key fields
+            // returns only the selected fields and does not contain all the key fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: "?$select=categoryid,categoryName",
@@ -266,6 +306,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields")
             );
 
+            // Validates that a Find request against a view with multiple key fields on a single item with
+            // $select with no key fields
+            // returns only the selected fields and does not contain any key fields.
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/1/pieceid/1",
                 queryString: "?$select=categoryName",

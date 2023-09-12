@@ -416,7 +416,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_OBJECT('id', id, 'content', content) AS data
                     FROM (
-                        SELECT id, book_id, content
+                        SELECT id, content
                         FROM reviews" + @"
                         WHERE id = 567 AND book_id = 1
                         ORDER BY id asc
@@ -739,7 +739,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('Scientific Name', species)) AS data
                   FROM (
-                      SELECT treeId, species
+                      SELECT species
                       FROM " + _integrationMappingTable + @"
                   ) AS subq"
             },
@@ -826,9 +826,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   SELECT JSON_OBJECT('title', title) AS data
                   FROM (
                       SELECT title
-                      FROM " + _simple_all_books +
-                      @" WHERE id = 1
-                  ) AS subq"
+                      FROM " + _simple_all_books + @"
+                      WHERE id = 1
+                  ) AS subq
+                "
             },
             {
                 "FindTestWithSelectFieldsWithoutKeyFieldsOnView",
@@ -836,9 +837,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('title', title)) AS data
                   FROM (
                       SELECT title
-                      FROM " + _simple_all_books +
-                      @" ORDER BY id asc
-                  ) AS subq"
+                      FROM " + _simple_all_books + @"
+                      ORDER BY id asc
+                  ) AS subq
+                "
             },
             {
                 "FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
@@ -846,10 +848,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName) AS data
                     FROM (
                         SELECT categoryid, categoryName
-                        FROM " + _simple_subset_stocks +
-                        @" WHERE categoryid = 1 AND pieceid = 1
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 1 AND pieceid = 1
                     ) AS subq
-                "
+                 "
             },
             {
                 "FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
@@ -867,8 +869,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT JSON_OBJECT('categoryName', categoryName) AS data
                     FROM (
                         SELECT categoryName
-                        FROM " + _simple_subset_stocks
-                        + @" WHERE categoryid = 1 AND pieceid = 1
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 1 AND pieceid = 1
                     ) AS subq
                 "
             },
@@ -878,8 +880,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryName', categoryName)) AS data
                     FROM (
                         SELECT categoryName, ROW_NUMBER() OVER(ORDER BY categoryid asc, pieceid asc)
-                        FROM " + _simple_subset_stocks
-                        + @"
+                        FROM " + _simple_subset_stocks + @"
                     ) AS subq
                 "
             },
@@ -888,18 +889,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                   SELECT JSON_OBJECT('title', title) AS data
                   FROM (
-                      SELECT title FROM " + _integrationTableName +
-                      @" WHERE id = 1
-                  ) AS subq"
+                      SELECT title FROM " + _integrationTableName + @"
+                      WHERE id = 1
+                  ) AS subq
+                "
             },
             {
                 "FindWithSelectFieldsWithoutPKOnTable",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('title', title)) AS data
                   FROM (
-                      SELECT title FROM " + _integrationTableName +
-                      @"
-                  ) AS subq"
+                      SELECT title FROM " + _integrationTableName + @"
+                  ) AS subq
+                "
             },
             {
                 "FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK",
@@ -907,8 +909,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName) AS data
                     FROM (
                         SELECT categoryid, categoryName
-                        FROM " + _Composite_NonAutoGenPK_TableName +
-                        @" WHERE categoryid = 1 AND pieceid = 1
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1
                     ) AS subq
                 "
             },
@@ -928,8 +930,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT JSON_OBJECT('categoryName', categoryName) AS data
                     FROM (
                         SELECT categoryName
-                        FROM " + _Composite_NonAutoGenPK_TableName +
-                        @" WHERE categoryid = 1 AND pieceid = 1     
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1     
                     ) AS subq
                 "
             },
@@ -939,8 +941,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryName', categoryName)) AS data
                     FROM (
                         SELECT categoryName, ROW_NUMBER() OVER (order by categoryid, pieceid)
-                        FROM " + _Composite_NonAutoGenPK_TableName +
-                        @"    
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"  
                     ) AS subq
                 "
             },
@@ -959,8 +960,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title)) AS data
                     FROM (
-                        SELECT id, title, ROW_NUMBER() OVER (ORDER BY publisher_id asc, id asc)  FROM "
-                        + _integrationTableName + @" 
+                        SELECT id, title, ROW_NUMBER() OVER (ORDER BY publisher_id asc, id asc)" + @"
+                        FROM " + _integrationTableName + @" 
                     ) AS subq
                 "
             }

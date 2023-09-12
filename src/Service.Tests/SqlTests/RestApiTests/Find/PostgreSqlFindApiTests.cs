@@ -838,8 +838,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT title FROM " + _simple_all_books +
-                        @" ORDER BY id
+                        SELECT title FROM " + _simple_all_books + @"
+                        ORDER BY id
                     ) AS subq
                 "
             },

@@ -189,7 +189,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // When there are no rows returned from the database, the jsonElement will be an empty array.
             // In that case, the response is returned as is.
-            if (jsonElement.ValueKind is JsonValueKind.Array && jsonElement.EnumerateArray().Count() == 0)
+            if (jsonElement.ValueKind is JsonValueKind.Array && jsonElement.GetArrayLength() == 0)
             {
                 return OkResponse(jsonElement);
             }
@@ -265,11 +265,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>Additional fields that are present in the response</returns>
         private static IEnumerable<string> DetermineExtraFieldsInResponse(JsonElement response, FindRequestContext context)
         {
-            // context.FieldsToBeReturned will contain the fields requested in the $select clause.
-            // If $select clause is absent, it will contain the list of columns that can be returned in the
-            // response taking into account the include and exclude fields configured for the entity.
-            HashSet<string> fieldsToBeReturned = new(context.FieldsToBeReturned);
-
             HashSet<string> fieldsPresentInResponse = new();
 
             if (response.ValueKind is not JsonValueKind.Array)
@@ -287,7 +282,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            return fieldsPresentInResponse.Except(fieldsToBeReturned);
+            // context.FieldsToBeReturned will contain the fields requested in the $select clause.
+            // If $select clause is absent, it will contain the list of columns that can be returned in the
+            // response taking into account the include and exclude fields configured for the entity.
+            // So, the other fields in the response apart from the fields in context.FieldsToBeReturned
+            // are not required.
+            return fieldsPresentInResponse.Except(context.FieldsToBeReturned);
         }
 
         /// <summary>
@@ -318,9 +318,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (jsonObject is null)
             {
-                throw new DataApiBuilderException(message: "While processing your request the server ran into an unexpected error",
-                                                  statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                throw new DataApiBuilderException(
+                    message: "While processing your request the server ran into an unexpected error",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             foreach (string extraField in extraFields)

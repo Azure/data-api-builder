@@ -48,8 +48,8 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
-        public static ApplicationInsightsOptions _applicationInsightsOptions = new();
-        public static TelemetryClient? _telemetryClient;
+        public static ApplicationInsightsOptions AppInsightsOptions = new();
+        public static TelemetryClient? AppTelemetryClient;
 
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
@@ -555,21 +555,21 @@ namespace Azure.DataApiBuilder.Service
             if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Telemetry is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
             {
-                _applicationInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
+                AppInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
 
-                if (string.IsNullOrWhiteSpace(_applicationInsightsOptions.ConnectionString))
+                if (string.IsNullOrWhiteSpace(AppInsightsOptions.ConnectionString))
                 {
                     _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
                     return;
                 }
 
-                _telemetryClient = app.ApplicationServices.GetRequiredService<TelemetryClient>();
+                AppTelemetryClient = app.ApplicationServices.GetRequiredService<TelemetryClient>();
 
                 // Update the TelemetryConfiguration object
-                TelemetryConfiguration telemetryConfiguration = _telemetryClient.TelemetryConfiguration;
-                telemetryConfiguration.ConnectionString = _applicationInsightsOptions.ConnectionString;
+                TelemetryConfiguration telemetryConfiguration = AppTelemetryClient.TelemetryConfiguration;
+                telemetryConfiguration.ConnectionString = AppInsightsOptions.ConnectionString;
 
-                if (_telemetryClient is null)
+                if (AppTelemetryClient is null)
                 {
                     _logger.LogError("Telemetry client is not initialized.");
                 }

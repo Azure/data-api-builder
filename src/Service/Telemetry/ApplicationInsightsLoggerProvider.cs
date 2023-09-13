@@ -8,7 +8,8 @@ using Microsoft.ApplicationInsights;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Provides a logger implementation that sends telemetry to Azure Application Insights.
+/// Provides a custom logger implementation that sends telemetry events to Azure Application Insights.
+/// See <see href="https://learn.microsoft.com/en-us/dotnet/core/extensions/custom-logging-provider">Custom Logging Provider</see> for more information.
 /// </summary>
 public class ApplicationInsightsLoggerProvider : ILoggerProvider
 {

@@ -1026,7 +1026,7 @@ namespace Cli
                 return false;
             }
 
-            loader.UpdateConfigFileName(runtimeConfigFile);
+            loader.UpdateConfigFilePath(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
             // Replaces all the environment variables while deserializing when starting DAB.

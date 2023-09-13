@@ -125,8 +125,8 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restEnabled: CliBool.True,
-                graphqlEnabled: CliBool.True,
+                restEnabled: CliBool.None,
+                graphqlEnabled: CliBool.None,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);

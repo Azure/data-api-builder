@@ -2443,6 +2443,33 @@
         "bkname": "name"
       }
     },
+    "BooksSold": {
+      "source": {
+        "object": "books_sold",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "books_sold",
+          "plural": "books_sold"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": []
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
     "PublisherNF": {
       "source": {
         "object": "publishers",

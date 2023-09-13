@@ -103,10 +103,11 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers
                     // Logging the parsing failure exception to the console, but not rethrowing
                     // nor creating a DataApiBuilder exception because the authentication handler
                     // will create and send a 401 unauthorized response to the client.
-                    logger.LogError($"Failure processing the AppService EasyAuth header.\n" +
-                        $"{HttpContextExtensions.GetLoggerCorrelationId(context)}" +
-                        $"{error.Message}\n" +
-                        $"{error.StackTrace}");
+                    logger.LogError(
+                        exception: error,
+                        message: "{correlationId} Failure processing the AppService EasyAuth header: {errorMessage}",
+                        HttpContextExtensions.GetLoggerCorrelationId(context),
+                        error.Message);
                 }
             }
 

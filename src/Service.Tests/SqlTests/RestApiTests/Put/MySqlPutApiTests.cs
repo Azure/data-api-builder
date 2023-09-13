@@ -101,6 +101,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
+                "PutOneUpdateWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%d %H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on = '2023-09-12 05:30:30' AND last_sold_on_date = '2023-09-12 05:30:30'
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneInsertWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'New book' AND copies_sold = 101
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_With_Mapping_Test",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,

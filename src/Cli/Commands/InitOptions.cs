@@ -86,7 +86,7 @@ namespace Cli.Commands
 
         // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
         // included in the init command.
-        [Option("rest.request-body-strict", Required = false, HelpText = "When set to true, allows extraneous fields in the request body for REST.")]
+        [Option("rest.request-body-strict", Required = false, HelpText = "When set to true, does not allow extraneous fields in the request body for REST.")]
         public CliBoolean RestRequestBodyStrict { get; }
 
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]

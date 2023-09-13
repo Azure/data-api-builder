@@ -1554,8 +1554,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpResponseMessage response = await client.SendAsync(request);
                 if (includeExtraneousFieldInRequestBody)
                 {
+                    string responseBody = await response.Content.ReadAsStringAsync();
                     // Assert that including an extraneous field in request body while operating in strict mode leads to a bad request exception. 
                     Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+                    Assert.IsTrue(responseBody.Contains("Invalid request body. Contained unexpected fields in body: extraField"));
                 }
                 else
                 {

@@ -1822,6 +1822,32 @@
           id: bkid
         }
       }
+    },
+    {
+      BooksSold: {
+        Source: {
+          Object: books_sold,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: books_sold,
+          Plural: books_sold,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

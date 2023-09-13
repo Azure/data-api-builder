@@ -808,7 +808,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return newPrimaryKeyRoute.ToString();
         }
 
-        private Dictionary<string, object?> PrepareParameters(RestRequestContext context)
+        private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)
         {
             Dictionary<string, object?> parameters = new();
 
@@ -816,7 +816,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 case EntityActionOperation.Delete:
                     // DeleteOne based off primary key in request.
-                    parameters = new(context.PrimaryKeyValuePairs!);
+                    PopulateParamsFromRestRequest(parameters, context.PrimaryKeyValuePairs!);
                     break;
                 case EntityActionOperation.Upsert:
                 case EntityActionOperation.UpsertIncremental:
@@ -824,11 +824,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case EntityActionOperation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
-                    parameters = new(context.PrimaryKeyValuePairs!);
-                    PopulateParamsFromRestContext(parameters, context);
+                    PopulateParamsFromRestRequest(parameters, context.PrimaryKeyValuePairs!);
+                    PopulateParamsFromRestRequest(parameters, context.FieldValuePairsInBody);
                     break;
                 default:
-                    PopulateParamsFromRestContext(parameters, context);
+                    PopulateParamsFromRestRequest(parameters, context.FieldValuePairsInBody);
                     break;
             }
 
@@ -836,22 +836,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to populate all the params from the Rest request's context into the parameters dictionary.
+        /// Helper method to populate all the params from the Rest request's primary key into the parameters dictionary.
         /// An entry is added only for those parameters which actually map to a backing column in the table/view.
         /// </summary>
         /// <param name="parameters">Parameters dictionary to be populated.</param>
-        /// <param name="context">Rest request's context</param>
-        private void PopulateParamsFromRestContext(Dictionary<string, object?> parameters, RestRequestContext context)
+        /// <param name="fieldValuePairs">Field value pairs from REST request's primary key/body.</param>
+        private static void PopulateParamsFromRestRequest(Dictionary<string, object?> parameters, Dictionary<string, object?> fieldValuePairs)
         {
-            foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
+            foreach ((string field, object? value) in fieldValuePairs)
             {
-                if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, pair.Key, out string? _))
-                {
-                    // Use TryAdd because there can be primary key fields present in the request body as well
-                    // (in addition to request URL), when we operate in non-strict mode for REST.
-                    // In such a case, the duplicate PK fields in the request body are ignored.
-                    parameters.TryAdd(pair.Key, pair.Value);
-                }
+                parameters.TryAdd(field, value);
             }
         }
 

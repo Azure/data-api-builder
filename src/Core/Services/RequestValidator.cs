@@ -300,6 +300,14 @@ namespace Azure.DataApiBuilder.Core.Services
                     continue;
                 }
 
+                if (insertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && column.Value.IsReadOnly)
+                {
+                    throw new DataApiBuilderException(
+                            message: $"Field '{exposedName}' cannot be included in the request body.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
                 // Request body must have value defined for included non-nullable columns
                 if (!column.Value.IsNullable && fieldsInRequestBody.Contains(exposedName))
                 {
@@ -362,6 +370,14 @@ namespace Azure.DataApiBuilder.Core.Services
                     out string? exposedName))
                 {
                     continue;
+                }
+
+                if (upsertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && column.Value.IsReadOnly)
+                {
+                    throw new DataApiBuilderException(
+                            message: $"Field '{exposedName}' cannot be included in the request body.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 // Primary Key(s) should not be present in the request body. We do not fail a request

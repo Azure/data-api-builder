@@ -413,6 +413,56 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// In such a case, we don't attempt to NULL out computed field (as per PUT semantics) but instead skip updating/inserting the field. 
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOneWithComputedFieldMissingFromRequestBody()
+        {
+            // Validate successful execution of a PUT update when a computed field (here 'last_sold_on_update')
+            // is missing from the request body. Successful execution of the PUT request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            string requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 101,
+                ""last_sold_on"": ""2023-09-12 05:30:30""
+            }";
+            string expectedLocationHeader = $"id/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PutOneUpdateWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate successful execution of a PUT insert when a computed field (here 'last_sold_on_update')
+            // is missing from the request body. Successful execution of the PUT request confirms that we did not
+            // attempt to NULL out the 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 101
+            }";
+            expectedLocationHeader = $"id/2";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PutOneInsertWithComputedFieldMissingFromRequestBody"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
+                );
+        }
+
+        /// <summary>
         /// Tests successful execution of PUT update requests which try to
         /// modify fields belonging to one base table in the view.
         /// </summary>
@@ -971,6 +1021,52 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 expectedErrorMessage: "One or more fields referenced by the database policy are not present in the request.",
                 expectedStatusCode: HttpStatusCode.Forbidden,
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString()
+                );
+        }
+
+        /// <summary>
+        /// Test to validate that whenever a computed field is included in the request body, we throw a BadRequest exception
+        /// as it is not allowed to provide value (to insert/update) for a computed field.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOneWithComputedFieldInRequestBody()
+        {
+            // Validate that a BadRequest exception is thrown for a PUT update when a computed field (here 'last_sold_on_date') is included in request body.
+            string requestBody = @"
+            {
+                ""last_sold_on_date"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Upsert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'last_sold_on_date' cannot be included in the request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+
+            // Validate that a BadRequest exception is thrown for a PUT insert when a computed field (here 'last_sold_on_date') is included in request body.
+            requestBody = @"
+            {
+                ""last_sold_on_date"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/2",
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Upsert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'last_sold_on_date' cannot be included in the request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
         #endregion

@@ -93,18 +93,18 @@ namespace Cli
 
             HyphenatedNamingPolicy namingPolicy = new();
 
-            // If --rest.disabled flag is included in the init command, we log a warning to not use this flag as it is a deprecated feature.
+            // If --rest.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
             if (options.RestDisabled is true)
             {
-                _logger.LogWarning("The option --rest.disabled is deprecated and its support will be removed in future versions." +
-                    " We recommend to use the --rest.enabled option instead.");
+                _logger.LogWarning("The option --rest.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " We recommend that you use the --rest.enabled option instead.");
             }
 
-            // If --graphql.disabled flag is included in the init command, we log a warning to not use this flag as it is a deprecated feature.
+            // If --graphql.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
             if (options.GraphQLDisabled is true)
             {
-                _logger.LogWarning("The option --graphql.disabled is deprecated and its support will be removed in future versions." +
-                    " We recommend to use the --graphql.enabled option instead.");
+                _logger.LogWarning("The option --graphql.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " We recommend that you use the --graphql.enabled option instead.");
             }
 
             bool restEnabled, graphQLEnabled;
@@ -250,7 +250,6 @@ namespace Cli
         /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
         /// <param name="apiType">ApiType - REST/GraphQL.</param>
         /// <param name="isApiEnabled">Boolean value indicating whether the API endpoint is enabled or not.</param>
-        /// <exception cref="Exception">Thrown when the semantics of enabled/disabled options differ.</exception>
         private static bool TryDetermineIfApiIsEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType, out bool isApiEnabled)
         {
             if (!apiDisabledOptionValue)
@@ -270,7 +269,7 @@ namespace Cli
 
             // We hit this code only when both --api.enabled and --api.disabled flags are included in the init command.
             isApiEnabled = bool.Parse(apiEnabledOptionValue.ToString());
-            if (!apiDisabledOptionValue != isApiEnabled)
+            if (apiDisabledOptionValue == isApiEnabled)
             {
                 string apiName = apiType.ToString().ToLower();
                 _logger.LogError($"Config generation failed due to mismatch in the semantics of enabling {apiType} API via " +

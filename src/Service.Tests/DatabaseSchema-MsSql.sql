@@ -49,6 +49,7 @@ DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS fte_data;
 DROP TABLE IF EXISTS intern_data;
+DROP TABLE IF EXISTS books_sold;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -274,6 +275,16 @@ salary int default 15,
 PRIMARY KEY(id, months)
 );
 
+create table books_sold
+(
+    id int PRIMARY KEY not null,
+    book_name varchar(50),
+    row_version rowversion,
+    copies_sold int default 0,
+    last_sold_on datetime2(7) DEFAULT '1999-01-08 10:23:54',
+    last_sold_on_date as last_sold_on,
+)
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -485,6 +496,8 @@ insert into intern_data(id, months, name) values(1, 3, 'Tess'), (2, 4, 'Frank');
 
 INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 5000, 'Anonymous'), (2, 'Comics', 10000, 'Anonymous'),
 (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
+
+INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GETDATE());
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');

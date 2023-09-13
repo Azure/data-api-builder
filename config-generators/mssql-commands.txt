@@ -41,6 +41,7 @@ add Bookmarks --config "dab-config.MsSql.json" --source "bookmarks" --permission
 add MappedBookmarks --config "dab-config.MsSql.json" --source "mappedbookmarks" --permissions "anonymous:*" --rest true --graphql true
 add FteData --config "dab-config.MsSql.json" --source fte_data --permissions "anonymous:*" --graphql "FteData:FteData"
 add InternData --config "dab-config.MsSql.json" --source intern_data --permissions "anonymous:*" --graphql "InternData:InternData"
+add BooksSold --config "dab-config.MsSql.json" --source "books_sold" --rest true --graphql "books_sold:books_sold" --permissions "anonymous:*"
 update GQLmappings --config "dab-config.MsSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
 update Publisher --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"

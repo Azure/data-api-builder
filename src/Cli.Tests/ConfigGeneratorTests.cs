@@ -140,6 +140,7 @@ public class ConfigGeneratorTests
             hostMode: HostMode.Production,
             corsOrigin: null,
             authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+            restRequestBodyStrict: CliBoolean.True,
             config: TEST_RUNTIME_CONFIG_FILE);
 
         StringBuilder expectedRuntimeConfigJson = new(

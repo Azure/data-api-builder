@@ -27,6 +27,7 @@ namespace Cli.Commands
             HostMode hostMode,
             IEnumerable<string>? corsOrigin,
             string authenticationProvider,
+            CliBoolean restRequestBodyStrict,
             string? audience = null,
             string? issuer = null,
             string restPath = RestRuntimeOptions.DEFAULT_PATH,
@@ -34,7 +35,6 @@ namespace Cli.Commands
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
-            CliBoolean restRequestBodyStrict = CliBoolean.True,
             string? config = null)
             : base(config)
         {
@@ -47,6 +47,7 @@ namespace Cli.Commands
             HostMode = hostMode;
             CorsOrigin = corsOrigin;
             AuthenticationProvider = authenticationProvider;
+            RestRequestBodyStrict = restRequestBodyStrict;
             Audience = audience;
             Issuer = issuer;
             RestPath = restPath;
@@ -54,7 +55,6 @@ namespace Cli.Commands
             RestDisabled = restDisabled;
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
-            RestRequestBodyStrict = restRequestBodyStrict;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -84,6 +84,11 @@ namespace Cli.Commands
         [Option("auth.provider", Default = "StaticWebApps", Required = false, HelpText = "Specify the Identity Provider.")]
         public string AuthenticationProvider { get; }
 
+        // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
+        // included in the init command.
+        [Option("rest.request-body-strict", Required = false, HelpText = "When set to true, allows extraneous fields in the request body for REST.")]
+        public CliBoolean RestRequestBodyStrict { get; }
+
         [Option("auth.audience", Required = false, HelpText = "Identifies the recipients that the JWT is intended for.")]
         public string? Audience { get; }
 
@@ -104,11 +109,6 @@ namespace Cli.Commands
 
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
-
-        // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
-        // included in the init command.
-        [Option("rest.request-body-strict", Required = false, HelpText = "When set to true, allows extraneous fields in the request body for REST.")]
-        public CliBoolean RestRequestBodyStrict { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

@@ -257,6 +257,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return query;
         }
 
+        /// <summary>
+        /// Builds the query to get all the read-only columns in an MsSql table.
+        /// For MsSql, the columns:
+        /// 1. That have data_type of 'timestamp', or
+        /// 2. are computed based on other columns,
+        /// are considered as read only columns. The query combines both the types of read-only columns and returns the list.
+        /// </summary>
+        /// <param name="schemaOrDatabaseParamName">Param name of the schema/database.</param>
+        /// <param name="tableParamName">Param name of the table.</param>
+        /// <returns></returns>
+        public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)
+        {
+            // For 'timestamp' columns sc.is_computed = 0.
+            string query = "SELECT ifsc.column_name from sys.columns as sc INNER JOIN information_schema.columns as ifsc " +
+                "ON (sc.is_computed = 1 or ifsc.data_type = 'timestamp') " +
+                $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) and ifsc.table_name = {tableParamName} " +
+                $"AND ifsc.table_schema = {schemaParamName} and ifsc.column_name = sc.name;";
+
+            return query;
+        }
+
         /// <inheritdoc />
         public DatabaseType DeriveDatabaseType()
         {

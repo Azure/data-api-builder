@@ -855,13 +855,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private static Dictionary<string, object?> PrepareParameters(RestRequestContext context)
         {
-            Dictionary<string, object?> parameters;
+            Dictionary<string, object?> parameters = new();
 
             switch (context.OperationType)
             {
                 case EntityActionOperation.Delete:
                     // DeleteOne based off primary key in request.
-                    parameters = new(context.PrimaryKeyValuePairs!);
+                    PopulateParamsFromRestRequest(parameters, context.PrimaryKeyValuePairs!);
                     break;
                 case EntityActionOperation.Upsert:
                 case EntityActionOperation.UpsertIncremental:
@@ -869,19 +869,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 case EntityActionOperation.UpdateIncremental:
                     // Combine both PrimaryKey/Field ValuePairs
                     // because we create an update statement.
-                    parameters = new(context.PrimaryKeyValuePairs!);
-                    foreach (KeyValuePair<string, object?> pair in context.FieldValuePairsInBody)
-                    {
-                        parameters.Add(pair.Key, pair.Value);
-                    }
-
+                    PopulateParamsFromRestRequest(parameters, context.PrimaryKeyValuePairs!);
+                    PopulateParamsFromRestRequest(parameters, context.FieldValuePairsInBody);
                     break;
                 default:
-                    parameters = new(context.FieldValuePairsInBody);
+                    PopulateParamsFromRestRequest(parameters, context.FieldValuePairsInBody);
                     break;
             }
 
             return parameters;
+        }
+
+        /// <summary>
+        /// Helper method to populate all the params from the Rest request's primary key into the parameters dictionary.
+        /// An entry is added only for those parameters which actually map to a backing column in the table/view.
+        /// </summary>
+        /// <param name="parameters">Parameters dictionary to be populated.</param>
+        /// <param name="fieldValuePairs">Field value pairs from REST request's primary key/body.</param>
+        private static void PopulateParamsFromRestRequest(Dictionary<string, object?> parameters, Dictionary<string, object?> fieldValuePairs)
+        {
+            foreach ((string field, object? value) in fieldValuePairs)
+            {
+                parameters.Add(field, value);
+            }
         }
 
         /// <summary>

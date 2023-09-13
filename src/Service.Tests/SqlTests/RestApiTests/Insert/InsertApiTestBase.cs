@@ -88,6 +88,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// In such a case, we skip inserting the field. 
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithComputedFieldMissingInRequestBody()
+        {
+            // Validate successful execution of a POST request when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the POST request confirms that we did not
+            // attempt to provide a value for the 'last_sold_on_date' field.
+            string requestBody = @"
+            {
+                ""id"": 2,
+                ""book_name"": ""Harry Potter"",
+                ""copies_sold"": 50
+            }";
+
+            string expectedLocationHeader = $"id/2";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: GetQuery("InsertOneWithComputedFieldMissingInRequestBody"),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Tests insertion on simple/composite views.
         /// </summary>
         /// <returns></returns>
@@ -286,6 +316,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        /// <summary>
+        /// Test to validate that whenever a computed field is included in the request body, we throw an appropriate exception
+        /// as it is not allowed to provide value (to insert) for a computed field.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithComputedFieldInRequestBody()
+        {
+            // Validate that a BadRequest exception is thrown for a POST request when a computed field (here 'last_sold_on_date') is included in request body.
+            string requestBody = @"
+            {
+                ""id"": 2,
+                ""last_sold_on_date"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'last_sold_on_date' cannot be included in the request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
         #endregion
 
         #region Negative Tests
@@ -430,7 +487,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: "Invalid request body. Field not allowed in body: id.",
+                expectedErrorMessage: "Field 'id' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

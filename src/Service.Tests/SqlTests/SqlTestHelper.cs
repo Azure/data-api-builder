@@ -97,6 +97,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Helper method to preprocess response to unescape unicode characters and remove all carriage returns/new lines.
+        /// </summary>
+        /// <param name="response">Raw response received from the API.</param>
+        /// <returns>Processed response containing unescaped unicode characters without new lines/carriage returns.</returns>
+        private static string PreprocessResponse(string response)
+        {
+            // Quote(") has to be treated differently than other unicode characters
+            // as it has to be added with a preceding backslash.
+            response = Regex.Replace(response, @"\\u0022", @"\\""");
+
+            // Remove all carriage returns and new lines from the response body.
+            response = Regex.Replace(response, @"\\n|\\r", "");
+
+            // Convert the escaped characters into their unescaped form.
+            response = Regex.Unescape(response);
+
+            return response;
+        }
+
+        /// <summary>
         /// Instantiate basic runtime config with no entity.
         /// </summary>
         /// <returns></returns>
@@ -181,16 +201,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
                 string expectedStatusCode = expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString();
                 string expectedSubStatusCode = expectedErrorObj.GetProperty(PROPERTY_CODE).ToString();
-
-                // Quote(") has to be treated differently than other unicode characters
-                // as it has to be added with a preceding backslash.
-                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
-
-                // Remove all carriage returns and new lines from the response body.
-                responseBody = Regex.Replace(responseBody, @"\\n|\\r", "");
-
-                // Convert the escaped characters into their unescaped form.
-                responseBody = Regex.Unescape(responseBody);
+                responseBody = PreprocessResponse(responseBody);
 
                 // Generate actual error object
                 JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);

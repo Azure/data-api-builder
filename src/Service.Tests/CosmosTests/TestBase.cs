@@ -29,6 +29,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests;
 public class TestBase
 {
     internal const string DATABASE_NAME = "graphqldb";
+    // Intentionally removed name attibute from Planet model to test scenario where the 'name' attribute
+    // is not explicitly added in the schema
     internal const string GRAPHQL_SCHEMA = @"
 type Character @model(name:""Character"") {
     id : ID,

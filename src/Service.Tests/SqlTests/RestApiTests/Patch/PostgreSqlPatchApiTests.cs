@@ -166,6 +166,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 "
             },
             {
+                "PatchOneUpdateWithReadOnlyFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, item_name, subtotal, tax, total
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND item_name = 'Shoes' AND subtotal = 100
+                            AND tax = 50 AND total = 150
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneUpdateWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 50
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneInsertWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'New book' AND copies_sold = 50 AND last_sold_on = '9999-12-31 23:59:59.997'
+                        AND last_sold_on_date = '9999-12-31 23:59:59.997'
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Update_Nulled_Test",
                 @"
                     SELECT to_jsonb(subq) AS data

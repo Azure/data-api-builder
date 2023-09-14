@@ -194,11 +194,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return OkResponse(jsonElement);
             }
 
-            IEnumerable<string> extraFieldsInResponse = (jsonElement.ValueKind is not JsonValueKind.Array)
+            HashSet<string> extraFieldsInResponse = (jsonElement.ValueKind is not JsonValueKind.Array)
                                                   ? DetermineExtraFieldsInResponse(jsonElement, context)
                                                   : DetermineExtraFieldsInResponse(jsonElement.EnumerateArray().First(), context);
 
-            int countOfExtraFieldsInResponse = extraFieldsInResponse.Count();
+            int countOfExtraFieldsInResponse = extraFieldsInResponse.Count;
 
             // If the results are not a collection or if the query does not have a next page
             // no nextLink is needed. So, the response is returned after removing the extra fields.
@@ -217,17 +217,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+            List<JsonElement> rootEnumerated = jsonElement.EnumerateArray().ToList();
 
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count - 1).ToList();
 
             // The fields such as primary keys, fields in $orderby clause that are retrieved in addition to the
             // fields requested in the $select clause are required for calculating the $after element which is part of nextLink.
             // So, the extra fields are removed post the calculation of $after element.
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
+                               element: rootEnumerated[rootEnumerated.Count - 1],
                                orderByColumns: context.OrderByClauseOfBackingColumns,
                                primaryKey: _sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
                                entityName: context.EntityName,
@@ -263,7 +263,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // When there are extra fields present, they are removed before returning the response.
             if (countOfExtraFieldsInResponse > 0)
             {
-                rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated.ToList(), extraFieldsInResponse);
+                rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated, extraFieldsInResponse);
             }
 
             return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated.Append(nextLink)));
@@ -279,7 +279,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="response">Response json retrieved from the database</param>
         /// <param name="context">FindRequestContext for the GET request.</param>
         /// <returns>Additional fields that are present in the response</returns>
-        private static IEnumerable<string> DetermineExtraFieldsInResponse(JsonElement response, FindRequestContext context)
+        private static HashSet<string> DetermineExtraFieldsInResponse(JsonElement response, FindRequestContext context)
         {
             HashSet<string> fieldsPresentInResponse = new();
 
@@ -293,7 +293,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // response taking into account the include and exclude fields configured for the entity.
             // So, the other fields in the response apart from the fields in context.FieldsToBeReturned
             // are not required.
-            return fieldsPresentInResponse.Except(context.FieldsToBeReturned);
+            return fieldsPresentInResponse.Except(context.FieldsToBeReturned).ToHashSet();
         }
 
         /// <summary>
@@ -304,7 +304,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>List of Json Elements after removing the additional fields</returns>
         private static List<JsonElement> RemoveExtraFieldsInResponseWithMultipleItems(List<JsonElement> jsonElementList, IEnumerable<string> extraFields)
         {
-            for (int i = 0; i < jsonElementList.Count(); i++)
+            for (int i = 0; i < jsonElementList.Count; i++)
             {
                 jsonElementList[i] = RemoveExtraFieldsInResponseWithSingleItem(jsonElementList[i], extraFields);
             }

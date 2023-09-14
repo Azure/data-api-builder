@@ -52,9 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT * FROM " + _simple_all_books + @"
-                        WHERE id = 2
                         ORDER BY id
-                        LIMIT 1
                     ) AS subq
                 "
             },

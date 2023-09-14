@@ -63,9 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   FROM (
                       SELECT *
                       FROM " + _simple_all_books + @"
-                      WHERE id = 2
                       ORDER BY id asc
-                      LIMIT 1
                   ) AS subq"
             },
             {

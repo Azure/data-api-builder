@@ -188,6 +188,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"AND [copies_sold] = 100 AND [last_sold_on] = '2023-08-28 12:36:08.8666667' " +
                 $"AND [last_sold_on_date] = '2023-08-28 12:36:08.8666667' AND [row_version] is NOT NULL " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneInTableWithAutoGenPKAndTrigger",
+                $"SELECT * FROM { _autogenPKTableWithTrigger } " +
+                $"WHERE [id] = {STARTING_ID_FOR_TEST_INSERTS} AND [u_id] = 2 AND [salary] = 100 AND [name] = 'Joel' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneInTableWithNonAutoGenPKAndTrigger",
+                $"SELECT * FROM { _nonAutogenPKTableWithTrigger } " +
+                $"WHERE [id] = 3 AND [months] = 2 AND [name] = 'Tommy' AND [salary] = 30 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 
@@ -375,6 +387,58 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: string.Empty,
                 expectJson: expectJson
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that even when an insert DML trigger is enabled on a table, we still return the
+        /// latest data (values written by trigger). To validate that the data is returned after the trigger is executed,
+        /// we use the new values (written by the trigger) in the WHERE predicates of the verifying sql query.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneInTableWithInsertTrigger()
+        {
+            // Given input item with salary: 102, this test verifies that the selection would return salary = 100.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(100,salary)).
+            string requestBody = @"
+            {
+                ""name"": ""Joel"",
+                ""salary"": 102
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}/u_id/2";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _autogenPKEntityWithTrigger,
+                sqlQuery: GetQuery("InsertOneInTableWithAutoGenPKAndTrigger"),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+
+            // Given input item with salary: 102, this test verifies that the selection would return salary = 30.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(30,salary)).
+            requestBody = @"
+            {
+                ""id"": 3,
+                ""name"": ""Tommy"",
+                ""salary"": 102
+            }";
+
+            expectedLocationHeader = $"id/3/months/2";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _nonAutogenPKEntityWithTrigger,
+                sqlQuery: GetQuery("InsertOneInTableWithNonAutoGenPKAndTrigger"),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
             );
         }
 

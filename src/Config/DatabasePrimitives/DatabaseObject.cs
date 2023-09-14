@@ -155,6 +155,21 @@ public class SourceDefinition
         new(StringComparer.InvariantCultureIgnoreCase);
 
     /// <summary>
+    /// Indicates whether an update trigger enabled on the table.
+    /// The default value must be kept as false, meaning by default we assume no trigger is enabled.
+    /// Based on whether trigger is enabled, we use either OUTPUT (when no trigger is enabled) / or SELECT (when a trigger is enabled),
+    /// to return the data after a mutation operation.
+    /// </summary>
+    public bool IsUpdateDMLTriggerEnabled;
+
+    /// <summary>
+    /// Indicates whether an insert trigger enabled on the table.
+    /// The default value must be kept as false, meaning by default we assume no trigger is enabled.
+    /// Based on whether trigger is enabled, we use either OUTPUT (when no trigger is enabled) / or SELECT (when a trigger is enabled),
+    /// to return the data after a mutation operation.
+    public bool IsInsertDMLTriggerEnabled;
+
+    /// <summary>
     /// Given the list of column names to check, evaluates
     /// if any of them is a nullable column when matched with the columns in this source definition.
     /// </summary>

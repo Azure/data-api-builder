@@ -2361,6 +2361,58 @@
       }
     },
     {
+      FteData: {
+        Source: {
+          Object: fte_data,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: FteData,
+          Plural: FteData,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      InternData: {
+        Source: {
+          Object: intern_data,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: InternData,
+          Plural: InternData,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       BooksSold: {
         Source: {
           Object: books_sold,

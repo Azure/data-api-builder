@@ -59,6 +59,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationTypeTable = "type_table";
         protected static readonly string _entityWithReadOnlyFields = "BooksSold";
         protected static readonly string _tableWithReadOnlyFields = "books_sold";
+        protected static readonly string _autogenPKEntityWithTrigger = "FteData";
+        protected static readonly string _autogenPKTableWithTrigger = "fte_data";
+        protected static readonly string _nonAutogenPKEntityWithTrigger = "InternData";
+        protected static readonly string _nonAutogenPKTableWithTrigger = "intern_data";
 
         public abstract string GetQuery(string key);
     }

@@ -177,8 +177,8 @@ public class ConfigGeneratorTests
             }");
 
         expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace(" ", string.Empty);
-        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
         expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\r\n", string.Empty);
+        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
 
         Assert.IsTrue(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 
@@ -187,9 +187,12 @@ public class ConfigGeneratorTests
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\r\n", string.Empty);
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\n", string.Empty);
 
+        string actual = actualRuntimeConfigJson.ToString();
+        string expected = expectedRuntimeConfigJson.ToString();
+
         // Comparing explicit strings here since parsing these into JSON would lose
         // the test scenario of verifying escaped chars are not written to the file system.
-        Assert.AreEqual(expectedRuntimeConfigJson.ToString(), actualRuntimeConfigJson.ToString());
+        Assert.AreEqual(expected, actual);
     }
 
     /// <summary>

@@ -217,7 +217,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 updateQuery.Append($"SELECT {columnsToBeReturned} FROM {tableName} WHERE {predicates};");
                 /* An example final update query on a table with update trigger enabled would look like:
                  *  UPDATE [dbo].[table] SET [dbo].[table].[field1] = @param3
-                 *  WHERE ([field3] != @param0) AND [dbo].[table].[id] = @param1 AND [dbo].[table].[nonautogen_id] = @param2;
+                 *  -- predicate because of database policy
+                 *  WHERE ([field3] != @param0) AND
+                 *  -- predicates because of PK
+                 *  [dbo].[table].[id] = @param1 AND [dbo].[table].[nonautogen_id] = @param2;
                  *  -- Subsequent select query.
                  *  SELECT [id] AS [id], [nonautogen_id] AS [nonautogen_id], [field1] AS [field1], [field2] AS [field2], [field3] AS [field3]
                  *  FROM [dbo].[table] WHERE ([field3] != @param0) AND [dbo].[table].[id] = @param1 AND [dbo].[table].[nonautogen_id] = @param2;

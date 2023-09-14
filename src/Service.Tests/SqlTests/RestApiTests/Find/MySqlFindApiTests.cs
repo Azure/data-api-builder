@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindViewAll",
                 @"
-                  SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
                       FROM " + _simple_all_books + @"

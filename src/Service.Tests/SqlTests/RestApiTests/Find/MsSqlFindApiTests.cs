@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindViewAll",
                 $"SELECT * FROM { _simple_all_books } " +
-                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindViewWithKeyAndMapping",

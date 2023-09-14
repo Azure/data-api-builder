@@ -138,8 +138,6 @@ public class ConfigGeneratorTests
             graphQLPath: "/An_",
             setSessionContext: false,
             hostMode: HostMode.Production,
-            restEnabled: CliBool.True,
-            graphqlEnabled: CliBool.True,
             corsOrigin: null,
             authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
             config: TEST_RUNTIME_CONFIG_FILE);

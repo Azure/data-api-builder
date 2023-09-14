@@ -1633,6 +1633,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 }
             }";
 
+            // The BASE_CONFIG omits the rest.request-body-strict option in the runtime section.
             string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
             RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             const string CUSTOM_CONFIG = "custom-config.json";

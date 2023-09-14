@@ -24,7 +24,7 @@ public static class ConfigMerger
             string baseConfigFile = FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string environmentBasedConfigFile = loader.GetFileName(environmentValue, considerOverrides: false);
 
-            if (loader.DoesFileExistInCurrentDirectory(baseConfigFile) && !string.IsNullOrEmpty(environmentBasedConfigFile))
+            if (loader.DoesFileExistInDirectory(baseConfigFile) && !string.IsNullOrEmpty(environmentBasedConfigFile))
             {
                 try
                 {

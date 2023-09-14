@@ -255,15 +255,13 @@ namespace Azure.DataApiBuilder.Service
                     {
                         if (error.Exception is not null)
                         {
-                            _logger.LogError(error.Exception.Message);
-                            _logger.LogError(error.Exception.StackTrace);
+                            _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
                             return error.WithMessage(error.Exception.Message);
                         }
 
                         if (error.Code is not null)
                         {
-                            _logger.LogError(error.Code);
-                            _logger.LogError(error.Message);
+                            _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
                             return error.WithMessage(error.Message);
                         }
 
@@ -294,10 +292,6 @@ namespace Azure.DataApiBuilder.Service
             {
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
-                if (_logger is not null)
-                {
-                    _logger.LogDebug("Loaded config file from {filePath}", fileSystemRuntimeConfigLoader.ConfigFileName);
-                }
 
                 if (!isRuntimeReady)
                 {
@@ -307,7 +301,7 @@ namespace Azure.DataApiBuilder.Service
                         _logger.LogError("Exiting the runtime engine...");
                     }
 
-                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {fileSystemRuntimeConfigLoader.ConfigFileName}");
+                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {fileSystemRuntimeConfigLoader.ConfigFilePath}");
                 }
             }
             else
@@ -596,7 +590,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (graphQLSchemaCreator is null || restService is null)
                 {
-                    _logger.LogError($"Endpoint service initialization failed");
+                    _logger.LogError("Endpoint service initialization failed.");
                 }
 
                 if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
@@ -618,15 +612,15 @@ namespace Azure.DataApiBuilder.Service
                 }
                 catch (DataApiBuilderException dabException)
                 {
-                    _logger.LogError($"{dabException.Message}");
+                    _logger.LogError(exception: dabException, message: "OpenAPI Documentor initialization failed.");
                 }
 
-                _logger.LogInformation($"Successfully completed runtime initialization.");
+                _logger.LogInformation("Successfully completed runtime initialization.");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Unable to complete runtime initialization. Refer to exception for error details.");
+                _logger.LogError(exception: ex, message: "Unable to complete runtime initialization. Refer to exception for error details.");
                 return false;
             }
         }

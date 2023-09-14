@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
-        private readonly ILogger<ISqlMetadataProvider> _logger;
+        protected readonly ILogger<ISqlMetadataProvider> _logger;
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
@@ -367,6 +367,19 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
         /// </summary>
         public abstract Type SqlToCLRType(string sqlType);
+
+        /// <summary>
+        /// Updates a table's SourceDefinition object's metadata with whether any enabled insert/update DML triggers exist for the table.
+        /// This method is only called for tables in MsSql.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="schemaName">Name of the schema in which the table is present.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="sourceDefinition">Table definition to update.</param>
+        public virtual Task PopulateTriggerMetadataForTable(string entityName, string schemaName, string tableName, SourceDefinition sourceDefinition)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Generates the map used to find a given entity based
@@ -984,10 +997,15 @@ namespace Azure.DataApiBuilder.Core.Services
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
+            _entities.TryGetValue(entityName, out Entity? entity);
+            if (GetDatabaseType() is DatabaseType.MSSQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
+            {
+                await PopulateTriggerMetadataForTable(entityName, schemaName, tableName, sourceDefinition);
+            }
+
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            _entities.TryGetValue(entityName, out Entity? entity);
             foreach (DataRow columnInfoFromAdapter in schemaTable.Rows)
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;

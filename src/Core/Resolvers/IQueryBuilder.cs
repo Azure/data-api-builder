@@ -76,6 +76,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         string BuildQueryToGetReadOnlyColumns(string schemaOrDatabaseParamName, string tableParamName);
 
         /// <summary>
+        /// Builds the query to determine the number of enabled triggers on a database table.
+        /// Needed only for MsSql.
+        /// </summary>
+        string BuildFetchEnabledTriggersQuery() => throw new NotImplementedException();
+
+        /// <summary>
         /// Derives the database type of the query builder.
         /// </summary>
         /// <returns>databaseType.</returns>

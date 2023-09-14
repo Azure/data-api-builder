@@ -18,13 +18,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         #region Positive tests
 
         /// <summary>
-        /// Test to validate that extraneous fields are allowed in request body when we operate in runtime.rest.request-body-strict = false.
-        /// When PK fields are specified both in URI and in the request body, the values specified for the fields in the URI are honored,
-        /// and the values specified in the request body are ignored.
-        /// This single test validates the functionality for PUT, PATCH and and POST requests.
+        /// Test to validate that extraneous fields are allowed in request body for POST operation when we operate in runtime.rest.request-body-strict = false.
         /// </summary>
         [TestMethod]
-        public virtual async Task MutationsTestWithExtraneousFieldsInRequestBody()
+        public virtual async Task InsertOneWithExtraneousFieldsInRequestBody()
         {
             // Validate that when a field which does not map to any column (here 'non_existing_field')
             // in the underlying table is included in the request body for POST operation,
@@ -50,9 +47,38 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedLocationHeader: "categoryid/3/pieceid/1"
                 );
 
+            requestBody = @"
+            {
+                ""id"": 2,
+                ""book_name"": ""Harry Potter"",
+                ""copies_sold"": 50,
+                ""last_sold_on_date"": ""2023-09-13 17:37:20""
+            }";
+
+            string expectedLocationHeader = $"id/2";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: GetQuery("InsertOneWithReadOnlyFieldsInRequestBody"),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that extraneous fields are allowed in request body for PUT operation when we operate in runtime.rest.request-body-strict = false.
+        /// When PK fields are specified both in URI and in the request body, the values specified for the fields in the URI are honored,
+        /// and the values specified in the request body are ignored.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOneWithExtraneousFieldsInRequestBody()
+        {
             // Validate that when PK fields (here 'categoryid' and 'pieceid') are included in the request body for PUT operation,
             // they are just ignored when we do not operate in strict mode for REST. The values of the fields from the URL is used.
-            requestBody = @"
+            string requestBody = @"
             {
                ""categoryName"":""SciFi"",
                ""piecesAvailable"":""10"",
@@ -92,7 +118,56 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 expectedStatusCode: HttpStatusCode.OK
                 );
 
+            // Validate that when a computed field (here 'last_sold_on_date') is included the request body for PUT update operation,
+            // it is just ignored when we do not operate in strict mode for REST. Successful execution of the PUT request confirms
+            // that we did not attempt to update the value of 'last_sold_on_update' field.
             requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 101,
+                ""last_sold_on"": ""2023-09-12 05:30:30""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/1",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PutOneUpdateWithComputedFieldInRequestBody"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate that when a computed field (here 'last_sold_on_date') is included the request body for PUT insert operation,
+            // it is just ignored when we do not operate in strict mode for REST. Successful execution of the PUT request confirms
+            // that we did not attempt to insert a value for 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 101
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/2",
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PutOneInsertWithComputedFieldInRequestBody"),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: "id/2"
+                );
+        }
+
+        /// <summary>
+        /// Test to validate that extraneous fields are allowed in request body for PATCH operation when we operate in runtime.rest.request-body-strict = false.
+        /// When PK fields are specified both in URI and in the request body, the values specified for the fields in the URI are honored,
+        /// and the values specified in the request body are ignored.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOneWithExtraneousFieldsInRequestBody()
+        {
+            string requestBody = @"
             {
                 ""piecesAvailable"": null,
                 ""piecied"": 5,
@@ -128,6 +203,49 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate that when a computed field (here 'last_sold_on_update') is included the request body for PATCH update operation,
+            // it is just ignored when we do not operate in strict mode for REST. Successful execution of the PATCH request confirms
+            // that we did not attempt to update the value of 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50,
+                ""last_sold_on_date"": ""2023-09-13 17:37:20""
+            }";
+            string expectedLocationHeader = $"id/1";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldInRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK
+                );
+
+            // Validate that when a computed field (here 'last_sold_on_date') is included the request body for PATCH insert operation,
+            // it is just ignored when we do not operate in strict mode for REST. Successful execution of the PATCH request confirms
+            // that we did not attempt to insert a value for 'last_sold_on_update' field.
+            requestBody = @"
+            {
+                ""book_name"": ""New book"",
+                ""copies_sold"": 50,
+                ""last_sold_on_date"": ""2023-09-13 17:37:20""
+            }";
+            expectedLocationHeader = $"id/3";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: expectedLocationHeader,
+                    queryString: null,
+                    entityNameOrPath: _entityWithReadOnlyFields,
+                    sqlQuery: GetQuery("PatchOneInsertWithComputedFieldInRequestBody"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    expectedLocationHeader: expectedLocationHeader
                 );
         }
         #endregion Positive tests

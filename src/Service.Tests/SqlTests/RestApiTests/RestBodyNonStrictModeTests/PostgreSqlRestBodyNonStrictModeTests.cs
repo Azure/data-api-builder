@@ -29,6 +29,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "InsertOneWithReadOnlyFieldsInRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'Harry Potter' AND copies_sold = 50 AND last_sold_on = '9999-12-31 23:59:59.997'
+                        AND last_sold_on_date = '9999-12-31 23:59:59.997'
+                    ) AS subq
+                "
+            },
+            {
                 "PutOneWithExtraneousFieldsInRequestBody",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -41,6 +53,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "PutOneUpdateWithComputedFieldInRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on = last_sold_on_date
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneInsertWithComputedFieldInRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on = '9999-12-31 23:59:59.997'
+                        AND last_sold_on_date = '9999-12-31 23:59:59.997'
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOneWithExtraneousFieldsInRequestBody",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -49,6 +84,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND ""categoryName"" = 'SciFi'
                             AND ""piecesAvailable"" is NULL AND ""piecesRequired"" = 0
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneUpdateWithComputedFieldInRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 50
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneInsertWithComputedFieldInRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 3 AND book_name = 'New book' AND copies_sold = 50 AND last_sold_on = '9999-12-31 23:59:59.997'
+                        AND last_sold_on_date = '9999-12-31 23:59:59.997'
                     ) AS subq
                 "
             }

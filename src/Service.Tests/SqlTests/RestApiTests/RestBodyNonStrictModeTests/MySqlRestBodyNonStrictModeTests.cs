@@ -30,6 +30,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "InsertOneWithReadOnlyFieldsInRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'Harry Potter' AND copies_sold = 50
+                    ) AS subq
+                "
+            },
+            {
                 "PutOneWithExtraneousFieldsInRequestBody",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -43,6 +55,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "
             },
             {
+                "PutOneUpdateWithComputedFieldInRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%d %H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on = '2023-09-12 05:30:30' AND last_sold_on_date = '2023-09-12 05:30:30'
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneInsertWithComputedFieldInRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'New book' AND copies_sold = 101
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOneWithExtraneousFieldsInRequestBody",
                 @"
                     SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
@@ -52,6 +88,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND categoryName ='SciFi' AND piecesAvailable is NULL
                         AND piecesRequired = 0
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneUpdateWithComputedFieldInRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%d %H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 50
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneInsertWithComputedFieldInRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 3 AND book_name = 'New book' AND copies_sold = 50
                     ) AS subq
                 "
             }

@@ -285,6 +285,8 @@ namespace Azure.DataApiBuilder.Core.Services
             SourceDefinition sourceDefinition =
                 TryGetSourceDefinition(insertRequestCtx.EntityName);
 
+            bool isRequestBodyStrict = IsRequestBodyStrict();
+
             // Each field that is checked against the DB schema is removed
             // from the hash set of unvalidated fields.
             // At the end, if we end up with extraneous unvalidated fields, we throw error.
@@ -302,10 +304,15 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (insertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && column.Value.IsReadOnly)
                 {
-                    throw new DataApiBuilderException(
+                    if (isRequestBodyStrict)
+                    {
+                        throw new DataApiBuilderException(
                             message: $"Field '{exposedName}' cannot be included in the request body.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
+                    unvalidatedFields.Remove(exposedName!);
                 }
 
                 // Request body must have value defined for included non-nullable columns
@@ -334,7 +341,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // There may be unvalidated fields remaining because of extraneous fields in request body
             // which are not mapped to the table. We throw an exception only when we operate in strict mode,
             // i.e. when extraneous fields are not allowed.
-            if (unvalidatedFields.Any() && IsRequestBodyStrict())
+            if (unvalidatedFields.Any() && isRequestBodyStrict)
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid request body. Contained unexpected fields in body: {string.Join(", ", unvalidatedFields)}",
@@ -353,7 +360,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public void ValidateUpsertRequestContext(UpsertRequestContext upsertRequestCtx)
         {
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
-
+            bool isRequestBodyStrict = IsRequestBodyStrict();
             SourceDefinition sourceDefinition = TryGetSourceDefinition(upsertRequestCtx.EntityName);
 
             // Each field that is checked against the DB schema is removed
@@ -374,10 +381,15 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (upsertRequestCtx.FieldValuePairsInBody.ContainsKey(exposedName!) && column.Value.IsReadOnly)
                 {
-                    throw new DataApiBuilderException(
+                    if (isRequestBodyStrict)
+                    {
+                        throw new DataApiBuilderException(
                             message: $"Field '{exposedName}' cannot be included in the request body.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
+                    unValidatedFields.Remove(exposedName!);
                 }
 
                 // Primary Key(s) should not be present in the request body. We do not fail a request
@@ -411,7 +423,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // There may be unvalidated fields remaining because of extraneous fields in request body
             // which are not mapped to the table. We throw an exception only when we operate in strict mode,
             // i.e. when extraneous fields are not allowed.
-            if (unValidatedFields.Any() && IsRequestBodyStrict())
+            if (unValidatedFields.Any() && isRequestBodyStrict)
             {
                 throw new DataApiBuilderException(
                     message: "Invalid request body. Either insufficient or extra fields supplied.",

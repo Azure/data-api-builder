@@ -155,6 +155,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                        FormatFindResult(queryJson, context);
         }
 
+        // <summary>
+        // Given the FindRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
+        // </summary>
+        public async Task<JsonDocument?> ExecuteAsyncAndGetResponseJson(FindRequestContext context, string datasourceName = "")
+        {
+            SqlQueryStructure structure = new(
+                context,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _runtimeConfigProvider,
+                _gQLFilterParser,
+                _httpContextAccessor.HttpContext!);
+            return await ExecuteAsync(structure, datasourceName);
+        }
+
         /// <summary>
         /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         /// Only the first result set will be returned, regardless of the contents of the stored procedure.

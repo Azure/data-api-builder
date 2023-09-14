@@ -37,6 +37,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public Task<IActionResult> ExecuteAsync(FindRequestContext context, string dataSourceName = "");
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="datasourceName"></param>
+        /// <returns></returns>
+        public Task<JsonDocument?> ExecuteAsyncAndGetResponseJson(FindRequestContext context, string datasourceName = "");
+
+        /// <summary>
         /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend.
         /// </summary>
         public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "");

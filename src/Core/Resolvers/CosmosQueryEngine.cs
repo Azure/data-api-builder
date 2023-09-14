@@ -390,5 +390,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             byte[] base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
             return Encoding.UTF8.GetString(base64EncodedBytes);
         }
+
+        public Task<JsonDocument?> ExecuteAsyncAndGetResponseJson(FindRequestContext context, string datasourceName = "")
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -55,6 +55,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
 
+        public HttpContext? HttpRequestContext;
+
         public BaseSqlQueryStructure(
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
@@ -68,6 +70,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
             Joins = new();
+
+            HttpRequestContext = httpContext;
 
             // For GraphQL read operation, we are deliberately not passing httpContext to this point
             // and hence it will take its default value i.e. null here.
@@ -496,6 +500,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
                     innerException: ex);
             }
+        }
+
+        public string? GetFilterPredicates(FilterClause? dbPolicyClause, EntityActionOperation operation)
+        {
+            ODataASTVisitor visitor = new(this, MetadataProvider, operation);
+            if(dbPolicyClause is null)
+            {
+                return null;
+            }
+
+            return dbPolicyClause.Expression.Accept<string>(visitor);
         }
 
         protected static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)

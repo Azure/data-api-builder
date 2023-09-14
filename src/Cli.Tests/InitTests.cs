@@ -50,7 +50,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -73,7 +72,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 restPath: "/rest-endpoint",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -97,7 +95,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -122,7 +119,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.None,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             return ExecuteVerifyTest(options);
@@ -156,7 +152,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.None,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectSuccess, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));
@@ -193,7 +188,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.None,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             Assert.AreEqual(expectedResult, TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? _));
@@ -222,7 +216,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 restDisabled: RestDisabled,
                 graphqlDisabled: GraphQLDisabled,
                 config: TEST_RUNTIME_CONFIG_FILE);
@@ -247,7 +240,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 config: TEST_RUNTIME_CONFIG_FILE);
 
             // Config generated successfully for the first time.
@@ -297,7 +289,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: authenticationProvider,
-                restRequestBodyStrict: CliBoolean.True,
                 audience: audience,
                 issuer: issuer,
                 config: TEST_RUNTIME_CONFIG_FILE);
@@ -327,7 +318,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE);
             Assert.AreEqual(true, TryGenerateConfig(initOptionsWithAllLowerCaseFileName, _runtimeConfigLoader!, _fileSystem!));
@@ -343,7 +333,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE.ToUpper());
             // Platform Dependent
@@ -367,7 +356,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 restPath: "abc",
                 config: TEST_RUNTIME_CONFIG_FILE);
 
@@ -387,7 +375,6 @@ namespace Cli.Tests
                 hostMode: HostMode.Production,
                 corsOrigin: null,
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
-                restRequestBodyStrict: CliBoolean.True,
                 graphQLPath: "abc",
                 config: TEST_RUNTIME_CONFIG_FILE);
 

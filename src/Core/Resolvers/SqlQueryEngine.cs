@@ -198,15 +198,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   ? DetermineExtraFieldsInResponse(jsonElement, context)
                                                   : DetermineExtraFieldsInResponse(jsonElement.EnumerateArray().First(), context);
 
-            int countOfExtraFieldsInResponse = extraFieldsInResponse.Count;
-
             // If the results are not a collection or if the query does not have a next page
             // no nextLink is needed. So, the response is returned after removing the extra fields.
             if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
             {
                 // If there are no additional fields present, the response is returned directly. When there
                 // are extra fields, they are removed before returning the response.
-                if (countOfExtraFieldsInResponse == 0)
+                if (extraFieldsInResponse.Count == 0)
                 {
                     return OkResponse(jsonElement);
                 }
@@ -221,7 +219,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count - 1).ToList();
+            rootEnumerated.RemoveAt(rootEnumerated.Count - 1);
 
             // The fields such as primary keys, fields in $orderby clause that are retrieved in addition to the
             // fields requested in the $select clause are required for calculating the $after element which is part of nextLink.
@@ -261,7 +259,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                   after);
 
             // When there are extra fields present, they are removed before returning the response.
-            if (countOfExtraFieldsInResponse > 0)
+            if (extraFieldsInResponse.Count > 0)
             {
                 rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated, extraFieldsInResponse);
             }

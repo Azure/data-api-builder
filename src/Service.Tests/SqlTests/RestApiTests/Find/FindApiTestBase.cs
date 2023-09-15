@@ -114,39 +114,291 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindOnTableWithUniqueCharacters"));
         }
 
-        ///<summary>
-        /// Tests the Rest Api for GET operations on Database Views,
-        /// either simple or composite.
-        ///</summary>
+        /// <summary>
+        /// Validates that a Find request on a single item with $select with only non-PK fields
+        /// returns only the selected fields and does not contain PK fields.
+        /// </summary>
         [TestMethod]
-        public virtual async Task FindOnViews()
+        public async Task FindByIdTestWithSelectFieldsWithoutPKOnATable()
         {
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2",
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=title",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTable")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request on a list of items with $select with only non-PK fields
+        /// returns only those fields and does not contain PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithoutPKOnATable()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=title",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTable")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a table with a composite PK on a single item
+        /// with $select containing some PK fields returns only the selected fields
+        /// and does not contain all the PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldWithSomePKFieldsOnATableWithCompositePK()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a table with a composite PK on a list of items
+        /// with $select containing some PK fields returns only the selected fields
+        /// and does not contain all the PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsContainingSomePKOnATableWithCompositePK()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithSomePKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a table with a composite PK on a single item
+        /// with $select containing no PK fields returns only the selected fields
+        /// and does not contain any PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsWithoutPKOnATableWithCompositePK()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a table with a composite PK on a list of items
+        /// with $select containing no PK fields returns only the selected fields
+        /// and does not contain any PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithoutPKOnATableWithCompositePK()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// Validates the repsonse when both $select and $orderby query strings are
+        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// fields requested in $select clause.
+        /// This test is executed against a table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindWithSelectAndOrderByQueryStringsOnATable()
+        {
+            // Validates that a Find request on a table with $select and $orderby query strings
+            // returns only the fields selected in $select query string and does not contain
+            // $orderby fields.
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=id,title&$orderby=publisher_id",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindWithSelectAndOrderbyQueryStringsOnTables")
+            );
+        }
+
+        /// <summary>
+        /// Validates the repsonse when both $select and $orderby query strings are
+        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// fields requested in $select clause.
+        /// This test is executed against a view.
+        /// </summary>
+        [TestMethod]
+        public async Task FindWithSelectAndOrderByQueryStringsOnAView()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName&$orderby=piecesAvailable",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindWithSelectAndOrderbyQueryStringsOnViews")
+            );
+        }
+
+        /// <summary>
+        /// Validates the response when a Find request to select all items is executed
+        /// against a view.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestOnAView()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _simple_all_books,
                 sqlQuery: GetQuery("FindViewAll")
             );
+        }
 
+        /// <summary>
+        /// Validates the response when a Find request is executed against a view
+        /// which has mapping defined on the key field.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestOnAViewWithMappingDefinedOnKeyField()
+        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=book_id",
                 entityNameOrPath: _book_view_with_key_and_mapping,
                 sqlQuery: GetQuery("FindViewWithKeyAndMapping")
             );
+        }
 
+        /// <summary>
+        /// Validates the response when a Find request to select a single item is
+        /// executed against a view with multiple key-fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestOnAViewWithMultipleKeyFields()
+        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
                 entityNameOrPath: _simple_subset_stocks,
                 sqlQuery: GetQuery("FindViewSelected")
             );
+        }
 
+        /// <summary>
+        /// Validates that a Find request against a view on a list of items with
+        /// $select with only non-key fields
+        /// returns only the selected fields and does not contain key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithoutKeyFieldsOnView()
+        {
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2/pub_id/1234",
-                queryString: string.Empty,
-                entityNameOrPath: _composite_subset_bookPub,
-                sqlQuery: GetQuery("FindBooksPubViewComposite")
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithoutKeyFieldsOnView")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view with multiple key-fields on a list of items with
+        /// $select with some key fields
+        /// returns only the selected fields and does not contain all the key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view with multiple key fields on a list of items with
+        /// $select with no key fields returns only the selected fields and
+        /// does not contain any key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view on a single item with
+        /// $select with key and non-key fields
+        /// returns only the selected fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsOnView()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=id,title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsOnView")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view on a single item with
+        /// $select with only non-key fields returns only the selected fields
+        /// and does not contain key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsOnViewWithoutKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsOnViewWithoutKeyFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view with multiple key-fields on a single item with
+        /// $select with some key fields returns only the selected fields
+        /// and does not contain all the key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view with multiple key fields on a single item with
+        /// $select with no key fields
+        /// returns only the selected fields and does not contain any key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields")
             );
         }
 
@@ -162,13 +414,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$filter=id ge 4",
                 entityNameOrPath: _simple_all_books,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilterOnView")
-            );
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/1",
-                queryString: "?$select=id,title",
-                entityNameOrPath: _simple_all_books,
-                sqlQuery: GetQuery("FindByIdTestWithQueryStringFieldsOnView")
             );
 
             await SetupAndRunRestApiTest(

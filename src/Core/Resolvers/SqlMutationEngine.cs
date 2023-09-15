@@ -310,12 +310,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             Dictionary<string, object?> parameters = PrepareParameters(context);
             string roleName = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
-            bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);            
+            bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);
             bool isDatabasePolicyDefinedForReadAction = false;
 
             if (isReadPermissionConfiguredForRole)
             {
-                isDatabasePolicyDefinedForReadAction =  !string.IsNullOrEmpty(_authorizationResolver.ProcessDBPolicy(context.EntityName, roleName, EntityActionOperation.Read, GetHttpContext()));
+                isDatabasePolicyDefinedForReadAction = !string.IsNullOrEmpty(_authorizationResolver.ProcessDBPolicy(context.EntityName, roleName, EntityActionOperation.Read, GetHttpContext()));
             }
 
             if (context.OperationType is EntityActionOperation.Delete)
@@ -405,13 +405,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
                 // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
-                if(_sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
+                if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
                 {
                     isUpdateResultSet = !PostgresQueryBuilder.IsInsert(resultRow);
                 }
 
                 HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
-                if(!isDatabasePolicyDefinedForReadAction)
+                if (!isDatabasePolicyDefinedForReadAction)
                 {
                     foreach (string columnInResponse in resultRow.Keys)
                     {
@@ -424,7 +424,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (!isUpdateResultSet)
                 {
-                    if(isDatabasePolicyDefinedForReadAction)
+                    if (isDatabasePolicyDefinedForReadAction)
                     {
                         return (jsonDocument is not null) ? new CreatedResult(location: string.Empty, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
                                                           : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
@@ -441,7 +441,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return new CreatedResult(location: string.Empty, OkMutationResponse(resultRow).Value);
                 }
 
-                if(isDatabasePolicyDefinedForReadAction)
+                if (isDatabasePolicyDefinedForReadAction)
                 {
                     return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
                                                       : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
@@ -524,12 +524,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // result is directly fetched from mutation result row
                 // remove columns that are excluded from read configuation
-                if(!isDatabasePolicyDefinedForReadAction)
+                if (!isDatabasePolicyDefinedForReadAction)
                 {
                     HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
-                    foreach(string columnInResponse in mutationResultRow!.Columns.Keys)
+                    foreach (string columnInResponse in mutationResultRow!.Columns.Keys)
                     {
-                        if(!allowedExposedColumns.Contains(columnInResponse))
+                        if (!allowedExposedColumns.Contains(columnInResponse))
                         {
                             mutationResultRow!.Columns.Remove(columnInResponse);
                         }
@@ -538,13 +538,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (context.OperationType is EntityActionOperation.Insert)
                 {
-                    if(isDatabasePolicyDefinedForReadAction)
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns);
+                    if (isDatabasePolicyDefinedForReadAction)
                     {
-                        return (jsonDocument is not null) ? new CreatedResult(location: string.Empty, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
-                                                          : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+                        return (jsonDocument is not null) ? new CreatedResult(location: primaryKeyRoute, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
+                                                          : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
                     }
 
-                    return new CreatedResult(location: string.Empty, OkMutationResponse(mutationResultRow!.Columns).Value);
+                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResultRow!.Columns).Value);
                 }
 
                 if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
@@ -588,7 +589,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             IEnumerable<string> allowedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
-           
+
             findRequestContext.UpdateReturnFields(allowedColumns);
             return findRequestContext;
         }

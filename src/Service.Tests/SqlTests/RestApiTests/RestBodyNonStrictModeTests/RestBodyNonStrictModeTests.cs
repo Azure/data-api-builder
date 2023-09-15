@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             {
                 ""book_name"": ""New book"",
                 ""copies_sold"": 101,
-                ""last_sold_on"": ""2023-09-12 05:30:30""
+                ""last_sold_on_date"": ""2023-09-12 05:30:30""
             }";
 
             await SetupAndRunRestApiTest(
@@ -144,7 +144,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             requestBody = @"
             {
                 ""book_name"": ""New book"",
-                ""copies_sold"": 101
+                ""copies_sold"": 101,
+                ""last_sold_on_date"": ""2023-09-13 17:37:20""
             }";
 
             await SetupAndRunRestApiTest(

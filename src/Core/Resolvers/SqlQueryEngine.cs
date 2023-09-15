@@ -264,7 +264,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated, extraFieldsInResponse);
             }
 
-            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated.Append(nextLink)));
+            rootEnumerated.Add(nextLink);
+            return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
         }
 
         /// <summary>

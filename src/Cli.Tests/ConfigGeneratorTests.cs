@@ -177,8 +177,8 @@ public class ConfigGeneratorTests
             }");
 
         expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace(" ", string.Empty);
-        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
         expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\r\n", string.Empty);
+        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
 
         Assert.IsTrue(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
 

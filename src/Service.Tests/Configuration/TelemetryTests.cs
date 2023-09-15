@@ -29,16 +29,16 @@ public class TelemetryTests
 {
     private const string TEST_APP_INSIGHTS_CONN_STRING = "InstrumentationKey=testKey;IngestionEndpoint=https://unitTest.com/;LiveEndpoint=https://unittest2.com/";
 
-    private readonly static TelemetryOptions _testTelemetryOptions = new(new ApplicationInsightsOptions(true, TEST_APP_INSIGHTS_CONN_STRING));
+    private readonly TelemetryOptions _testTelemetryOptions = new(new ApplicationInsightsOptions(true, TEST_APP_INSIGHTS_CONN_STRING));
 
     private const string CONFIG_WITH_TELEMETRY = "dab-telemetry-test-config.json";
-    private static RuntimeConfig _configuration;
+    private RuntimeConfig _configuration;
 
     /// <summary>
     /// Sets up the test environment by creating a runtime config with telemetry options.
     /// </summary>
-    [ClassInitialize]
-    public static void SetUpTelemetryInconfig(TestContext testContext)
+    [TestInitialize]
+    public void SetUpTelemetryInconfig()
     {
         DataSource dataSource = new(DatabaseType.MSSQL,
             GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
@@ -52,8 +52,8 @@ public class TelemetryTests
     /// <summary>
     /// Cleans up the test environment by deleting the runtime config with telemetry options.
     /// </summary>
-    [ClassCleanup]
-    public static void CleanUpTelemetryConfig()
+    [TestCleanup]
+    public void CleanUpTelemetryConfig()
     {
         File.Delete(CONFIG_WITH_TELEMETRY);
     }

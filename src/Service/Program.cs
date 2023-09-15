@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service
                     if (Startup.AppInsightsOptions.Enabled && appTelemetryClient is not null)
                     {
                         builder.AddApplicationInsights(configureTelemetryConfiguration: (config) =>
-                            config.ConnectionString = appTelemetryClient.TelemetryConfiguration.ConnectionString,
+                            config.ConnectionString = Startup.AppInsightsOptions.ConnectionString,
                             configureApplicationInsightsLoggerOptions: (options) => { }
                         )
                         .AddFilter<ApplicationInsightsLoggerProvider>("", logLevel)

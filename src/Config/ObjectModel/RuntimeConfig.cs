@@ -47,6 +47,7 @@ public record RuntimeConfig
 
     /// <summary>
     /// Constructor for runtimeConfig.
+    /// To be used when setting up from cli json scenario.
     /// </summary>
     /// <param name="Schema">schema.</param>
     /// <param name="DataSource">Default datasource.</param>
@@ -109,6 +110,30 @@ public record RuntimeConfig
     }
 
     /// <summary>
+    /// Constructor for runtimeConfig.
+    /// This constructor is to be used when dynamically setting up the config as opposed to using a cli json file.
+    /// </summary>
+    /// <param name="Schema"></param>
+    /// <param name="DataSource"></param>
+    /// <param name="Runtime"></param>
+    /// <param name="Entities"></param>
+    /// <param name="DefaultDataSourceName"></param>
+    /// <param name="DataSourceNameToDataSource"></param>
+    /// <param name="EntityNameToDataSourceName"></param>
+    /// <param name="DataSourceFiles"></param>
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, string DefaultDataSourceName, Dictionary<string, DataSource> DataSourceNameToDataSource, Dictionary<string, string> EntityNameToDataSourceName, DataSourceFiles? DataSourceFiles = null)
+    {
+        this.Schema = Schema;
+        this.DataSource = DataSource;
+        this.Runtime = Runtime;
+        this.Entities = Entities;
+        this._defaultDataSourceName = DefaultDataSourceName;
+        this._dataSourceNameToDataSource = DataSourceNameToDataSource;
+        this._entityNameToDataSourceName = EntityNameToDataSourceName;
+        this.DataSourceFiles = DataSourceFiles;
+    }
+
+    /// <summary>
     /// Gets the DataSource corresponding to the datasourceName.
     /// </summary>
     /// <param name="dataSourceName">Name of datasource.</param>
@@ -121,17 +146,6 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Tries to add the datasource to the DataSourceNameToDataSource dictionary.
-    /// </summary>
-    /// <param name="dataSourceName">dataSourceName.</param>
-    /// <param name="dataSource">dataSource.</param>
-    /// <returns>True indicating success, False indicating failure.</returns>
-    public bool AddDataSource(string dataSourceName, DataSource dataSource)
-    {
-        return _dataSourceNameToDataSource.TryAdd(dataSourceName, dataSource);
-    }
-
-    /// <summary>
     /// Updates the DataSourceNameToDataSource dictionary with the new datasource.
     /// </summary>
     /// <param name="dataSourceName">Name of datasource</param>
@@ -141,18 +155,6 @@ public record RuntimeConfig
     {
         CheckDataSourceNamePresent(dataSourceName);
         _dataSourceNameToDataSource[dataSourceName] = dataSource;
-    }
-
-    /// <summary>
-    /// Removes the datasource from the DataSourceNameToDataSource dictionary.
-    /// </summary>
-    /// <param name="dataSourceName">DataSourceName.</param>
-    /// <returns>True indicating success, False indicating failure.</returns>
-    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public bool RemoveDataSource(string dataSourceName)
-    {
-        CheckDataSourceNamePresent(dataSourceName);
-        return _dataSourceNameToDataSource.Remove(dataSourceName);
     }
 
     /// <summary>
@@ -175,43 +177,6 @@ public record RuntimeConfig
     {
         CheckEntityNamePresent(entityName);
         return _dataSourceNameToDataSource[_entityNameToDataSourceName[entityName]];
-    }
-
-    /// <summary>
-    /// Add entity to the EntityNameToDataSourceName dictionary.
-    /// </summary>
-    /// <param name="entityName">EntityName</param>
-    /// <param name="dataSourceName">DatasourceName.</param>
-    /// <returns>True indicating success, False indicating failure.</returns>
-    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public bool AddEntity(string entityName, string dataSourceName)
-    {
-        CheckDataSourceNamePresent(dataSourceName);
-        return _entityNameToDataSourceName.TryAdd(entityName, dataSourceName);
-    }
-
-    /// <summary>
-    /// Updates the EntityNameToDataSourceName dictionary with the new Entity to datasource mapping.
-    /// </summary>
-    /// <param name="entityName">EntityName.</param>
-    /// <param name="dataSourceName">dataSourceName.</param>
-    /// <exception cref="DataApiBuilderException"></exception>
-    public void UpdateEntityNameToDataSourceName(string entityName, string dataSourceName)
-    {
-        CheckDataSourceNamePresent(dataSourceName);
-        CheckEntityNamePresent(entityName);
-        _entityNameToDataSourceName[entityName] = dataSourceName;
-    }
-
-    /// <summary>
-    /// Removes the entity from the EntityNameToDataSourceName dictionary.
-    /// </summary>
-    /// <param name="entityName">Name of Entity</param>
-    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public bool RemoveEntity(string entityName)
-    {
-        CheckEntityNamePresent(entityName);
-        return _entityNameToDataSourceName.Remove(entityName);
     }
 
     /// <summary>

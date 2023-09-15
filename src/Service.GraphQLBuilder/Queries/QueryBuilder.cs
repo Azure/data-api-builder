@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// Also populates the DocumentNode with return types.
         /// </summary>
         /// <param name="root">Root of GraphQL schema</param>
-        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
+        /// <param name="databaseTypes">EnitityName to database Type of entity.</param>
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
         /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
         /// <param name="dbObjects">Database object metadata</param>

@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="logLevel">minimum log level.</param>
         /// <param name="appTelemetryClient">Telemetry client</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient=null)
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null)
         {
             return LoggerFactory
                 .Create(builder =>

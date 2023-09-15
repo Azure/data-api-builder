@@ -570,8 +570,8 @@ namespace Azure.DataApiBuilder.Service
 
                 if (appTelemetryClient is null)
                 {
-                   _logger.LogError("Telemetry client is not initialized.");
-                   return;
+                    _logger.LogError("Telemetry client is not initialized.");
+                    return;
                 }
 
                 // Update the TelemetryConfiguration object

@@ -206,6 +206,100 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), 13);
         }
 
+        public async Task InsertMutationOnTableWithTriggerWithNonAutoGenPK(string dbQuery)
+        {
+            // Given input item { id: 4, name: ""Tommy"", salary: 45 }, this test verifies that the selection would return salary = 30.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(30,salary)).
+            string graphQLMutationName = "createInternData";
+            string graphQLMutation = @"
+                mutation{
+                    createInternData(item: { id: 4, name: ""Tommy"", salary: 45 }) {
+                        id
+                        months
+                        name
+                        salary
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        public async Task InsertMutationOnTableWithTriggerWithAutoGenPK(string dbQuery)
+        {
+            // Given input item { name: ""Joel"", salary: 102 }, this test verifies that the selection would return salary = 100.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(100,salary)).
+            string graphQLMutationName = "createFteData";
+            string graphQLMutation = @"
+                mutation{
+                    createFteData(item: { name: ""Joel"", salary: 102 }) {
+                        id
+                        u_id
+                        name
+                        position
+                        salary
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        public async Task UpdateMutationOnTableWithTriggerWithNonAutoGenPK(string dbQuery)
+        {
+            // Given input item { salary: 100 }, this test verifies that the selection would return salary = 50.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(50,salary)).
+            string graphQLMutationName = "updateInternData";
+            string graphQLMutation = @"
+                mutation{
+                    updateInternData(id: 1, months: 3, item: { salary: 100 }) {
+                        id
+                        months
+                        name
+                        salary
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        public async Task UpdateMutationOnTableWithTriggerWithAutoGenPK(string dbQuery)
+        {
+            // Given input item { salary: -9 }, this test verifies that the selection would return salary = 0.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(150,salary)).
+            string graphQLMutationName = "updateFteData";
+            string graphQLMutation = @"
+                mutation{
+                    updateFteData(id: 1, u_id: 2, item: { salary: -9 }) {
+                        id
+                        u_id
+                        name
+                        position
+                        salary
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
         /// <summary>
         /// <code>Do: </code> Insert a new book with a given title and publisher name.
         /// and returns all the books under the given publisher.

@@ -84,8 +84,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (runtimeConfigProvider.IsLateConfigured)
                 {
-                    // builder.Encrypt = SqlConnectionEncryptOption.Mandatory;
-                    // builder.TrustServerCertificate = false;
+                    builder.Encrypt = SqlConnectionEncryptOption.Mandatory;
+                    builder.TrustServerCertificate = false;
                 }
 
                 ConnectionStringBuilders.TryAdd(dataSourceName, builder);

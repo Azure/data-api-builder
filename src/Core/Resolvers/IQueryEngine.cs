@@ -42,6 +42,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "");
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="datasourceName"></param>
+        /// <returns></returns>
+        public Task<JsonDocument?> ExecuteAsyncAndGetResponseJson(FindRequestContext context, string datasourceName = "");
+
+        /// <summary>
         /// Resolves a jsonElement representing an inner object based on the field's schema and metadata
         /// </summary>
         public JsonDocument? ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);

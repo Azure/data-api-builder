@@ -309,6 +309,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
         {
             Dictionary<string, object?> parameters = PrepareParameters(context);
+            string roleName = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+            bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);            
+            bool isDatabasePolicyDefinedForReadAction = false;
+
+            if (isReadPermissionConfiguredForRole)
+            {
+                isDatabasePolicyDefinedForReadAction =  !string.IsNullOrEmpty(_authorizationResolver.ProcessDBPolicy(context.EntityName, roleName, EntityActionOperation.Read, GetHttpContext()));
+            }
 
             if (context.OperationType is EntityActionOperation.Delete)
             {
@@ -346,7 +354,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
             {
-                DbResultSet? upsertOperationResult = null;
+                DbResultSet? upsertOperationResult;
+                DbResultSetRow? dbResultSetRow = null;
+                JsonDocument? jsonDocument = null;
+                bool isUpdateResultSet = false;
 
                 try
                 {
@@ -356,6 +367,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         upsertOperationResult = await PerformUpsertOperation(
                                                             parameters,
                                                             context);
+
+                        dbResultSetRow = upsertOperationResult is not null ?
+                    (upsertOperationResult.Rows.FirstOrDefault() ?? new()) : null;
+
+                        if (upsertOperationResult is not null &&
+                            dbResultSetRow is not null && dbResultSetRow.Columns.Count > 0)
+                        {
+
+                            if (upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
+                            {
+                                isUpdateResultSet = Convert.ToBoolean(isUpdateResultSetValue);
+                            }
+
+                        }
+
+                        if (isDatabasePolicyDefinedForReadAction)
+                        {
+                            FindRequestContext findRequestContext = ConstructFindRequestContext(context, dbResultSetRow!, roleName);
+                            jsonDocument = await _queryEngine.ExecuteAsyncAndGetResponseJson(findRequestContext);
+                        }
+
                         transactionScope.Complete();
                     }
                 }
@@ -369,38 +401,60 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw _dabExceptionWithTransactionErrorMessage;
                 }
 
-                DbResultSetRow? dbResultSetRow = upsertOperationResult is not null ?
-                    (upsertOperationResult.Rows.FirstOrDefault() ?? new()) : null;
+                Dictionary<string, object?> resultRow = dbResultSetRow!.Columns;
 
-                if (upsertOperationResult is not null &&
-                    dbResultSetRow is not null && dbResultSetRow.Columns.Count > 0)
+                // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
+                // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
+                if(_sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
                 {
-                    Dictionary<string, object?> resultRow = dbResultSetRow.Columns;
-
-                    bool isUpdateResultSet = false;
-                    if (upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
-                    {
-                        isUpdateResultSet = Convert.ToBoolean(isUpdateResultSetValue);
-                    }
-
-                    // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
-                    // Even if its first result, postgresql may still be an insert op here, if so, return CreatedResult
-                    if (!isUpdateResultSet ||
-                        (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL &&
-                        PostgresQueryBuilder.IsInsert(resultRow)))
-                    {
-                        string primaryKeyRoute = ConstructPrimaryKeyRoute(context, resultRow);
-                        // location will be updated in rest controller where httpcontext is available
-                        return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value);
-                    }
-
-                    // Valid REST updates return OkObjectResult
-                    return OkMutationResponse(resultRow);
+                    isUpdateResultSet = !PostgresQueryBuilder.IsInsert(resultRow);
                 }
+
+                HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
+                if(!isDatabasePolicyDefinedForReadAction)
+                {
+                    foreach (string columnInResponse in resultRow.Keys)
+                    {
+                        if (!allowedExposedColumns.Contains(columnInResponse))
+                        {
+                            resultRow.Remove(columnInResponse);
+                        }
+                    }
+                }
+
+                if (!isUpdateResultSet)
+                {
+                    if(isDatabasePolicyDefinedForReadAction)
+                    {
+                        return (jsonDocument is not null) ? new CreatedResult(location: string.Empty, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
+                                                          : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+                    }
+
+                    foreach (string columnInResponse in resultRow.Keys)
+                    {
+                        if (!allowedExposedColumns.Contains(columnInResponse))
+                        {
+                            resultRow.Remove(columnInResponse);
+                        }
+                    }
+
+                    return new CreatedResult(location: string.Empty, OkMutationResponse(resultRow).Value);
+                }
+
+                if(isDatabasePolicyDefinedForReadAction)
+                {
+                    return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
+                                                      : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+                }
+
+                // Valid REST updates return OkObjectResult
+                //return  (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone()) : OkMutationResponse(resultRow);
+                return OkMutationResponse(resultRow);
             }
             else
             {
                 DbResultSetRow? mutationResultRow = null;
+                JsonDocument? jsonDocument = null;
 
                 try
                 {
@@ -412,6 +466,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     context.EntityName,
                                     context.OperationType,
                                     parameters);
+
+                        if (context.OperationType is EntityActionOperation.Insert)
+                        {
+                            if (mutationResultRow is null)
+                            {
+                                // Ideally this case should not happen, however may occur due to unexpected reasons,
+                                // like the DbDataReader being null. We throw an exception
+                                // which will be returned as an Unexpected Internal Server Error
+                                throw new DataApiBuilderException(
+                                    message: "An unexpected error occurred while trying to execute the query.",
+                                    statusCode: HttpStatusCode.InternalServerError,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                            }
+
+                            if (mutationResultRow.Columns.Count == 0)
+                            {
+                                throw new DataApiBuilderException(
+                                    message: "Could not insert row with given values.",
+                                    statusCode: HttpStatusCode.Forbidden,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
+                                    );
+                            }
+
+                        }
+
+                        if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
+                        {
+                            // Nothing to update means we throw Exception
+                            if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                            {
+                                throw new DataApiBuilderException(message: "No Update could be performed, record not found",
+                                                                   statusCode: HttpStatusCode.PreconditionFailed,
+                                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                            }
+
+                        }
+
+                        if (isDatabasePolicyDefinedForReadAction)
+                        {
+                            FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow!, roleName);
+                            jsonDocument = await _queryEngine.ExecuteAsyncAndGetResponseJson(findRequestContext);
+                        }
+
                         transactionScope.Complete();
                     }
                 }
@@ -425,50 +522,75 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw _dabExceptionWithTransactionErrorMessage;
                 }
 
+                // result is directly fetched from mutation result row
+                // remove columns that are excluded from read configuation
+                if(!isDatabasePolicyDefinedForReadAction)
+                {
+                    HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
+                    foreach(string columnInResponse in mutationResultRow!.Columns.Keys)
+                    {
+                        if(!allowedExposedColumns.Contains(columnInResponse))
+                        {
+                            mutationResultRow!.Columns.Remove(columnInResponse);
+                        }
+                    }
+                }
+
                 if (context.OperationType is EntityActionOperation.Insert)
                 {
-                    if (mutationResultRow is null)
+                    if(isDatabasePolicyDefinedForReadAction)
                     {
-                        // Ideally this case should not happen, however may occur due to unexpected reasons,
-                        // like the DbDataReader being null. We throw an exception
-                        // which will be returned as an Unexpected Internal Server Error
-                        throw new DataApiBuilderException(
-                            message: "An unexpected error occurred while trying to execute the query.",
-                            statusCode: HttpStatusCode.InternalServerError,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                        return (jsonDocument is not null) ? new CreatedResult(location: string.Empty, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
+                                                          : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
                     }
 
-                    if (mutationResultRow.Columns.Count == 0)
-                    {
-                        throw new DataApiBuilderException(
-                            message: "Could not insert row with given values.",
-                            statusCode: HttpStatusCode.Forbidden,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
-                            );
-                    }
-
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow.Columns);
-                    // location will be updated in rest controller where httpcontext is available
-                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResultRow.Columns).Value);
+                    return new CreatedResult(location: string.Empty, OkMutationResponse(mutationResultRow!.Columns).Value);
                 }
 
                 if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
                 {
-                    // Nothing to update means we throw Exception
-                    if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                    if (isDatabasePolicyDefinedForReadAction)
                     {
-                        throw new DataApiBuilderException(message: "No Update could be performed, record not found",
-                                                           statusCode: HttpStatusCode.PreconditionFailed,
-                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                        return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
+                                                          : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
                     }
 
                     // Valid REST updates return OkObjectResult
-                    return OkMutationResponse(mutationResultRow.Columns);
+                    return OkMutationResponse(mutationResultRow!.Columns);
                 }
             }
 
             // if we have not yet returned, record is null
             return null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="mutationResultRow"></param>
+        /// <param name="roleName"></param>
+        /// <returns></returns>
+        private FindRequestContext ConstructFindRequestContext(RestRequestContext context, DbResultSetRow mutationResultRow, string roleName)
+        {
+            FindRequestContext findRequestContext = new(entityName: context.EntityName, dbo: context.DatabaseObject, isList: false);
+            foreach (string primarykey in context.DatabaseObject.SourceDefinition.PrimaryKey)
+            {
+                _sqlMetadataProvider.TryGetBackingColumn(context.EntityName, primarykey, out string? backingColumnName);
+                if (!string.IsNullOrEmpty(backingColumnName))
+                {
+                    findRequestContext.PrimaryKeyValuePairs.Add(backingColumnName, value: mutationResultRow.Columns[primarykey]!);
+                }
+                else
+                {
+                    findRequestContext.PrimaryKeyValuePairs.Add(primarykey, value: mutationResultRow.Columns[primarykey]!);
+                }
+            }
+
+            IEnumerable<string> allowedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
+           
+            findRequestContext.UpdateReturnFields(allowedColumns);
+            return findRequestContext;
         }
 
         /// <summary>

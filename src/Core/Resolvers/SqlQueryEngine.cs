@@ -156,6 +156,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="datasourceName"></param>
+        /// <returns></returns>
+        public async Task<JsonDocument?> ExecuteAsyncAndGetResponseJson(FindRequestContext context, string datasourceName = "")
+        {
+            SqlQueryStructure structure = new(
+                context,
+                _sqlMetadataProvider,
+                _authorizationResolver,
+                _runtimeConfigProvider,
+                _gQLFilterParser,
+                _httpContextAccessor.HttpContext!);
+
+            return await ExecuteAsync(structure, datasourceName);
+        }
+
+        /// <summary>
         /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         /// Only the first result set will be returned, regardless of the contents of the stored procedure.
         /// </summary>

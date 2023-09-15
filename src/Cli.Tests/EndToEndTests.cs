@@ -108,7 +108,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
-        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.disabled", "--graphql.path", "/graphql-api" };
+        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.enabled", "false", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
@@ -766,6 +766,67 @@ public class EndToEndTests
             Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig);
             Assert.AreEqual("/base-route", runtimeConfig.Runtime.BaseRoute);
+        }
+    }
+
+    [DataTestMethod]
+    [DataRow(ApiType.REST, false, false, true, true, DisplayName = "Validate that REST endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
+    [DataRow(ApiType.REST, false, true, true, true, DisplayName = "Validate that REST endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
+    [DataRow(ApiType.REST, true, false, true, false, DisplayName = "Validate that REST endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
+    [DataRow(ApiType.REST, true, true, false, false, DisplayName = "Validate that REST endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
+    [DataRow(ApiType.REST, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for REST endpoint.")]
+    [DataRow(ApiType.GraphQL, false, false, true, true, DisplayName = "Validate that GraphQL endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
+    [DataRow(ApiType.GraphQL, false, true, true, true, DisplayName = "Validate that GraphQL endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
+    [DataRow(ApiType.GraphQL, true, false, true, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
+    [DataRow(ApiType.GraphQL, true, true, false, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
+    [DataRow(ApiType.GraphQL, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for GraphQL endpoint.")]
+    public void TestEnabledDisabledFlagsForApis(
+        ApiType apiType,
+        bool includeDisabledFlag,
+        bool includeEnabledFlag,
+        bool enabledFlagValue,
+        bool expectedEnabledFlagValueInConfig,
+        bool isExceptionExpected = false)
+    {
+        string apiName = apiType.ToString().ToLower();
+        string disabledFlag = $"--{apiName}.disabled";
+        string enabledFlag = $"--{apiName}.enabled";
+
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", SAMPLE_TEST_CONN_STRING };
+
+        string[] enabledDisabledArgs = { };
+
+        if (includeDisabledFlag)
+        {
+            enabledDisabledArgs = enabledDisabledArgs.Append(disabledFlag).ToArray();
+        }
+
+        if (includeEnabledFlag)
+        {
+            enabledDisabledArgs = enabledDisabledArgs.Append(enabledFlag).ToArray();
+            enabledDisabledArgs = enabledDisabledArgs.Append(enabledFlagValue.ToString()).ToArray();
+        }
+
+        initArgs = initArgs.Concat(enabledDisabledArgs).ToArray();
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+        if (isExceptionExpected)
+        {
+            Assert.IsFalse(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNull(runtimeConfig);
+        }
+        else
+        {
+            Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig);
+
+            if (apiType is ApiType.REST)
+            {
+                Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Rest.Enabled);
+            }
+            else
+            {
+                Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.GraphQL.Enabled);
+            }
         }
     }
 

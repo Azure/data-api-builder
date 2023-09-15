@@ -34,6 +34,8 @@ namespace Cli.Commands
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
+            CliBool restEnabled = CliBool.None,
+            CliBool graphqlEnabled = CliBool.None,
             CliBoolean restRequestBodyStrict = CliBoolean.None,
             string? config = null)
             : base(config)
@@ -54,6 +56,8 @@ namespace Cli.Commands
             RestDisabled = restDisabled;
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
+            RestEnabled = restEnabled;
+            GraphQLEnabled = graphqlEnabled;
             RestRequestBodyStrict = restRequestBodyStrict;
         }
 
@@ -104,6 +108,12 @@ namespace Cli.Commands
 
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
+
+        [Option("rest.enabled", Required = false, HelpText = "Enables REST endpoint for all entities. Supported values: true, false.")]
+        public CliBool RestEnabled { get; }
+
+        [Option("graphql.enabled", Required = false, HelpText = "Enables GraphQL endpoint for all entities. Supported values: true, false.")]
+        public CliBool GraphQLEnabled { get; }
 
         // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
         // included in the init command.

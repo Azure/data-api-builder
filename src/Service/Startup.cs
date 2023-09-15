@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service
         public static bool IsLogLevelOverriddenByCli;
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
-        public static TelemetryClient? AppTelemetryClient;
+        // public static TelemetryClient? AppTelemetryClient;
 
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
@@ -76,8 +76,9 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
 
-            // Register a TelemetryClient instance and custom ITelemetryInitializer implementation with the dependency injection
-            services.AddSingleton<TelemetryClient>();
+            // Add ApplicationTelemetry service and register custom ITelemetryInitializer implementation with the dependency injection
+            services.AddApplicationInsightsTelemetry();
+
             services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
@@ -464,7 +465,9 @@ namespace Azure.DataApiBuilder.Service
                 }
             }
 
-            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
+            TelemetryClient? appTelemetryClient = serviceProvider.GetService<TelemetryClient>();
+
+            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
         }
 
         /// <summary>
@@ -563,19 +566,20 @@ namespace Azure.DataApiBuilder.Service
                     return;
                 }
 
-                AppTelemetryClient = app.ApplicationServices.GetRequiredService<TelemetryClient>();
+                TelemetryClient? appTelemetryClient = app.ApplicationServices.GetService<TelemetryClient>();
 
-                // Update the TelemetryConfiguration object
-                TelemetryConfiguration telemetryConfiguration = AppTelemetryClient.TelemetryConfiguration;
-                telemetryConfiguration.ConnectionString = AppInsightsOptions.ConnectionString;
-
-                if (AppTelemetryClient is null)
+                if (appTelemetryClient is null)
                 {
-                    _logger.LogError("Telemetry client is not initialized.");
+                   _logger.LogError("Telemetry client is not initialized.");
+                   return;
                 }
 
+                // Update the TelemetryConfiguration object
+                TelemetryConfiguration telemetryConfiguration = appTelemetryClient.TelemetryConfiguration;
+                telemetryConfiguration.ConnectionString = AppInsightsOptions.ConnectionString;
+
                 // Updating Startup Logger to Log from Startup Class.
-                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
                 _logger = loggerFactory.CreateLogger<Startup>();
             }
         }

@@ -64,7 +64,10 @@ public class ApplicationInsightsLoggerProvider : ILoggerProvider
                 // The state parameter is an object that contains additional information about the log event.
                 // The code checks if state is an IEnumerable<KeyValuePair<string, object>> and uses the ToDictionary method to convert it to a dictionary of key-value pairs.
                 // If state is not an IEnumerable<KeyValuePair<string, object>>, the code creates an empty dictionary.
-                IDictionary<string, string> properties = (state as IEnumerable<KeyValuePair<string, object>>)?.ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? string.Empty) ?? new Dictionary<string, string>();
+                IDictionary<string, string> properties = (state as IEnumerable<KeyValuePair<string, object>>)?
+                    .ToDictionary(kv => kv.Key, kv => kv.Value?.ToString() ?? string.Empty)
+                    ?? new Dictionary<string, string>();
+
                 properties["CategoryName"] = _categoryName;
                 properties["Message"] = formatter(state, exception);
                 _telemetryClient.TrackEvent(ERROR_CAUGHT_EVENT_NAME, properties);

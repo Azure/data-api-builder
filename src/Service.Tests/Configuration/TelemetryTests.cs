@@ -1,20 +1,29 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SharpYaml.Tokens;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -57,12 +66,13 @@ public class TelemetryTests
     }
 
     /// <summary>
+    /// Test for non-hosted scenario.
     /// Tests that telemetry events are tracked whenever error is caught.
     /// In this test we try to query an entity without appropriate access and
     /// assert on the failure message in the telemetry event sent to Application Insights.
     /// </summary>
     [TestMethod]
-    public async Task TestErrorCaughtEventIsSentForErrors()
+    public async Task TestErrorCaughtEventIsSentForErrors_NonHostedScenario()
     {
         string[] args = new[]
         {
@@ -73,10 +83,7 @@ public class TelemetryTests
         TelemetryClient telemetryClient = server.Services.GetService<TelemetryClient>();
         TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
         List<ITelemetry> telemetryItems = new();
-        telemetryConfiguration.TelemetryChannel = new CustomTelemetryChannel(telemetryItems)
-        {
-            EndpointAddress = "https://unitTest.com/"
-        };
+        telemetryConfiguration.TelemetryChannel = new CustomTelemetryChannel(telemetryItems);
 
         using (HttpClient client = server.CreateClient())
         {
@@ -87,7 +94,56 @@ public class TelemetryTests
         }
 
         // Asserting on TrackEvent telemetry items.
-        Assert.AreEqual(1, telemetryItems.Count());
+        Assert.AreEqual(1, telemetryItems.Count(item => item is EventTelemetry));
+
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is EventTelemetry
+            && ((EventTelemetry)item).Name.Equals("ErrorCaught")
+            && ((EventTelemetry)item).Properties["CategoryName"].Equals("Azure.DataApiBuilder.Service.Controllers.RestController")
+            && ((EventTelemetry)item).Properties.ContainsKey("correlationId")
+            && ((EventTelemetry)item).Properties["Message"].Contains("Error handling REST request.")));
+    }
+
+    /// <summary>
+    /// Testing the Hosted Scenario for both configuration endpoint.
+    /// Tests that telemetry events are tracked whenever error is caught.
+    /// In this test we try to query an entity without appropriate access and
+    /// assert on the failure message in the telemetry event sent to Application Insights.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(CONFIGURATION_ENDPOINT)]
+    [DataRow(CONFIGURATION_ENDPOINT_V2)]
+    public async Task TestErrorCaughtEventIsSentForErrors_HostedScenario(string configurationEndpoint)
+    {
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
+        };
+
+        // Instantiate new server with no runtime config for post-startup configuration hydration tests.
+        TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+        TelemetryClient telemetryClient = server.Services.GetService<TelemetryClient>();
+        TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
+        List<ITelemetry> telemetryItems = new();
+        telemetryConfiguration.TelemetryChannel = new CustomTelemetryChannel(telemetryItems);
+
+        using (HttpClient client = server.CreateClient())
+        {
+            JsonContent content = GetPostStartupConfigParams(TestCategory.MSSQL, _configuration, configurationEndpoint);
+
+            HttpResponseMessage postResult =
+            await client.PostAsync(configurationEndpoint, content);
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+
+            HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client, "Publisher/id/1?name=Test");
+
+            Assert.AreEqual(expected: HttpStatusCode.Forbidden, actual: restResponseCode);
+        }
+
+        server.Dispose();
+
+        // Asserting on TrackEvent telemetry items.
+        Assert.AreEqual(1, telemetryItems.Count(item => item is EventTelemetry));
 
         Assert.IsTrue(telemetryItems.Any(item =>
             item is EventTelemetry

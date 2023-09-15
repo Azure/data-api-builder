@@ -13,13 +13,15 @@ public class AppInsightsTelemetryInitializer : ITelemetryInitializer
         // Add more custom properties here
     };
 
+    /// <summary>
+    /// Initializes the telemetry context.
+    /// </summary>
+    /// <param name="telemetry">The telemetry object to</param>
     public void Initialize(ITelemetry telemetry)
     {
         telemetry.Context.Cloud.RoleName = ProductInfo.GetDataApiBuilderUserAgent();
         telemetry.Context.Session.Id = Guid.NewGuid().ToString();
         telemetry.Context.Component.Version = ProductInfo.GetProductVersion();
-        telemetry.Context.Device.OperatingSystem = Environment.OSVersion.ToString();
-        telemetry.Context.User.Id = $"{Environment.MachineName}_{Environment.UserName}";
 
         foreach (KeyValuePair<string, string> property in GlobalProperties)
         {

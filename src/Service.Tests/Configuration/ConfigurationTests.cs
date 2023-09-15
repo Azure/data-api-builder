@@ -68,8 +68,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const int RETRY_WAIT_SECONDS = 1;
 
         // TODO: Remove the old endpoint once we've updated all callers to use the new one.
-        private const string CONFIGURATION_ENDPOINT = "/configuration";
-        private const string CONFIGURATION_ENDPOINT_V2 = "/configuration/v2";
+        public const string CONFIGURATION_ENDPOINT = "/configuration";
+        public const string CONFIGURATION_ENDPOINT_V2 = "/configuration/v2";
 
         /// <summary>
         /// A valid REST API request body with correct parameter types for all the fields.
@@ -2250,7 +2250,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// Additional pre-processing performed acquire database connection string from a local file.
         /// </summary>
         /// <returns>ConfigurationPostParameters object.</returns>
-        private static JsonContent GetPostStartupConfigParams(string environment, RuntimeConfig runtimeConfig, string configurationEndpoint)
+        public static JsonContent GetPostStartupConfigParams(string environment, RuntimeConfig runtimeConfig, string configurationEndpoint)
         {
             string connectionString = GetConnectionStringFromEnvironmentConfig(environment);
 
@@ -2310,7 +2310,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="httpClient">Client used for request execution.</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
         /// else the response code from the REST request</returns>
-        private static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient)
+        public static async Task<HttpStatusCode> GetRestResponsePostConfigHydration(HttpClient httpClient, string restEntityPath = POST_STARTUP_CONFIG_ENTITY)
         {
             // Retry request RETRY_COUNT times in 1 second increments to allow required services
             // time to instantiate and hydrate permissions.
@@ -2320,7 +2320,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             {
                 // Spot test authorization resolver utilization to ensure configuration is used.
                 HttpResponseMessage postConfigHydrationResult =
-                    await httpClient.GetAsync($"api/{POST_STARTUP_CONFIG_ENTITY}");
+                    await httpClient.GetAsync($"api/{restEntityPath}");
                 responseCode = postConfigHydrationResult.StatusCode;
 
                 if (postConfigHydrationResult.StatusCode == HttpStatusCode.ServiceUnavailable)

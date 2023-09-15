@@ -6,6 +6,7 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -108,7 +109,8 @@ namespace Azure.DataApiBuilder.Service
         /// Creates a LoggerFactory and add filter with the given LogLevel.
         /// </summary>
         /// <param name="logLevel">minimum log level.</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel)
+        /// <param name="appTelemetryClient">Telemetry client</param>
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient=null)
         {
             return LoggerFactory
                 .Create(builder =>
@@ -121,14 +123,14 @@ namespace Azure.DataApiBuilder.Service
                     builder.AddFilter(category: "Default", logLevel);
 
                     // For Sending all the ILogger logs to Application Insights
-                    if (Startup.AppInsightsOptions.Enabled)
+                    if (Startup.AppInsightsOptions.Enabled && appTelemetryClient is not null)
                     {
                         builder.AddApplicationInsights(configureTelemetryConfiguration: (config) =>
-                            config.ConnectionString = Startup.AppInsightsOptions.ConnectionString,
+                            config.ConnectionString = appTelemetryClient.TelemetryConfiguration.ConnectionString,
                             configureApplicationInsightsLoggerOptions: (options) => { }
                         )
                         .AddFilter<ApplicationInsightsLoggerProvider>("", logLevel)
-                        .AddProvider(new ApplicationInsightsLoggerProvider(Startup.AppTelemetryClient!));
+                        .AddProvider(new ApplicationInsightsLoggerProvider(appTelemetryClient));
                     }
 
                     builder.AddConsole();

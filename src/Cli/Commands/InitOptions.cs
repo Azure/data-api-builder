@@ -34,6 +34,8 @@ namespace Cli.Commands
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
+            CliBool restEnabled = CliBool.None,
+            CliBool graphqlEnabled = CliBool.None,
             string? config = null)
             : base(config)
         {
@@ -53,6 +55,8 @@ namespace Cli.Commands
             RestDisabled = restDisabled;
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
+            RestEnabled = restEnabled;
+            GraphQLEnabled = graphqlEnabled;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -102,6 +106,12 @@ namespace Cli.Commands
 
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
+
+        [Option("rest.enabled", Required = false, HelpText = "Enables REST endpoint for all entities. Supported values: true, false.")]
+        public CliBool RestEnabled { get; }
+
+        [Option("graphql.enabled", Required = false, HelpText = "Enables GraphQL endpoint for all entities. Supported values: true, false.")]
+        public CliBool GraphQLEnabled { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

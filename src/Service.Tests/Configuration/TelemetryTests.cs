@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.ApplicationInsights.Channel;
@@ -85,6 +86,8 @@ public class TelemetryTests
         server.Dispose();
         ((CustomTelemetryChannel)Startup.CustomTelemetryChannel).Flush();
 
+        Console.WriteLine(JsonSerializer.Serialize(telemetryItems));
+
         // Assert that we are sending Traces/Requests/Exceptions
         Assert.IsTrue(telemetryItems.Any(item => item is TraceTelemetry));
         Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
@@ -157,6 +160,8 @@ public class TelemetryTests
         server.Dispose();
         ((CustomTelemetryChannel)Startup.CustomTelemetryChannel).Flush();
 
+        Console.WriteLine(JsonSerializer.Serialize(telemetryItems));
+
         // Assert that we are sending Traces/Requests/Exceptions
         Assert.IsTrue(telemetryItems.Any(item => item is TraceTelemetry));
         Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
@@ -215,6 +220,8 @@ public class TelemetryTests
         await TestRestAndGraphQLRequestsOnServerInNonHostedScenario(server);
 
         server.Dispose();
+
+        Console.WriteLine(JsonSerializer.Serialize(telemetryItems));
 
         // Assert that we are not sending any Traces/Requests/Exceptions to Telemetry
         Assert.IsTrue(telemetryItems.IsNullOrEmpty());

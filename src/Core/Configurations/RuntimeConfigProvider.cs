@@ -161,27 +161,24 @@ public class RuntimeConfigProvider
     }
 
     /// <summary>
-    /// Initialize the runtime configuration provider with the specified accessToken.
+    /// Initialize the runtime configuration provider with the specified accessToken for the specified datasource.
     /// This initialization method is used to set the access token for the current runtimeConfig.
     /// As opposed to using a json input and regenerating the runtimconfig, it sets the access token for the current runtimeConfig on the provider.
     /// </summary>
     /// <param name="accessToken">The string representation of a managed identity access token</param>
+    /// <param name="dataSourceName">Name of the datasource for which to assign the token.</param>
     /// <returns>true if the initialization succeeded, false otherwise.</returns>
-    public async Task<bool> InitializeWithAccesstoken(
+    public bool InitializeWithAccesstoken(
         string? accessToken,
         string dataSourceName)
     {
-        if (TryGetConfig(out RuntimeConfig? runtimeConfig))
+        if (ManagedIdentityAccessToken.ContainsKey(dataSourceName))
         {
-            _runtimeConfig = runtimeConfig;
             ManagedIdentityAccessToken[dataSourceName] = accessToken;
+            return true;
         }
 
-        bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
-
-        IsLateConfigured = true;
-
-        return configLoadSucceeded;
+        return false;
     }
 
     /// <summary>

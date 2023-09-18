@@ -52,6 +52,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new ArgumentNullException(nameof(queryArgs));
             }
 
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                // in rest scenario, dataSourceName could be empty.
+                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            }
+
             CosmosClient? client = _clientProvider.Clients[dataSourceName];
             if (client is null)
             {

@@ -190,12 +190,9 @@ public class ConfigGeneratorTests
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\r\n", string.Empty);
         actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\n", string.Empty);
 
-        string actual = actualRuntimeConfigJson.ToString();
-        string expected = expectedRuntimeConfigJson.ToString();
-
         // Comparing explicit strings here since parsing these into JSON would lose
         // the test scenario of verifying escaped chars are not written to the file system.
-        Assert.AreEqual(expected, actual);
+        Assert.AreEqual(expectedRuntimeConfigJson.ToString(), actualRuntimeConfigJson.ToString());
     }
 
     /// <summary>

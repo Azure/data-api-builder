@@ -128,12 +128,10 @@ namespace Azure.DataApiBuilder.Core.Authorization
         }
 
         /// <inheritdoc />
-        public bool AreColumnsAllowedForOperation(string entityIdentifier, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
+        public bool AreColumnsAllowedForOperation(string entityName, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
         {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityIdentifier);
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-
-            string entityName = metadataProvider.GetEntityName(entityIdentifier);
 
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
             {

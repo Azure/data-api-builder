@@ -133,6 +133,11 @@
             "enabled": {
               "type": "boolean",
               "description": "Allow enabling/disabling REST requests for all entities."
+            },
+            "request-body-strict": {
+              "type": "boolean",
+              "description": "Does not allow extraneous fields in request body when set to true.",
+              "default": true
             }
           }
         },

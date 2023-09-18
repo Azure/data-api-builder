@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>

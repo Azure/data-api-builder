@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MSSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         #region Positive Tests

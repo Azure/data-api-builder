@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IAuthorizationService _authorizationService;
         private readonly ISqlMetadataProvider _sqlMetadataProvider;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly RequestValidator _requestValidator;
 
         public RestService(
             IQueryEngine queryEngine,
@@ -37,7 +38,8 @@ namespace Azure.DataApiBuilder.Core.Services
             ISqlMetadataProvider sqlMetadataProvider,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
-            RuntimeConfigProvider runtimeConfigProvider
+            RuntimeConfigProvider runtimeConfigProvider,
+            RequestValidator requestValidator
             )
         {
             _queryEngine = queryEngine;
@@ -46,6 +48,7 @@ namespace Azure.DataApiBuilder.Core.Services
             _authorizationService = authorizationService;
             _sqlMetadataProvider = sqlMetadataProvider;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _requestValidator = requestValidator;
         }
 
         /// <summary>
@@ -60,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Services
             EntityActionOperation operationType,
             string? primaryKeyRoute)
         {
-            RequestValidator.ValidateEntity(entityName, _sqlMetadataProvider.EntityToDatabaseObject.Keys);
+            _requestValidator.ValidateEntity(entityName);
             DatabaseObject dbObject = _sqlMetadataProvider.EntityToDatabaseObject[entityName];
 
             if (dbObject.SourceType is not EntitySourceType.StoredProcedure)
@@ -123,9 +126,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             operationType);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
-                            RequestValidator.ValidateInsertRequestContext(
-                            (InsertRequestContext)context,
-                            _sqlMetadataProvider);
+                            _requestValidator.ValidateInsertRequestContext((InsertRequestContext)context);
                         }
 
                         break;
@@ -148,8 +149,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             operationType);
                         if (context.DatabaseObject.SourceType is EntitySourceType.Table)
                         {
-                            RequestValidator.
-                                ValidateUpsertRequestContext((UpsertRequestContext)context, _sqlMetadataProvider);
+                            _requestValidator.ValidateUpsertRequestContext((UpsertRequestContext)context);
                         }
 
                         break;
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // After parsing primary key, the Context will be populated with the
                     // correct PrimaryKeyValuePairs.
                     RequestParser.ParsePrimaryKey(primaryKeyRoute, context);
-                    RequestValidator.ValidatePrimaryKey(context, _sqlMetadataProvider);
+                    _requestValidator.ValidatePrimaryKey(context);
                 }
 
                 if (!string.IsNullOrWhiteSpace(queryString))
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // At this point for DELETE, the primary key should be populated in the Request Context.
-            RequestValidator.ValidateRequestContext(context, _sqlMetadataProvider);
+            _requestValidator.ValidateRequestContext(context);
 
             // The final authorization check on columns occurs after the request is fully parsed and validated.
             // Stored procedures do not yet have semantics defined for column-level permissions
@@ -293,7 +293,7 @@ namespace Azure.DataApiBuilder.Core.Services
             ((StoredProcedureRequestContext)context).PopulateResolvedParameters();
 
             // Validate the request parameters
-            RequestValidator.ValidateStoredProcedureRequestContext((StoredProcedureRequestContext)context, _sqlMetadataProvider);
+            _requestValidator.ValidateStoredProcedureRequestContext((StoredProcedureRequestContext)context);
         }
 
         /// <summary>

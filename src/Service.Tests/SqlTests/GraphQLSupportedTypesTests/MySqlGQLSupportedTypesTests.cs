@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         protected override string MakeQueryOnTypeTable(List<string> columnsToQuery, int id)

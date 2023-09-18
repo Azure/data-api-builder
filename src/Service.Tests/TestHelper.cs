@@ -157,6 +157,9 @@ namespace Azure.DataApiBuilder.Service.Tests
 
         /// <summary>
         /// A minimal valid config json without any entities. This config string is used in tests.
+        /// Note: The test ConfigurationTests.ValidateStrictModeAsDefaultForRestRequestBody depends on BASE_CONFIG
+        /// omitting the request-body-strict property.
+        /// If there is a need to include this property here, the test needs to be adjusted accordingly.
         /// </summary>
         public const string BASE_CONFIG =
           "{" +

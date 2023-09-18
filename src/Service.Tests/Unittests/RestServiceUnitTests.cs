@@ -139,6 +139,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryExecutor,
                 queryBuilder,
                 sqlMetadataLogger.Object);
+
+            RequestValidator requestValidator = new(sqlMetadataProvider.Object, provider);
             string outParam;
             sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
             Dictionary<string, string> _pathToEntityMock = new() { { entityName, entityName } };
@@ -177,7 +179,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 sqlMetadataProvider.Object,
                 httpContextAccessor.Object,
                 authorizationService.Object,
-                provider);
+                provider,
+                requestValidator);
         }
 
         /// <summary>

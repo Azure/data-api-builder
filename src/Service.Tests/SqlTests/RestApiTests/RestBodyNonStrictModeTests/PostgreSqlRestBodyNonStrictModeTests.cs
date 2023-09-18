@@ -59,7 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     FROM (
                         SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
                         FROM " + _tableWithReadOnlyFields + @"
-                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on = last_sold_on_date
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on is NULL AND last_sold_on_date is NULL
                     ) AS subq
                 "
             },

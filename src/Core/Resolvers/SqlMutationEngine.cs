@@ -842,7 +842,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="parameters">Parameters dictionary to be populated.</param>
         /// <param name="context">Rest request context.</param>
-        private void PopulateParamsFromRestRequest(Dictionary<string, object? > parameters, RestRequestContext context)
+        private void PopulateParamsFromRestRequest(Dictionary<string, object?> parameters, RestRequestContext context)
         {
             SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(context.EntityName);
             foreach ((string field, object? value) in context.FieldValuePairsInBody)

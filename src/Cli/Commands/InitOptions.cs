@@ -109,15 +109,15 @@ namespace Cli.Commands
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
 
-        [Option("rest.enabled", Required = false, HelpText = "Enables REST endpoint for all entities. Supported values: true, false.")]
+        [Option("rest.enabled", Required = false, HelpText = "(Default: true) Enables REST endpoint for all entities. Supported values: true, false.")]
         public CliBool RestEnabled { get; }
 
-        [Option("graphql.enabled", Required = false, HelpText = "Enables GraphQL endpoint for all entities. Supported values: true, false.")]
+        [Option("graphql.enabled", Required = false, HelpText = "(Default: true) Enables GraphQL endpoint for all entities. Supported values: true, false.")]
         public CliBool GraphQLEnabled { get; }
 
         // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
         // included in the init command.
-        [Option("rest.request-body-strict", Required = false, HelpText = "When set to true, does not allow extraneous fields in the request body for REST.")]
+        [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
         public CliBoolean RestRequestBodyStrict { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

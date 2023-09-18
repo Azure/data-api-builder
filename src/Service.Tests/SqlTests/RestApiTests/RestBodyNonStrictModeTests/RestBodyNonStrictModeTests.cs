@@ -125,6 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
             {
                 ""book_name"": ""New book"",
                 ""copies_sold"": 101,
+                ""last_sold_on"": null,
                 ""last_sold_on_date"": ""2023-09-12 05:30:30""
             }";
 

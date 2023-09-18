@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
@@ -281,6 +280,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 );
         }
 
+        /// <summary>
+        /// Test to validate that extraneous fields are allowed in request body for Execute operation for stored procedures
+        /// when we operate in runtime.rest.request-body-strict = false.
+        /// </summary>
         [TestMethod]
         public async Task ExecuteStoredProcedureWithExtraneousFieldInRequestBody()
         {

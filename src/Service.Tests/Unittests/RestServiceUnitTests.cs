@@ -185,6 +185,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
             mutationEngineFactory.Setup(x => x.GetMutationEngine(It.IsAny<DatabaseType>())).Returns(mutationEngine);
+            RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
 
             // Setup REST Service
             _restService = new RestService(
@@ -193,7 +194,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 metadataProviderFactory.Object,
                 httpContextAccessor.Object,
                 authorizationService.Object,
-                provider);
+                provider,
+                requestValidator);
         }
 
         /// <summary>

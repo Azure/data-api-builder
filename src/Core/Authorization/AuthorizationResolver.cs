@@ -144,6 +144,7 @@ namespace Azure.DataApiBuilder.Core.Authorization
             // to enable include/excluded column permissions lookups.
             if (roleMetadata.OperationToColumnMap.TryGetValue(operation, out OperationMetadata? operationToColumnMap) && operationToColumnMap is not null)
             {
+                _runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
                 // Each column present in the request is an "exposedColumn".
                 // Authorization permissions reference "backingColumns"
                 // Resolve backingColumn name to check authorization.
@@ -162,9 +163,10 @@ namespace Azure.DataApiBuilder.Core.Authorization
                             return false;
                         }
                     }
-                    else
+                    else if (runtimeConfig is not null && runtimeConfig.Runtime.Rest.RequestBodyStrict)
                     {
-                        // This check will not be needed once exposedName mapping validation is added.
+                        // Throw exception when we are not allowed extraneous fields in the rest request body,
+                        // and no mapping exists for the given exposed field to a backing column.
                         throw new DataApiBuilderException(
                             message: "Invalid field name provided.",
                             statusCode: HttpStatusCode.BadRequest,

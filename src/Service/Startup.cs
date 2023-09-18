@@ -123,6 +123,7 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton<GraphQLSchemaCreator>();
             services.AddSingleton<GQLFilterParser>();
+            services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>

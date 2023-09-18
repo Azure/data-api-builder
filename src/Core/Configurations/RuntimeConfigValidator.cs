@@ -792,6 +792,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Current use by dab workflow")]
         public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
         {
+            RequestValidator requestValidator = new(sqlMetadataProviderFactory, _runtimeConfigProvider);
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
                 string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
@@ -809,7 +810,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             EntityActionOperation.All);
                     try
                     {
-                        RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
+                        requestValidator.ValidateStoredProcedureRequestContext(sqRequestContext);
                     }
                     catch (DataApiBuilderException e)
                     {

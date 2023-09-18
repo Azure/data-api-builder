@@ -72,18 +72,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// This is a helper that is called from the non abstract versions of
         /// this class.
         /// </summary>
-        /// <param name="context"></param>
         /// <param name="customQueries">Test specific queries to be executed on database.</param>
         /// <param name="customEntities">Test specific entities to be added to database.</param>
+        /// <param name="isRestBodyStrict">When false, allows extraneous fields in REST request body.</param>
         /// <returns></returns>
         protected async static Task InitializeTestFixture(
-            TestContext context,
             List<string> customQueries = null,
-            List<string[]> customEntities = null)
+            List<string[]> customEntities = null,
+            bool isRestBodyStrict = true)
         {
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
             // Get the base config file from disk
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+
+            // Setting the rest.request-body-strict flag as per the test fixtures.
+            if (!isRestBodyStrict)
+            {
+                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime with { Rest = runtimeConfig.Runtime.Rest with { RequestBodyStrict = isRestBodyStrict } } };
+            }
 
             // Add magazines entity to the config
             runtimeConfig = DatabaseEngine switch

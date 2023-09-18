@@ -3,12 +3,17 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
 using System.Text;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
@@ -343,7 +348,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             try
             {
-                RequestValidator.ValidatePrimaryKey(findRequestContext, _mockMetadataStore.Object);
+                RuntimeConfig mockConfig = new(
+                    Schema: "",
+                    DataSource: new(DatabaseType.PostgreSQL, "", new()),
+                    Runtime: new(
+                        Rest: new(Path: "/api"),
+                        GraphQL: new(),
+                        Host: new(Cors: null, Authentication: null)
+                        ),
+                    Entities: new(new Dictionary<string, Entity>())
+                    );
+                MockFileSystem fileSystem = new();
+                fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+                FileSystemRuntimeConfigLoader loader = new(fileSystem);
+                RuntimeConfigProvider provider = new(loader);
+                Mock<MetadataProviderFactory> metadataProviderFactory = new();
+                metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<String>())).Returns(_mockMetadataStore.Object);
+                RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
+                requestValidator.ValidatePrimaryKey(findRequestContext);
 
                 //If expecting an exception, the code should not reach this point.
                 if (expectsException)

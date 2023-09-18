@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
@@ -104,6 +105,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 "PatchOneInsertWithRowversionFieldInRequestBody",
                 $"SELECT * FROM {_tableWithReadOnlyFields } WHERE [id] = 2 AND [book_name] = 'Best seller' " +
                 $"AND [copies_sold] = 100 AND [last_sold_on] is NULL AND [last_sold_on_date] is NULL AND [row_version] is NOT NULL " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneAndReturnSingleRowWithStoredProcedureWithExtraneousFieldInRequestBody",
+                // This query attempts retrieval of the stored procedure insert operation result,
+                // and is explicitly not representative of the engine generated insert statement.
+                $"SELECT table0.[id], table0.[title], table0.[publisher_id] FROM books AS table0 " +
+                $"JOIN (SELECT id FROM publishers WHERE name = 'The First Publisher') AS table1 " +
+                $"ON table0.[publisher_id] = table1.[id] " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
         };
@@ -269,6 +279,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     expectedStatusCode: HttpStatusCode.Created,
                     expectedLocationHeader: expectedLocationHeader
                 );
+        }
+
+        [TestMethod]
+        public async Task ExecuteStoredProcedureWithExtraneousFieldInRequestBody()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Happy New Year"",
+                ""publisher_name"": ""The First Publisher"",
+                ""extra_field"": ""Some value""
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationProcedureInsertOneAndDisplay_EntityName,
+                sqlQuery: GetQuery("InsertOneAndReturnSingleRowWithStoredProcedureWithExtraneousFieldInRequestBody"),
+                operationType: EntityActionOperation.Execute,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: string.Empty,
+                expectJson: true
+            );
         }
     }
 }

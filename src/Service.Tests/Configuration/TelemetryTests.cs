@@ -10,12 +10,10 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
-using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 
@@ -27,98 +25,117 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 [TestClass, TestCategory(TestCategory.MSSQL)]
 public class TelemetryTests
 {
+    public TestContext TestContext { get; set;}
     private const string TEST_APP_INSIGHTS_CONN_STRING = "InstrumentationKey=testKey;IngestionEndpoint=https://unitTest.com/;LiveEndpoint=https://unittest2.com/";
 
-    private static readonly TelemetryOptions _testTelemetryOptions = new(new ApplicationInsightsOptions(true, TEST_APP_INSIGHTS_CONN_STRING));
-
     private const string CONFIG_WITH_TELEMETRY = "dab-telemetry-test-config.json";
+    private const string CONFIG_WITHOUT_TELEMETRY = "dab-no-telemetry-test-config.json";
     private static RuntimeConfig _configuration;
 
     /// <summary>
-    /// Sets up the test environment by creating a runtime config with telemetry options.
+    /// Creates runtime config file with specified telemetry options.
     /// </summary>
-    [ClassInitialize]
-    public static void SetUpTelemetryInconfig(TestContext context)
+    /// <pa
+    public static void SetUpTelemetryInconfig(string configFileName, bool isTelemetryEnabled, string TelemetryConnectionString)
     {
         DataSource dataSource = new(DatabaseType.MSSQL,
             GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
         _configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions: new(), restOptions: new());
+
+        TelemetryOptions _testTelemetryOptions = new(new ApplicationInsightsOptions(isTelemetryEnabled, TelemetryConnectionString));
         _configuration = _configuration with { Runtime = _configuration.Runtime with { Telemetry = _testTelemetryOptions } };
 
-        File.WriteAllText(CONFIG_WITH_TELEMETRY, _configuration.ToJson());
+        File.WriteAllText(configFileName, _configuration.ToJson());
     }
 
     /// <summary>
     /// Cleans up the test environment by deleting the runtime config with telemetry options.
     /// </summary>
-    [ClassCleanup]
-    public static void CleanUpTelemetryConfig()
+    [TestCleanup]
+    public void CleanUpTelemetryConfig()
     {
         File.Delete(CONFIG_WITH_TELEMETRY);
+        File.Delete(CONFIG_WITHOUT_TELEMETRY);
     }
 
     /// <summary>
     /// Test for non-hosted scenario.
-    /// Tests that telemetry events are tracked whenever error is caught.
-    /// In this test we try to query an entity without appropriate access and
-    /// assert on the failure message in the telemetry event sent to Application Insights.
+    /// Tests that different telemetry items such as Traces or logs, Exceptions and Requests
+    /// are correctly sent to application Insights when enabled.
+    /// Also asserting on their respective properties.
     /// </summary>
     [TestMethod]
-    public async Task TestErrorCaughtEventIsSentForErrors_NonHostedScenario()
+    public async Task TestTelemetryItemsAreSentCorrectly_NonHostedScenario()
     {
+        SetUpTelemetryInconfig(CONFIG_WITH_TELEMETRY, isTelemetryEnabled: true, TEST_APP_INSIGHTS_CONN_STRING);
+
         string[] args = new[]
         {
             $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
         };
 
-        TestServer server = new(Program.CreateWebHostBuilder(args));
-        TelemetryClient telemetryClient = server.Services.GetService<TelemetryClient>();
-        TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
         List<ITelemetry> telemetryItems = new();
-        telemetryConfiguration.TelemetryChannel = new CustomTelemetryChannel(telemetryItems);
+        ITelemetryChannel telemetryChannel= new CustomTelemetryChannel(telemetryItems);
+        Startup.CustomTelemetryChannel = telemetryChannel;
+        TestServer server = new(Program.CreateWebHostBuilder(args));
 
-        using (HttpClient client = server.CreateClient())
-        {
-            // Get request on non-accessible entity
-            HttpRequestMessage restRequest = new(HttpMethod.Post, "/api/Publisher/id/1?name=Test");
-            HttpResponseMessage restResponse = await client.SendAsync(restRequest);
-            Assert.AreEqual(HttpStatusCode.Forbidden, restResponse.StatusCode);
-        }
+        await TestRestAndGraphQLRequestsOnServerInNonHostedScenario(server);
 
-        // Asserting on TrackEvent telemetry items.
-        Assert.AreEqual(1, telemetryItems.Count(item => item is EventTelemetry));
+        server.Dispose();
+        ((CustomTelemetryChannel)Startup.CustomTelemetryChannel).Flush();
+
+        // Assert that we are sending Traces/Requests/Exceptions
+        Assert.IsTrue(telemetryItems.Any(item => item is TraceTelemetry));
+        Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
+        Assert.IsTrue(telemetryItems.Any(item => item is ExceptionTelemetry));
+
+        // Asserting on count Exception/Request telemetry items.
+        Assert.AreEqual(1, telemetryItems.Count(item => item is ExceptionTelemetry));
+        Assert.AreEqual(2, telemetryItems.Count(item => item is RequestTelemetry));
 
         Assert.IsTrue(telemetryItems.Any(item =>
-            item is EventTelemetry
-            && ((EventTelemetry)item).Name.Equals("ErrorCaught")
-            && ((EventTelemetry)item).Properties["CategoryName"].Equals("Azure.DataApiBuilder.Service.Controllers.RestController")
-            && ((EventTelemetry)item).Properties.ContainsKey("correlationId")
-            && ((EventTelemetry)item).Properties["Message"].Contains("Error handling REST request.")));
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST /graphql")
+            && ((RequestTelemetry)item).ResponseCode.Equals("200")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/graphql")));
+
+        Assert.IsTrue(telemetryItems.Any(item =>
+        item is RequestTelemetry
+        && ((RequestTelemetry)item).Name.Equals("POST Rest/Insert [route]")
+            && ((RequestTelemetry)item).ResponseCode.Equals("403")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/api/Publisher/id/1?name=Test")));
+
+        Assert.IsTrue(telemetryItems.Any(item =>
+        item is ExceptionTelemetry
+        && ((ExceptionTelemetry)item).Message.Equals("Authorization Failure: Access Not Allowed.")));
     }
 
     /// <summary>
     /// Testing the Hosted Scenario for both configuration endpoint.
-    /// Tests that telemetry events are tracked whenever error is caught.
-    /// In this test we try to query an entity without appropriate access and
-    /// assert on the failure message in the telemetry event sent to Application Insights.
+    /// Tests that different telemetry items such as Traces or logs, Exceptions and Requests
+    /// are correctly sent to application Insights when enabled.
+    /// Also asserting on their respective properties.
     /// </summary>
     [DataTestMethod]
     [DataRow(CONFIGURATION_ENDPOINT)]
     [DataRow(CONFIGURATION_ENDPOINT_V2)]
-    public async Task TestErrorCaughtEventIsSentForErrors_HostedScenario(string configurationEndpoint)
+    public async Task TestTelemetryItemsAreSentCorrectly_HostedScenario(string configurationEndpoint)
     {
+        // Disable parallel execution for this test method
+        TestContext.Properties.Add("ParallelScope", "Individual");
+
+        SetUpTelemetryInconfig(CONFIG_WITH_TELEMETRY, isTelemetryEnabled: true, TEST_APP_INSIGHTS_CONN_STRING);
+
         string[] args = new[]
         {
             $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
         };
 
         // Instantiate new server with no runtime config for post-startup configuration hydration tests.
-        TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
-        TelemetryClient telemetryClient = server.Services.GetService<TelemetryClient>();
-        TelemetryConfiguration telemetryConfiguration = telemetryClient.TelemetryConfiguration;
         List<ITelemetry> telemetryItems = new();
-        telemetryConfiguration.TelemetryChannel = new CustomTelemetryChannel(telemetryItems);
+        Startup.CustomTelemetryChannel = new CustomTelemetryChannel(telemetryItems);
+        TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
 
         using (HttpClient client = server.CreateClient())
         {
@@ -128,22 +145,115 @@ public class TelemetryTests
             await client.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
-            HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client, "Publisher/id/1?name=Test");
+            HttpStatusCode restResponseCode = await GetRestResponsePostConfigHydration(client, "Publisher/id/1");
 
             Assert.AreEqual(expected: HttpStatusCode.Forbidden, actual: restResponseCode);
+
+            HttpStatusCode graphqlResponseCode = await GetGraphQLResponsePostConfigHydration(client);
+
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: graphqlResponseCode);
         }
 
         server.Dispose();
+        ((CustomTelemetryChannel)Startup.CustomTelemetryChannel).Flush();
 
-        // Asserting on TrackEvent telemetry items.
-        Assert.AreEqual(1, telemetryItems.Count(item => item is EventTelemetry));
+        // Assert that we are sending Traces/Requests/Exceptions
+        Assert.IsTrue(telemetryItems.Any(item => item is TraceTelemetry));
+        Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
+        Assert.IsTrue(telemetryItems.Any(item => item is ExceptionTelemetry));
+
+        // Asserting on count of Exception/Request telemetry items.
+        Assert.AreEqual(1, telemetryItems.Count(item => item is ExceptionTelemetry));
+        Assert.AreEqual(3, telemetryItems.Count(item => item is RequestTelemetry));
 
         Assert.IsTrue(telemetryItems.Any(item =>
-            item is EventTelemetry
-            && ((EventTelemetry)item).Name.Equals("ErrorCaught")
-            && ((EventTelemetry)item).Properties["CategoryName"].Equals("Azure.DataApiBuilder.Service.Controllers.RestController")
-            && ((EventTelemetry)item).Properties.ContainsKey("correlationId")
-            && ((EventTelemetry)item).Properties["Message"].Contains("Error handling REST request.")));
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST Configuration/Index")
+            && ((RequestTelemetry)item).ResponseCode.Equals("200")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals(configurationEndpoint)));
+
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST /graphql")
+            && ((RequestTelemetry)item).ResponseCode.Equals("200")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/graphql")));
+
+        Assert.IsTrue(telemetryItems.Any(item =>
+        item is RequestTelemetry
+        && ((RequestTelemetry)item).Name.Equals("GET Rest/Find [route]")
+            && ((RequestTelemetry)item).ResponseCode.Equals("403")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/api/Publisher/id/1")));
+
+        Assert.IsTrue(telemetryItems.Any(item =>
+        item is ExceptionTelemetry
+        && ((ExceptionTelemetry)item).Message.Equals("Authorization Failure: Access Not Allowed.")));
+    }
+
+    /// <summary>
+    /// Tests that No telemetry data is sent when disabled.
+    /// Both Application Insight Flag should be enabled and Telemetry Connection String should be provided
+    /// to send telemetry.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow(false, "", DisplayName = "Configuration without a connection string and with Application Insights disabled.")]
+    [DataRow(true, "", DisplayName = "Configuration without a connection string, but with Application Insights enabled.")]
+    [DataRow(false, TEST_APP_INSIGHTS_CONN_STRING, DisplayName = "Configuration with a connection string, but with Application Insights disabled.")]
+    public async Task TestNoTelemetryItemsSentWhenDisabled_NonHostedScenario(bool isTelemetryEnabled, string telemetryConnectionString)
+    {
+        SetUpTelemetryInconfig(CONFIG_WITHOUT_TELEMETRY, isTelemetryEnabled, telemetryConnectionString);
+
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CONFIG_WITHOUT_TELEMETRY}"
+        };
+
+        List<ITelemetry> telemetryItems = new();
+        ITelemetryChannel telemetryChannel= new CustomTelemetryChannel(telemetryItems);
+        Startup.CustomTelemetryChannel = telemetryChannel;
+        TestServer server = new(Program.CreateWebHostBuilder(args));
+
+        await TestRestAndGraphQLRequestsOnServerInNonHostedScenario(server);
+
+        server.Dispose();
+
+        // Assert that we are not sending any Traces/Requests/Exceptions to Telemetry
+        Assert.IsTrue(telemetryItems.IsNullOrEmpty());
+    }
+
+    /// <summary>
+    /// this method tests the ability of the server to handle GraphQL and REST requests,
+    /// and verifies that the server returns the expected response status codes.
+    /// Makes a valid GraphQL Request and one Invalid REST Request.
+    /// </summary>
+    private static async Task TestRestAndGraphQLRequestsOnServerInNonHostedScenario(TestServer server)
+    {
+        using (HttpClient client = server.CreateClient())
+        {
+            string query = @"{
+                book_by_pk(id: 1) {
+                    id,
+                    title,
+                    publisher_id
+                }
+            }";
+
+            object payload = new { query };
+
+            HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+            {
+                Content = JsonContent.Create(payload)
+            };
+
+            HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+            Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+
+            // POST request on non-accessible entity
+            HttpRequestMessage restRequest = new(HttpMethod.Post, "/api/Publisher/id/1?name=Test");
+            HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+            
+            Assert.AreEqual(HttpStatusCode.Forbidden, restResponse.StatusCode);
+            
+        }
     }
 
     /// <summary>
@@ -151,7 +261,7 @@ public class TelemetryTests
     /// </summary>
     private class CustomTelemetryChannel : ITelemetryChannel
     {
-        private readonly List<ITelemetry> _telemetryItems;
+        private List<ITelemetry> _telemetryItems=new();
 
         public CustomTelemetryChannel(List<ITelemetry> telemetryItems)
         {
@@ -165,8 +275,10 @@ public class TelemetryTests
         public void Dispose()
         { }
 
-        public void Flush()
-        { }
+        public async void Flush()
+        {
+            await Task.Delay(5000);
+        }
 
         public void Send(ITelemetry item)
         {

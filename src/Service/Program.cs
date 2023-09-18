@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.ApplicationInsights;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -123,14 +124,19 @@ namespace Azure.DataApiBuilder.Service
                     builder.AddFilter(category: "Default", logLevel);
 
                     // For Sending all the ILogger logs to Application Insights
-                    if (Startup.AppInsightsOptions.Enabled && appTelemetryClient is not null)
+                    if (Startup.AppInsightsOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.AppInsightsOptions.ConnectionString))
                     {
                         builder.AddApplicationInsights(configureTelemetryConfiguration: (config) =>
-                            config.ConnectionString = Startup.AppInsightsOptions.ConnectionString,
+                            {
+                                config.ConnectionString = Startup.AppInsightsOptions.ConnectionString;
+                                if (Startup.CustomTelemetryChannel is not null)
+                                {
+                                    config.TelemetryChannel = Startup.CustomTelemetryChannel;
+                                }
+                            },
                             configureApplicationInsightsLoggerOptions: (options) => { }
                         )
-                        .AddFilter<ApplicationInsightsLoggerProvider>("", logLevel)
-                        .AddProvider(new ApplicationInsightsLoggerProvider(appTelemetryClient));
+                        .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
                     }
 
                     builder.AddConsole();

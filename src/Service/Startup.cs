@@ -25,6 +25,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.AspNetCore;
 using HotChocolate.Types;
 using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -49,8 +50,6 @@ namespace Azure.DataApiBuilder.Service
         public static bool IsLogLevelOverriddenByCli;
 
         public static ApplicationInsightsOptions AppInsightsOptions = new();
-        // public static TelemetryClient? AppTelemetryClient;
-
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
         public Startup(IConfiguration configuration, ILogger<Startup> logger)
@@ -60,6 +59,15 @@ namespace Azure.DataApiBuilder.Service
         }
 
         public IConfiguration Configuration { get; }
+
+        /// <summary>
+        /// Useful in cases where we need to:
+        /// Send telemetry data to a custom endpoint that is not supported by the default telemetry channel.
+        /// Modify the telemetry data before it is sent, such as adding custom properties or filtering out sensitive data.
+        /// Implement custom retry logic or error handling for telemetry data that fails to send.
+        /// For testing purposes.
+        /// </summary>
+        public static ITelemetryChannel? CustomTelemetryChannel { get; set; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -577,6 +585,12 @@ namespace Azure.DataApiBuilder.Service
                 // Update the TelemetryConfiguration object
                 TelemetryConfiguration telemetryConfiguration = appTelemetryClient.TelemetryConfiguration;
                 telemetryConfiguration.ConnectionString = AppInsightsOptions.ConnectionString;
+
+                // Update default telemetry channel to custom provided telemetry channel
+                if (CustomTelemetryChannel is not null)
+                {
+                    telemetryConfiguration.TelemetryChannel = CustomTelemetryChannel;
+                }
 
                 // Updating Startup Logger to Log from Startup Class.
                 ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);

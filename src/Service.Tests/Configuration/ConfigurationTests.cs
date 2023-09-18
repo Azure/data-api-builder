@@ -2342,7 +2342,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="httpClient">Client used for request execution.</param>
         /// <returns>ServiceUnavailable if service is not successfully hydrated with config,
         /// else the response code from the GRAPHQL request</returns>
-        private static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient)
+        public static async Task<HttpStatusCode> GetGraphQLResponsePostConfigHydration(HttpClient httpClient)
         {
             // Retry request RETRY_COUNT times in 1 second increments to allow required services
             // time to instantiate and hydrate permissions.

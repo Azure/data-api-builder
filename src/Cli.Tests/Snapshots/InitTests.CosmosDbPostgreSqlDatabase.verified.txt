@@ -5,7 +5,8 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /rest-endpoint
+      Path: /rest-endpoint,
+      RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,

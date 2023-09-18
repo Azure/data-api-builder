@@ -555,7 +555,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MSSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>

@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net;
 using System.Text;
 using Azure.DataApiBuilder.Config;
@@ -348,6 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             try
             {
+                EntitySource entitySource = new (findRequestContext.EntityName, EntitySourceType.Table, null, KeyFields: findRequestContext.PrimaryKeyValuePairs.Keys.ToArray());
                 RuntimeConfig mockConfig = new(
                     Schema: "",
                     DataSource: new(DatabaseType.PostgreSQL, "", new()),
@@ -356,13 +358,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                         GraphQL: new(),
                         Host: new(Cors: null, Authentication: null)
                         ),
-                    Entities: new(new Dictionary<string, Entity>())
+                    Entities: new(new Dictionary<string, Entity>()
+                    {
+                        { DEFAULT_NAME, new Entity(entitySource, new EntityGraphQLOptions(findRequestContext.EntityName, findRequestContext.EntityName), new EntityRestOptions(new SupportedHttpVerb[0]), null, null, null) }
+                    })
                     );
                 MockFileSystem fileSystem = new();
                 fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
                 FileSystemRuntimeConfigLoader loader = new(fileSystem);
                 RuntimeConfigProvider provider = new(loader);
-                Mock<MetadataProviderFactory> metadataProviderFactory = new();
+                Mock<IMetadataProviderFactory> metadataProviderFactory = new();
                 metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<String>())).Returns(_mockMetadataStore.Object);
                 RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
                 requestValidator.ValidatePrimaryKey(findRequestContext);

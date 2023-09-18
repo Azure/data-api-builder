@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Options;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -25,6 +26,8 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 /// </remarks>
 public class RuntimeConfigProvider
 {
+    private readonly IOptionsMonitor<RuntimeOptions> _runtimeConfigMonitor; // may not be needed unless runtime updates after initital reload are required
+
     public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
 
     public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
@@ -44,9 +47,10 @@ public class RuntimeConfigProvider
 
     private RuntimeConfig? _runtimeConfig;
 
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader, IOptionsMonitor<RuntimeOptions> runtimeConfigMonitor)
     {
         ConfigLoader = runtimeConfigLoader;
+        _runtimeConfigMonitor = runtimeConfigMonitor;
     }
 
     /// <summary>

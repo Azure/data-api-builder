@@ -33,6 +33,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
@@ -64,11 +65,25 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
-            RuntimeConfigProvider configProvider = new(configLoader);
-
+            services.Configure<RuntimeOptions>(Configuration.GetSection("RuntimeOptions"));
+            // services.AddSingleton(Options.Create(Configuration.GetValue<string>(nameof(RuntimeOptions)))); // just use OptionsMonitor instead
+            services.AddSingleton<IOptionsMonitor<RuntimeOptions>>();
+            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            {
+                return new RuntimeConfigProvider(configLoader, serviceProvider.GetRequiredService<IOptionsMonitor<RuntimeOptions>>());
+            });
             services.AddSingleton(fileSystem);
-            services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
+            services.AddSingleton(implementationFactory: (serviceProvider) =>
+            {
+                if (serviceProvider.GetRequiredService<RuntimeConfigProvider>().TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Host.Mode is HostMode.Development)
+                {
+                    ConfigFileWatcher configFileWatcher = new(configFileName, serviceProvider.GetRequiredService<IOptionsMonitor<RuntimeOptions>>());
+                    return configFileWatcher;
+                }
+
+                return new(); // in this case configfile watcher is an empty object
+            });
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);

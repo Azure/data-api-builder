@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MSSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <inheritdoc />

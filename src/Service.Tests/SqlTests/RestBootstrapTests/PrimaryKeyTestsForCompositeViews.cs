@@ -94,7 +94,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
             {
                 DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(() =>
                 InitializeTestFixture(
-                    context: null,
                     new List<string> { compositeDbViewquery },
                     new List<string[]> { customEntity }));
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -104,7 +103,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestBootstrapTests
             else
             {
                 await InitializeTestFixture(
-                    context: null,
                     new List<string> { compositeDbViewquery },
                     new List<string[]> { customEntity });
 

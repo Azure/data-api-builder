@@ -349,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             try
             {
-                EntitySource entitySource = new (findRequestContext.EntityName, EntitySourceType.Table, null, KeyFields: findRequestContext.PrimaryKeyValuePairs.Keys.ToArray());
+                EntitySource entitySource = new(findRequestContext.EntityName, EntitySourceType.Table, null, KeyFields: findRequestContext.PrimaryKeyValuePairs.Keys.ToArray());
                 RuntimeConfig mockConfig = new(
                     Schema: "",
                     DataSource: new(DatabaseType.PostgreSQL, "", new()),

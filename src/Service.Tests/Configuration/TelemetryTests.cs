@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 [TestClass, TestCategory(TestCategory.MSSQL)]
 public class TelemetryTests
 {
-    public TestContext TestContext { get; set;}
+    public TestContext TestContext { get; set; }
     private const string TEST_APP_INSIGHTS_CONN_STRING = "InstrumentationKey=testKey;IngestionEndpoint=https://unitTest.com/;LiveEndpoint=https://unittest2.com/";
 
     private const string CONFIG_WITH_TELEMETRY = "dab-telemetry-test-config.json";
@@ -76,7 +76,7 @@ public class TelemetryTests
         };
 
         List<ITelemetry> telemetryItems = new();
-        ITelemetryChannel telemetryChannel= new CustomTelemetryChannel(telemetryItems);
+        ITelemetryChannel telemetryChannel = new CustomTelemetryChannel(telemetryItems);
         Startup.CustomTelemetryChannel = telemetryChannel;
         TestServer server = new(Program.CreateWebHostBuilder(args));
 
@@ -208,7 +208,7 @@ public class TelemetryTests
         };
 
         List<ITelemetry> telemetryItems = new();
-        ITelemetryChannel telemetryChannel= new CustomTelemetryChannel(telemetryItems);
+        ITelemetryChannel telemetryChannel = new CustomTelemetryChannel(telemetryItems);
         Startup.CustomTelemetryChannel = telemetryChannel;
         TestServer server = new(Program.CreateWebHostBuilder(args));
 
@@ -250,9 +250,9 @@ public class TelemetryTests
             // POST request on non-accessible entity
             HttpRequestMessage restRequest = new(HttpMethod.Post, "/api/Publisher/id/1?name=Test");
             HttpResponseMessage restResponse = await client.SendAsync(restRequest);
-            
+
             Assert.AreEqual(HttpStatusCode.Forbidden, restResponse.StatusCode);
-            
+
         }
     }
 
@@ -261,7 +261,7 @@ public class TelemetryTests
     /// </summary>
     private class CustomTelemetryChannel : ITelemetryChannel
     {
-        private List<ITelemetry> _telemetryItems=new();
+        private List<ITelemetry> _telemetryItems = new();
 
         public CustomTelemetryChannel(List<ITelemetry> telemetryItems)
         {

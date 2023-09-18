@@ -36,9 +36,11 @@ namespace Azure.DataApiBuilder.Service
                 CreateHostBuilder(args).Build().Run();
                 return true;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
+                // Do not log the exception here because exceptions raised during startup
+                // are already automatically written to the console.
+                Console.Error.WriteLine($"Unable to launch the runtime due to an error.");
                 return false;
             }
         }

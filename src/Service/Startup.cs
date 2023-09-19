@@ -70,15 +70,18 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IOptionsMonitor<RuntimeOptions>>();
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
-                return new RuntimeConfigProvider(configLoader, serviceProvider.GetRequiredService<IOptionsMonitor<RuntimeOptions>>());
+                return new RuntimeConfigProvider(configLoader);
             });
             services.AddSingleton(fileSystem);
             services.AddSingleton(configLoader);
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
-                if (serviceProvider.GetRequiredService<RuntimeConfigProvider>().TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Host.Mode is HostMode.Development)
+                if (serviceProvider.GetRequiredService<RuntimeConfigProvider>().TryGetConfig(out RuntimeConfig? runtimeConfig)
+                && runtimeConfig.Runtime.Host.Mode is HostMode.Development)
                 {
-                    ConfigFileWatcher configFileWatcher = new(configFileName, serviceProvider.GetRequiredService<IOptionsMonitor<RuntimeOptions>>());
+                    ConfigFileWatcher configFileWatcher = new(configFileName,
+                        serviceProvider.GetRequiredService<IOptionsMonitor<RuntimeOptions>>(),
+                        serviceProvider.GetRequiredService<RuntimeConfigProvider>());
                     return configFileWatcher;
                 }
 
@@ -221,8 +224,12 @@ namespace Azure.DataApiBuilder.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
-
-            ConfigureAuthentication(services, configProvider);
+            services.AddTransient(implementationFactory: (serviceProvider) =>
+            {
+                ConfigureAuthentication(services, serviceProvider.GetRequiredService<RuntimeConfigProvider>());
+                return string.Empty;
+            });
+            
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>

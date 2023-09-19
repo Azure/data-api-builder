@@ -5,7 +5,8 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /api
+      Path: /api,
+      RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,
@@ -1897,6 +1898,32 @@
           bkname: name,
           id: bkid
         }
+      }
+    },
+    {
+      BooksSold: {
+        Source: {
+          Object: books_sold,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: books_sold,
+          Plural: books_sold,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
       }
     },
     {

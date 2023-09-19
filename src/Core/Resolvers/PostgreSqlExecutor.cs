@@ -164,12 +164,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // so a bunch of different exceptions could occur in that scenario
             catch (Exception ex)
             {
-                QueryExecutorLogger.LogWarning($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext)}" +
-                    $"No password detected in the connection string. Attempt to retrieve " +
-                    $"a managed identity access token using DefaultAzureCredential failed due to: \n{ex}\n" +
-                    (firstAttemptAtDefaultAccessToken ?
-                    $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored." :
-                    string.Empty));
+                string messagePrefix = "{correlationId} No password detected in the connection string. Attempt to retrieve a managed identity access token using DefaultAzureCredential failed due to:\n{errorMessage}";
+                string messageSuffix = (firstAttemptAtDefaultAccessToken ? $"If authentication with DefaultAzureCrendential is not intended, this warning can be safely ignored." : string.Empty);
+                string message = messagePrefix + messageSuffix;
+                QueryExecutorLogger.LogWarning(
+                    exception: ex,
+                    message: message,
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContextAccessor.HttpContext),
+                    ex.Message);
 
                 // the config doesn't contain an identity token
                 // and a default identity token cannot be obtained

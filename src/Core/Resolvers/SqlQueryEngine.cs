@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -186,22 +187,45 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             JsonElement jsonElement = jsonDoc.RootElement.Clone();
 
-            // If the results are not a collection or if the query does not have a next page
-            // no nextLink is needed, return JsonDocument as is
-            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            // When there are no rows returned from the database, the jsonElement will be an empty array.
+            // In that case, the response is returned as is.
+            if (jsonElement.ValueKind is JsonValueKind.Array && jsonElement.GetArrayLength() == 0)
             {
-                // Clones the root element to a new JsonElement that can be
-                // safely stored beyond the lifetime of the original JsonDocument.
                 return OkResponse(jsonElement);
             }
 
+            HashSet<string> extraFieldsInResponse = (jsonElement.ValueKind is not JsonValueKind.Array)
+                                                  ? DetermineExtraFieldsInResponse(jsonElement, context)
+                                                  : DetermineExtraFieldsInResponse(jsonElement.EnumerateArray().First(), context);
+
+            // If the results are not a collection or if the query does not have a next page
+            // no nextLink is needed. So, the response is returned after removing the extra fields.
+            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            {
+                // If there are no additional fields present, the response is returned directly. When there
+                // are extra fields, they are removed before returning the response.
+                if (extraFieldsInResponse.Count == 0)
+                {
+                    return OkResponse(jsonElement);
+                }
+                else
+                {
+                    return jsonElement.ValueKind is JsonValueKind.Array ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(jsonElement.EnumerateArray().ToList(), extraFieldsInResponse)))
+                                                                        : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(jsonElement, extraFieldsInResponse));
+                }
+            }
+
+            List<JsonElement> rootEnumerated = jsonElement.EnumerateArray().ToList();
+
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
-            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+            rootEnumerated.RemoveAt(rootEnumerated.Count - 1);
 
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            // The fields such as primary keys, fields in $orderby clause that are retrieved in addition to the
+            // fields requested in the $select clause are required for calculating the $after element which is part of nextLink.
+            // So, the extra fields are removed post the calculation of $after element.
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
+                               element: rootEnumerated[rootEnumerated.Count - 1],
                                orderByColumns: context.OrderByClauseOfBackingColumns,
                                primaryKey: _sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
                                entityName: context.EntityName,
@@ -233,8 +257,84 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                   path,
                                   nvc: context!.ParsedQueryString,
                                   after);
-            rootEnumerated = rootEnumerated.Append(nextLink);
+
+            // When there are extra fields present, they are removed before returning the response.
+            if (extraFieldsInResponse.Count > 0)
+            {
+                rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated, extraFieldsInResponse);
+            }
+
+            rootEnumerated.Add(nextLink);
             return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
+        }
+
+        /// <summary>
+        /// To support pagination and $first clause with Find requests, it is necessary to provide the nextLink
+        /// field in the response. For the calculation of nextLink, the fields such as primary keys, fields in $orderby clause
+        /// are retrieved from the database in addition to the fields requested in the $select clause.
+        /// However, these fields are not required in the response.
+        /// This function helps to determine those additional fields that are present in the response.
+        /// </summary>
+        /// <param name="response">Response json retrieved from the database</param>
+        /// <param name="context">FindRequestContext for the GET request.</param>
+        /// <returns>Additional fields that are present in the response</returns>
+        private static HashSet<string> DetermineExtraFieldsInResponse(JsonElement response, FindRequestContext context)
+        {
+            HashSet<string> fieldsPresentInResponse = new();
+
+            foreach (JsonProperty property in response.EnumerateObject())
+            {
+                fieldsPresentInResponse.Add(property.Name);
+            }
+
+            // context.FieldsToBeReturned will contain the fields requested in the $select clause.
+            // If $select clause is absent, it will contain the list of columns that can be returned in the
+            // response taking into account the include and exclude fields configured for the entity.
+            // So, the other fields in the response apart from the fields in context.FieldsToBeReturned
+            // are not required.
+            return fieldsPresentInResponse.Except(context.FieldsToBeReturned).ToHashSet();
+        }
+
+        /// <summary>
+        /// Helper function that removes the extra fields from each item of a list of json elements.
+        /// </summary>
+        /// <param name="jsonElementList">List of Json Elements with extra fields</param>
+        /// <param name="extraFields">Additional fields that needs to be removed from the list of Json elements</param>
+        /// <returns>List of Json Elements after removing the additional fields</returns>
+        private static List<JsonElement> RemoveExtraFieldsInResponseWithMultipleItems(List<JsonElement> jsonElementList, IEnumerable<string> extraFields)
+        {
+            for (int i = 0; i < jsonElementList.Count; i++)
+            {
+                jsonElementList[i] = RemoveExtraFieldsInResponseWithSingleItem(jsonElementList[i], extraFields);
+            }
+
+            return jsonElementList;
+        }
+
+        /// <summary>
+        /// Helper function that removes the extra fields from a single json element.
+        /// </summary>
+        /// <param name="jsonElement"> Json Element with extra fields</param>
+        /// <param name="extraFields">Additional fields that needs to be removed from the Json element</param>
+        /// <returns>Json Element after removing the additional fields</returns>
+        private static JsonElement RemoveExtraFieldsInResponseWithSingleItem(JsonElement jsonElement, IEnumerable<string> extraFields)
+        {
+            JsonObject? jsonObject = JsonObject.Create(jsonElement);
+
+            if (jsonObject is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "While processing your request the server ran into an unexpected error",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            foreach (string extraField in extraFields)
+            {
+                jsonObject.Remove(extraField);
+            }
+
+            return JsonSerializer.SerializeToElement(jsonObject);
         }
 
         /// <summary>
@@ -354,8 +454,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                _logger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext)}" +
-                    "Did not return enough rows.");
+                _logger.LogInformation(
+                    message: "{correlationId} Result set did not have any rows.",
+                    HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext));
             }
 
             return jsonDocument;

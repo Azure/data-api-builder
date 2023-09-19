@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
@@ -117,21 +118,45 @@ public abstract class RuntimeConfigLoader
                 }
 
             }
+
+            // For Cosmos DB NoSQL database type, DAB CLI v0.8.49+ generates a REST property within the Runtime section of the config file. However
+            // v0.7.6- does not generate this property. So, when the config file generated using v0.7.6- is used to start the engine with v0.8.49+, the absence
+            // of the REST property causes the engine to throw exceptions. This is the only difference in the way Runtime section of the config file is created
+            // between these two versions.
+            // To avoid the NullReference Exceptions, the REST property is added when absent in the config file.
+            // Other properties within the Runtime section are also populated with default values to account for the cases where
+            // the properties could be removed manually from the config file.
+            if (config.Runtime is not null)
+            {
+                if (config.Runtime.Rest is null)
+                {
+                    config = config with { Runtime = config.Runtime with { Rest = (config.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL) ? new RestRuntimeOptions(Enabled: false) : new RestRuntimeOptions(Enabled: false) } };
+                }
+
+                if (config.Runtime.GraphQL is null)
+                {
+                    config = config with { Runtime = config.Runtime with { GraphQL = new GraphQLRuntimeOptions(AllowIntrospection: false) } };
+                }
+
+                if (config.Runtime.Host is null)
+                {
+                    config = config with { Runtime = config.Runtime with { Host = new HostOptions(Cors: null, Authentication: new AuthenticationOptions(Provider: EasyAuthType.StaticWebApps.ToString(), Jwt: null), Mode: HostMode.Production) } };
+                }
+            }
+
         }
         catch (JsonException ex)
         {
-            string errorMessage = $"Deserialization of the configuration file failed.\n" +
-                        $"Message:\n {ex.Message}\n" +
-                        $"Stack Trace:\n {ex.StackTrace}";
+            string errorMessage = "Deserialization of the configuration file failed.";
 
+            // logger can be null when called from CLI
             if (logger is null)
             {
-                // logger can be null when called from CLI
-                Console.Error.WriteLine(errorMessage);
+                Console.Error.WriteLine(errorMessage + $"\n" + $"Message:\n {ex.Message}\n" + $"Stack Trace:\n {ex.StackTrace}");
             }
             else
             {
-                logger.LogError(ex, errorMessage);
+                logger.LogError(exception: ex, message: errorMessage);
             }
 
             config = null;
@@ -156,7 +181,8 @@ public abstract class RuntimeConfigLoader
             ReadCommentHandling = JsonCommentHandling.Skip,
             WriteIndented = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            IncludeFields = true
+            IncludeFields = true,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());
         options.Converters.Add(new RestRuntimeOptionsConverterFactory());

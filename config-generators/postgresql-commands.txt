@@ -29,6 +29,7 @@ add Sales --config "dab-config.PostgreSql.json" --source "sales" --permissions "
 add GQLmappings --config "dab-config.PostgreSql.json" --source "gqlmappings" --permissions "anonymous:*" --rest true --graphql true
 add Bookmarks --config "dab-config.PostgreSql.json" --source "bookmarks" --permissions "anonymous:*" --rest true --graphql true
 add MappedBookmarks --config "dab-config.PostgreSql.json" --source "mappedbookmarks" --permissions "anonymous:*" --rest true --graphql true
+add BooksSold --config "dab-config.PostgreSql.json" --source "books_sold" --rest true --graphql "books_sold:books_sold" --permissions "anonymous:*"
 update GQLmappings --config "dab-config.PostgreSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
 update Publisher --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:create,delete"

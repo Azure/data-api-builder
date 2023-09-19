@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Core.Models
         public static string GetLoggerCorrelationId(HttpContext? context)
         {
             Guid? correlationId = context is not null ? GetCorrelationId(context) : null;
-            return correlationId is not null ? $"{correlationId.ToString()!}: " : "";
+            return correlationId is not null ? $"{correlationId}" : "";
         }
     }
 }

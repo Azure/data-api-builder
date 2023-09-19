@@ -510,11 +510,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return query;
         }
-
-        /// <inheritdoc />
-        public DatabaseType DeriveDatabaseType()
-        {
-            return DatabaseType.MSSQL;
-        }
     }
 }

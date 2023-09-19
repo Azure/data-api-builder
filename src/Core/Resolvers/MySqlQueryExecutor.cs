@@ -59,8 +59,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
-                  httpContextAccessor,
-                  DatabaseType.MySQL)
+                  httpContextAccessor)
         {
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;

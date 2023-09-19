@@ -7,7 +7,6 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -35,8 +34,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private AsyncRetryPolicy _retryPolicy;
 
-        private DatabaseType _databaseType;
-
         /// <summary>
         /// Dictionary that stores dataSourceName to its corresponding connection string builder.
         /// </summary>
@@ -45,15 +42,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<IQueryExecutor> logger,
                              RuntimeConfigProvider configProvider,
-                             IHttpContextAccessor httpContextAccessor,
-                             DatabaseType databaseType)
+                             IHttpContextAccessor httpContextAccessor)
         {
             DbExceptionParser = dbExceptionParser;
             QueryExecutorLogger = logger;
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
-            _databaseType = databaseType;
             _retryPolicy = Policy
             .Handle<DbException>(DbExceptionParser.IsTransientException)
             .WaitAndRetryAsync(
@@ -406,12 +401,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return jsonString.ToString();
-        }
-
-        /// <inheritdoc />
-        public DatabaseType DeriveDatabaseType()
-        {
-            return _databaseType;
         }
     }
 }

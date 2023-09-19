@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config.ObjectModel;
-
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     // <summary>
@@ -80,12 +78,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Needed only for MsSql.
         /// </summary>
         string BuildFetchEnabledTriggersQuery() => throw new NotImplementedException();
-
-        /// <summary>
-        /// Derives the database type of the query builder.
-        /// </summary>
-        /// <returns>databaseType.</returns>
-        public DatabaseType DeriveDatabaseType();
 
         /// <summary>
         /// Adds database specific quotes to string identifier

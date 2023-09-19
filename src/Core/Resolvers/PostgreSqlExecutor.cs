@@ -60,8 +60,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
-                  httpContextAccessor,
-                  DatabaseType.PostgreSQL)
+                  httpContextAccessor)
         {
             IEnumerable<KeyValuePair<string, DataSource>> postgresqldbs = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.PostgreSQL);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();

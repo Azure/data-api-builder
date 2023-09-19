@@ -70,8 +70,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             : base(dbExceptionParser,
                   logger,
                   runtimeConfigProvider,
-                  httpContextAccessor,
-                  DatabaseType.MSSQL)
+                  httpContextAccessor)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);

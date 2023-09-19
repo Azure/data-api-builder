@@ -66,11 +66,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="e">The exception thrown as a result of execution of the request.</param>
         /// <returns>status code to be returned in the response.</returns>
         public abstract HttpStatusCode GetHttpStatusCodeForException(DbException e);
-
-        /// <summary>
-        /// Derives the database type
-        /// </summary>
-        /// <returns>DatabaseType.</returns>
-        public abstract DatabaseType DeriveDatabaseType();
     }
 }

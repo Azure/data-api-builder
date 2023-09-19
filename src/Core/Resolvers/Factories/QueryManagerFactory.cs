@@ -37,6 +37,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                 IQueryExecutor? queryExecutor = null;
                 DbExceptionParser? exceptionParser = null;
 
+                if (_queryBuilders.ContainsKey(dataSource.DatabaseType))
+                {
+                    // we have already created the builder, parser and executor for this database type. no need to create again.
+                    continue;
+                }
+
                 switch (dataSource.DatabaseType)
                 {
                     case DatabaseType.CosmosDB_NoSQL:

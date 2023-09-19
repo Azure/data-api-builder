@@ -101,25 +101,13 @@ namespace Azure.DataApiBuilder.Service
 
             // Below are the factory registrations that will enable multiple databases scenario.
             // within these factories the various instances will be created based on the database type and datasourceName.
-            services.AddSingleton<IQueryManagerFactory>(implementationFactory: (serviceProvider) =>
-            {
-                return ActivatorUtilities.GetServiceOrCreateInstance<QueryManagerFactory>(serviceProvider);
-            });
+            services.AddSingleton<IQueryManagerFactory, QueryManagerFactory>();
 
-            services.AddSingleton<IQueryEngineFactory>(implementationFactory: (serviceProvider) =>
-            {
-                return ActivatorUtilities.GetServiceOrCreateInstance<QueryEngineFactory>(serviceProvider);
-            });
+            services.AddSingleton<IQueryEngineFactory, QueryEngineFactory>();
 
-            services.AddSingleton<IMutationEngineFactory>(implementationFactory: (serviceProvider) =>
-            {
-                return ActivatorUtilities.GetServiceOrCreateInstance<MutationEngineFactory>(serviceProvider);
-            });
+            services.AddSingleton<IMutationEngineFactory, MutationEngineFactory>();
 
-            services.AddSingleton<IMetadataProviderFactory>(implementationFactory: (serviceProvider) =>
-            {
-                return ActivatorUtilities.GetServiceOrCreateInstance<MetadataProviderFactory>(serviceProvider);
-            });
+            services.AddSingleton<IMetadataProviderFactory, MetadataProviderFactory>();
 
             services.AddSingleton<GraphQLSchemaCreator>();
             services.AddSingleton<GQLFilterParser>();

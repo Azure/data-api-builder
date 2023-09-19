@@ -232,11 +232,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 $"WHERE attrelid = ({schemaParamName} || '.' || {tableParamName})::regclass AND attgenerated = 's';";
             return query;
         }
-
-        /// <inheritdoc />
-        public DatabaseType DeriveDatabaseType()
-        {
-            return DatabaseType.PostgreSQL;
-        }
     }
 }

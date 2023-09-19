@@ -366,11 +366,5 @@ WHERE
         {
             throw new NotImplementedException();
         }
-
-        /// <inheritdoc />
-        public DatabaseType DeriveDatabaseType()
-        {
-            return DatabaseType.MySQL;
-        }
     }
 }

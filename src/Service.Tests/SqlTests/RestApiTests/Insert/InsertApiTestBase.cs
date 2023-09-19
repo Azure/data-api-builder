@@ -343,6 +343,94 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
+
+        /// <summary>
+        /// Test to validate the successful creation of an item in the database through a
+        /// REST POST API request. This test also validates that the response returned takes
+        /// into account the fields configuration set for READ action of the role with which
+        /// the request was executed.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithExcludeFieldsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithExcludeFieldsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "policy_tester_excludefields"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate the successful creation of an item in the database through a
+        /// REST POST API request. This test also validates that an empty response is returned
+        /// when no read action is configured for the role with which the POST request is executed.
+        /// </summary>
+        /// <returns></returns>        
+        [TestMethod]
+        public virtual async Task InsertOneWithNoReadPermissionsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithNoReadPermissionsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "policy_tester_noread"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate the successful creation of an item in the database through a
+        /// REST POST API request. This test also validates that the response returned takes
+        /// into account the database policies set up for READ action of the role with which
+        /// the request was executed.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithReadDatabasePolicyTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Test"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithNoReadPermissionsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+            );
+        }
+
         #endregion
 
         #region Negative Tests

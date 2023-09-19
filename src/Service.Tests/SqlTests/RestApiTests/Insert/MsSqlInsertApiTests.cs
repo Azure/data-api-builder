@@ -200,6 +200,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"SELECT * FROM { _nonAutogenPKTableWithTrigger } " +
                 $"WHERE [id] = 3 AND [months] = 2 AND [name] = 'Tommy' AND [salary] = 30 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneWithExcludeFieldsTest",
+                $"SELECT [id], [title] FROM { _integrationTableName } " +
+                $"WHERE [id] = {STARTING_ID_FOR_TEST_INSERTS} " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneWithNoReadPermissionsTest",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE [id] = {STARTING_ID_FOR_TEST_INSERTS} AND 0 = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 
@@ -439,6 +451,84 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Tests 
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneWithExcludeFieldsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithExcludeFieldsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "policy_tester_excludefields"
+            );
+        }
+
+        /// <summary>
+        /// Tests 
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneWithNoReadPermissionsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithNoReadPermissionsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "policy_tester_noread"
+            );
+        }
+
+        /// <summary>
+        /// Tests 
+        /// </summary>
+        [TestMethod]
+        public async Task InsertOneWithReadDatabasePolicyTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Test"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithNoReadPermissionsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "policy_tester_excludefields_dbpolicy"
             );
         }
 

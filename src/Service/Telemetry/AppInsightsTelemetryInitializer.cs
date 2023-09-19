@@ -16,7 +16,7 @@ public class AppInsightsTelemetryInitializer : ITelemetryInitializer
     /// <summary>
     /// Initializes the telemetry context.
     /// </summary>
-    /// <param name="telemetry">The telemetry object to</param>
+    /// <param name="telemetry">The telemetry object to initialize</param>
     public void Initialize(ITelemetry telemetry)
     {
         telemetry.Context.Cloud.RoleName = ProductInfo.GetDataApiBuilderUserAgent();

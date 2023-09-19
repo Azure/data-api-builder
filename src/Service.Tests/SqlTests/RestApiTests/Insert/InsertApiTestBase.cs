@@ -725,15 +725,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Verifies that we throw exception when field
-        /// provided to insert is an exposed name that
-        /// maps to a backing column name that does not
-        /// exist in the table.
+        /// Verifies that we throw an exception when an extraneous field that does not map to a backing column in the table
+        /// is provided in the request body for an INSERT operation. This test validates the behavior of rest.request-body-strict when it is:
+        /// 1. Included in runtime config (and set to true)
+        /// 2. Excluded from runtime config(defaults to true)
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
-        public async Task InsertTestWithInvalidMapping()
+        public async Task InsertOneTestWithExtraneousFieldsInRequestBody()
         {
+            // Non-existing field 'hazards' included in the request body for the table.
             string requestBody = @"
             {
                 ""speciesid"" : 3,
@@ -741,7 +741,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""region"": ""Pacific North West""
             }";
 
-            string expectedLocationHeader = $"speciedid/3";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -752,8 +751,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedErrorMessage: "Invalid request body. Contained unexpected fields in body: hazards",
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: "BadRequest",
-                expectedLocationHeader: expectedLocationHeader
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 

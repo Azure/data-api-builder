@@ -34,6 +34,9 @@ namespace Cli.Commands
             bool restDisabled = false,
             string graphQLPath = GraphQLRuntimeOptions.DEFAULT_PATH,
             bool graphqlDisabled = false,
+            CliBool restEnabled = CliBool.None,
+            CliBool graphqlEnabled = CliBool.None,
+            CliBoolean restRequestBodyStrict = CliBoolean.None,
             string? config = null)
             : base(config)
         {
@@ -53,6 +56,9 @@ namespace Cli.Commands
             RestDisabled = restDisabled;
             GraphQLPath = graphQLPath;
             GraphQLDisabled = graphqlDisabled;
+            RestEnabled = restEnabled;
+            GraphQLEnabled = graphqlEnabled;
+            RestRequestBodyStrict = restRequestBodyStrict;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
@@ -102,6 +108,17 @@ namespace Cli.Commands
 
         [Option("graphql.disabled", Default = false, Required = false, HelpText = "Disables GraphQL endpoint for all entities.")]
         public bool GraphQLDisabled { get; }
+
+        [Option("rest.enabled", Required = false, HelpText = "(Default: true) Enables REST endpoint for all entities. Supported values: true, false.")]
+        public CliBool RestEnabled { get; }
+
+        [Option("graphql.enabled", Required = false, HelpText = "(Default: true) Enables GraphQL endpoint for all entities. Supported values: true, false.")]
+        public CliBool GraphQLEnabled { get; }
+
+        // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
+        // included in the init command.
+        [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
+        public CliBoolean RestRequestBodyStrict { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

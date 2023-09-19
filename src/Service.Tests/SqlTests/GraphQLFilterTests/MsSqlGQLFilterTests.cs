@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         public static async Task Setup(TestContext context)
         {
             DatabaseEngine = TestCategory.MSSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>

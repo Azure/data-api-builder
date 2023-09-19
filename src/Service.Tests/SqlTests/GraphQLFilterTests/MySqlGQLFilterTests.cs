@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         public static async Task Setup(TestContext context)
         {
             DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         [Ignore]

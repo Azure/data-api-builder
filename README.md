@@ -5,7 +5,11 @@
 [![Documentation](https://img.shields.io/badge/docs-website-%23fc0)](https://learn.microsoft.com/azure/data-api-builder/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest stable version of Data API builder is **0.8.50** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
+Latest stable version of Data API builder is **0.8.51** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
+
+## Community
+
+Join the Data API builder community! This sign up will help us maintain a list of interested developers to be part of our roadmap and to help us better understand the different ways DAB is being used. Sign up [here](https://forms.office.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR1S1JdzGAxhDrefV-tBYtwZUNE1RWVo0SUVMTkRESUZLMVVOS0wwUFNVRy4u).
 
 ## About
 

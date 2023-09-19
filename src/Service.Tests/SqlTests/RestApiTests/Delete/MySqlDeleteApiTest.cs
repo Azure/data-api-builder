@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>

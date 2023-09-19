@@ -1070,6 +1070,7 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>(),
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restRequestBodyStrict: CliBoolean.True,
                 config: config);
         }
     }

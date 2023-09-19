@@ -48,8 +48,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             authorizationResolver,
             gQLFilterParser,
             GQLMutArgumentToDictParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams),
-            httpContext,
-            ApiType.GraphQL)
+            httpContext)
         { }
 
         public SqlInsertStructure(
@@ -58,14 +57,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
-            HttpContext httpContext,
-            ApiType apiRequestType
+            HttpContext httpContext
             )
         : base(
               metadataProvider: sqlMetadataProvider,
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
-              apiRequestType: apiRequestType,
               entityName: entityName,
               httpContext: httpContext,
               operationType: EntityActionOperation.Create)

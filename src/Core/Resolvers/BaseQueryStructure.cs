@@ -3,7 +3,6 @@
 
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -14,12 +13,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class BaseQueryStructure
     {
-
-        /// <summary>
-        /// Type of the API request - REST or GraphQL.
-        /// </summary>
-        public ApiType ApiRequestType { get; set; }
-
         /// <summary>
         /// The Entity name associated with this query as appears in the config file.
         /// </summary>
@@ -82,8 +75,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             List<Predicate>? predicates = null,
             string entityName = "",
-            IncrementingInteger? counter = null,
-            ApiType apiRequestType = ApiType.GraphQL)
+            IncrementingInteger? counter = null)
         {
             Columns = new();
             Parameters = new();
@@ -92,7 +84,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             MetadataProvider = metadataProvider;
             GraphQLFilterParser = gQLFilterParser;
             AuthorizationResolver = authorizationResolver;
-            ApiRequestType = apiRequestType;
 
             // Default the alias to the empty string since this base constructor
             // is called for requests other than Find operations. We only use

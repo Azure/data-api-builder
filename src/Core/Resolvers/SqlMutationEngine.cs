@@ -107,8 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         Dictionary<string, object>? resultProperties =
                             await PerformDeleteOperation(
                                 entityName,
-                                parameters,
-                                ApiType.GraphQL);
+                                parameters);
 
                         // If the number of records affected by DELETE were zero,
                         // and yet the result was not null previously, it indicates this DELETE lost
@@ -130,7 +129,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 entityName,
                                 mutationOperation,
                                 parameters,
-                                ApiType.GraphQL,
                                 context);
 
                         if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
@@ -208,9 +206,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _sqlMetadataProvider,
                 _authorizationResolver,
                 _gQLFilterParser,
-                context.ResolvedParameters,
-                ApiType.REST);
-
+                context.ResolvedParameters);
             string queryText = _queryBuilder.Build(executeQueryStructure);
 
             JsonArray? resultArray = null;
@@ -333,8 +329,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         resultProperties = await PerformDeleteOperation(
                                 context.EntityName,
-                                parameters,
-                                ApiType.REST);
+                                parameters);
                         transactionScope.Complete();
                     }
                 }
@@ -387,7 +382,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         }
 
-                        if (isDatabasePolicyDefinedForReadAction && _sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                        if (isDatabasePolicyDefinedForReadAction)
                         {
                             FindRequestContext findRequestContext = ConstructFindRequestContext(context, dbResultSetRow!, roleName);
                             jsonDocument = await _queryEngine.ExecuteAsyncAndGetResponseJson(findRequestContext);
@@ -416,7 +411,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
-                if (!isDatabasePolicyDefinedForReadAction && _sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                if (!isDatabasePolicyDefinedForReadAction)
                 {
                     foreach (string columnInResponse in resultRow.Keys)
                     {
@@ -429,27 +424,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (!isUpdateResultSet)
                 {
-                    if (isDatabasePolicyDefinedForReadAction && _sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                    if (isDatabasePolicyDefinedForReadAction)
                     {
                         return (jsonDocument is not null) ? new CreatedResult(location: string.Empty, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
                                                           : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
                     }
 
-                    if(_sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                    foreach (string columnInResponse in resultRow.Keys)
                     {
-                        foreach (string columnInResponse in resultRow.Keys)
+                        if (!allowedExposedColumns.Contains(columnInResponse))
                         {
-                            if (!allowedExposedColumns.Contains(columnInResponse))
-                            {
-                                resultRow.Remove(columnInResponse);
-                            }
+                            resultRow.Remove(columnInResponse);
                         }
                     }
 
                     return new CreatedResult(location: string.Empty, OkMutationResponse(resultRow).Value);
                 }
 
-                if (isDatabasePolicyDefinedForReadAction && _sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                if (isDatabasePolicyDefinedForReadAction)
                 {
                     return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
                                                       : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
@@ -473,8 +465,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 await PerformMutationOperation(
                                     context.EntityName,
                                     context.OperationType,
-                                    parameters,
-                                    ApiType.REST);
+                                    parameters);
 
                         if (context.OperationType is EntityActionOperation.Insert)
                         {
@@ -512,7 +503,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         }
 
-                        if (isDatabasePolicyDefinedForReadAction && _sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                        if (isDatabasePolicyDefinedForReadAction)
                         {
                             FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow!, roleName);
                             jsonDocument = await _queryEngine.ExecuteAsyncAndGetResponseJson(findRequestContext);
@@ -533,8 +524,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // result is directly fetched from mutation result row
                 // remove columns that are excluded from read configuation
-                // for mssql, the db query already takes care of all this
-                if (!isDatabasePolicyDefinedForReadAction && _sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                if (!isDatabasePolicyDefinedForReadAction)
                 {
                     HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
                     foreach (string columnInResponse in mutationResultRow!.Columns.Keys)
@@ -549,7 +539,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (context.OperationType is EntityActionOperation.Insert)
                 {
                     string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns);
-                    if (isDatabasePolicyDefinedForReadAction && _sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                    if (isDatabasePolicyDefinedForReadAction)
                     {
                         return (jsonDocument is not null) ? new CreatedResult(location: primaryKeyRoute, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
                                                           : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
@@ -560,7 +550,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
                 {
-                    if (isDatabasePolicyDefinedForReadAction && _sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                    if (isDatabasePolicyDefinedForReadAction)
                     {
                         return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
                                                           : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
@@ -661,7 +651,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string entityName,
                 EntityActionOperation operationType,
                 IDictionary<string, object?> parameters,
-                ApiType apiRequestType,
                 IMiddlewareContext? context = null)
         {
             string queryString;
@@ -677,8 +666,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             _authorizationResolver,
                             _gQLFilterParser,
                             parameters,
-                            GetHttpContext(),
-                            apiRequestType)
+                            GetHttpContext())
                         : new(
                             context,
                             entityName,
@@ -696,7 +684,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         _sqlMetadataProvider,
                         _authorizationResolver,
                         _gQLFilterParser,
-                        apiRequestType,
                         parameters,
                         GetHttpContext(),
                         isIncrementalUpdate: false);
@@ -709,7 +696,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         _sqlMetadataProvider,
                         _authorizationResolver,
                         _gQLFilterParser,
-                        apiRequestType,
                         parameters,
                         GetHttpContext(),
                         isIncrementalUpdate: true);
@@ -827,8 +813,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private async Task<Dictionary<string, object>?>
             PerformDeleteOperation(
                 string entityName,
-                IDictionary<string, object?> parameters,
-                ApiType apiRequestType)
+                IDictionary<string, object?> parameters)
         {
             string queryString;
             Dictionary<string, DbConnectionParam> queryParameters;
@@ -838,8 +823,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _authorizationResolver,
                 _gQLFilterParser,
                 parameters,
-                GetHttpContext(),
-                apiRequestType);
+                GetHttpContext());
             queryString = _queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
 

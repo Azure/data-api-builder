@@ -3,12 +3,14 @@
 
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -54,6 +56,7 @@ public class TelemetryTests
     {
         File.Delete(CONFIG_WITH_TELEMETRY);
         File.Delete(CONFIG_WITHOUT_TELEMETRY);
+        Startup.CustomTelemetryChannel = null;
     }
 
     /// <summary>
@@ -62,51 +65,51 @@ public class TelemetryTests
     /// are correctly sent to application Insights when enabled.
     /// Also asserting on their respective properties.
     /// </summary>
-    // [TestMethod]
-    // public async Task TestTelemetryItemsAreSentCorrectly_NonHostedScenario()
-    // {
-    //     SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, isTelemetryEnabled: true, TEST_APP_INSIGHTS_CONN_STRING);
+    [TestMethod]
+    public async Task TestTelemetryItemsAreSentCorrectly_NonHostedScenario()
+    {
+        SetUpTelemetryInConfig(CONFIG_WITH_TELEMETRY, isTelemetryEnabled: true, TEST_APP_INSIGHTS_CONN_STRING);
 
-    //     string[] args = new[]
-    //     {
-    //         $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
-    //     };
+        string[] args = new[]
+        {
+            $"--ConfigFileName={CONFIG_WITH_TELEMETRY}"
+        };
 
-    //     List<ITelemetry> telemetryItems = new();
-    //     ITelemetryChannel telemetryChannel = new CustomTelemetryChannel(telemetryItems);
-    //     Startup.CustomTelemetryChannel = telemetryChannel;
-    //     using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-    //     {
-    //         await TestRestAndGraphQLRequestsOnServerInNonHostedScenario(server);
-    //     }
+        List<ITelemetry> telemetryItems = new();
+        ITelemetryChannel telemetryChannel = new CustomTelemetryChannel(telemetryItems);
+        Startup.CustomTelemetryChannel = telemetryChannel;
+        using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+        {
+            await TestRestAndGraphQLRequestsOnServerInNonHostedScenario(server);
+        }
 
-    //     ((CustomTelemetryChannel)Startup.CustomTelemetryChannel).Flush();
+        ((CustomTelemetryChannel)Startup.CustomTelemetryChannel).Flush();
 
-    //     // Assert that we are sending Traces/Requests/Exceptions
-    //     Assert.IsTrue(telemetryItems.Any(item => item is TraceTelemetry));
-    //     Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
-    //     Assert.IsTrue(telemetryItems.Any(item => item is ExceptionTelemetry));
+        // Assert that we are sending Traces/Requests/Exceptions
+        Assert.IsTrue(telemetryItems.Any(item => item is TraceTelemetry));
+        Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
+        Assert.IsTrue(telemetryItems.Any(item => item is ExceptionTelemetry));
 
-    //     // Asserting on count Exception/Request telemetry items.
-    //     Assert.AreEqual(1, telemetryItems.Count(item => item is ExceptionTelemetry));
-    //     Assert.AreEqual(2, telemetryItems.Count(item => item is RequestTelemetry));
+        // Asserting on count Exception/Request telemetry items.
+        Assert.AreEqual(1, telemetryItems.Count(item => item is ExceptionTelemetry));
+        Assert.AreEqual(2, telemetryItems.Count(item => item is RequestTelemetry));
 
-    //     Assert.IsTrue(telemetryItems.Any(item =>
-    //         item is RequestTelemetry
-    //         && ((RequestTelemetry)item).Name.Equals("POST /graphql")
-    //         && ((RequestTelemetry)item).ResponseCode.Equals("200")
-    //         && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/graphql")));
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST /graphql")
+            && ((RequestTelemetry)item).ResponseCode.Equals("200")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/graphql")));
 
-    //     Assert.IsTrue(telemetryItems.Any(item =>
-    //         item is RequestTelemetry
-    //         && ((RequestTelemetry)item).Name.Equals("POST Rest/Insert [route]")
-    //         && ((RequestTelemetry)item).ResponseCode.Equals("403")
-    //         && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/api/Publisher/id/1?name=Test")));
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST Rest/Insert [route]")
+            && ((RequestTelemetry)item).ResponseCode.Equals("403")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/api/Publisher/id/1?name=Test")));
 
-    //     Assert.IsTrue(telemetryItems.Any(item =>
-    //         item is ExceptionTelemetry
-    //         && ((ExceptionTelemetry)item).Message.Equals("Authorization Failure: Access Not Allowed.")));
-    // }
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is ExceptionTelemetry
+            && ((ExceptionTelemetry)item).Message.Equals("Authorization Failure: Access Not Allowed.")));
+    }
 
     /// <summary>
     /// Testing the Hosted Scenario for both configuration endpoint.

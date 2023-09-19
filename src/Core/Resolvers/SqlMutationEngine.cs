@@ -410,9 +410,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     isUpdateResultSet = !PostgresQueryBuilder.IsInsert(resultRow);
                 }
 
-                HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
-                if (!isDatabasePolicyDefinedForReadAction)
+                
+                if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
                 {
+                    HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
                     foreach (string columnInResponse in resultRow.Keys)
                     {
                         if (!allowedExposedColumns.Contains(columnInResponse))
@@ -430,15 +431,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                           : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
                     }
 
-                    foreach (string columnInResponse in resultRow.Keys)
-                    {
-                        if (!allowedExposedColumns.Contains(columnInResponse))
-                        {
-                            resultRow.Remove(columnInResponse);
-                        }
-                    }
-
-                    return new CreatedResult(location: string.Empty, OkMutationResponse(resultRow).Value);
+                    return isReadPermissionConfiguredForRole ? new CreatedResult(location: string.Empty, OkMutationResponse(resultRow).Value)
+                                                             : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
                 }
 
                 if (isDatabasePolicyDefinedForReadAction)
@@ -449,7 +443,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // Valid REST updates return OkObjectResult
                 //return  (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone()) : OkMutationResponse(resultRow);
-                return OkMutationResponse(resultRow);
+                return isReadPermissionConfiguredForRole ?  OkMutationResponse(resultRow)
+                                                         : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+
             }
             else
             {
@@ -524,7 +520,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // result is directly fetched from mutation result row
                 // remove columns that are excluded from read configuation
-                if (!isDatabasePolicyDefinedForReadAction)
+                if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
                 {
                     HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
                     foreach (string columnInResponse in mutationResultRow!.Columns.Keys)
@@ -545,7 +541,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                           : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
                     }
 
-                    return new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResultRow!.Columns).Value);
+                    return isReadPermissionConfiguredForRole ?  new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResultRow!.Columns).Value)
+                                                             :  new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
                 }
 
                 if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
@@ -557,7 +554,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     // Valid REST updates return OkObjectResult
-                    return OkMutationResponse(mutationResultRow!.Columns);
+                    return isReadPermissionConfiguredForRole ? OkMutationResponse(mutationResultRow!.Columns)
+                                                             : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
                 }
             }
 

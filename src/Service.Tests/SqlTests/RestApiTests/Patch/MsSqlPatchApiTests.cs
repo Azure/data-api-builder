@@ -200,6 +200,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"SELECT * FROM { _nonAutogenPKTableWithTrigger } " +
                 $"WHERE [id] = 3 AND [months] = 2 AND [salary] = 30 AND [name] = 'Paris' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Update_NoReadTest",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE 0 = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "Patch_Update_WithExcludeFieldsTest",
+                $"SELECT [id], [title] FROM { _integrationTableName } " +
+                $"WHERE id = 8 AND [title] = 'Heart of Darkness' " +
+                $"AND [publisher_id] = 2324 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup

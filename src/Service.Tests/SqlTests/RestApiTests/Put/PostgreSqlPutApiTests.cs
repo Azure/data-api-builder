@@ -315,7 +315,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND publisher_id = 1234
                     ) AS subq
                 "
+            },
+            {
+                "PutOne_Update_WithNoReadAction_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Update_WithExcludeFields_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, issue_number
+                        FROM " + "foo." + _integration_NonAutoGenPK_TableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND title = 'Batman Returns'
+                            AND issue_number = 1234
+                    ) AS subq
+                "
             }
+
         };
 
         [TestMethod]

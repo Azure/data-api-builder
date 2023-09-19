@@ -210,6 +210,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         AND publisher_id = 1234
                     ) AS subq
                 "
+            },
+            {
+                "PatchOne_Update_NoReadTest",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "Patch_Update_WithExcludeFieldsTest",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 8 AND title = 'Heart of Darkness'
+                        AND publisher_id = 2324
+                    ) AS subq
+                "
             }
         };
 

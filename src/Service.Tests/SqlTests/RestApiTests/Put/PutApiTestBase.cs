@@ -119,6 +119,83 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request.
+        /// Also validates that an empty response body is returned since the role has
+        /// no read action configured
+        /// </summary>
+        [TestMethod]
+        public async Task PutOne_Update_WithNoReadAction_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_WithNoReadAction_Test)),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "policy_tester_noread"
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request.
+        /// This test also validates that the response body contains fields in accordance to the
+        /// fields configured for the read action for the role.
+        /// </summary>
+        [TestMethod]
+        public async Task PutOne_Update_WithExcludeFields_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_WithExcludeFields_Test)),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "policy_tester_excludefields"
+                );
+        }
+
+        /// <summary>
+        /// Tests the PutOne functionality with a REST PUT request.
+        /// This test also validates that the database policy configured for the read action is honored.
+        /// </summary>
+        [TestMethod]
+        public async Task PutOne_Update_WithReadDbPolicy_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Test"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_WithNoReadAction_Test)),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+                );
+        }
+
+        /// <summary>
         /// Tests that the PUT updates can only update the rows which are accessible after applying the
         /// security policy which uses data from session context.
         /// </summary>

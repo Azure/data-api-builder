@@ -453,6 +453,92 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        /// <summary>
+        /// Tests REST PatchOne which results in an incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects:
+        /// Status: 200 OK where sqlQuery validates update.
+        /// Response Body: Empty because the role policy_tester_noread has no read action configured.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchOne_Update_NoReadTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_NoReadTest)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "policy_tester_noread"
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in an incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects:
+        /// Status: 200 OK where sqlQuery validates update.
+        /// Response Body: Contains only the id, title fields as publisher_id field is excluded in the read configuration.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task Patch_Update_WithExcludeFieldsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(Patch_Update_WithExcludeFieldsTest)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "policy_tester_excludefields"
+                );
+        }
+
+        /// <summary>
+        /// Tests REST PatchOne which results in an incremental update
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects:
+        /// Status: 200 OK where sqlQuery validates update.
+        /// Response Body: Empty. The read action for the role used in this test has a database policy
+        /// defined which states that title cannot be equal to Test. Since, this test updates the title
+        /// to Test the response must be empty.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task Patch_Update_WithReadDatabasePoliciesTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Test""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PatchOne_Update_NoReadTest)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+                );
+        }
+
         #endregion
 
         #region Negative Tests

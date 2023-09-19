@@ -55,17 +55,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
 
+        /// <summary>
+        /// 
+        /// </summary>
+        protected string RoleName { get; set; } = "";
+
         public BaseSqlQueryStructure(
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
+            ApiType apiRequestType,
             List<Predicate>? predicates = null,
             string entityName = "",
             IncrementingInteger? counter = null,
             HttpContext? httpContext = null,
             EntityActionOperation operationType = EntityActionOperation.None
             )
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter, apiRequestType)
         {
             Joins = new();
 
@@ -74,6 +80,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // For GraphQL read operation, the database policy predicates are added later in the Sql{*}QueryStructure classes.
             if (httpContext is not null)
             {
+                RoleName = httpContext.Request.Headers["X-MS-API-ROLE"];
+
                 AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
                 operationType,
                 this,
@@ -318,22 +326,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         protected List<LabelledColumn> GenerateOutputColumns()
         {
             List<LabelledColumn> outputColumns = new();
-            foreach (string columnName in GetUnderlyingSourceDefinition().Columns.Keys)
-            {
-                if (!MetadataProvider.TryGetExposedColumnName(
-                    entityName: EntityName,
-                    backingFieldName: columnName,
-                    out string? exposedName))
-                {
-                    continue;
-                }
 
-                outputColumns.Add(new(
-                    tableSchema: DatabaseObject.SchemaName,
-                    tableName: DatabaseObject.Name,
-                    columnName: columnName,
-                    label: exposedName!,
-                    tableAlias: SourceAlias));
+            // add comments here
+            if(ApiRequestType is ApiType.REST &&
+              MetadataProvider.GetDatabaseType() is DatabaseType.MSSQL &&
+              MetadataProvider.EntityToDatabaseObject[EntityName].SourceType is not EntitySourceType.StoredProcedure)
+            {
+                foreach (string columnName in AuthorizationResolver.GetAllowedExposedColumns(EntityName, RoleName, EntityActionOperation.Read))
+                {
+                    if (!MetadataProvider.TryGetExposedColumnName(
+                        entityName: EntityName,
+                        backingFieldName: columnName,
+                        out string? exposedName))
+                    {
+                        continue;
+                    }
+
+                    outputColumns.Add(new(
+                        tableSchema: DatabaseObject.SchemaName,
+                        tableName: DatabaseObject.Name,
+                        columnName: columnName,
+                        label: exposedName!,
+                        tableAlias: SourceAlias));
+                }
+            }
+            else
+            {
+                foreach (string columnName in GetUnderlyingSourceDefinition().Columns.Keys)
+                {
+                    if (!MetadataProvider.TryGetExposedColumnName(
+                        entityName: EntityName,
+                        backingFieldName: columnName,
+                        out string? exposedName))
+                    {
+                        continue;
+                    }
+
+                    outputColumns.Add(new(
+                        tableSchema: DatabaseObject.SchemaName,
+                        tableName: DatabaseObject.Name,
+                        columnName: columnName,
+                        label: exposedName!,
+                        tableAlias: SourceAlias));
+                }
             }
 
             return outputColumns;

@@ -46,7 +46,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string clientRoleHeader = roleHeaderValue.ToString();
-            List<EntityActionOperation> elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
+            HashSet<EntityActionOperation> elementalOperations = ResolveCompoundOperationToElementalOperations(operationType).ToHashSet();
+
+            // add appropriate comments here
+            if(queryStructure.ApiRequestType is ApiType.REST &&
+              sqlMetadataProvider.GetDatabaseType() is DatabaseType.MSSQL &&
+              sqlMetadataProvider.EntityToDatabaseObject[queryStructure.EntityName].SourceType is not EntitySourceType.StoredProcedure)
+            {
+                elementalOperations.Add(EntityActionOperation.Read);
+            }
 
             foreach (EntityActionOperation elementalOperation in elementalOperations)
             {

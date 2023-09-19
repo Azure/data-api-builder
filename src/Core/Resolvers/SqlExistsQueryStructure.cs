@@ -37,6 +37,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   metadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
+                  ApiType.GraphQL,
                   predicates,
                   entityName,
                   counter,

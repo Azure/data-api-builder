@@ -686,7 +686,64 @@
               "action": "create"
             }
           ]
-        }
+        },
+        {
+            "role": "policy_tester_noread",
+            "actions": [
+              {
+                "action": "create"
+              },
+              {
+                "action": "update"
+              },
+              {
+                "action": "delete"
+              }
+            ]
+        },
+        {
+            "role": "policy_tester_excludefields",
+            "actions": [
+              {
+                "action": "create"
+              },
+              {
+                "action": "update"
+              },
+              {
+                "action": "delete"
+              },
+              {
+                "action": "read",
+                "fields":{
+                  "exclude": ["publisher_id"]
+                }
+              }
+            ]
+        },
+        {
+          "role": "policy_tester_excludefields_dbpolicy",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "read",
+              "fields":{
+                "exclude": ["publisher_id"]
+              },
+              "policy": {
+                "database": "@item.title ne 'Test'"
+              }
+            }
+          ]
+      }
       ],
       "mappings": {
         "id": "id",

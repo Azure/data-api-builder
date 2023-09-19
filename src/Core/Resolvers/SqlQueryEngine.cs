@@ -99,8 +99,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _sqlMetadataProvider,
                     _authorizationResolver,
                     _gQLFilterParser,
-                    parameters,
-                    ApiType.GraphQL);
+                    parameters);
 
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata?>(
                         FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure, dataSourceName)),
@@ -186,8 +185,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _sqlMetadataProvider,
                 _authorizationResolver,
                 _gQLFilterParser,
-                context.ResolvedParameters,
-                ApiType.REST);
+                context.ResolvedParameters);
             using JsonDocument? queryJson = await ExecuteAsync(structure, dataSourceName);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty result set, return an empty json array

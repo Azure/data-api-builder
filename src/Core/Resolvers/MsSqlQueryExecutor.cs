@@ -289,7 +289,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         statusCode: HttpStatusCode.Forbidden,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
                 }
-                
+
                 // This is used as an identifier to distinguish between update/insert operations.
                 // Later helps to add location header in case of insert operation.
                 dbResultSet.ResultProperties.Add(SqlMutationEngine.IS_UPDATE_RESULT_SET, true);

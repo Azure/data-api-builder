@@ -70,7 +70,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
-              apiRequestType: ApiType.REST,
               operationType: EntityActionOperation.Upsert,
               httpContext: httpContext)
         {

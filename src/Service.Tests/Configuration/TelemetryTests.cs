@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
 

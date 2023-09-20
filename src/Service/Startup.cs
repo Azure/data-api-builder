@@ -580,7 +580,7 @@ namespace Azure.DataApiBuilder.Service
 
                 if (string.IsNullOrWhiteSpace(AppInsightsOptions.ConnectionString))
                 {
-                    _logger.LogWarning("Logs won't be sent to Application Insights as connection string is not available in the runtime config.");
+                    _logger.LogWarning("Logs won't be sent to Application Insights because an Application Insights connection string is not available in the runtime config.");
                     return;
                 }
 

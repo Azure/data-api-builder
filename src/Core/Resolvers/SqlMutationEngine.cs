@@ -587,7 +587,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="jsonDocument">Result of the select database operation</param>
         /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
-        private static CreatedResult ConstructCreatedResultResponse(Dictionary<string, object?> resultRow, JsonDocument? jsonDocument, string primaryKeyRoute ,bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
+        private static CreatedResult ConstructCreatedResultResponse(Dictionary<string, object?> resultRow, JsonDocument? jsonDocument, string primaryKeyRoute, bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
         {
             // When the database policy is defined for the read action, a subsequent select query will be executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.
@@ -614,7 +614,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="jsonDocument">Result of the select database operation</param>
         /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
-        private static OkObjectResult ConstructOkMutationResponse(Dictionary<string,object?> resultRow, JsonDocument? jsonDocument, bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
+        private static OkObjectResult ConstructOkMutationResponse(Dictionary<string, object?> resultRow, JsonDocument? jsonDocument, bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
         {
             // When the database policy is defined for the read action, a subsequent select query will be executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.

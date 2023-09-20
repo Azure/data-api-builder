@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             Mock<GQLFilterParser> _gQLFilterParser = new(provider, _metadataProviderFactory.Object);
 
-            Mock<IQueryManagerFactory> _queryManagerFactory = new();
+            Mock<IAbstractQueryManagerFactory> _queryManagerFactory = new();
 
             _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder.Object);
             _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor.Object);

@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
         /// <inheritdoc/>
         public QueryEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
-            IQueryManagerFactory queryManagerFactory,
+            IAbstractQueryManagerFactory queryManagerFactory,
             IMetadataProviderFactory metadataProviderFactory,
             CosmosClientProvider cosmosClientProvider,
             IHttpContextAccessor contextAccessor,

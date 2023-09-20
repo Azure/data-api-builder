@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class SqlQueryEngine : IQueryEngine
     {
         private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
-        private readonly IQueryManagerFactory _queryFactory;
+        private readonly IAbstractQueryManagerFactory _queryFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly ILogger<IQueryEngine> _logger;
@@ -37,7 +37,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // Constructor.
         // </summary>
         public SqlQueryEngine(
-            IQueryManagerFactory queryFactory,
+            IAbstractQueryManagerFactory queryFactory,
             IMetadataProviderFactory sqlMetadataProviderFactory,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,

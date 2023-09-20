@@ -106,7 +106,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IQueryExecutor> queryExecutor = new();
             IQueryBuilder queryBuilder = new MsSqlQueryBuilder();
 
-            Mock<IQueryManagerFactory> engineFactory = new();
+            Mock<IAbstractQueryManagerFactory> engineFactory = new();
             engineFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             engineFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
 
@@ -171,7 +171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
                 // Setup Mock engine Factory
-                Mock<IQueryManagerFactory> queryManagerFactory = new();
+                Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                 queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 

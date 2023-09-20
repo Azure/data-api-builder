@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<AuthorizationResolver>> authLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();
-            Mock<IQueryManagerFactory> queryManagerFactory = new();
+            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
             Mock<IQueryEngineFactory> queryEngineFactory = new();
 
             MsSqlQueryExecutor queryExecutor = new(

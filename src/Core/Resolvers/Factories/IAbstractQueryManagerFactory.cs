@@ -6,10 +6,10 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
     /// <summary>
-    /// QueryManager Factory.
+    /// AbstractQueryManager Factory.
     /// Used to get IQueryBuilder,IQueryExecutor and DbExceptionParser based on database type.
     /// </summary>
-    public interface IQueryManagerFactory
+    public interface IAbstractQueryManagerFactory
     {
         /// <summary>
         /// Gets Query Builder based on database type.

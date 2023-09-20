@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     {
         private readonly IDictionary<string, ISqlMetadataProvider> _metadataProviders;
 
-        public MetadataProviderFactory(RuntimeConfigProvider runtimeConfigProvider, IQueryManagerFactory engineFactory, ILogger<ISqlMetadataProvider> logger, IFileSystem fileSystem)
+        public MetadataProviderFactory(RuntimeConfigProvider runtimeConfigProvider, IAbstractQueryManagerFactory engineFactory, ILogger<ISqlMetadataProvider> logger, IFileSystem fileSystem)
         {
             _metadataProviders = new Dictionary<string, ISqlMetadataProvider>();
             foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())

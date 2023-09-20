@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public class SqlMutationEngine : IMutationEngine
     {
-        private readonly IQueryManagerFactory _queryManagerFactory;
+        private readonly IAbstractQueryManagerFactory _queryManagerFactory;
         private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
         private readonly IQueryEngineFactory _queryEngineFactory;
         private readonly IAuthorizationResolver _authorizationResolver;
@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Constructor
         /// </summary>
         public SqlMutationEngine(
-            IQueryManagerFactory queryManagerFactory,
+            IAbstractQueryManagerFactory queryManagerFactory,
             IMetadataProviderFactory sqlMetadataProviderFactory,
             IQueryEngineFactory queryEngineFactory,
             IAuthorizationResolver authorizationResolver,

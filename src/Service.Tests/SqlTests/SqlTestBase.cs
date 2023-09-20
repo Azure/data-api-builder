@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
-        protected static Mock<IQueryManagerFactory> _queryManagerFactory;
+        protected static Mock<IAbstractQueryManagerFactory> _queryManagerFactory;
         protected static Mock<IQueryEngineFactory> _queryEngineFactory;
         protected static Mock<IMetadataProviderFactory> _metadataProviderFactory;
         protected static DbExceptionParser _dbExceptionParser;
@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider);
 
             // Setup Mock engine Factory
-            _queryManagerFactory = new Mock<IQueryManagerFactory>();
+            _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
             _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
             _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
 
@@ -245,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static void SetUpSQLMetadataProvider(RuntimeConfigProvider runtimeConfigProvider)
         {
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
-            _queryManagerFactory = new Mock<IQueryManagerFactory>();
+            _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             switch (DatabaseEngine)

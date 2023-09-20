@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
-        protected IQueryManagerFactory EngineFactory { get; init; }
+        protected IAbstractQueryManagerFactory EngineFactory { get; init; }
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
-            IQueryManagerFactory engineFactory,
+            IAbstractQueryManagerFactory engineFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName)
         {

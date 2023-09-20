@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
     /// QueryManagerFactory. Implements IQueryManagerFactory
     /// Used to get the appropriate query builder, query executor and exception parser and  based on the database type.
     /// </summary>
-    public class QueryManagerFactory : IQueryManagerFactory
+    public class QueryManagerFactory : IAbstractQueryManagerFactory
     {
         private readonly IDictionary<DatabaseType, IQueryBuilder> _queryBuilders;
         private readonly IDictionary<DatabaseType, IQueryExecutor> _queryExecutors;

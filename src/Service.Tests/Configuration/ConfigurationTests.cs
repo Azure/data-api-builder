@@ -778,7 +778,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
             Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.MSSQL), typeof(SqlMutationEngine));
 
-            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IQueryManagerFactory));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IAbstractQueryManagerFactory));
             Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.MSSQL), typeof(MsSqlQueryBuilder));
             Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.MSSQL), typeof(MsSqlQueryExecutor));
 
@@ -798,7 +798,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
             Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.PostgreSQL), typeof(SqlMutationEngine));
 
-            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IQueryManagerFactory));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IAbstractQueryManagerFactory));
             Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.PostgreSQL), typeof(PostgresQueryBuilder));
             Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.PostgreSQL), typeof(PostgreSqlQueryExecutor));
 
@@ -818,7 +818,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
             Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.MySQL), typeof(SqlMutationEngine));
 
-            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IQueryManagerFactory));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IAbstractQueryManagerFactory));
             Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.MySQL), typeof(MySqlQueryBuilder));
             Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.MySQL), typeof(MySqlQueryExecutor));
 

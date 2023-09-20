@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 
             RuntimeConfigProvider provider = new(loader);
 
-            Mock<IQueryManagerFactory> queryManagerfactory = new();
+            Mock<IAbstractQueryManagerFactory> queryManagerfactory = new();
             Mock<IQueryEngineFactory> queryEngineFactory = new();
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
             Mock<ILogger<ISqlMetadataProvider>> logger = new();

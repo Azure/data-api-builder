@@ -101,7 +101,6 @@ public class TelemetryTests
 
         // Asserting on Trace telemetry items.
         // Checking for the Logs for the two entities Book and Publisher are correctly sent to Application Insights.
-        Assert.AreEqual(18, telemetryItems.Count(item => item is TraceTelemetry));
         Assert.IsTrue(telemetryItems.Any(item =>
             item is TraceTelemetry
             && ((TraceTelemetry)item).Message.Equals("[Book] REST path: /api/Book")

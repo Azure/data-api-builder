@@ -21,17 +21,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
     {
         private readonly IEnumerable<IQueryEngine> _queryEngines;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="QueryEngineFactory"/> class.
-        /// </summary>
-        /// <param name="runtimeConfigProvider">runtimeConfigProvider</param>
-        /// <param name="queryManagerFactory">queryManagerFactory</param>
-        /// <param name="metadataProviderFactory">metadataProviderFactory</param>
-        /// <param name="cosmosClientProvider">cosmsClientProvider.</param>
-        /// <param name="contextAccessor">HttpContextAccessor</param>
-        /// <param name="authorizationResolver">AuthorizationResolver.</param>
-        /// <param name="gQLFilterParser">gQLFilterParser</param>
-        /// <param name="logger">logger</param>
+        /// <inheritdoc/>
         public QueryEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
             IQueryManagerFactory queryManagerFactory,
             IMetadataProviderFactory metadataProviderFactory,
@@ -54,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             }
 
             bool cosmosEngineNeeded = dataSources.Any
-                (x => x.DatabaseType == DatabaseType.CosmosDB_NoSQL || x.DatabaseType == DatabaseType.CosmosDB_PostgreSQL);
+                (x => x.DatabaseType == DatabaseType.CosmosDB_NoSQL);
 
             if (cosmosEngineNeeded)
             {
@@ -63,19 +53,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
         }
 
-        /// <summary>
-        /// Gets the QueryEngine based on database type.
-        /// </summary>
-        /// <param name="databaseType">databaseType.</param>
-        /// <returns>IQueryEngine</returns>
-        /// <exception cref="DataApiBuilderException">exception thrown if databaseType not found.</exception>
+        /// <inheritdoc/>
         public IQueryEngine GetQueryEngine(DatabaseType databaseType)
         {
             IQueryEngine queryEngine = databaseType switch
             {
-                DatabaseType.CosmosDB_NoSQL or DatabaseType.CosmosDB_PostgreSQL => _queryEngines.First(engine => engine.GetType() == typeof(CosmosQueryEngine)),
+                DatabaseType.CosmosDB_NoSQL => _queryEngines.First(engine => engine.GetType() == typeof(CosmosQueryEngine)),
                 DatabaseType.MySQL or DatabaseType.MSSQL or DatabaseType.PostgreSQL => _queryEngines.First(engine => engine.GetType() == typeof(SqlQueryEngine)),
-                _ => throw new DataApiBuilderException($"{nameof(databaseType)}:{databaseType} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound)
+                _ => throw new DataApiBuilderException(
+                    $"{nameof(databaseType)}:{databaseType} could not be found within the config",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound)
             };
 
             return queryEngine;

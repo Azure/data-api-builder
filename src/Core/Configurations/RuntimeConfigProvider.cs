@@ -93,6 +93,12 @@ public class RuntimeConfigProvider
             if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
             {
                 _runtimeConfig = config;
+
+                // Set up the managed identity dictionary with key values for each datasource for the access token. By default, the value is null.
+                foreach ((string dataSourceName, _) in _runtimeConfig.GetDataSourceNamesToDataSourcesIterator())
+                {
+                    ManagedIdentityAccessToken[dataSourceName] = null;
+                }
             }
         }
 

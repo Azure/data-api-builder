@@ -28,6 +28,6 @@ class DataSourceFilesConverter : JsonConverter<DataSourceFiles>
         JsonSerializerOptions innerOptions = new(options);
         innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is DataSourceFilesConverter));
 
-        JsonSerializer.Serialize(writer, value, innerOptions);
+        JsonSerializer.Serialize(writer, value.SourceFiles, innerOptions);
     }
 }

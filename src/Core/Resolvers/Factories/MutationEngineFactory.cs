@@ -70,7 +70,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             {
                 DatabaseType.CosmosDB_NoSQL or DatabaseType.CosmosDB_PostgreSQL => _mutationEngines.First(engine => engine.GetType() == typeof(CosmosMutationEngine)),
                 DatabaseType.MySQL or DatabaseType.MSSQL or DatabaseType.PostgreSQL => _mutationEngines.First(engine => engine.GetType() == typeof(SqlMutationEngine)),
-                _ => throw new DataApiBuilderException($"{nameof(databaseType)}:{databaseType} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound)
+                _ => throw new DataApiBuilderException(
+                    $"{nameof(databaseType)}:{databaseType} could not be found within the config",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound)
             };
 
             return mutationEngine;

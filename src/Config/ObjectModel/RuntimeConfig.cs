@@ -70,7 +70,6 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
@@ -99,7 +98,11 @@ public record RuntimeConfig
                     catch (Exception e)
                     {
                         // Errors could include duplicate datasource names, duplicate entity names, etc.
-                        throw new DataApiBuilderException($"Error while loading datasource file {dataSourceFile} with exception {e.Message}", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        throw new DataApiBuilderException(
+                            $"Error while loading datasource file {dataSourceFile} with exception {e.Message}",
+                            HttpStatusCode.BadRequest,
+                            DataApiBuilderException.SubStatusCodes.ConfigValidationError,
+                            e.InnerException);
                     }
                 }
             }

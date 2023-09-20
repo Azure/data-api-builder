@@ -77,7 +77,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         {
             if (!_queryBuilders.TryGetValue(databaseType, out IQueryBuilder? queryBuilder))
             {
-                throw new DataApiBuilderException($"{nameof(DatabaseType)}:{databaseType} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+                throw new DataApiBuilderException(
+                    $"{nameof(DatabaseType)}:{databaseType} could not be found within the config",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
             return queryBuilder;
@@ -88,7 +91,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         {
             if (!_queryExecutors.TryGetValue(databaseType, out IQueryExecutor? queryExecutor))
             {
-                throw new DataApiBuilderException($"{nameof(databaseType)}:{databaseType} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+                throw new DataApiBuilderException(
+                    $"{nameof(databaseType)}:{databaseType} could not be found within the config",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
             return queryExecutor;
@@ -99,7 +105,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         {
             if (!_dbExceptionsParsers.TryGetValue(databaseType, out DbExceptionParser? exceptionParser))
             {
-                throw new DataApiBuilderException($"{nameof(databaseType)}:{databaseType} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+                throw new DataApiBuilderException(
+                    $"{nameof(databaseType)}:{databaseType} could not be found within the config",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
             return exceptionParser;

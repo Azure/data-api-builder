@@ -564,14 +564,21 @@ namespace Azure.DataApiBuilder.Service
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
         private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Telemetry is not null
-                && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
+            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
+                && runtimeConfig.Runtime.Telemetry is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights is not null)
             {
                 AppInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
 
+                if (!AppInsightsOptions.Enabled)
+                {
+                    _logger.LogInformation("Application Insights are disabled.");
+                    return;
+                }
+
                 if (string.IsNullOrWhiteSpace(AppInsightsOptions.ConnectionString))
                 {
-                    _logger.LogError("Logs won't be sent to Application Insights as connection string is not set in the runtime config.");
+                    _logger.LogWarning("Logs won't be sent to Application Insights as connection string is not available in the runtime config.");
                     return;
                 }
 

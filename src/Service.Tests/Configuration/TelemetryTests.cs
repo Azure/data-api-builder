@@ -56,6 +56,7 @@ public class TelemetryTests
     {
         File.Delete(CONFIG_WITH_TELEMETRY);
         File.Delete(CONFIG_WITHOUT_TELEMETRY);
+        Startup.AppInsightsOptions = new();
         Startup.CustomTelemetryChannel = null;
     }
 
@@ -268,9 +269,8 @@ public class TelemetryTests
         public void Dispose()
         { }
 
-        public async void Flush()
+        public void Flush()
         {
-            await Task.Delay(5000);
         }
 
         public void Send(ITelemetry item)

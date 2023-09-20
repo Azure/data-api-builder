@@ -93,33 +93,33 @@ public class TelemetryTests
         Console.WriteLine(telemetryItems.Any(item => item is RequestTelemetry));
         Console.WriteLine(telemetryItems.Any(item => item is ExceptionTelemetry));
         Console.WriteLine(telemetryItems.Count(item => item is TraceTelemetry));
-        Console.WriteLine(telemetryItems.Count(item => item is ExceptionTelemetry));
         Console.WriteLine(telemetryItems.Count(item => item is RequestTelemetry));
+        Console.WriteLine(telemetryItems.Count(item => item is ExceptionTelemetry));
 
         // Assert that we are sending Traces/Requests/Exceptions
         Assert.IsTrue(telemetryItems.Any(item => item is TraceTelemetry));
         Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
         Assert.IsTrue(telemetryItems.Any(item => item is ExceptionTelemetry));
 
-        // Asserting on count Exception/Request telemetry items.
-        // Assert.AreEqual(1, telemetryItems.Count(item => item is ExceptionTelemetry));
-        // Assert.AreEqual(2, telemetryItems.Count(item => item is RequestTelemetry));
+        //Asserting on count Exception/Request telemetry items.
+        Assert.AreEqual(1, telemetryItems.Count(item => item is ExceptionTelemetry));
+        Assert.AreEqual(2, telemetryItems.Count(item => item is RequestTelemetry));
 
-        // Assert.IsTrue(telemetryItems.Any(item =>
-        //     item is RequestTelemetry
-        //     && ((RequestTelemetry)item).Name.Equals("POST /graphql")
-        //     && ((RequestTelemetry)item).ResponseCode.Equals("200")
-        //     && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/graphql")));
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST /graphql")
+            && ((RequestTelemetry)item).ResponseCode.Equals("200")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/graphql")));
 
-        // Assert.IsTrue(telemetryItems.Any(item =>
-        //     item is RequestTelemetry
-        //     && ((RequestTelemetry)item).Name.Equals("POST Rest/Insert [route]")
-        //     && ((RequestTelemetry)item).ResponseCode.Equals("403")
-        //     && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/api/Publisher/id/1?name=Test")));
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST Rest/Insert [route]")
+            && ((RequestTelemetry)item).ResponseCode.Equals("403")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/api/Publisher/id/1?name=Test")));
 
-        // Assert.IsTrue(telemetryItems.Any(item =>
-        //     item is ExceptionTelemetry
-        //     && ((ExceptionTelemetry)item).Message.Equals("Authorization Failure: Access Not Allowed.")));
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is ExceptionTelemetry
+            && ((ExceptionTelemetry)item).Message.Equals("Authorization Failure: Access Not Allowed.")));
     }
 
     /// <summary>

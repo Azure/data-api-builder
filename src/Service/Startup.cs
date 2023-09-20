@@ -310,11 +310,11 @@ namespace Azure.DataApiBuilder.Service
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                // Config provided before starting the engine.
-                isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
-
                 // Configure Application Insights Telemetry
                 ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
+
+                // Config provided before starting the engine.
+                isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
 
                 if (!isRuntimeReady)
                 {
@@ -630,9 +630,6 @@ namespace Azure.DataApiBuilder.Service
             {
                 RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
                 RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-
-                // // Configure Application Insights Telemetry
-                // ConfigureApplicationInsightsTelemetry(app, runtimeConfigProvider);
 
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config

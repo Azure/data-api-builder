@@ -157,12 +157,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Given the FindRequestContext, obtains the query text, executes it against the backend and returns the result as a JsonDocument.
+        /// This method is used for REST POST, PATCH and PUT API requests.
         /// </summary>
-        /// <param name="context"></param>
-        /// <param name="datasourceName"></param>
-        /// <returns></returns>
-        public async Task<JsonDocument?> ExecuteAsyncAndGetResponseJson(FindRequestContext context, string datasourceName = "")
+        public async Task<JsonDocument?> ExecuteAsyncAndGetResponseAsJsonDocument(FindRequestContext context, string datasourceName = "")
         {
             SqlQueryStructure structure = new(
                 context,

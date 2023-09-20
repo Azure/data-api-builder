@@ -57,6 +57,15 @@ namespace Azure.DataApiBuilder.Auth
         public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, EntityActionOperation operation);
 
         /// <summary>
+        /// Returns true/false depending on whether a database policy is defined for an operation within an entity's role entry.
+        /// </summary>
+        /// <param name="entityName">Entity from request</param>
+        /// <param name="roleName">Role defined in client role header.</param>
+        /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
+        /// <returns>Returns true if a database policy is defined for the operation of a given role. If not, returns false.</returns>
+        public bool IsDBPolicyDefinedForRoleAndAction(string entityName, string roleName, EntityActionOperation operation);
+
+        /// <summary>
         /// Retrieves the policy of an operation within an entity's role entry
         /// within the permissions section of the runtime config, and tries to process
         /// the policy.

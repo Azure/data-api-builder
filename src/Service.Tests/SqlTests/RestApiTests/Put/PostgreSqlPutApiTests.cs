@@ -155,18 +155,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
-                "PutOne_Insert_Test",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT id, title, issue_number
-                        FROM " + "foo." + _integration_NonAutoGenPK_TableName + @"
-                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND title = 'Batman Returns'
-                            AND issue_number = 1234
-                    ) AS subq
-                "
-            },
-            {
                 "PutOne_Insert_Nullable_Test",
                 @"
                     SELECT to_jsonb(subq) AS data

@@ -178,6 +178,12 @@ namespace Azure.DataApiBuilder.Core.Authorization
         }
 
         /// <inheritdoc />
+        public bool IsDBPolicyDefinedForRoleAndAction(string entityName, string roleName, EntityActionOperation operation)
+        {
+            return !string.IsNullOrEmpty(GetDBPolicyForRequest(entityName, roleName, operation));
+        }
+
+        /// <inheritdoc />
         public string ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, operation);

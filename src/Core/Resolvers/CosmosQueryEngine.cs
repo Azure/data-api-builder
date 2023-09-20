@@ -196,7 +196,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public Task<JsonDocument> ExecuteAsyncAndGetResponseJson(FindRequestContext context, string datasourceName = "")
+        public Task<JsonDocument> ExecuteAsyncAndGetResponseAsJsonDocument(FindRequestContext context, string datasourceName = "")
         {
             throw new NotImplementedException();
         }

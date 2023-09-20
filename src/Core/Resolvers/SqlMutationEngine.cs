@@ -315,7 +315,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (isReadPermissionConfiguredForRole)
             {
-                isDatabasePolicyDefinedForReadAction = !string.IsNullOrEmpty(_authorizationResolver.ProcessDBPolicy(context.EntityName, roleName, EntityActionOperation.Read, GetHttpContext()));
+                isDatabasePolicyDefinedForReadAction = _authorizationResolver.IsDBPolicyDefinedForRoleAndAction(context.EntityName, roleName, EntityActionOperation.Read);
             }
 
             if (context.OperationType is EntityActionOperation.Delete)
@@ -382,10 +382,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         }
 
+                        // The role with which the REST request is executed can have database policies defined for the read action.
+                        // When the database policy is defined for the read action, a select query select query that honors the database policy
+                        // is executed to fetch the results.
                         if (isDatabasePolicyDefinedForReadAction)
                         {
                             FindRequestContext findRequestContext = ConstructFindRequestContext(context, dbResultSetRow!, roleName);
-                            jsonDocument = await _queryEngine.ExecuteAsyncAndGetResponseJson(findRequestContext);
+                            jsonDocument = await _queryEngine.ExecuteAsyncAndGetResponseAsJsonDocument(findRequestContext);
                         }
 
                         transactionScope.Complete();
@@ -401,6 +404,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw _dabExceptionWithTransactionErrorMessage;
                 }
 
+                // make sure that dbResultSetRow is not null here
                 Dictionary<string, object?> resultRow = dbResultSetRow!.Columns;
 
                 // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
@@ -410,7 +414,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     isUpdateResultSet = !PostgresQueryBuilder.IsInsert(resultRow);
                 }
 
-                
+                // When read permissions is configured without database policy, a subsequent select query will not be executed.
+                // However, the read action could have include and exclude fields configured and it
+                // Any additional fields that are present in the response are removed.
                 if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
                 {
                     HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
@@ -423,29 +429,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                 }
 
+                // When the upsert operation results in the creation of a new record, a HTTP 201 CreatedResult response is returned.
                 if (!isUpdateResultSet)
                 {
-                    if (isDatabasePolicyDefinedForReadAction)
-                    {
-                        return (jsonDocument is not null) ? new CreatedResult(location: string.Empty, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
-                                                          : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
-                    }
-
-                    return isReadPermissionConfiguredForRole ? new CreatedResult(location: string.Empty, OkMutationResponse(resultRow).Value)
-                                                             : new CreatedResult(location: string.Empty, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+                    return ConstructCreatedResultResponse(resultRow, jsonDocument, string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                 }
 
-                if (isDatabasePolicyDefinedForReadAction)
-                {
-                    return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
-                                                      : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
-                }
-
-                // Valid REST updates return OkObjectResult
-                //return  (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone()) : OkMutationResponse(resultRow);
-                return isReadPermissionConfiguredForRole ?  OkMutationResponse(resultRow)
-                                                         : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
-
+                // When the upsert operation results in the update of an existing record, a HTTP 200 OK response is returned.
+                return ConstructOkMutationResponse(resultRow, jsonDocument, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
             }
             else
             {
@@ -499,10 +490,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         }
 
+                        // The role with which the REST request is executed can have database policies defined for the read action.
+                        // When the database policy is defined for the read action, a select query that honors the database policy
+                        // is executed to fetch the results.
                         if (isDatabasePolicyDefinedForReadAction)
                         {
                             FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow!, roleName);
-                            jsonDocument = await _queryEngine.ExecuteAsyncAndGetResponseJson(findRequestContext);
+                            jsonDocument = await _queryEngine.ExecuteAsyncAndGetResponseAsJsonDocument(findRequestContext);
                         }
 
                         transactionScope.Complete();
@@ -518,8 +512,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw _dabExceptionWithTransactionErrorMessage;
                 }
 
-                // result is directly fetched from mutation result row
-                // remove columns that are excluded from read configuation
+                // When read permission is configured without a database policy, a subsequent select query will not be executed.
+                // So, if the read action has include/exclude fields configured, additional fields present in the response
+                // need to be removed.
                 if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
                 {
                     HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
@@ -534,28 +529,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (context.OperationType is EntityActionOperation.Insert)
                 {
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns);
-                    if (isDatabasePolicyDefinedForReadAction)
-                    {
-                        return (jsonDocument is not null) ? new CreatedResult(location: primaryKeyRoute, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
-                                                          : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
-                    }
-
-                    return isReadPermissionConfiguredForRole ?  new CreatedResult(location: primaryKeyRoute, OkMutationResponse(mutationResultRow!.Columns).Value)
-                                                             :  new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+                    return ConstructCreatedResultResponse(mutationResultRow!.Columns, jsonDocument, ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns), isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                 }
 
                 if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
                 {
-                    if (isDatabasePolicyDefinedForReadAction)
-                    {
-                        return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
-                                                          : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
-                    }
-
-                    // Valid REST updates return OkObjectResult
-                    return isReadPermissionConfiguredForRole ? OkMutationResponse(mutationResultRow!.Columns)
-                                                             : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+                    return ConstructOkMutationResponse(mutationResultRow!.Columns, jsonDocument, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                 }
             }
 
@@ -564,15 +543,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Constructs a FindRequestContext from the Insert/Upsert RequestContext and the results of insert/upsert database operation.
+        /// For REST POST, PUT AND PATCH API reqeusts, when there are database policies defined for the read action,
+        /// a subsequent select query that honors the database policy is executed to fetch the results.
         /// </summary>
-        /// <param name="context"></param>
-        /// <param name="mutationResultRow"></param>
-        /// <param name="roleName"></param>
-        /// <returns></returns>
+        /// <param name="context">Insert/Upsert Request context for the REST POST, PUT and PATCH request</param>
+        /// <param name="mutationResultRow">Result of the insert/upsert database operation</param>
+        /// <param name="roleName">Role with which the API request is executed</param>
+        /// <returns>Returns a FindRequestContext object constructed from the existing context and create/upsert operation results.</returns>
         private FindRequestContext ConstructFindRequestContext(RestRequestContext context, DbResultSetRow mutationResultRow, string roleName)
         {
             FindRequestContext findRequestContext = new(entityName: context.EntityName, dbo: context.DatabaseObject, isList: false);
+
+            // PrimaryKeyValuePairs in the context is populated using the primary key values from the
+            // results of the insert/upsert database operation.
             foreach (string primarykey in context.DatabaseObject.SourceDefinition.PrimaryKey)
             {
                 _sqlMetadataProvider.TryGetBackingColumn(context.EntityName, primarykey, out string? backingColumnName);
@@ -586,10 +570,58 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            IEnumerable<string> allowedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
+            // READ action for the given role can have include and exclude fields configured. Populating UpdateReturnFields
+            // ensures that the select query retrieves only those fields that are allowed for the given role.
+            findRequestContext.UpdateReturnFields(_authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read));
 
-            findRequestContext.UpdateReturnFields(allowedColumns);
             return findRequestContext;
+        }
+
+        /// <summary>
+        /// Constructs and returns a HTTP 201 Created response.
+        /// The response is constructed using results of the upsert database operation when database policy is not defined for the read permission.
+        /// If database policy is defined, the results of the subsequent select statement is used for constructing the response.
+        /// </summary>
+        /// <param name="resultRow">Reuslt of the upsert database operation</param>
+        /// <param name="jsonDocument">Result of the select database operation</param>
+        /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
+        /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
+        private static CreatedResult ConstructCreatedResultResponse(Dictionary<string, object?> resultRow, JsonDocument? jsonDocument, string primaryKeyRoute ,bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
+        {
+            // When the database policy is defined for the read action, a subsequent select query will be executed to fetch the results.
+            // So, the response of that database query is used to construct the final response to be returned.
+            if (isDatabasePolicyDefinedForReadAction)
+            {
+                return (jsonDocument is not null) ? new CreatedResult(location: primaryKeyRoute, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
+                                                  : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+            }
+
+            // When no database policy is defined for the read action, the reuslts from the upsert database operation is
+            // used to construct the final response.
+            // Also, when no read permissions are configured for the role, an empty response is returned.
+            return isReadPermissionConfiguredForRole ? new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value)
+                                                     : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+        }
+
+        /// <summary>
+        /// Constructs and returns a HTTP 200 Ok response.
+        /// The response is constructed using results of the upsert database operation when database policy is not defined for the read permission.
+        /// If database policy is defined, the results of the subsequent select statement is used for constructing the response.
+        /// </summary>
+        /// <param name="resultRow">Reuslt of the upsert database operation</param>
+        /// <param name="jsonDocument">Result of the select database operation</param>
+        /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
+        /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
+        private static OkObjectResult ConstructOkMutationResponse(Dictionary<string,object?> resultRow, JsonDocument? jsonDocument, bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
+        {
+            if (isDatabasePolicyDefinedForReadAction)
+            {
+                return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
+                                                  : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+            }
+
+            return isReadPermissionConfiguredForRole ? OkMutationResponse(resultRow)
+                                                     : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
         }
 
         /// <summary>

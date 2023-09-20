@@ -124,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// no read action configured
         /// </summary>
         [TestMethod]
-        public async Task PutOne_Update_WithNoReadAction_Test()
+        public virtual async Task PutOne_Update_WithNoReadAction_Test()
         {
             string requestBody = @"
             {
@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// fields configured for the read action for the role.
         /// </summary>
         [TestMethod]
-        public async Task PutOne_Update_WithExcludeFields_Test()
+        public virtual async Task PutOne_Update_WithExcludeFields_Test()
         {
             string requestBody = @"
             {
@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// This test also validates that the database policy configured for the read action is honored.
         /// </summary>
         [TestMethod]
-        public async Task PutOne_Update_WithReadDbPolicy_Test()
+        public virtual async Task PutOne_Update_WithReadDbPolicy_Test()
         {
             string requestBody = @"
             {

@@ -34,7 +34,9 @@ public class TelemetryTests
     /// <summary>
     /// Creates runtime config file with specified telemetry options.
     /// </summary>
-    /// <pa
+    /// <param name="configFileName">Name of the config file to be created.</param>
+    /// <param name="isTelemetryEnabled">Whether telemetry is enabled or not.</param>
+    /// <param name="telemetryConnectionString">Telemetry connection string.</param> 
     public static void SetUpTelemetryInConfig(string configFileName, bool isTelemetryEnabled, string telemetryConnectionString)
     {
         DataSource dataSource = new(DatabaseType.MSSQL,
@@ -190,6 +192,8 @@ public class TelemetryTests
     /// Validates that no telemetry data is sent to CustomTelemetryChannel when 
     /// Appsights is disabled OR when no valid connectionstring is provided.
     /// </summary>
+    /// <param name="isTelemetryEnabled">Whether telemetry is enabled or not.</param>
+    /// <param name="telemetryConnectionString">Telemetry connection string.</param>
     [DataTestMethod]
     [DataRow(false, "", DisplayName = "Configuration without a connection string and with Application Insights disabled.")]
     [DataRow(true, "", DisplayName = "Configuration without a connection string, but with Application Insights enabled.")]

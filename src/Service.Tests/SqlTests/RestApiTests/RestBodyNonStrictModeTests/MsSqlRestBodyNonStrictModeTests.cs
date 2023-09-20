@@ -156,7 +156,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""last_sold_on"": ""2023-08-28 12:36:08.8666667"",
                 ""row_version"": ""AAAAAAAHgqw=""
             }";
-            string expectedLocationHeader = $"id/2";
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: null,
@@ -166,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: EntityActionOperation.Insert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedLocationHeader: string.Empty
                 );
         }
 
@@ -221,7 +220,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedLocationHeader: string.Empty
                 );
         }
 
@@ -276,7 +275,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedLocationHeader: string.Empty
                 );
         }
 

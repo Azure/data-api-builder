@@ -12,20 +12,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <summary>
         /// Gets the appropriate metadata provider based on the data source name.
         /// </summary>
-        /// <param name="dataSourceName">dataSourceName.</param>
-        /// <returns>ISqlMetadataProvider.</returns>
         public ISqlMetadataProvider GetMetadataProvider(string dataSourceName);
 
         /// <summary>
         /// Lists the metadata providers.
         /// </summary>
-        /// <returns>IEnumerable of metadataproviders.</returns>
         public IEnumerable<ISqlMetadataProvider> ListMetadataProviders();
 
         /// <summary>
         /// Initializes the metadata providers.
         /// </summary>
-        /// <returns>Task.</returns>
         public Task InitializeAsync();
     }
 }

@@ -49,11 +49,11 @@ public record RuntimeConfig
     /// Constructor for runtimeConfig.
     /// To be used when setting up from cli json scenario.
     /// </summary>
-    /// <param name="Schema">schema.</param>
+    /// <param name="Schema">schema for config.</param>
     /// <param name="DataSource">Default datasource.</param>
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="Entities">Entities</param>
-    /// <param name="DataSourceFiles">List of datasource files for multiple db scenario.</param></param>
+    /// <param name="DataSourceFiles">List of datasource files for multiple db scenario.Null for single db scenario.</param></param>
     [JsonConstructor]
     public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, DataSourceFiles? DataSourceFiles = null)
     {
@@ -61,50 +61,50 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        this._defaultDataSourceName = Guid.NewGuid().ToString();
+        _defaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
-        this._dataSourceNameToDataSource = new Dictionary<string, DataSource>
+        _dataSourceNameToDataSource = new Dictionary<string, DataSource>
         {
-            { this._defaultDataSourceName, this.DataSource }
+            { _defaultDataSourceName, this.DataSource }
         };
 
-        this._entityNameToDataSourceName = new Dictionary<string, string>();
+        _entityNameToDataSourceName = new Dictionary<string, string>();
 
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            _entityNameToDataSourceName.TryAdd(entity.Key, this._defaultDataSourceName);
+            _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
         }
 
-        // Multiple database scenario.
+        // Process data source and entities information for each database in multiple database scenario.
         this.DataSourceFiles = DataSourceFiles;
-        IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
 
-        if (DataSourceFiles is not null)
+        if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            try
-            {
-                // Iterate through all the datasource files and load the config.
-                IFileSystem fileSystem = new FileSystem();
-                FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
+            // Iterate through all the datasource files and load the config.
+            IFileSystem fileSystem = new FileSystem();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-                foreach (string dataSourceFile in DataSourceFiles.SourceFiles ?? Enumerable.Empty<string>())
+            foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
+            {
+                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
                 {
-                    if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
+                    try
                     {
-                        this._dataSourceNameToDataSource = this._dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        this._entityNameToDataSourceName = this._entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         allEntities = allEntities.Concat(config.Entities.ToList());
                     }
+                    catch (Exception e)
+                    {
+                        // Errors could include duplicate datasource names, duplicate entity names, etc.
+                        throw new DataApiBuilderException($"Error while loading datasource file {dataSourceFile} with exception {e.Message}", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
                 }
+            }
 
-                this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
-            }
-            catch (Exception e)
-            {
-                // Errors could include invalid sub file paths, duplicated entity names, etc.
-                throw new DataApiBuilderException($"Error while loading datasource files: {e.Message}", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-            }
+            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
         }
 
     }
@@ -113,23 +113,24 @@ public record RuntimeConfig
     /// Constructor for runtimeConfig.
     /// This constructor is to be used when dynamically setting up the config as opposed to using a cli json file.
     /// </summary>
-    /// <param name="Schema"></param>
-    /// <param name="DataSource"></param>
-    /// <param name="Runtime"></param>
-    /// <param name="Entities"></param>
-    /// <param name="DefaultDataSourceName"></param>
-    /// <param name="DataSourceNameToDataSource"></param>
-    /// <param name="EntityNameToDataSourceName"></param>
-    /// <param name="DataSourceFiles"></param>
+    /// <param name="Schema">schema for config.</param>
+    /// <param name="DataSource">Default datasource.</param>
+    /// <param name="Runtime">Runtime settings.</param>
+    /// <param name="Entities">Entities</param>
+    /// <param name="DataSourceFiles">List of datasource files for multiple db scenario.Null for single db scenario.
+    /// <param name="DefaultDataSourceName">DefaultDataSourceName to maintain backward compatibility.</param>
+    /// <param name="DataSourceNameToDataSource">Dictionary mapping datasourceName to datasource object.</param>
+    /// <param name="EntityNameToDataSourceName">Dictionary mapping entityName to datasourceName.</param>
+    /// <param name="DataSourceFiles">Datasource files which represent list of child runtimeconfigs for multi-db scenario.</param>
     public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, string DefaultDataSourceName, Dictionary<string, DataSource> DataSourceNameToDataSource, Dictionary<string, string> EntityNameToDataSourceName, DataSourceFiles? DataSourceFiles = null)
     {
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        this._defaultDataSourceName = DefaultDataSourceName;
-        this._dataSourceNameToDataSource = DataSourceNameToDataSource;
-        this._entityNameToDataSourceName = EntityNameToDataSourceName;
+        _defaultDataSourceName = DefaultDataSourceName;
+        _dataSourceNameToDataSource = DataSourceNameToDataSource;
+        _entityNameToDataSourceName = EntityNameToDataSourceName;
         this.DataSourceFiles = DataSourceFiles;
     }
 

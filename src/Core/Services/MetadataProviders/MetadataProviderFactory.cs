@@ -30,19 +30,22 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
                 };
 
-                _metadataProviders.TryAdd(dataSourceName, metadataProvider);
+                _metadataProviders.Add(dataSourceName, metadataProvider);
             }
         }
 
         /// <inheritdoc />
         public ISqlMetadataProvider GetMetadataProvider(string dataSourceName)
         {
-            if (!_metadataProviders.ContainsKey(dataSourceName))
+            if (!(_metadataProviders.TryGetValue(dataSourceName, out ISqlMetadataProvider? metadataProvider)))
             {
-                throw new DataApiBuilderException($"{nameof(dataSourceName)}:{dataSourceName} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+                throw new DataApiBuilderException(
+                    $"{nameof(dataSourceName)}:{dataSourceName} could not be found within the config",
+                    HttpStatusCode.BadRequest,
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
-            return _metadataProviders[dataSourceName];
+            return metadataProvider;
         }
 
         /// <inheritdoc />

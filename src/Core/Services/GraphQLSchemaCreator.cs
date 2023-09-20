@@ -153,15 +153,14 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Generates the ObjectTypeDefinitionNodes and InputObjectTypeDefinitionNodes as part of GraphQL Schema generation
-        /// with the provided entities listed in the runtime configuration.
+        /// with the provided entities listed in the runtime configuration that match the provided database type.
         /// </summary>
         /// <param name="entities">Key/Value Collection {entityName -> Entity object}</param>
         /// <returns>Root GraphQLSchema DocumentNode and inputNodes to be processed by downstream schema generation helpers.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateSqlGraphQLObjects(RuntimeEntities entities)
+        private DocumentNode GenerateSqlGraphQLObjects(RuntimeEntities entities, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
-            Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
 
             // First pass - build up the object and input types for all the entities
             foreach ((string entityName, Entity entity) in entities)
@@ -234,17 +233,22 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             List<IDefinitionNode> nodes = new(objectTypes.Values);
-            return (new DocumentNode(nodes.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
+            return new DocumentNode(nodes);
         }
 
-        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateCosmosGraphQLObjects(HashSet<string> dataSourceNames)
+        /// <summary>
+        /// Generates the ObjectTypeDefinitionNodes and InputObjectTypeDefinitionNodes as part of GraphQL Schema generation for cosmos db.
+        /// Each datasource in cosmos has a root file provided which is used to generate the schema. 
+        /// </summary>
+        /// <param name="dataSourceNames">Hashset of datasourceNames to generate cosmos objects.</param>
+        /// <returns></returns>
+        private DocumentNode GenerateCosmosGraphQLObjects(HashSet<string> dataSourceNames, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
-            Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
             DocumentNode? root = null;
 
             if (dataSourceNames.Count() == 0)
             {
-                return (new DocumentNode(new List<IDefinitionNode>()), inputObjects);
+                return new DocumentNode(new List<IDefinitionNode>());
             }
 
             foreach (string dataSourceName in dataSourceNames)
@@ -260,14 +264,15 @@ namespace Azure.DataApiBuilder.Core.Services
                 InputTypeBuilder.GenerateInputTypesForObjectType(node, inputObjects);
             }
 
-            return (root.WithDefinitions(root.Definitions.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
+            return root;
         }
 
-        private (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateGraphQLObjects()
+        public (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateGraphQLObjects()
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             HashSet<string> cosmosDataSourceNames = new();
             IDictionary<string, Entity> sqlEntities = new Dictionary<string, Entity>();
+            Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = new();
 
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
@@ -288,14 +293,13 @@ namespace Azure.DataApiBuilder.Core.Services
 
             RuntimeEntities sql = new(new ReadOnlyDictionary<string, Entity>(sqlEntities));
 
-            (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) cosmosResult = GenerateCosmosGraphQLObjects(cosmosDataSourceNames);
-            (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) sqlResult = GenerateSqlGraphQLObjects(sql);
+            DocumentNode cosmosResult = GenerateCosmosGraphQLObjects(cosmosDataSourceNames, inputObjects);
+            DocumentNode sqlResult = GenerateSqlGraphQLObjects(sql, inputObjects);
+            // Create Root node with definitions from both cosmos and sql.
+            DocumentNode root = new(cosmosResult.Definitions.Concat(sqlResult.Definitions).ToImmutableList());
 
-            // Merge the inputObjects from both cosmos and sql
-            Dictionary<string, InputObjectTypeDefinitionNode> inputObjects = cosmosResult.Item2.Concat(sqlResult.Item2).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-
-            // Merge the definitions from both cosmos and sql
-            return (new DocumentNode(cosmosResult.Item1.Definitions.Concat(sqlResult.Item1.Definitions).ToImmutableList()), inputObjects);
+            // Merge the inputobjectType definitions from cosmos and sql onto the root.
+            return (root.WithDefinitions(root.Definitions.Concat(inputObjects.Values).ToImmutableList()), inputObjects);
         }
     }
 }

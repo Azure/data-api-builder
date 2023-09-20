@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
                 if (_queryBuilders.ContainsKey(dataSource.DatabaseType))
                 {
-                    // we have already created the builder, parser and executor for this database type. no need to create again.
+                    // we have already created the builder, parser and executor for this database type.No need to create again.
                     continue;
                 }
 
@@ -75,34 +75,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <inheritdoc />
         public IQueryBuilder GetQueryBuilder(DatabaseType databaseType)
         {
-            if (!_queryBuilders.ContainsKey(databaseType))
+            if (!_queryBuilders.TryGetValue(databaseType, out IQueryBuilder? queryBuilder))
             {
                 throw new DataApiBuilderException($"{nameof(DatabaseType)}:{databaseType} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
-            return _queryBuilders[databaseType];
+            return queryBuilder;
         }
 
         /// <inheritdoc />
         public IQueryExecutor GetQueryExecutor(DatabaseType databaseType)
         {
-            if (!_queryExecutors.ContainsKey(databaseType))
+            if (!_queryExecutors.TryGetValue(databaseType, out IQueryExecutor? queryExecutor))
             {
                 throw new DataApiBuilderException($"{nameof(databaseType)}:{databaseType} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
-            return _queryExecutors[databaseType];
+            return queryExecutor;
         }
 
         /// <inheritdoc />
         public DbExceptionParser GetDbExceptionParser(DatabaseType databaseType)
         {
-            if (!_dbExceptionsParsers.ContainsKey(databaseType))
+            if (!_dbExceptionsParsers.TryGetValue(databaseType, out DbExceptionParser? exceptionParser))
             {
                 throw new DataApiBuilderException($"{nameof(databaseType)}:{databaseType} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
             }
 
-            return _dbExceptionsParsers[databaseType];
+            return exceptionParser;
         }
 
     }

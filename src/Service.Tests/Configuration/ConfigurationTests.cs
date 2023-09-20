@@ -702,6 +702,42 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.BadRequest, postConfigOpenApiSwaggerEndpointAvailability.StatusCode);
         }
 
+        /// <summary>
+        /// Tests that sending configuration to the DAB engine post-startup will properly hydrate even with data-source-files specified.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod("Validates RuntimeConfig setup for post-configuraiton hydration with datasource-files specified.")]
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestValidMultiSourceRunTimePostStartupConfigurations(string configurationEndpoint)
+        {
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: POST_STARTUP_CONFIG_ENTITY,
+                entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
+                roleName: POST_STARTUP_CONFIG_ROLE,
+                operation: EntityActionOperation.Read,
+                includedCols: new HashSet<string>() { "*" });
+
+            // Set up Configuration with DataSource files.
+            config = config with { DataSourceFiles = new DataSourceFiles(new List<String>() { "file1", "file2" }) };
+
+            JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, config, configurationEndpoint);
+
+            HttpResponseMessage postResult = await httpClient.PostAsync(configurationEndpoint, content);
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+
+            RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
+
+            Assert.IsNotNull(configProvider, "Configuration Provider shouldn't be null after setting the configuration at runtime.");
+            Assert.IsTrue(configProvider.TryGetConfig(out RuntimeConfig configuration), "TryGetConfig should return true when the config is set.");
+            Assert.IsNotNull(configuration, "Config returned should not be null.");
+
+            Assert.AreEqual(1, configuration.GetDataSourceNamesToDataSourcesIterator().Count(), "Only the base datasource should be used in case of late hydration of config.");
+        }
+
         [TestMethod("Validates that local CosmosDB_NoSQL settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestLoadingLocalCosmosSettings()
         {

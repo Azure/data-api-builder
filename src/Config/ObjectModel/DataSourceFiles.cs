@@ -4,7 +4,8 @@
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
     /// <summary>
-    /// DataSourceFiles is a record that contains a list of files defining the runtimeConfigs for multi-db scenario.
+    /// DataSourceFiles is a record that contains a list of files defining the runtime configs for multi-db scenario.
+    /// SourceFiles is null for single-db scenario.
     /// </summary>
     /// <param name="SourceFiles"></param>
     public record DataSourceFiles(IEnumerable<string>? SourceFiles = null);

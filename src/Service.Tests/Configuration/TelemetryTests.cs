@@ -208,24 +208,24 @@ public class TelemetryTests
     [DataRow(false, TEST_APP_INSIGHTS_CONN_STRING, DisplayName = "Configuration with a connection string, but with Application Insights disabled.")]
     public async Task TestNoTelemetryItemsSentWhenDisabled_NonHostedScenario(bool isTelemetryEnabled, string telemetryConnectionString)
     {
-       SetUpTelemetryInConfig(CONFIG_WITHOUT_TELEMETRY, isTelemetryEnabled, telemetryConnectionString);
+        SetUpTelemetryInConfig(CONFIG_WITHOUT_TELEMETRY, isTelemetryEnabled, telemetryConnectionString);
 
-       string[] args = new[]
-       {
+        string[] args = new[]
+        {
            $"--ConfigFileName={CONFIG_WITHOUT_TELEMETRY}"
        };
 
-       List<ITelemetry> telemetryItems = new();
-       ITelemetryChannel telemetryChannel = new CustomTelemetryChannel(telemetryItems);
-       Startup.CustomTelemetryChannel = telemetryChannel;
+        List<ITelemetry> telemetryItems = new();
+        ITelemetryChannel telemetryChannel = new CustomTelemetryChannel(telemetryItems);
+        Startup.CustomTelemetryChannel = telemetryChannel;
 
-       using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-       {
-           await TestRestAndGraphQLRequestsOnServerInNonHostedScenario(server);
-       }
+        using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+        {
+            await TestRestAndGraphQLRequestsOnServerInNonHostedScenario(server);
+        }
 
-       // Assert that we are not sending any Traces/Requests/Exceptions to Telemetry
-       Assert.IsTrue(telemetryItems.IsNullOrEmpty());
+        // Assert that we are not sending any Traces/Requests/Exceptions to Telemetry
+        Assert.IsTrue(telemetryItems.IsNullOrEmpty());
     }
 
     /// <summary>

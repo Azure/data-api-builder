@@ -313,6 +313,9 @@ namespace Azure.DataApiBuilder.Service
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
 
+                // Configure Application Insights Telemetry
+                ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
+
                 if (!isRuntimeReady)
                 {
                     // Exiting if config provided is Invalid.
@@ -562,10 +565,9 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
-        private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfigProvider runtimeConfigurationProvider)
+        private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
-                && runtimeConfig.Runtime.Telemetry is not null
+            if (runtimeConfig.Runtime.Telemetry is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights is not null)
             {
                 AppInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
@@ -629,8 +631,8 @@ namespace Azure.DataApiBuilder.Service
                 RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
                 RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
-                // Configure Application Insights Telemetry
-                ConfigureApplicationInsightsTelemetry(app, runtimeConfigProvider);
+                // // Configure Application Insights Telemetry
+                // ConfigureApplicationInsightsTelemetry(app, runtimeConfigProvider);
 
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config

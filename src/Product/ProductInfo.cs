@@ -12,6 +12,8 @@ public static class ProductInfo
     public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
     public static readonly string DEFAULT_APP_NAME = $"dab_oss_{ProductInfo.GetProductVersion()}";
 
+    public static readonly string ROLE_NAME = "DataApiBuilder";
+
     /// <summary>
     /// Reads the product version from the executing assembly's file version information.
     /// </summary>

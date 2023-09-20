@@ -80,7 +80,9 @@ public class TelemetryTests
         };
 
         List<ITelemetry> telemetryItems = new();
-        ITelemetryChannel telemetryChannel = new CustomTelemetryChannel(telemetryItems);
+        ITelemetryChannel telemetryChannel = new CustomTelemetryChannel(telemetryItems){
+            EndpointAddress = "https://localhost/"
+        };
         Startup.CustomTelemetryChannel = telemetryChannel;
         using (TestServer server = new(Program.CreateWebHostBuilder(args)))
         {

@@ -659,27 +659,13 @@
             Role: policy_tester_excludefields,
             Actions: [
               {
-                Action: Create
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
-              },
-              {
                 Action: Read,
                 Fields: {
                   Exclude: [
                     publisher_id
                   ]
                 }
-              }
-            ]
-          },
-          {
-            Role: policy_tester_excludefields_dbpolicy,
-            Actions: [
+              },
               {
                 Action: Create
               },
@@ -688,7 +674,12 @@
               },
               {
                 Action: Delete
-              },
+              }
+            ]
+          },
+          {
+            Role: policy_tester_excludefields_dbpolicy,
+            Actions: [
               {
                 Action: Read,
                 Fields: {
@@ -699,6 +690,15 @@
                 Policy: {
                   Database: @item.title ne 'Test'
                 }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
               }
             ]
           }

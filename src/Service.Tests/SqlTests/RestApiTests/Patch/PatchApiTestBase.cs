@@ -449,7 +449,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
                     clientRoleHeader: "database_policy_tester",
-                    expectedLocationHeader: "categoryid/0/pieceid/7"
+                    expectedLocationHeader: string.Empty
                 );
         }
 

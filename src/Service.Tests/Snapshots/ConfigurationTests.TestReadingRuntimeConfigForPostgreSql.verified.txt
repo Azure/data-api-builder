@@ -306,6 +306,9 @@
               },
               {
                 Action: Create
+              },
+              {
+                Action: Read
               }
             ]
           },
@@ -635,6 +638,67 @@
               },
               {
                 Action: Create
+              }
+            ]
+          },
+          {
+            Role: policy_tester_noread,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: policy_tester_excludefields,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            Role: policy_tester_excludefields_dbpolicy,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                },
+                Policy: {
+                  Database: @item.title ne 'Test'
+                }
               }
             ]
           }

@@ -128,6 +128,8 @@ namespace Azure.DataApiBuilder.Core.Configurations
                         HttpStatusCode.ServiceUnavailable,
                         DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
 
+                // The schema is provided through GraphQLSchema and not the Schema file when the configuration
+                // is received after startup.
                 if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
                 {
                     if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))

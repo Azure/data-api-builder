@@ -111,19 +111,19 @@ public class TelemetryTests
             && ((TraceTelemetry)item).SeverityLevel == SeverityLevel.Information));
 
         // Asserting on Request telemetry items.
-        // Assert.AreEqual(2, telemetryItems.Count(item => item is RequestTelemetry));
+        Assert.AreEqual(2, telemetryItems.Count(item => item is RequestTelemetry));
 
-        // Assert.IsTrue(telemetryItems.Any(item =>
-        //     item is RequestTelemetry
-        //     && ((RequestTelemetry)item).Name.Equals("POST /graphql")
-        //     && ((RequestTelemetry)item).ResponseCode.Equals("200")
-        //     && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/graphql")));
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST /graphql")
+            && ((RequestTelemetry)item).ResponseCode.Equals("200")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/graphql")));
 
-        // Assert.IsTrue(telemetryItems.Any(item =>
-        //     item is RequestTelemetry
-        //     && ((RequestTelemetry)item).Name.Equals("POST Rest/Insert [route]")
-        //     && ((RequestTelemetry)item).ResponseCode.Equals("403")
-        //     && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/api/Publisher/id/1?name=Test")));
+        Assert.IsTrue(telemetryItems.Any(item =>
+            item is RequestTelemetry
+            && ((RequestTelemetry)item).Name.Equals("POST Rest/Insert [route]")
+            && ((RequestTelemetry)item).ResponseCode.Equals("403")
+            && ((RequestTelemetry)item).Url.PathAndQuery.Equals("/api/Publisher/id/1?name=Test")));
 
         // Assert on the Exceptions telemetry items.
         Assert.AreEqual(1, telemetryItems.Count(item => item is ExceptionTelemetry));
@@ -193,6 +193,8 @@ public class TelemetryTests
             // POST request on non-accessible entity
             HttpRequestMessage restRequest = new(HttpMethod.Post, "/api/Publisher/id/1?name=Test");
             await client.SendAsync(restRequest);
+
+            System.Threading.Thread.Sleep(5000);
         }
     }
 

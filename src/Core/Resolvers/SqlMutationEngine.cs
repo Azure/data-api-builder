@@ -418,7 +418,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // any additional fields that are present in the response are removed.
                     if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
                     {
-                        HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
+                        IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
                         foreach (string columnInResponse in resultRow.Keys)
                         {
                             if (!allowedExposedColumns.Contains(columnInResponse))
@@ -522,7 +522,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // need to be removed.
                     if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
                     {
-                        HashSet<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read).ToHashSet();
+                        IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
                         foreach (string columnInResponse in mutationResultRow!.Columns.Keys)
                         {
                             if (!allowedExposedColumns.Contains(columnInResponse))

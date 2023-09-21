@@ -153,9 +153,10 @@ namespace Azure.DataApiBuilder.Core.Models
                     if (!relationshipField)
                     {
                         string graphQLTypeName = queryStructure.EntityName;
+                        string originalEntityName = metadataProvider.GetEntityName(graphQLTypeName);
 
                         bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
-                            entityIdentifier: graphQLTypeName,
+                            entityName: originalEntityName,
                             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
                             operation: EntityActionOperation.Read,
                             columns: new[] { name });

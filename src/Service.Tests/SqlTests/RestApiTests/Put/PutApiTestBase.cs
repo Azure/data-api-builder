@@ -195,6 +195,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
+        /// Tests that for a successful PUT API request, the response returned takes into account the database policy configured for the read action.
+        /// policy_tester_excludefields_dbpolicy role has a database policy configured for read action that prevents the retrieval of rows with title = Test.
+        /// Since, this test updates the title to a different value, a non-empty response body is expected.
+        /// Also, since the role excludes the publisher_id field, response should not contain the publisher_id field.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PutOne_Update_WithReadDbPolicyUnsatisfied_Test()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""The Hobbit Returns to The Shire"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/7",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(PutOne_Update_WithExcludeFields_Test)),
+                    operationType: EntityActionOperation.Upsert,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+                );
+        }
+
+        /// <summary>
         /// Tests that the PUT updates can only update the rows which are accessible after applying the
         /// security policy which uses data from session context.
         /// </summary>

@@ -428,6 +428,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             );
         }
 
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes into account the database policy
+        /// and the include/exclude configuration set up for READ action of the role with which the request was executed.
+        /// The database policy configured for the read action does not allow the query to select any records when title = Test.
+        /// Since, this test updates the title to a different value, the response returned should be non-empty and should not contain
+        /// publisher_id field as it is excluded.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithReadDatabasePolicyUnsatisfiedTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithExcludeFieldsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+            );
+        }
+
         #endregion
 
         #region Negative Tests

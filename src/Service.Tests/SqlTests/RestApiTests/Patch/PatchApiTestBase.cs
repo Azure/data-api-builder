@@ -520,7 +520,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         /// to Test the response must be empty.
         /// </summary>
         [TestMethod]
-        public virtual async Task Patch_Update_WithReadDatabasePoliciesTest()
+        public virtual async Task Patch_Update_WithReadDatabasePolicyTest()
         {
             string requestBody = @"
             {
@@ -539,6 +539,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 );
         }
 
+        /// <summary>
+        /// Tests that for a successful PATCH API request, the response returned takes into account the database policy configured for the read action.
+        /// URI Path: PK of existing record.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects:
+        /// Status: 200 OK
+        /// Response Body: Non-Empty and does not contain the publisher_id field. The read action for the role used in this test has a database policy
+        /// defined which states that title cannot be equal to Test. Since, this test updates the title
+        /// to a different the response must be non-empty. Also, since the role excludes the publisher_id field, the repsonse should not
+        /// contain publisher_id field.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task Patch_Update_WithReadDatabasePolicyUnsatisfiedTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Heart of Darkness""
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "id/8",
+                    queryString: null,
+                    entityNameOrPath: _integrationEntityName,
+                    sqlQuery: GetQuery(nameof(Patch_Update_WithExcludeFieldsTest)),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.OK,
+                    clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+                );
+        }
         #endregion
 
         #region Negative Tests

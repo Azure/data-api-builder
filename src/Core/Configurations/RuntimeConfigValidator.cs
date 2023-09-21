@@ -128,17 +128,22 @@ namespace Azure.DataApiBuilder.Core.Configurations
                         HttpStatusCode.ServiceUnavailable,
                         DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
 
-                if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                // The schema is provided through GraphQLSchema and not the Schema file when the configuration
+                // is received after startup.
+                if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
                 {
-                    throw new DataApiBuilderException(
-                        "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
-                        HttpStatusCode.ServiceUnavailable,
-                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                }
+                    if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                    {
+                        throw new DataApiBuilderException(
+                            "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
+                            HttpStatusCode.ServiceUnavailable,
+                            DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
 
-                if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
-                {
-                    throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                    if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
+                    {
+                        throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                    }
                 }
             }
         }

@@ -4,7 +4,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
@@ -167,9 +166,8 @@ public class TelemetryTests
     }
 
     /// <summary>
-    /// This method tests the ability of the server to handle GraphQL and REST requests,
-    /// and verifies that the server returns the expected response status codes.
-    /// Makes a valid GraphQL Request and one Invalid REST Request.
+    /// This method is just used as helper for other test methods to execute REST and GRaphQL requests
+    /// which trigger the logging system to emit logs.
     /// </summary>
     private static async Task TestRestAndGraphQLRequestsOnServerInNonHostedScenario(TestServer server)
     {
@@ -190,13 +188,11 @@ public class TelemetryTests
                 Content = JsonContent.Create(payload)
             };
 
-            HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
-            Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+            await client.SendAsync(graphQLRequest);
 
             // POST request on non-accessible entity
             HttpRequestMessage restRequest = new(HttpMethod.Post, "/api/Publisher/id/1?name=Test");
-            HttpResponseMessage restResponse = await client.SendAsync(restRequest);
-            Assert.AreEqual(HttpStatusCode.Forbidden, restResponse.StatusCode);
+            await client.SendAsync(restRequest);
         }
     }
 

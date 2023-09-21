@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
@@ -1947,9 +1948,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()
         {
-            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
+            RuntimeConfig configuration = ReadCosmosConfigurationFromFile();
             return new(
-                File.ReadAllText(cosmosFile),
+                configuration.ToJson(),
                 File.ReadAllText("schema.gql"),
                 $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}",
                 AccessToken: null);
@@ -1957,7 +1958,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParametersV2 GetCosmosConfigurationParametersV2()
         {
-            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
+            RuntimeConfig configuration = ReadCosmosConfigurationFromFile();
             RuntimeConfig overrides = new(
                 null,
                 new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
@@ -1965,10 +1966,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 null);
 
             return new(
-                File.ReadAllText(cosmosFile),
+                configuration.ToJson(),
                 overrides.ToJson(),
                 File.ReadAllText("schema.gql"),
                 AccessToken: null);
+        }
+
+        private static RuntimeConfig ReadCosmosConfigurationFromFile()
+        {
+            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
+
+            string configurationFileContents = File.ReadAllText(cosmosFile);
+            if (!RuntimeConfigLoader.TryParseConfig(configurationFileContents, out RuntimeConfig config))
+            {
+                throw new Exception("Failed to parse configuration file.");
+            }
+
+            // The Schema file isn't provided in the configuration file when going through the configuration endpoint so we're removing it.
+            config.DataSource.Options.Remove("Schema");
+            return config;
         }
 
         /// <summary>

@@ -378,7 +378,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// REST POST API request. This test also validates that an empty response is returned
         /// when no read action is configured for the role with which the POST request is executed.
         /// </summary>
-        /// <returns></returns>        
         [TestMethod]
         public virtual async Task InsertOneWithNoReadPermissionsTest()
         {
@@ -407,6 +406,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// REST POST API request. This test also validates that the response returned takes
         /// into account the database policies set up for READ action of the role with which
         /// the request was executed.
+        /// The database policy configured for the read action does not allow the query to select any records when title = Test.
+        /// Since, this test updates the title to Test, the response returned will be empty.
         /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithReadDatabasePolicyTest()

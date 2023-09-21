@@ -146,8 +146,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request.
-        /// This test also validates that the response body contains fields in accordance to the
-        /// fields configured for the read action for the role.
+        /// This test also validates that the response body takes into consideration the include and exclude fields configured for the read action.
+        /// The read action for the role excludes the publisher_id field. So, the response should contain only the id and title fields.
         /// </summary>
         [TestMethod]
         public virtual async Task PutOne_Update_WithExcludeFields_Test()
@@ -173,6 +173,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         /// <summary>
         /// Tests the PutOne functionality with a REST PUT request.
         /// This test also validates that the database policy configured for the read action is honored.
+        /// policy_tester_excludefields_dbpolicy role has a database policy configured for read action that prevents the retrieval of rows with title = Test.
+        /// Since, this test updates the title to Test, an empty response body is expected for the PUT request.
         /// </summary>
         [TestMethod]
         public virtual async Task PutOne_Update_WithReadDbPolicy_Test()

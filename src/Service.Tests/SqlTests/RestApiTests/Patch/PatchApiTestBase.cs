@@ -458,7 +458,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
         /// Expects:
-        /// Status: 200 OK where sqlQuery validates update.
+        /// Status: 200 OK since the PATCH operation results in an update
         /// Response Body: Empty because the role policy_tester_noread has no read action configured.
         /// </summary>
         [TestMethod]
@@ -486,7 +486,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
         /// Expects:
-        /// Status: 200 OK where sqlQuery validates update.
+        /// Status: 200 OK as PATCH operation results in an update operation.
         /// Response Body: Contains only the id, title fields as publisher_id field is excluded in the read configuration.
         /// </summary>
         [TestMethod]

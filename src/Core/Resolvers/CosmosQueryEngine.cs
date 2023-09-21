@@ -196,12 +196,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public Task<JsonDocument> ExecuteAsyncAndGetResponseAsJsonDocument(FindRequestContext context, string datasourceName = "")
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <inheritdoc />
         public JsonDocument ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             //TODO: Try to avoid additional deserialization/serialization here.

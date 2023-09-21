@@ -2494,6 +2494,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             { entityName, entity }
         };
 
+            // Adding an entity with only Authorized Access
+            Entity anotherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
+                Relationships: null,
+                Mappings: null
+                );
+            entityMap.Add("Publisher", anotherEntity);
+
             return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,

@@ -345,8 +345,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Test to validate the successful creation of an item in the database through a
-        /// REST POST API request. This test also validates that the response returned takes
+        /// Test to validate that for a successful POST API request, the response returned takes
         /// into account the fields configuration set for READ action of the role with which
         /// the request was executed.
         /// </summary>
@@ -374,9 +373,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Test to validate the successful creation of an item in the database through a
-        /// REST POST API request. This test also validates that an empty response is returned
-        /// when no read action is configured for the role with which the POST request is executed.
+        /// Test to validate that for a successful POST API request, the response returned takes into account that no read action is configured for the role
+        /// and returns an empty response.
         /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithNoReadPermissionsTest()
@@ -402,10 +400,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Test to validate the successful creation of an item in the database through a
-        /// REST POST API request. This test also validates that the response returned takes
-        /// into account the database policies set up for READ action of the role with which
-        /// the request was executed.
+        /// Test to validate that for a successful POST API request, the response returned takes into account the database policies set up
+        /// for READ action of the role with which the request was executed.
         /// The database policy configured for the read action does not allow the query to select any records when title = Test.
         /// Since, this test updates the title to Test, the response returned will be empty.
         /// </summary>

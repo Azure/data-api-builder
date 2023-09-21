@@ -454,7 +454,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Tests REST PatchOne which results in an incremental update
+        /// Tests that for a successful PATCH API request, the response returned takes into account that no read action is configured for the role.
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
         /// Expects:
@@ -482,7 +482,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Tests REST PatchOne which results in an incremental update
+        /// Tests that for a successful PATCH API request, the response returned takes into account the include and exclude fields configured for the read action.
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
         /// Expects:
@@ -510,11 +510,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         }
 
         /// <summary>
-        /// Tests REST PatchOne which results in an incremental update
+        /// Tests that for a successful PATCH API request, the response returned takes into account the database policy configured for the read action.
         /// URI Path: PK of existing record.
         /// Req Body: Valid Parameter with intended update.
         /// Expects:
-        /// Status: 200 OK where sqlQuery validates update.
+        /// Status: 200 OK
         /// Response Body: Empty. The read action for the role used in this test has a database policy
         /// defined which states that title cannot be equal to Test. Since, this test updates the title
         /// to Test the response must be empty.

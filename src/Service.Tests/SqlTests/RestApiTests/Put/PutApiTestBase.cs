@@ -119,9 +119,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Tests the PutOne functionality with a REST PUT request.
-        /// Also validates that an empty response body is returned since the role has
-        /// no read action configured
+        /// Tests that for a successful PUT API request, the response returned takes into account that no read action is configured for the role.
+        /// Since, the role has no read action configured, an empty response is expected.
         /// </summary>
         [TestMethod]
         public virtual async Task PutOne_Update_WithNoReadAction_Test()
@@ -145,9 +144,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Tests the PutOne functionality with a REST PUT request.
-        /// This test also validates that the response body takes into consideration the include and exclude fields configured for the read action.
-        /// The read action for the role excludes the publisher_id field. So, the response should contain only the id and title fields.
+        /// Tests that for a successful PUT API request, the response returned takes into account the include and exclude fields configured for the read action.
+        /// The read action for the role excludes the publisher_id field. So, the response is expected to contain only the id and title fields.
         /// </summary>
         [TestMethod]
         public virtual async Task PutOne_Update_WithExcludeFields_Test()
@@ -171,10 +169,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         }
 
         /// <summary>
-        /// Tests the PutOne functionality with a REST PUT request.
-        /// This test also validates that the database policy configured for the read action is honored.
+        /// Tests that for a successful PUT API request, the response returned takes into account the database policy configured for the read action.
         /// policy_tester_excludefields_dbpolicy role has a database policy configured for read action that prevents the retrieval of rows with title = Test.
-        /// Since, this test updates the title to Test, an empty response body is expected for the PUT request.
+        /// Since, this test updates the title to Test, an empty response body is expected.
         /// </summary>
         [TestMethod]
         public virtual async Task PutOne_Update_WithReadDbPolicy_Test()

@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
                             {
 
-                                isUpdateResultSet = Convert.ToBoolean(isUpdateResultSetValue);                             
+                                isUpdateResultSet = Convert.ToBoolean(isUpdateResultSetValue);
                             }
 
                             // The role with which the REST request is executed can have a database policy defined for the read action.
@@ -549,8 +549,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             }
 
-            
-
             // if we have not yet returned, record is null
             return null;
         }
@@ -601,7 +599,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
         private static CreatedResult ConstructCreatedResultResponse(Dictionary<string, object?> resultRow, JsonDocument? jsonDocument, string primaryKeyRoute, bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
         {
-            // When the database policy is defined for the read action, a subsequent select query will be executed to fetch the results.
+            // When the database policy is defined for the read action, a select query in another roundtrip to the database will be executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.
             if (isDatabasePolicyDefinedForReadAction)
             {
@@ -609,9 +607,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
             }
 
-            // When no database policy is defined for the read action, the reuslts from the upsert database operation is
+            // When no database policy is defined for the read action, the results from the upsert database operation is
             // used to construct the final response.
-            // When no read permissions are configured for the role, or all the fields are excluded
+            // When no read permission is configured for the role, or all the fields are excluded
             // an empty response is returned.
             return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value)
                                                      : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
@@ -636,9 +634,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
             }
 
-            // When no database policy is defined for the read action, the results from the upsert database operation is
+            // When no database policy is defined for the read action, the result from the upsert database operation is
             // used to construct the final response.
-            // When no read permissions are configured for the role, or all the fields are excluded
+            // When no read permission is configured for the role, or all the fields are excluded
             // an empty response is returned.
             return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? OkMutationResponse(resultRow)
                                                      : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());

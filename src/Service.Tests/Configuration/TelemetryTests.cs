@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -93,9 +94,16 @@ public class TelemetryTests
 
         List<ITelemetry> telemetryItems = ((CustomTelemetryChannel)telemetryChannel).GetTelemetryItems();
 
+        Console.WriteLine(telemetryItems.Any(item => item is TraceTelemetry));
+        Console.WriteLine(telemetryItems.Any(item => item is RequestTelemetry));
+        Console.WriteLine(telemetryItems.Any(item => item is ExceptionTelemetry));
+        Console.WriteLine(telemetryItems.Count(item => item is TraceTelemetry));
+        Console.WriteLine(telemetryItems.Count(item => item is RequestTelemetry));
+        Console.WriteLine(telemetryItems.Count(item => item is ExceptionTelemetry));
+        
         // Assert that we are sending Traces/Requests/Exceptions
         Assert.IsTrue(telemetryItems.Any(item => item is TraceTelemetry));
-        // Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
+        Assert.IsTrue(telemetryItems.Any(item => item is RequestTelemetry));
         Assert.IsTrue(telemetryItems.Any(item => item is ExceptionTelemetry));
 
         // Asserting on Trace telemetry items.

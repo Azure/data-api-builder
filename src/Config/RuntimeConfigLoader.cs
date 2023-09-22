@@ -145,7 +145,9 @@ public abstract class RuntimeConfigLoader
             }
 
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (
+            ex is JsonException ||
+            ex is DataApiBuilderException)
         {
             string errorMessage = "Deserialization of the configuration file failed.";
 

@@ -83,13 +83,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 if (replaceEnvVar)
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repValues, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repValues, @"""postgresql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                         "Should read the expected config");
                 }
                 else
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repKeys, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repKeys, @"""postgresql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                         "Should read the expected config");
                 }
 
@@ -204,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Environment.SetEnvironmentVariable($"'envVarName", $"_envVarValue");
             Environment.SetEnvironmentVariable($"envVarName'", $"envVarValue_");
             Environment.SetEnvironmentVariable($"'envVarName'", $"_envVarValue_");
-            Environment.SetEnvironmentVariable($"enumVarName", $"mssql");
+            Environment.SetEnvironmentVariable($"enumVarName", $"postgresql");
         }
 
         /// <summary>

@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using Azure.DataApiBuilder.Config.Converters;
+using Microsoft.Extensions.Hosting;
 
 namespace Cli.Tests;
 
@@ -157,7 +159,10 @@ public class EnvironmentTests
         );
 
         string? output = await process.StandardError.ReadLineAsync();
-        Assert.AreEqual(output, "Deserialization of the configuration file failed during a post-processing step.");
+        Assert.AreEqual("Deserialization of the configuration file failed during a post-processing step.", output);
+        output = await process.StandardError.ReadToEndAsync();
+        StringAssert.Contains(output, "Environmental Variable, "
+            + expectedEnvVarName + ", not found.", StringComparison.Ordinal);
         process.Kill();
     }
 

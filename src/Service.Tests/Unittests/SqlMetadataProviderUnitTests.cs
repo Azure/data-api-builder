@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -13,6 +14,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
+using Microsoft.Azure.Cosmos.Core;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -81,8 +83,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("")]
         public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString)
         {
+            // error message to test will be in std error so we redirect here
+            StringWriter sw = new();
+            Console.SetError(sw);
             DatabaseEngine = TestCategory.MSSQL;
-            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString, sw);
         }
 
         /// <summary>
@@ -153,7 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="databaseType"></param>
         /// <param name="connectionString"></param>
         /// <returns></returns>
-        private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString)
+        private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString, StringWriter sw = null)
         {
             TestHelper.SetupDatabaseEnvironment(databaseType);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
@@ -178,9 +183,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException ex)
             {
                 // use contains to correctly cover db/user unique error messaging
-                Assert.IsTrue(ex.Message.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                // check standard error for underlying connection string message
+                string error = sw.ToString();   
+                Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                if (databaseType is TestCategory.MSSQL)
+                {
+                    Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
+                }
+                else
+                {
+                    Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+
+                }
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();

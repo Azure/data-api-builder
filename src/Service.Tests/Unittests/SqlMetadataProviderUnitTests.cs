@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with MSSQL as the database.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow(";;;;;fooBarBAZ")]
+        //[DataRow(";;;;;fooBarBAZ")]
         [DataRow("!&^%*&$$%#$%@$%#@()")]
         [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
         [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]

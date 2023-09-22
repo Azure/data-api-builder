@@ -157,9 +157,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         [DataRow("\"notsupporteddb\"", "",
-            DisplayName="Tests that a database type which will not deserialize correctly fails.")]
+            DisplayName = "Tests that a database type which will not deserialize correctly fails.")]
         [DataRow("\"mssql\"", "\"notsupportedconnectionstring\"",
-            DisplayName="Tests that a malformed connection string fails during post-processing.")]
+            DisplayName = "Tests that a malformed connection string fails during post-processing.")]
         [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
         public void TestDataSourceDeserializationFailures(string dbType, string connectionString)
         {

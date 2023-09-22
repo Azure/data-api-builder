@@ -24,6 +24,9 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.AspNetCore;
 using HotChocolate.Types;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -46,6 +49,7 @@ namespace Azure.DataApiBuilder.Service
 
         public static bool IsLogLevelOverriddenByCli;
 
+        public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
         public Startup(IConfiguration configuration, ILogger<Startup> logger)
@@ -55,6 +59,15 @@ namespace Azure.DataApiBuilder.Service
         }
 
         public IConfiguration Configuration { get; }
+
+        /// <summary>
+        /// Useful in cases where we need to:
+        /// Send telemetry data to a custom endpoint that is not supported by the default telemetry channel.
+        /// Modify the telemetry data before it is sent, such as adding custom properties or filtering out sensitive data.
+        /// Implement custom retry logic or error handling for telemetry data that fails to send.
+        /// For testing purposes.
+        /// </summary>
+        public static ITelemetryChannel? CustomTelemetryChannel { get; set; }
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
@@ -70,6 +83,12 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(fileSystem);
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
+
+            // Add ApplicationTelemetry service and register custom ITelemetryInitializer implementation with the dependency injection
+            services.AddApplicationInsightsTelemetry();
+
+            services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
@@ -291,6 +310,9 @@ namespace Azure.DataApiBuilder.Service
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
+                // Configure Application Insights Telemetry
+                ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
+
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
 
@@ -455,7 +477,9 @@ namespace Azure.DataApiBuilder.Service
                 }
             }
 
-            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
+            TelemetryClient? appTelemetryClient = serviceProvider.GetService<TelemetryClient>();
+
+            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
         }
 
         /// <summary>
@@ -536,6 +560,55 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
+        /// Configure Application Insights Telemetry based on the loaded runtime configuration. If Application Insights
+        /// is enabled, we can track different events and metrics.
+        /// </summary>
+        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
+        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
+        private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig.Runtime.Telemetry is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights is not null)
+            {
+                AppInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
+
+                if (!AppInsightsOptions.Enabled)
+                {
+                    _logger.LogInformation("Application Insights are disabled.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(AppInsightsOptions.ConnectionString))
+                {
+                    _logger.LogWarning("Logs won't be sent to Application Insights because an Application Insights connection string is not available in the runtime config.");
+                    return;
+                }
+
+                TelemetryClient? appTelemetryClient = app.ApplicationServices.GetService<TelemetryClient>();
+
+                if (appTelemetryClient is null)
+                {
+                    _logger.LogError("Telemetry client is not initialized.");
+                    return;
+                }
+
+                // Update the TelemetryConfiguration object
+                TelemetryConfiguration telemetryConfiguration = appTelemetryClient.TelemetryConfiguration;
+                telemetryConfiguration.ConnectionString = AppInsightsOptions.ConnectionString;
+
+                // Update default telemetry channel to custom provided telemetry channel
+                if (CustomTelemetryChannel is not null)
+                {
+                    telemetryConfiguration.TelemetryChannel = CustomTelemetryChannel;
+                }
+
+                // Updating Startup Logger to Log from Startup Class.
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
+                _logger = loggerFactory.CreateLogger<Startup>();
+            }
+        }
+
+        /// <summary>
         /// Sets Static Web Apps EasyAuth as the authentication scheme for the engine.
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
@@ -557,6 +630,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
                 RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.

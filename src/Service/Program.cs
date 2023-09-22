@@ -6,11 +6,13 @@ using System.CommandLine;
 using System.CommandLine.Parsing;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.ApplicationInsights;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.ApplicationInsights;
 
 namespace Azure.DataApiBuilder.Service
 {
@@ -110,7 +112,8 @@ namespace Azure.DataApiBuilder.Service
         /// Creates a LoggerFactory and add filter with the given LogLevel.
         /// </summary>
         /// <param name="logLevel">minimum log level.</param>
-        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel)
+        /// <param name="appTelemetryClient">Telemetry client</param>
+        public static ILoggerFactory GetLoggerFactoryForLogLevel(LogLevel logLevel, TelemetryClient? appTelemetryClient = null)
         {
             return LoggerFactory
                 .Create(builder =>
@@ -121,6 +124,23 @@ namespace Azure.DataApiBuilder.Service
                     builder.AddFilter(category: "Microsoft", logLevel);
                     builder.AddFilter(category: "Azure", logLevel);
                     builder.AddFilter(category: "Default", logLevel);
+
+                    // For Sending all the ILogger logs to Application Insights
+                    if (Startup.AppInsightsOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.AppInsightsOptions.ConnectionString))
+                    {
+                        builder.AddApplicationInsights(configureTelemetryConfiguration: (config) =>
+                            {
+                                config.ConnectionString = Startup.AppInsightsOptions.ConnectionString;
+                                if (Startup.CustomTelemetryChannel is not null)
+                                {
+                                    config.TelemetryChannel = Startup.CustomTelemetryChannel;
+                                }
+                            },
+                            configureApplicationInsightsLoggerOptions: (options) => { }
+                        )
+                        .AddFilter<ApplicationInsightsLoggerProvider>(category: string.Empty, logLevel);
+                    }
+
                     builder.AddConsole();
                 });
         }

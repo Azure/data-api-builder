@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("\"notsupporteddb\"", "")]
         [DataRow("\"mssql\"", "\"notsupportedconnectionstring\"")]
         [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
-        public void TestDeserializationFailures(string dbType, string connectionString)
+        public void TestDataSourceDeserializationFailures(string dbType, string connectionString)
         {
             string configJson = @"
 {

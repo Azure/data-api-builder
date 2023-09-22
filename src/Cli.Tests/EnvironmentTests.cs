@@ -140,7 +140,9 @@ public class EnvironmentTests
     /// Validates that engine startup fails when the CONN_STRING environment
     /// variable is not found. This test simulates this by defining the
     /// environment variable COMM_STRINGX and not setting the expected
-    /// variable CONN_STRING.
+    /// variable CONN_STRING. This will cause an exception during the post
+    /// processing of the deserialization of the config. We verify the expected
+    /// error message returns.
     /// This test has been disabled as it is causing the build server to hang indefinitely.
     /// There is something problematic with reading from stderr and stdout in this test
     /// that is causing the issue. It's possible that the stream is not being flushed
@@ -162,8 +164,7 @@ public class EnvironmentTests
         );
 
         string? output = await process.StandardError.ReadLineAsync();
-        StringAssert.Contains(output, "Environmental Variable, "
-            + expectedEnvVarName + ", not found.", StringComparison.Ordinal);
+        Assert.AreEqual(output, "Deserialization of the configuration file failed.");
         process.Kill();
     }
 

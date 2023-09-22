@@ -1,9 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using Azure.DataApiBuilder.Config.Converters;
-using Microsoft.Extensions.Hosting;
 
 namespace Cli.Tests;
 

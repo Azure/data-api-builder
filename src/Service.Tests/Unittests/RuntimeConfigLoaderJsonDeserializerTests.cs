@@ -156,8 +156,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
         }
 
-        [DataRow("\"notsupporteddb\"", "")]
-        [DataRow("\"mssql\"", "\"notsupportedconnectionstring\"")]
+        [DataRow("\"notsupporteddb\"", "",
+            DisplayName="Tests that a database type which will not deserialize correctly fails.")]
+        [DataRow("\"mssql\"", "\"notsupportedconnectionstring\"",
+            DisplayName="Tests that a malformed connection string fails during post-processing.")]
         [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
         public void TestDataSourceDeserializationFailures(string dbType, string connectionString)
         {
@@ -169,6 +171,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     },
     ""entities"":{ }
 }";
+            // replaceEnvVar: true is needed to make sure we do post-processing for the connection string case
             Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, replaceEnvVar: true));
             Assert.IsNull(deserializedConfig);
         }

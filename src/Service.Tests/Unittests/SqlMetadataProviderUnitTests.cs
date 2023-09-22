@@ -14,7 +14,6 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Microsoft.Azure.Cosmos.Core;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -184,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 // use contains to correctly cover db/user unique error messaging
                 // check standard error for underlying connection string message
-                string error = sw.ToString();   
+                string error = sw.ToString();
                 Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 if (databaseType is TestCategory.MSSQL)

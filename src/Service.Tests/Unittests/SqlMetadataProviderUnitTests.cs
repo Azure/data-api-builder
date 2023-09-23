@@ -79,12 +79,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
         [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
-        //[DataRow("")]
+        [DataRow("")]
         public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString)
         {
             // error message to test will be in std error so we redirect here
-            StringWriter sw = new();
-            Console.SetError(sw);
+            StringWriter sw = null;
+            if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                sw = new();
+                Console.SetError(sw);
+            }
+
             DatabaseEngine = TestCategory.MSSQL;
             await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString, sw);
         }
@@ -186,7 +191,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 string error = sw is null ? ex.Message : sw.ToString();
                 Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
-                if (databaseType is TestCategory.MSSQL)
+                if (sw is not null)
                 {
                     Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
                 }

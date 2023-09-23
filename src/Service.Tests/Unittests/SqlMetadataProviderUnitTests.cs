@@ -74,17 +74,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with MSSQL as the database.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow(";;;;;fooBarBAZ")]
-        [DataRow("!&^%*&$$%#$%@$%#@()")]
-        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
-        [DataRow("")]
-        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString)
+        [DataRow(";;;;;fooBarBAZ", true)]
+        [DataRow("!&^%*&$$%#$%@$%#@()", true)]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", true)]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", true)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", true)]
+        [DataRow("", false)]
+        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString, bool invalidConnectionBuilderString)
         {
-            // error message to test will be in std error so we redirect here
             StringWriter sw = null;
-            if (!string.IsNullOrWhiteSpace(connectionString))
+            // For strings that are an invalid format for the connection string builder, need to
+            // redirect std error to a string writer for comparison to expected error messaging later.
+            if (invalidConnectionBuilderString)
             {
                 sw = new();
                 Console.SetError(sw);
@@ -187,7 +188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException ex)
             {
                 // use contains to correctly cover db/user unique error messaging
-                // check standard error for underlying connection string message
+                // if sw is not null it holds the error messaging
                 string error = sw is null ? ex.Message : sw.ToString();
                 Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);

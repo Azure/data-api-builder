@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             try
             {
                 string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
-                // Setup Mock engine Factory
+                // Setup Mock query manager Factory
                 Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
                 queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);

@@ -7,7 +7,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
     /// <summary>
     /// AbstractQueryManager Factory.
-    /// Used to get IQueryBuilder,IQueryExecutor and DbExceptionParser based on database type.
+    /// Used to get IQueryBuilder, IQueryExecutor and DbExceptionParser based on database type.
     /// </summary>
     public interface IAbstractQueryManagerFactory
     {

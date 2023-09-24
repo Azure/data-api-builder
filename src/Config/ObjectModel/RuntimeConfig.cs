@@ -53,7 +53,7 @@ public record RuntimeConfig
     /// <param name="DataSource">Default datasource.</param>
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="Entities">Entities</param>
-    /// <param name="DataSourceFiles">List of datasource files for multiple db scenario.Null for single db scenario.</param></param>
+    /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
     [JsonConstructor]
     public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, DataSourceFiles? DataSourceFiles = null)
     {

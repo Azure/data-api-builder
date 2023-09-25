@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
-using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -110,7 +109,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         private static SqlMutationEngine SetupTestFixture(bool isAuthorized)
         {
             Mock<IQueryEngine> _queryEngine = new();
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
             Mock<IQueryExecutor> _queryExecutor = new();
             Mock<IQueryBuilder> _queryBuilder = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
@@ -121,18 +119,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             RuntimeConfigProvider provider = new(loader);
             DefaultHttpContext context = new();
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
-
-            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
-
             Mock<GQLFilterParser> _gQLFilterParser = new(provider, _metadataProviderFactory.Object);
-
             Mock<IAbstractQueryManagerFactory> _queryManagerFactory = new();
-
-            _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder.Object);
-            _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor.Object);
-
             Mock<IQueryEngineFactory> _queryEngineFactory = new();
-            _queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(_queryEngine.Object);
 
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
 

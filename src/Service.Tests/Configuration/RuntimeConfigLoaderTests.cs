@@ -34,6 +34,9 @@ public class RuntimeConfigLoaderTests
         Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig _), "Failed to load config");
     }
 
+    /// <summary>
+    /// Test validates that when child files are present all datasources are loaded correctly.
+    /// </summary>
     [DataTestMethod]
     [DataRow("Multidab-config.CosmosDb_NoSql.json", new string[] { "Multidab-config.MsSql.json", "Multidab-config.MySql.json", "Multidab-config.PostgreSql.json" })]
     public async Task CanLoadValidMultiSourceConfig(string configPath, IEnumerable<string> dataSourceFiles)
@@ -63,6 +66,10 @@ public class RuntimeConfigLoaderTests
         Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType, "Default datasource should be of root file database type.");
     }
 
+    /// <summary>
+    /// Test validates that load fails when datasource files have duplicate entities.
+    /// Example: Publisher entity present in the 3 sql.json files.
+    /// </summary>
     [DataTestMethod]
     [DataRow("dab-config.CosmosDb_NoSql.json", new string[] { "dab-config.MsSql.json", "dab-config.MySql.json", "dab-config.PostgreSql.json" })]
     public async Task FailLoadMultiDataSourceConfigDuplicateEntities(string configPath, IEnumerable<string> dataSourceFiles)

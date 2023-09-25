@@ -55,7 +55,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             metadataProvider.Setup(x => x.GetEntityName(It.IsAny<string>()))
                 .Returns((string entity) => entity);
             Mock<IMetadataProviderFactory> metadataProviderFactory = new();
-            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(metadataProvider.Object);
+            string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(dataSourceName)).Returns(metadataProvider.Object);
 
             return new AuthorizationResolver(runtimeConfigProvider, metadataProviderFactory.Object);
         }

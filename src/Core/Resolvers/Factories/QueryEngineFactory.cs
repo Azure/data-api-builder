@@ -33,22 +33,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         {
             _queryEngines = new List<IQueryEngine>();
 
-            IEnumerable<DataSource> dataSources = runtimeConfigProvider.GetConfig().ListAllDataSources();
+            RuntimeConfig config = runtimeConfigProvider.GetConfig();
 
-            bool sqlEngineNeeded = dataSources.Any
-                (x => x.DatabaseType == DatabaseType.MSSQL || x.DatabaseType == DatabaseType.PostgreSQL || x.DatabaseType == DatabaseType.MySQL);
-
-            if (sqlEngineNeeded)
+            if (config.SqlEngineNeeded)
             {
-                _queryEngines = _queryEngines.Append(new SqlQueryEngine(queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider));
+                _queryEngines = _queryEngines.Append(
+                    new SqlQueryEngine(queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider));
             }
 
-            bool cosmosEngineNeeded = dataSources.Any
-                (x => x.DatabaseType == DatabaseType.CosmosDB_NoSQL);
-
-            if (cosmosEngineNeeded)
+            if (config.CosmosEngineNeeded)
             {
-                _queryEngines = _queryEngines.Append(new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser));
+                _queryEngines = _queryEngines.Append(
+                    new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser));
             }
 
         }

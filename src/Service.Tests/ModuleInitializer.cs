@@ -27,6 +27,10 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
         // Ignore the datasource files as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DataSourceFiles);
+        // Ignore the CosmosEngineNeeded files as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CosmosEngineNeeded);
+        // Ignore the SqlEngineNeeded files as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.SqlEngineNeeded);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.

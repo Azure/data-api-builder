@@ -93,12 +93,6 @@ public class RuntimeConfigProvider
             if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
             {
                 _runtimeConfig = config;
-
-                // Set up the managed identity dictionary with key values for each datasource for the access token. By default, the value is null.
-                foreach ((string dataSourceName, _) in _runtimeConfig.GetDataSourceNamesToDataSourcesIterator())
-                {
-                    ManagedIdentityAccessToken[dataSourceName] = null;
-                }
             }
         }
 
@@ -178,7 +172,14 @@ public class RuntimeConfigProvider
         string? accessToken,
         string dataSourceName)
     {
-        if (ManagedIdentityAccessToken.ContainsKey(dataSourceName))
+        if (_runtimeConfig is null)
+        {
+            // if runtimeConfig is not set up, throw as cannot initialize.
+            throw new DataApiBuilderException($"{nameof(RuntimeConfig)} has not been loaded.", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        // Validate that the datasource exists in the runtimeConfig and then add or update access token.
+        if (_runtimeConfig.CheckDataSourceExists(dataSourceName))
         {
             ManagedIdentityAccessToken[dataSourceName] = accessToken;
             return true;

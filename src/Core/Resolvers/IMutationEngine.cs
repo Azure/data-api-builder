@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>JSON object result and a metadata object required to resolve the result</returns>
         public Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context,
             IDictionary<string, object?> parameters,
-            string dataSourceName = "");
+            string dataSourceName);
 
         /// <summary>
         /// Executes the mutation query and returns result as JSON object asynchronously.
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Executes the stored procedure as a mutation query and returns result as JSON asynchronously.
         /// Execution will be identical regardless of mutation operation, but result returned will differ
         /// </summary>
-        public Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "");
+        public Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName);
 
         /// <summary>
         /// Authorization check on mutation fields provided in a GraphQL Mutation request.

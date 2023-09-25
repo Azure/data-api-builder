@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     {
         private readonly IDictionary<string, ISqlMetadataProvider> _metadataProviders;
 
-        public MetadataProviderFactory(RuntimeConfigProvider runtimeConfigProvider, IAbstractQueryManagerFactory engineFactory, ILogger<ISqlMetadataProvider> logger, IFileSystem fileSystem)
+        public MetadataProviderFactory(RuntimeConfigProvider runtimeConfigProvider, IAbstractQueryManagerFactory queryManagerFactory, ILogger<ISqlMetadataProvider> logger, IFileSystem fileSystem)
         {
             _metadataProviders = new Dictionary<string, ISqlMetadataProvider>();
             foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
@@ -24,9 +24,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 ISqlMetadataProvider metadataProvider = dataSource.DatabaseType switch
                 {
                     DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(runtimeConfigProvider, fileSystem),
-                    DatabaseType.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),
-                    DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),
-                    DatabaseType.MySQL => new MySqlMetadataProvider(runtimeConfigProvider, engineFactory, logger, dataSourceName),
+                    DatabaseType.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName),
+                    DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName),
+                    DatabaseType.MySQL => new MySqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName),
                     _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
                 };
 

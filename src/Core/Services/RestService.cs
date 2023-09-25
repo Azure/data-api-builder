@@ -212,10 +212,11 @@ namespace Azure.DataApiBuilder.Core.Services
         private Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
         {
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             return context switch
             {
                 FindRequestContext => queryEngine.ExecuteAsync((FindRequestContext)context),
-                StoredProcedureRequestContext => queryEngine.ExecuteAsync((StoredProcedureRequestContext)context),
+                StoredProcedureRequestContext => queryEngine.ExecuteAsync((StoredProcedureRequestContext)context, defaultDataSourceName),
                 _ => throw new NotSupportedException("This operation is not yet supported."),
             };
         }

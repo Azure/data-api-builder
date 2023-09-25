@@ -25,10 +25,10 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
-            IAbstractQueryManagerFactory engineFactory,
+            IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName)
-            : base(runtimeConfigProvider, engineFactory, logger, dataSourceName)
+            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName)
         {
         }
 

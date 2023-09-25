@@ -280,7 +280,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 switch (ds.DatabaseType)
                 {
-                    case DatabaseType.CosmosDB_NoSQL or DatabaseType.CosmosDB_PostgreSQL:
+                    case DatabaseType.CosmosDB_NoSQL:
                         cosmosDataSourceNames.Add(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName));
                         break;
                     case DatabaseType.MSSQL or DatabaseType.MySQL or DatabaseType.PostgreSQL:

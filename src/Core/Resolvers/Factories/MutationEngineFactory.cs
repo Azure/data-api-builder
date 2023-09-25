@@ -42,33 +42,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         {
             _mutationEngines = new List<IMutationEngine>();
 
-            bool sqlEngineNeeded = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Any
-                (x => x.Value.DatabaseType == DatabaseType.MSSQL || x.Value.DatabaseType == DatabaseType.PostgreSQL || x.Value.DatabaseType == DatabaseType.MySQL);
-            if (sqlEngineNeeded)
+            RuntimeConfig config = runtimeConfigProvider.GetConfig();
+
+            if (config.SqlEngineNeeded)
             {
-                _mutationEngines = _mutationEngines.Append(new SqlMutationEngine(queryManagerFactory, metadataProviderFactory, queryEngineFactory, authorizationResolver, gQLFilterParser, httpContextAccessor, runtimeConfigProvider));
+                _mutationEngines = _mutationEngines.Append(
+                    new SqlMutationEngine(
+                        queryManagerFactory, metadataProviderFactory, queryEngineFactory, authorizationResolver, gQLFilterParser, httpContextAccessor, runtimeConfigProvider));
             }
 
-            bool cosmosEngineNeeded = runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator().Any
-                (x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL || x.Value.DatabaseType == DatabaseType.CosmosDB_PostgreSQL);
-
-            if (cosmosEngineNeeded)
+            if (config.CosmosEngineNeeded)
             {
-                _mutationEngines = _mutationEngines.Append(new CosmosMutationEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, runtimeConfigProvider));
+                _mutationEngines = _mutationEngines.Append(
+                    new CosmosMutationEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver));
             }
         }
 
-        /// <summary>
-        /// Gets the MutationEngine based on database type.
-        /// </summary>
-        /// <param name="databaseType">databaseType.</param>
-        /// <returns>IMutationEngine.</returns>
-        /// <exception cref="DataApiBuilderException">Exception if databaseType not found.</exception>
+        /// <inheritdoc/>
         public IMutationEngine GetMutationEngine(DatabaseType databaseType)
         {
             IMutationEngine mutationEngine = databaseType switch
             {
-                DatabaseType.CosmosDB_NoSQL or DatabaseType.CosmosDB_PostgreSQL => _mutationEngines.First(engine => engine.GetType() == typeof(CosmosMutationEngine)),
+                DatabaseType.CosmosDB_NoSQL => _mutationEngines.First(engine => engine.GetType() == typeof(CosmosMutationEngine)),
                 DatabaseType.MySQL or DatabaseType.MSSQL or DatabaseType.PostgreSQL => _mutationEngines.First(engine => engine.GetType() == typeof(SqlMutationEngine)),
                 _ => throw new DataApiBuilderException(
                     $"{nameof(databaseType)}:{databaseType} could not be found within the config",

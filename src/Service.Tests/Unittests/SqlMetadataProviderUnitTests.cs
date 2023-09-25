@@ -106,11 +106,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IQueryExecutor> queryExecutor = new();
             IQueryBuilder queryBuilder = new MsSqlQueryBuilder();
 
-            Mock<IAbstractQueryManagerFactory> engineFactory = new();
-            engineFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
-            engineFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
+            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
+            queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
+            queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
 
-            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, engineFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().GetDefaultDataSourceName());
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().GetDefaultDataSourceName());
             string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
             Assert.AreEqual(tableprefix, expectedPrefix);
         }

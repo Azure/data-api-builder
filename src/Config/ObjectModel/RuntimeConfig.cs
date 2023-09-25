@@ -22,6 +22,12 @@ public record RuntimeConfig
 
     public DataSourceFiles? DataSourceFiles { get; init; }
 
+    [JsonIgnore]
+    public bool CosmosEngineNeeded { get; private set; }
+
+    [JsonIgnore]
+    public bool SqlEngineNeeded { get; private set; }
+
     private string _defaultDataSourceName;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
@@ -110,6 +116,12 @@ public record RuntimeConfig
             this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
         }
 
+        SqlEngineNeeded = _dataSourceNameToDataSource.Values.Any
+            (x => x.DatabaseType == DatabaseType.MSSQL || x.DatabaseType == DatabaseType.PostgreSQL || x.DatabaseType == DatabaseType.MySQL);
+
+        CosmosEngineNeeded = _dataSourceNameToDataSource.Values.Any
+                (x => x.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+
     }
 
     /// <summary>
@@ -181,6 +193,14 @@ public record RuntimeConfig
     {
         CheckEntityNamePresent(entityName);
         return _dataSourceNameToDataSource[_entityNameToDataSourceName[entityName]];
+    }
+
+    /// <summary>
+    /// Validates if datasource is present in runtimeConfig.
+    /// </summary>
+    public bool CheckDataSourceExists(string dataSourceName)
+    {
+        return _dataSourceNameToDataSource.ContainsKey(dataSourceName);
     }
 
     /// <summary>

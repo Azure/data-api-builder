@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
-        protected IAbstractQueryManagerFactory EngineFactory { get; init; }
+        protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
@@ -103,9 +103,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
             ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
             EntitiesDataSet = new();
-            EngineFactory = engineFactory;
-            SqlQueryBuilder = EngineFactory.GetQueryBuilder(_databaseType);
-            QueryExecutor = EngineFactory.GetQueryExecutor(_databaseType);
+            QueryManagerFactory = engineFactory;
+            SqlQueryBuilder = QueryManagerFactory.GetQueryBuilder(_databaseType);
+            QueryExecutor = QueryManagerFactory.GetQueryExecutor(_databaseType);
         }
 
         /// <inheritdoc />

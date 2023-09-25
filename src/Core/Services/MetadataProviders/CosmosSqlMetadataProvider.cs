@@ -349,11 +349,5 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             return _runtimeConfig.Runtime.Host.Mode is HostMode.Development;
         }
-
-        /// <inheritdoc />
-        public string GetDatabaseSourceName()
-        {
-            throw new NotImplementedException();
-        }
     }
 }

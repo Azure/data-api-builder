@@ -111,15 +111,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // compute the mutation result before removing the element,
                         // since typical GraphQL delete mutations return the metadata of the deleted item.
                         result = await queryEngine.ExecuteAsync(
-                            context: context,
-                            parameters: GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
-                            dataSourceName: dataSourceName);
+                            context,
+                            GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
+                            dataSourceName);
 
                         Dictionary<string, object>? resultProperties =
                             await PerformDeleteOperation(
-                                entityName: entityName,
-                                parameters: parameters,
-                                sqlMetadataProvider: sqlMetadataProvider);
+                                entityName,
+                                parameters,
+                                sqlMetadataProvider);
 
                         // If the number of records affected by DELETE were zero,
                         // and yet the result was not null previously, it indicates this DELETE lost
@@ -138,11 +138,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         DbResultSetRow? mutationResultRow =
                             await PerformMutationOperation(
-                                entityName: entityName,
-                                operationType: mutationOperation,
-                                parameters: parameters,
-                                sqlMetadataProvider: sqlMetadataProvider,
-                                context: context);
+                                entityName,
+                                mutationOperation,
+                                parameters,
+                                sqlMetadataProvider,
+                                context);
 
                         if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
                             && !context.Selection.Type.IsScalarType())
@@ -152,9 +152,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
                             // represent database column names.
                             result = await queryEngine.ExecuteAsync(
-                                        context: context,
-                                        parameters: GetBackingColumnsFromCollection(entityName: entityName, parameters: mutationResultRow.Columns, sqlMetadataProvider: sqlMetadataProvider),
-                                        dataSourceName: dataSourceName);
+                                        context,
+                                        GetBackingColumnsFromCollection(entityName: entityName, parameters: mutationResultRow.Columns, sqlMetadataProvider: sqlMetadataProvider),
+                                        dataSourceName);
                         }
                     }
 

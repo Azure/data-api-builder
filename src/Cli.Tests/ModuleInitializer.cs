@@ -22,9 +22,9 @@ static class ModuleInitializer
         // Ignore the datasource files as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DataSourceFiles);
         // Ignore the CosmosEngineNeeded files as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CosmosEngineNeeded);
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CosmosDataSourceUsed);
         // Ignore the SqlEngineNeeded files as that's unimportant from a test standpoint.
-        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.SqlEngineNeeded);
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.SqlDataSourceUsed);
         // Ignore the JSON schema path as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
         // Ignore the message as that's not serialized in our config file anyway.

@@ -167,94 +167,92 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             OpenApiPaths pathsCollection = new();
 
-            foreach (ISqlMetadataProvider metadataProvider in _metadataProviderFactory.ListMetadataProviders())
+            string defaultDataSourceName = _runtimeConfig.GetDefaultDataSourceName();
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
+            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
+                string entityName = entityDbMetadataMap.Key;
+                string entityRestPath = GetEntityRestPath(entityName);
+                string entityBasePathComponent = $"/{entityRestPath}";
 
-                foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
+                DatabaseObject dbObject = entityDbMetadataMap.Value;
+                SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
+
+                // Entities which disable their REST endpoint must not be included in
+                // the OpenAPI description document.
+                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
                 {
-                    string entityName = entityDbMetadataMap.Key;
-                    string entityRestPath = GetEntityRestPath(entityName);
-                    string entityBasePathComponent = $"/{entityRestPath}";
-
-                    DatabaseObject dbObject = entityDbMetadataMap.Value;
-                    SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
-
-                    // Entities which disable their REST endpoint must not be included in
-                    // the OpenAPI description document.
-                    if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                    if (!entity.Rest.Enabled)
                     {
-                        if (!entity.Rest.Enabled)
-                        {
-                            continue;
-                        }
+                        continue;
                     }
+                }
 
-                    // Explicitly exclude setting the tag's Description property since the Name property is self-explanatory.
-                    OpenApiTag openApiTag = new()
-                    {
-                        Name = entityRestPath
-                    };
+                // Explicitly exclude setting the tag's Description property since the Name property is self-explanatory.
+                OpenApiTag openApiTag = new()
+                {
+                    Name = entityRestPath
+                };
 
-                    // The OpenApiTag will categorize all paths created using the entity's name or overridden REST path value.
-                    // The tag categorization will instruct OpenAPI document visualization tooling to display all generated paths together.
-                    List<OpenApiTag> tags = new()
+                // The OpenApiTag will categorize all paths created using the entity's name or overridden REST path value.
+                // The tag categorization will instruct OpenAPI document visualization tooling to display all generated paths together.
+                List<OpenApiTag> tags = new()
                 {
                     openApiTag
                 };
 
-                    Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entityName, dbObject);
+                Dictionary<OperationType, bool> configuredRestOperations = GetConfiguredRestOperations(entityName, dbObject);
 
-                    if (dbObject.SourceType is EntitySourceType.StoredProcedure)
+                if (dbObject.SourceType is EntitySourceType.StoredProcedure)
+                {
+                    Dictionary<OperationType, OpenApiOperation> operations = CreateStoredProcedureOperations(
+                        entityName: entityName,
+                        sourceDefinition: sourceDefinition,
+                        configuredRestOperations: configuredRestOperations,
+                        tags: tags);
+
+                    OpenApiPathItem openApiPathItem = new()
                     {
-                        Dictionary<OperationType, OpenApiOperation> operations = CreateStoredProcedureOperations(
-                            entityName: entityName,
-                            sourceDefinition: sourceDefinition,
-                            configuredRestOperations: configuredRestOperations,
-                            tags: tags);
+                        Operations = operations
+                    };
 
-                        OpenApiPathItem openApiPathItem = new()
-                        {
-                            Operations = operations
-                        };
+                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
+                }
+                else
+                {
+                    // Create operations for SourceType.Table and SourceType.View
+                    // Operations including primary key
+                    Dictionary<OperationType, OpenApiOperation> pkOperations = CreateOperations(
+                        entityName: entityName,
+                        sourceDefinition: sourceDefinition,
+                        includePrimaryKeyPathComponent: true,
+                        tags: tags);
 
-                        pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
-                    }
-                    else
+                    Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
+                    string pkPathComponents = pkComponents.Item1;
+                    string fullPathComponent = entityBasePathComponent + pkPathComponents;
+
+                    OpenApiPathItem openApiPkPathItem = new()
                     {
-                        // Create operations for SourceType.Table and SourceType.View
-                        // Operations including primary key
-                        Dictionary<OperationType, OpenApiOperation> pkOperations = CreateOperations(
-                            entityName: entityName,
-                            sourceDefinition: sourceDefinition,
-                            includePrimaryKeyPathComponent: true,
-                            tags: tags);
+                        Operations = pkOperations,
+                        Parameters = pkComponents.Item2
+                    };
 
-                        Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
-                        string pkPathComponents = pkComponents.Item1;
-                        string fullPathComponent = entityBasePathComponent + pkPathComponents;
+                    pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
 
-                        OpenApiPathItem openApiPkPathItem = new()
-                        {
-                            Operations = pkOperations,
-                            Parameters = pkComponents.Item2
-                        };
+                    // Operations excluding primary key
+                    Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
+                        entityName: entityName,
+                        sourceDefinition: sourceDefinition,
+                        includePrimaryKeyPathComponent: false,
+                        tags: tags);
 
-                        pathsCollection.TryAdd(fullPathComponent, openApiPkPathItem);
+                    OpenApiPathItem openApiPathItem = new()
+                    {
+                        Operations = operations
+                    };
 
-                        // Operations excluding primary key
-                        Dictionary<OperationType, OpenApiOperation> operations = CreateOperations(
-                            entityName: entityName,
-                            sourceDefinition: sourceDefinition,
-                            includePrimaryKeyPathComponent: false,
-                            tags: tags);
-
-                        OpenApiPathItem openApiPathItem = new()
-                        {
-                            Operations = operations
-                        };
-
-                        pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
-                    }
+                    pathsCollection.TryAdd(entityBasePathComponent, openApiPathItem);
                 }
             }
 
@@ -801,79 +799,80 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             Dictionary<string, OpenApiSchema> schemas = new();
 
-            foreach (ISqlMetadataProvider metadataProvider in _metadataProviderFactory.ListMetadataProviders())
-            {
-                foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
-                {
-                    // Entities which disable their REST endpoint must not be included in
-                    // the OpenAPI description document.
-                    string entityName = entityDbMetadataMap.Key;
-                    DatabaseObject dbObject = entityDbMetadataMap.Value;
+            // for rest scenario we need the default datasource name.
+            string defaultDataSourceName = _runtimeConfig.GetDefaultDataSourceName();
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
 
-                    if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
+            {
+                // Entities which disable their REST endpoint must not be included in
+                // the OpenAPI description document.
+                string entityName = entityDbMetadataMap.Key;
+                DatabaseObject dbObject = entityDbMetadataMap.Value;
+
+                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                {
+                    if (!entity.Rest.Enabled)
                     {
-                        if (!entity.Rest.Enabled)
+                        continue;
+                    }
+                }
+
+                SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
+                HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList(), metadataProvider);
+                HashSet<string> nonAutoGeneratedPKColumnNames = new();
+
+                if (dbObject.SourceType is EntitySourceType.StoredProcedure)
+                {
+                    // Request body schema whose properties map to stored procedure parameters
+                    DatabaseStoredProcedure spObject = (DatabaseStoredProcedure)dbObject;
+                    schemas.Add(entityName + SP_REQUEST_SUFFIX, CreateSpRequestComponentSchema(fields: spObject.StoredProcedureDefinition.Parameters));
+
+                    // Response body schema whose properties map to the stored procedure's first result set columns
+                    // as described by sys.dm_exec_describe_first_result_set. 
+                    schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
+                }
+                else
+                {
+                    // Create component schema for FULL entity with all primary key columns (included auto-generated)
+                    // which will typically represent the response body of a request or a stored procedure's request body.
+                    schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
+
+                    // Create an entity's request body component schema excluding autogenerated primary keys.
+                    // A POST request requires any non-autogenerated primary key references to be in the request body.
+                    foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
+                    {
+                        // Non-Autogenerated primary key(s) should appear in the request body.
+                        if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
                         {
+                            nonAutoGeneratedPKColumnNames.Add(primaryKeyColumn);
                             continue;
                         }
-                    }
 
-                    SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
-                    HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList(), metadataProvider);
-                    HashSet<string> nonAutoGeneratedPKColumnNames = new();
-
-                    if (dbObject.SourceType is EntitySourceType.StoredProcedure)
-                    {
-                        // Request body schema whose properties map to stored procedure parameters
-                        DatabaseStoredProcedure spObject = (DatabaseStoredProcedure)dbObject;
-                        schemas.Add(entityName + SP_REQUEST_SUFFIX, CreateSpRequestComponentSchema(fields: spObject.StoredProcedureDefinition.Parameters));
-
-                        // Response body schema whose properties map to the stored procedure's first result set columns
-                        // as described by sys.dm_exec_describe_first_result_set. 
-                        schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
-                    }
-                    else
-                    {
-                        // Create component schema for FULL entity with all primary key columns (included auto-generated)
-                        // which will typically represent the response body of a request or a stored procedure's request body.
-                        schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
-
-                        // Create an entity's request body component schema excluding autogenerated primary keys.
-                        // A POST request requires any non-autogenerated primary key references to be in the request body.
-                        foreach (string primaryKeyColumn in sourceDefinition.PrimaryKey)
+                        if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                            && exposedColumnName is not null)
                         {
-                            // Non-Autogenerated primary key(s) should appear in the request body.
-                            if (!sourceDefinition.Columns[primaryKeyColumn].IsAutoGenerated)
-                            {
-                                nonAutoGeneratedPKColumnNames.Add(primaryKeyColumn);
-                                continue;
-                            }
-
-                            if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
-                                && exposedColumnName is not null)
-                            {
-                                exposedColumnNames.Remove(exposedColumnName);
-                            }
+                            exposedColumnNames.Remove(exposedColumnName);
                         }
-
-                        schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
-
-                        // Create an entity's request body component schema excluding all primary keys
-                        // by removing the tracked non-autogenerated primary key column names and removing them from
-                        // the exposedColumnNames collection.
-                        // The schema component without primary keys is used for PUT and PATCH operation request bodies because
-                        // those operations require all primary key references to be in the URI path, not the request body.
-                        foreach (string primaryKeyColumn in nonAutoGeneratedPKColumnNames)
-                        {
-                            if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
-                                && exposedColumnName is not null)
-                            {
-                                exposedColumnNames.Remove(exposedColumnName);
-                            }
-                        }
-
-                        schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
                     }
+
+                    schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
+
+                    // Create an entity's request body component schema excluding all primary keys
+                    // by removing the tracked non-autogenerated primary key column names and removing them from
+                    // the exposedColumnNames collection.
+                    // The schema component without primary keys is used for PUT and PATCH operation request bodies because
+                    // those operations require all primary key references to be in the URI path, not the request body.
+                    foreach (string primaryKeyColumn in nonAutoGeneratedPKColumnNames)
+                    {
+                        if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                            && exposedColumnName is not null)
+                        {
+                            exposedColumnNames.Remove(exposedColumnName);
+                        }
+                    }
+
+                    schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
                 }
             }
 

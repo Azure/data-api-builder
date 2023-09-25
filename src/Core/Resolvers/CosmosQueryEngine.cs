@@ -51,14 +51,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<Tuple<JsonDocument, IMetadata>> ExecuteAsync(
             IMiddlewareContext context,
             IDictionary<string, object> parameters,
-            string dataSourceName = "")
+            string dataSourceName)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
-
-            dataSourceName = GetValidatedDataSourceName(dataSourceName);
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
@@ -144,14 +142,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL query and
         /// expecting a list of Json back.
         /// </summary>
-        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters, string dataSourceName = "")
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object> parameters, string dataSourceName)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
-
-            dataSourceName = GetValidatedDataSourceName(dataSourceName);
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
@@ -188,7 +184,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "")
+        public Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName)
         {
             throw new NotImplementedException();
         }
@@ -387,16 +383,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             byte[] base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
             return Encoding.UTF8.GetString(base64EncodedBytes);
-        }
-
-        private string GetValidatedDataSourceName(string dataSourceName)
-        {
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = _clientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName();
-            }
-
-            return dataSourceName;
         }
     }
 }

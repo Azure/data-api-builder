@@ -23,10 +23,10 @@ public record RuntimeConfig
     public DataSourceFiles? DataSourceFiles { get; init; }
 
     [JsonIgnore]
-    public bool CosmosEngineNeeded { get; private set; }
+    public bool CosmosDataSourceUsed { get; private set; }
 
     [JsonIgnore]
-    public bool SqlEngineNeeded { get; private set; }
+    public bool SqlDataSourceUsed { get; private set; }
 
     private string _defaultDataSourceName;
 
@@ -99,7 +99,7 @@ public record RuntimeConfig
                     {
                         _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                         _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-                        allEntities = allEntities.Concat(config.Entities.ToList());
+                        allEntities = allEntities.Concat(config.Entities.AsEnumerable());
                     }
                     catch (Exception e)
                     {
@@ -116,10 +116,10 @@ public record RuntimeConfig
             this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
         }
 
-        SqlEngineNeeded = _dataSourceNameToDataSource.Values.Any
+        SqlDataSourceUsed = _dataSourceNameToDataSource.Values.Any
             (x => x.DatabaseType == DatabaseType.MSSQL || x.DatabaseType == DatabaseType.PostgreSQL || x.DatabaseType == DatabaseType.MySQL);
 
-        CosmosEngineNeeded = _dataSourceNameToDataSource.Values.Any
+        CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
                 (x => x.DatabaseType == DatabaseType.CosmosDB_NoSQL);
 
     }

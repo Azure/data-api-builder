@@ -327,8 +327,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
         {
-            // prefix added to ensure uniqueness.
-            return $"Node_{context.Path.ToList().First()}";
+            return $"{context.Path.ToList()[0]}";
         }
     }
 }

@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     defaultValue: null,
                     new List<DirectiveNode>()));
 
-            inputTypes.TryAdd(
+            inputTypes.Add(
                 inputTypeName,
                 new(
                     location: null,

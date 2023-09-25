@@ -106,12 +106,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Generate the GraphQL schema query and mutation nodes from the provided database.
         /// </summary>
-        /// <param name="root"></param>
-        /// <param name="inputTypes"></param>
-        /// <returns></returns>
+        /// <param name="root">Root document node which contains base entity types.</param>
+        /// <param name="inputTypes">Dictionary with key being the object and value the input object type definition node for that object.</param>
+        /// <returns>Query and mutation nodes.</returns>
         public (DocumentNode, DocumentNode) GenerateQueryAndMutationNodes(DocumentNode root, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes)
         {
-            Dictionary<string, DatabaseObject> dbObjects = new();
+            Dictionary<string, DatabaseObject> entityToDbObjects = new();
             Dictionary<string, DatabaseType> entityToDatabaseType = new();
 
             HashSet<string> dataSourceNames = new();
@@ -123,17 +123,17 @@ namespace Azure.DataApiBuilder.Core.Services
                 ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 if (!dataSourceNames.Contains(dataSourceName))
                 {
-                    dbObjects = dbObjects.Concat(metadataprovider.EntityToDatabaseObject).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                    entityToDbObjects = entityToDbObjects.Concat(metadataprovider.EntityToDatabaseObject).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
                     dataSourceNames.Add(dataSourceName);
                 }
 
                 entityToDatabaseType.TryAdd(name, metadataprovider.GetDatabaseType());
             }
             // Generate the GraphQL queries from the provided objects
-            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, dbObjects);
+            DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);
 
             // Generate the GraphQL mutations from the provided objects
-            DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, dbObjects);
+            DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);
 
             return (queryNode, mutationNode);
         }
@@ -238,10 +238,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Generates the ObjectTypeDefinitionNodes and InputObjectTypeDefinitionNodes as part of GraphQL Schema generation for cosmos db.
-        /// Each datasource in cosmos has a root file provided which is used to generate the schema. 
+        /// Each datasource in cosmos has a root file provided which is used to generate the schema.
+        /// NOTE: DataSourceNames must be preFiltered to be cosmos datasources.
         /// </summary>
         /// <param name="dataSourceNames">Hashset of datasourceNames to generate cosmos objects.</param>
-        /// <returns></returns>
         private DocumentNode GenerateCosmosGraphQLObjects(HashSet<string> dataSourceNames, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
             DocumentNode? root = null;

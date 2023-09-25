@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
     /// </summary>
     public class QueryEngineFactory : IQueryEngineFactory
     {
-        private readonly IEnumerable<IQueryEngine> _queryEngines;
+        private readonly Dictionary<DatabaseType, IQueryEngine> _queryEngines;
 
         /// <inheritdoc/>
         public QueryEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
@@ -31,20 +31,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger)
         {
-            _queryEngines = new List<IQueryEngine>();
+            _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
 
             RuntimeConfig config = runtimeConfigProvider.GetConfig();
 
-            if (config.SqlEngineNeeded)
+            if (config.SqlDataSourceUsed)
             {
-                _queryEngines = _queryEngines.Append(
-                    new SqlQueryEngine(queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider));
+                IQueryEngine queryEngine = new SqlQueryEngine(
+                    queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider);
+                _queryEngines.Add(DatabaseType.MSSQL, queryEngine);
+                _queryEngines.Add(DatabaseType.MySQL, queryEngine);
+                _queryEngines.Add(DatabaseType.PostgreSQL, queryEngine);
             }
 
-            if (config.CosmosEngineNeeded)
+            if (config.CosmosDataSourceUsed)
             {
-                _queryEngines = _queryEngines.Append(
-                    new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser));
+                IQueryEngine queryEngine = new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser);
+                _queryEngines.Add(DatabaseType.CosmosDB_NoSQL, queryEngine);
             }
 
         }
@@ -52,15 +55,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <inheritdoc/>
         public IQueryEngine GetQueryEngine(DatabaseType databaseType)
         {
-            IQueryEngine queryEngine = databaseType switch
+            if (!_queryEngines.TryGetValue(databaseType, out IQueryEngine? queryEngine))
             {
-                DatabaseType.CosmosDB_NoSQL => _queryEngines.First(engine => engine.GetType() == typeof(CosmosQueryEngine)),
-                DatabaseType.MySQL or DatabaseType.MSSQL or DatabaseType.PostgreSQL => _queryEngines.First(engine => engine.GetType() == typeof(SqlQueryEngine)),
-                _ => throw new DataApiBuilderException(
+                throw new DataApiBuilderException(
                     $"{nameof(databaseType)}:{databaseType} could not be found within the config",
                     HttpStatusCode.BadRequest,
-                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound)
-            };
+                    DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            }
 
             return queryEngine;
         }

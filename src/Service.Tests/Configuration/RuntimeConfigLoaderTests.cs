@@ -58,6 +58,9 @@ public class RuntimeConfigLoaderTests
 
         Assert.IsTrue(loader.TryLoadConfig("dab-config.json", out RuntimeConfig runtimeConfig), "Should successfully load config");
         Assert.IsTrue(runtimeConfig.ListAllDataSources().Count() == 4, "Should have 4 data sources");
+        Assert.IsTrue(runtimeConfig.CosmosDataSourceUsed, "Should have CosmosDb data source");
+        Assert.IsTrue(runtimeConfig.SqlDataSourceUsed, "Should have Sql data source");
+        Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType, "Default datasource should be of root file database type.");
     }
 
     [DataTestMethod]

@@ -32,6 +32,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         [DataTestMethod]
         public void AuthorizeDirectiveAddedForMutation(EntityActionOperation operationType, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
         {
+            string entityName = "Foo";
+
             string gql =
 @"
 type Foo @model(name: ""Foo""){
@@ -42,15 +44,15 @@ type Foo @model(name: ""Foo""){
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
             {
-                { "Foo", DatabaseType.MSSQL }
+                { entityName, DatabaseType.MSSQL }
             };
 
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
                 entityNameToDatabasetype,
-                entities: new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
+                entities: new(new Dictionary<string, Entity> { { entityName, GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    entityNames: new string[] { "Foo" },
+                    entityNames: new string[] { entityName },
                     operations: new EntityActionOperation[] { operationType },
                     roles: rolesDefinedInPermissions)
                 );

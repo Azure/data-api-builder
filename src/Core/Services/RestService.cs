@@ -228,9 +228,10 @@ namespace Azure.DataApiBuilder.Core.Services
         private Task<IActionResult?> DispatchMutation(RestRequestContext context, ISqlMetadataProvider metadataProvider)
         {
             IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(metadataProvider.GetDatabaseType());
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             return context switch
             {
-                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, metadataProvider.GetDatabaseSourceName()),
+                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, defaultDataSourceName),
                 _ => mutationEngine.ExecuteAsync(context)
             };
         }
@@ -438,13 +439,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// (and optionally primary key).</param>
         /// <returns>entity name associated with entity path and primary key route.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string routeAfterPathBase, string dataSourceName = "")
+        public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string routeAfterPathBase)
         {
-            if (string.IsNullOrEmpty(dataSourceName))
-            {
-                dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
-            }
 
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements

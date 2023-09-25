@@ -41,8 +41,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException"></exception>
         public void ValidateRequestContext(RestRequestContext context)
         {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(context.EntityName);
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(context.EntityName);
             SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
             foreach (string field in context.FieldsToBeReturned)
             {
@@ -66,8 +65,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException"></exception>
         public void ValidatePrimaryKey(RestRequestContext context)
         {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(context.EntityName);
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(context.EntityName);
             SourceDefinition sourceDefinition = TryGetSourceDefinition(context.EntityName, sqlMetadataProvider);
 
             int countOfPrimaryKeysInSchema = sourceDefinition.PrimaryKey.Count;
@@ -134,8 +132,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         public void ValidateStoredProcedureRequestContext(StoredProcedureRequestContext spRequestCtx)
         {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(spRequestCtx.EntityName);
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(spRequestCtx.EntityName);
             StoredProcedureDefinition storedProcedureDefinition =
                 TryGetStoredProcedureDefinition(spRequestCtx.EntityName, sqlMetadataProvider);
 
@@ -288,8 +285,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException"></exception>
         public void ValidateInsertRequestContext(InsertRequestContext insertRequestCtx)
         {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(insertRequestCtx.EntityName);
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(insertRequestCtx.EntityName);
 
             IEnumerable<string> fieldsInRequestBody = insertRequestCtx.FieldValuePairsInBody.Keys;
             SourceDefinition sourceDefinition =
@@ -369,8 +365,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException"></exception>
         public void ValidateUpsertRequestContext(UpsertRequestContext upsertRequestCtx)
         {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(upsertRequestCtx.EntityName);
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(upsertRequestCtx.EntityName);
             IEnumerable<string> fieldsInRequestBody = upsertRequestCtx.FieldValuePairsInBody.Keys;
             bool isRequestBodyStrict = IsRequestBodyStrict();
             SourceDefinition sourceDefinition = TryGetSourceDefinition(upsertRequestCtx.EntityName, sqlMetadataProvider);
@@ -488,8 +483,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException"></exception>
         public void ValidateEntity(string entityName)
         {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(entityName);
             IEnumerable<string> entities = sqlMetadataProvider.EntityToDatabaseObject.Keys;
             if (!entities.Contains(entityName))
             {
@@ -576,6 +570,15 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to get the sqlMetadataProvider from the entity name.
+        /// </summary>
+        private ISqlMetadataProvider GetSqlMetadataProvider(string entityName)
+        {
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            return _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
         }
     }
 }

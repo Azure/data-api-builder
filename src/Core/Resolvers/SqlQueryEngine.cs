@@ -62,10 +62,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if empty</param>
-        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "")
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName)
         {
-            dataSourceName = GetValidatedDataSourceName(dataSourceName);
-
             SqlQueryStructure structure = new(
                 context,
                 parameters,
@@ -92,9 +90,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL and expecting result of stored-procedure execution as
         /// list of Jsons and the relevant pagination metadata back.
         /// </summary>
-        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "")
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName)
         {
-            dataSourceName = GetValidatedDataSourceName(dataSourceName);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
             {
@@ -159,9 +156,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         /// Only the first result set will be returned, regardless of the contents of the stored procedure.
         /// </summary>
-        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "")
+        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName)
         {
-            dataSourceName = GetValidatedDataSourceName(dataSourceName);
             SqlExecuteStructure structure = new(
                 context.EntityName,
                 _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName),
@@ -487,17 +483,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     args: null,
                     dataSourceName: dataSourceName);
             return jsonListResult;
-        }
-
-        /// <summary>
-        /// Returns the data source name if it is valid. If not, returns the default data source name.
-        /// </summary>
-        /// <param name="dataSourceName">datasourceName.</param>
-        /// <returns>datasourceName.</returns>
-        private string GetValidatedDataSourceName(string dataSourceName)
-        {
-            // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
-            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
         }
     }
 }

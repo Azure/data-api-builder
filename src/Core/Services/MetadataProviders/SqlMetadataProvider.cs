@@ -1352,7 +1352,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata, null, null, _dataSourceName);
+            PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(
+                queryForForeignKeyInfo, parameters, SummarizeFkMetadata, httpContext: null, args: null, _dataSourceName);
 
             if (PairToFkDefinition is not null)
             {
@@ -1608,12 +1609,6 @@ namespace Azure.DataApiBuilder.Core.Services
         public bool IsDevelopmentMode()
         {
             return _runtimeConfigProvider.GetConfig().Runtime.Host.Mode is HostMode.Development;
-        }
-
-        /// <inheritdoc />
-        public string GetDatabaseSourceName()
-        {
-            return _dataSourceName;
         }
     }
 }

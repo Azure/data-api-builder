@@ -168,7 +168,7 @@ public class RuntimeConfigProvider
     /// <param name="accessToken">The string representation of a managed identity access token</param>
     /// <param name="dataSourceName">Name of the datasource for which to assign the token.</param>
     /// <returns>true if the initialization succeeded, false otherwise.</returns>
-    public bool InitializeWithAccesstoken(
+    public bool TryInitializeWithAccesstoken(
         string? accessToken,
         string dataSourceName)
     {

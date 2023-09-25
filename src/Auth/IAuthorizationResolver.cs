@@ -57,13 +57,19 @@ public interface IAuthorizationResolver
     public IEnumerable<string> GetAllowedExposedColumns(string entityName, string roleName, EntityActionOperation operation);
 
     /// <summary>
-    /// Returns true/false depending on whether a database policy is defined for an operation within an entity's role entry.
+    /// Helper function to fetch the database policy associated with the current request based on the entity under
+    /// action, the role defined in the the request and the operation to be executed.
+    /// When no database policy is found, no database query predicates need to be added.
+    /// 1) _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
+    /// 2) entityMetaData.RoleToOperationMap[roleName] finds the roleMetaData for the current roleName
+    /// 3) roleMetaData.OperationToColumnMap[operation] finds the operationMetadata for the current operation
+    /// 4) operationMetaData.databasePolicy finds the required database policy
     /// </summary>
-    /// <param name="entityName">Entity from request</param>
+    /// <param name="entityName">Entity from request.</param>
     /// <param name="roleName">Role defined in client role header.</param>
-    /// <param name="operation">Operation type: Create, Read, Update, Delete</param>
-    /// <returns>Returns true if a database policy is defined for the operation of a given role. If not, returns false.</returns>
-    public bool IsDBPolicyDefinedForRoleAndAction(string entityName, string roleName, EntityActionOperation operation);
+    /// <param name="operation">Operation type: create, read, update, delete.</param>
+    /// <returns>Policy string if a policy exists in config.</returns>
+    public string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation);
 
     /// <summary>
     /// Retrieves the policy of an operation within an entity's role entry

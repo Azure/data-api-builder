@@ -178,12 +178,6 @@ namespace Azure.DataApiBuilder.Core.Authorization
         }
 
         /// <inheritdoc />
-        public bool IsDBPolicyDefinedForRoleAndAction(string entityName, string roleName, EntityActionOperation operation)
-        {
-            return !string.IsNullOrWhiteSpace(GetDBPolicyForRequest(entityName, roleName, operation));
-        }
-
-        /// <inheritdoc />
         public string ProcessDBPolicy(string entityName, string roleName, EntityActionOperation operation, HttpContext httpContext)
         {
             string dBpolicyWithClaimTypes = GetDBPolicyForRequest(entityName, roleName, operation);
@@ -196,20 +190,8 @@ namespace Azure.DataApiBuilder.Core.Authorization
             return GetPolicyWithClaimValues(dBpolicyWithClaimTypes, GetAllUserClaims(httpContext));
         }
 
-        /// <summary>
-        /// Helper function to fetch the database policy associated with the current request based on the entity under
-        /// action, the role defined in the the request and the operation to be executed.
-        /// When no database policy is found, no database query predicates need to be added.
-        /// 1) _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
-        /// 2) entityMetaData.RoleToOperationMap[roleName] finds the roleMetaData for the current roleName
-        /// 3) roleMetaData.OperationToColumnMap[operation] finds the operationMetadata for the current operation
-        /// 4) operationMetaData.databasePolicy finds the required database policy
-        /// </summary>
-        /// <param name="entityName">Entity from request.</param>
-        /// <param name="roleName">Role defined in client role header.</param>
-        /// <param name="operation">Operation type: create, read, update, delete.</param>
-        /// <returns>Policy string if a policy exists in config.</returns>
-        private string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
+        /// <inheritdoc/>
+        public string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
         {
             if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
             {

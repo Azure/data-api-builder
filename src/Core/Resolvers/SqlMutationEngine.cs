@@ -352,7 +352,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (isReadPermissionConfiguredForRole)
                 {
-                    isDatabasePolicyDefinedForReadAction = _authorizationResolver.IsDBPolicyDefinedForRoleAndAction(context.EntityName, roleName, EntityActionOperation.Read);
+                    isDatabasePolicyDefinedForReadAction = !string.IsNullOrWhiteSpace(_authorizationResolver.GetDBPolicyForRequest(context.EntityName, roleName, EntityActionOperation.Read));
                 }
 
                 if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
@@ -371,8 +371,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                                 parameters,
                                                                 context);
 
-                            upsertOperationResultSetRow = upsertOperationResult is not null ?
-                        (upsertOperationResult.Rows.FirstOrDefault() ?? new()) : null;
+                            upsertOperationResultSetRow = upsertOperationResult is not null ? (upsertOperationResult.Rows.FirstOrDefault() ?? new())
+                                                                                            : null;
 
                             if (upsertOperationResult is not null &&
                                 upsertOperationResultSetRow is not null &&
@@ -388,7 +388,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             if (isDatabasePolicyDefinedForReadAction)
                             {
                                 FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow!, roleName);
-                                selectOperationResponse = await _queryEngine.ExecuteAsyncAndGetResponseAsJsonDocument(findRequestContext);
+                                selectOperationResponse = await _queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
                             }
 
                             transactionScope.Complete();
@@ -499,7 +499,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             if (isDatabasePolicyDefinedForReadAction)
                             {
                                 FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow!, roleName);
-                                selectOperationResponse = await _queryEngine.ExecuteAsyncAndGetResponseAsJsonDocument(findRequestContext);
+                                selectOperationResponse = await _queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
                             }
 
                             transactionScope.Complete();
@@ -570,8 +570,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // results of the insert/update database operation.
             foreach (string primarykey in context.DatabaseObject.SourceDefinition.PrimaryKey)
             {
-                _sqlMetadataProvider.TryGetBackingColumn(context.EntityName, primarykey, out string? backingColumnName);
-                if (!string.IsNullOrEmpty(backingColumnName))
+                if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, primarykey, out string? backingColumnName))
                 {
                     findRequestContext.PrimaryKeyValuePairs.Add(backingColumnName, value: mutationResultRow.Columns[primarykey]!);
                 }

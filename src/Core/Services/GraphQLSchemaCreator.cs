@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Merge the entityToDBObjects for queryNode generation for all entities.
             foreach ((string entityName, _) in _entities)
             {
-                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name);
+                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
                 ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 if (!dataSourceNames.Contains(dataSourceName))
                 {
@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     dataSourceNames.Add(dataSourceName);
                 }
 
-                entityToDatabaseType.TryAdd(name, metadataprovider.GetDatabaseType());
+                entityToDatabaseType.TryAdd(entityName, metadataprovider.GetDatabaseType());
             }
             // Generate the GraphQL queries from the provided objects
             DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);

@@ -80,12 +80,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", true)]
         [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", true)]
         [DataRow("", false)]
-        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString, bool invalidConnectionBuilderString)
+        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString, bool isInvalidConnectionBuilderString)
         {
             StringWriter sw = null;
             // For strings that are an invalid format for the connection string builder, need to
             // redirect std error to a string writer for comparison to expected error messaging later.
-            if (invalidConnectionBuilderString)
+            if (isInvalidConnectionBuilderString)
             {
                 sw = new();
                 Console.SetError(sw);
@@ -194,6 +194,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 if (sw is not null)
                 {
+                    Assert.IsTrue(sw.ToString().StartsWith("Deserialization of the configuration file failed during a post-processing step."));
                     Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
                 }
                 else

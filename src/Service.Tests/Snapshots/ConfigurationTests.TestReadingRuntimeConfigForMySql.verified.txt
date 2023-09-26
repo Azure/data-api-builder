@@ -294,6 +294,67 @@
                 Action: Delete
               }
             ]
+          },
+          {
+            Role: test_role_with_noread,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: test_role_with_excluded_fields,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    categoryName
+                  ]
+                }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: test_role_with_policy_excluded_fields,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    categoryName
+                  ]
+                },
+                Policy: {
+                  Database: @item.piecesAvailable ne 0
+                }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
           }
         ],
         Relationships: {
@@ -609,7 +670,7 @@
             ]
           },
           {
-            Role: policy_tester_noread,
+            Role: test_role_with_noread,
             Actions: [
               {
                 Action: Create
@@ -623,7 +684,7 @@
             ]
           },
           {
-            Role: policy_tester_excludefields,
+            Role: test_role_with_excluded_fields,
             Actions: [
               {
                 Action: Read,
@@ -645,7 +706,7 @@
             ]
           },
           {
-            Role: policy_tester_excludefields_dbpolicy,
+            Role: test_role_with_policy_excluded_fields,
             Actions: [
               {
                 Action: Read,

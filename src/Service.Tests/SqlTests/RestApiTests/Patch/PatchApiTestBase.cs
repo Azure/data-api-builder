@@ -477,7 +477,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "policy_tester_noread"
+                    clientRoleHeader: "test_role_with_noread"
                 );
         }
 
@@ -505,7 +505,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "policy_tester_excludefields"
+                    clientRoleHeader: "test_role_with_excluded_fields"
                 );
         }
 
@@ -535,7 +535,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+                    clientRoleHeader: "test_role_with_policy_excluded_fields"
                 );
         }
 
@@ -566,9 +566,142 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.OK,
-                    clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+                    clientRoleHeader: "test_role_with_policy_excluded_fields"
                 );
         }
+
+        /// <summary>
+        /// Test to validate that for a PATCH API request that results in a successful insert operation,
+        /// the response returned takes into account that no read action is configured for the role.
+        /// URI Path: Contains a Non-existent PK.
+        /// Req Body: Valid Parameter with intended insert data.
+        /// Expects:
+        /// Status: 201 Created since the PATCH results in an insert operation
+        /// Response Body: Empty because the role policy_tester_noread has no read action configured.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task PatchInsert_NoReadTest()
+        {
+            string requestBody = @"
+            {
+                ""piecesAvailable"": 4,
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 4
+            }";
+
+            await SetupAndRunRestApiTest(
+                    primaryKeyRoute: "categoryid/0/pieceid/7",
+                    queryString: null,
+                    entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                    sqlQuery: GetQuery("PatchInsert_NoReadTest"),
+                    operationType: EntityActionOperation.UpsertIncremental,
+                    requestBody: requestBody,
+                    expectedStatusCode: HttpStatusCode.Created,
+                    clientRoleHeader: "test_role_with_noread",
+                    expectedLocationHeader: string.Empty
+                );
+        }
+
+        /// <summary>
+        /// Tests that for a PATCH API request that results in a successful insert operation,
+        /// the response returned takes into account the include and exclude fields configured for the read action.
+        /// URI Path: Contains a non-existent PK.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects:
+        /// Status: 201 Created as PATCH results in an insert operation.
+        /// Response Body: Does not contain the categoryName field as it is excluded in the read configuration.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task Patch_Insert_WithExcludeFieldsTest()
+        {
+            string requestBody = @"
+            {
+                ""piecesAvailable"": 4,
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 4
+            }";
+
+            await SetupAndRunRestApiTest(
+                   primaryKeyRoute: "categoryid/0/pieceid/7",
+                   queryString: null,
+                   entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                   sqlQuery: GetQuery("Patch_Insert_WithExcludeFieldsTest"),
+                   operationType: EntityActionOperation.UpsertIncremental,
+                   requestBody: requestBody,
+                   expectedStatusCode: HttpStatusCode.Created,
+                   clientRoleHeader: "test_role_with_excluded_fields",
+                   expectedLocationHeader: string.Empty
+               );
+        }
+
+        /// <summary>
+        /// Tests that for a PATCH API request that results in a successful insert operation,
+        /// the response returned takes into account the database policy configured for the read action.
+        /// URI Path: Contains a non-existent PK.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects:
+        /// Status: 201 Created as PATCH results in an insert operation.
+        /// Response Body: Empty. The database policy configured for the read action states that piecesAvailable cannot be 0.
+        /// Since, the PATCH request inserts a record with piecesAvailable = 0, the response must be empty.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task Patch_Insert_WithReadDatabasePolicyTest()
+        {
+            string requestBody = @"
+            {
+                ""piecesAvailable"": 0,
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 4
+            }";
+
+            await SetupAndRunRestApiTest(
+                   primaryKeyRoute: "categoryid/0/pieceid/7",
+                   queryString: null,
+                   entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                   sqlQuery: GetQuery("PatchInsert_NoReadTest"),
+                   operationType: EntityActionOperation.UpsertIncremental,
+                   requestBody: requestBody,
+                   expectedStatusCode: HttpStatusCode.Created,
+                   clientRoleHeader: "test_role_with_policy_excluded_fields",
+                   expectedLocationHeader: string.Empty
+               );
+        }
+
+        /// <summary>
+        /// Tests that for a PATCH API request that results in a successful insert operation,
+        /// the response returned takes into account the database policy and the include/exlude fields
+        /// configured for the read action.
+        /// URI Path: Contains a non-existent PK.
+        /// Req Body: Valid Parameter with intended update.
+        /// Expects:
+        /// Status: 201 Created as PATCH results in an insert operation.
+        /// Response Body: Non-empty and should not contain the categoryName. The database policy configured for the read action states that piecesAvailable cannot be 0.
+        /// But, the PATCH request inserts a record with piecesAvailable = 4, so the policy is unsatisfied. Hence, the response should be non-empty.
+        /// The policy also excludes the categoryName field, so the response should not contain the categoryName field.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task Patch_Insert_WithReadDatabasePolicyUnsatisfiedTest()
+        {
+            string requestBody = @"
+            {
+                ""piecesAvailable"": 4,
+                ""categoryName"": ""SciFi"",
+                ""piecesRequired"": 4
+            }";
+
+            await SetupAndRunRestApiTest(
+                   primaryKeyRoute: "categoryid/0/pieceid/7",
+                   queryString: null,
+                   entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                   sqlQuery: GetQuery("Patch_Insert_WithExcludeFieldsTest"),
+                   operationType: EntityActionOperation.UpsertIncremental,
+                   requestBody: requestBody,
+                   expectedStatusCode: HttpStatusCode.Created,
+                   clientRoleHeader: "test_role_with_policy_excluded_fields",
+                   expectedLocationHeader: string.Empty
+               );
+        }
+
         #endregion
 
         #region Negative Tests

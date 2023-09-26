@@ -255,6 +255,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 $"WHERE id = 7 AND [title] = 'The Hobbit Returns to The Shire' " +
                 $"AND [publisher_id] = 1234" +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PutInsert_NoReadTest",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE 0 = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "Put_Insert_WithExcludeFieldsTest",
+                $"SELECT [categoryid], [pieceid], [piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE [categoryid] = 0 AND [pieceid] = 7 AND [categoryName] = 'SciFi' " +
+                $"AND [piecesAvailable]= 4 AND [piecesRequired] = 4 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 

@@ -338,6 +338,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND issue_number = 1234
                     ) AS subq
                 "
+            },
+            {
+                "PutInsert_NoReadTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "Put_Insert_WithExcludeFieldsTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 4
+                    ) AS subq
+                "
             }
 
         };

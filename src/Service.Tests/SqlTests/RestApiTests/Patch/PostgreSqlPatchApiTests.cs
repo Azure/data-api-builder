@@ -263,6 +263,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         WHERE id = 8 AND title = 'Heart of Darkness' AND publisher_id = 2324
                     ) AS subq
                 "
+            },
+            {
+                "PatchInsert_NoReadTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "Patch_Insert_WithExcludeFieldsTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 4
+                    ) AS subq
+                "
             }
         };
 

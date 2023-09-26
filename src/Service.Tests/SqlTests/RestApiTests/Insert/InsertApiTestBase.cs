@@ -368,7 +368,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader,
-                clientRoleHeader: "policy_tester_excludefields"
+                clientRoleHeader: "test_role_with_excluded_fields"
             );
         }
 
@@ -395,7 +395,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader,
-                clientRoleHeader: "policy_tester_noread"
+                clientRoleHeader: "test_role_with_noread"
             );
         }
 
@@ -424,7 +424,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader,
-                clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+                clientRoleHeader: "test_role_with_policy_excluded_fields"
             );
         }
 
@@ -454,7 +454,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader,
-                clientRoleHeader: "policy_tester_excludefields_dbpolicy"
+                clientRoleHeader: "test_role_with_policy_excluded_fields"
             );
         }
 

@@ -313,6 +313,67 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "test_role_with_noread",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_policy_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              },
+              "policy": {
+                "database": "@item.piecesAvailable ne 0"
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ],
       "relationships": {
@@ -651,7 +712,7 @@
           ]
         },
         {
-          "role": "policy_tester_noread",
+          "role": "test_role_with_noread",
           "actions": [
             {
               "action": "create"
@@ -665,7 +726,7 @@
           ]
         },
         {
-          "role": "policy_tester_excludefields",
+          "role": "test_role_with_excluded_fields",
           "actions": [
             {
               "action": "read",
@@ -687,7 +748,7 @@
           ]
         },
         {
-          "role": "policy_tester_excludefields_dbpolicy",
+          "role": "test_role_with_policy_excluded_fields",
           "actions": [
             {
               "action": "read",

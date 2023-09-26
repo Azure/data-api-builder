@@ -74,7 +74,7 @@ public class RuntimeConfigProvider
         {
             throw new DataApiBuilderException(
                 message: "Runtime config isn't setup.",
-                statusCode: HttpStatusCode.InternalServerError,
+                statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 

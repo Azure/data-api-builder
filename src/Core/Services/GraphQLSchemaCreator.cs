@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Core.Services
             HashSet<string> dataSourceNames = new();
 
             // Merge the entityToDBObjects for queryNode generation for all entities.
-            foreach ((string name, _) in _entities)
+            foreach ((string entityName, _) in _entities)
             {
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(name);
                 ISqlMetadataProvider metadataprovider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);

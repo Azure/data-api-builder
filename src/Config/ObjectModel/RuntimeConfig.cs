@@ -22,10 +22,10 @@ public record RuntimeConfig
 
     public DataSourceFiles? DataSourceFiles { get; init; }
 
-    [JsonIgnore]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool CosmosDataSourceUsed { get; private set; }
 
-    [JsonIgnore]
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool SqlDataSourceUsed { get; private set; }
 
     private string _defaultDataSourceName;

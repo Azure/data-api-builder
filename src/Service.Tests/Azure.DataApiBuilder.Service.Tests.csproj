@@ -96,6 +96,12 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="MultiSourceTestSchema.gql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>

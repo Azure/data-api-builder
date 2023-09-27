@@ -22,6 +22,13 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
     [TestClass]
     public class GraphQLSchemaBuilderTests
     {
+        /// <summary>
+        /// Validates building of cosmos gql schema.
+        /// 1. Loads customer base schema.
+        /// 2. Calls on schema builder to build root document and the input type objects.
+        /// 3. Root document should be created based on loaded schema.
+        /// 4. Input type objects should be created based on entity types and not be duplicated.
+        /// </summary>
         [DataTestMethod]
         public async Task CosmosSchemaBuilderTestAsync()
         {

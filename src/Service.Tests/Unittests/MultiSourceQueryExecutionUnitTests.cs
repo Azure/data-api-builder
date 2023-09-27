@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             // validate that the data returend for the queries we did matches the moq data we set up for the respective query engines.
             Assert.AreEqual("db1", queryMap1[0].Value, $"Data returned for {queryName1} is incorrect for multi-source query");
-            Assert.AreEqual("db2", queryMap2[0].Value, $"Data returned for {queryName1} is incorrect for multi-source query");
+            Assert.AreEqual("db2", queryMap2[0].Value, $"Data returned for {queryName2} is incorrect for multi-source query");
         }
     }
 }

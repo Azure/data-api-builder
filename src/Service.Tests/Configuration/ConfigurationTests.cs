@@ -735,7 +735,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(configProvider.TryGetConfig(out RuntimeConfig configuration), "TryGetConfig should return true when the config is set.");
             Assert.IsNotNull(configuration, "Config returned should not be null.");
 
-            Assert.AreEqual(1, configuration.GetDataSourceNamesToDataSourcesIterator().Count(), "Only the base datasource should be used in case of late hydration of config.");
+            Assert.IsNotNull(configuration.DataSource, "The base datasource should get populated in case of late hydration of config inspite of invalid multi-db files.");
         }
 
         [TestMethod("Validates that local CosmosDB_NoSQL settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]

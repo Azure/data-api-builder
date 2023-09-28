@@ -99,7 +99,7 @@ public class RuntimeConfigLoaderTests
         }
         catch (DataApiBuilderException ex)
         {
-            Assert.IsTrue(ex.StatusCode == System.Net.HttpStatusCode.BadRequest);
+            Assert.IsTrue(ex.StatusCode == System.Net.HttpStatusCode.InternalServerError);
         }
     }
 }

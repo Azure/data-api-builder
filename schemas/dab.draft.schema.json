@@ -118,6 +118,11 @@
         "connection-string"
       ]
     },
+    "data-source-files": {
+      "type": "array",
+      "description": "Child runtime configs pointing to other databases for multisource scenario.",
+      "default": null
+    },
     "runtime": {
       "type": "object",
       "description": "Runtime configuration settings",

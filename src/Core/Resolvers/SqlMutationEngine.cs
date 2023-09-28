@@ -358,7 +358,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
                 {
                     DbResultSet? upsertOperationResult;
-                    DbResultSetRow? upsertOperationResultSetRow = null;
+                    DbResultSetRow upsertOperationResultSetRow;
                     JsonDocument? selectOperationResponse = null;
                     bool isUpdateResultSet = false;
 
@@ -371,12 +371,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                                 parameters,
                                                                 context);
 
-                            upsertOperationResultSetRow = upsertOperationResult is not null ? (upsertOperationResult.Rows.FirstOrDefault() ?? new())
-                                                                                            : null;
+                            if (upsertOperationResult is null)
+                            {
+                                // Ideally this case should not happen, however may occur due to unexpected reasons,
+                                // like the DbDataReader being null. We throw an exception
+                                // which will be returned as an Unexpected InternalServerError
+                                throw new DataApiBuilderException(
+                                    message: "An unexpected error occurred while trying to execute the query.",
+                                    statusCode: HttpStatusCode.InternalServerError,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                            }
 
-                            if (upsertOperationResult is not null &&
-                                upsertOperationResultSetRow is not null &&
-                                upsertOperationResultSetRow.Columns.Count > 0 &&
+                            upsertOperationResultSetRow = upsertOperationResult.Rows.FirstOrDefault() ?? new();
+
+                            if (upsertOperationResultSetRow.Columns.Count > 0 &&
                                 upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
                             {
 
@@ -387,7 +395,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             // In such a case, to get the results back, a select query which honors the database policy is excuted.
                             if (isDatabasePolicyDefinedForReadAction)
                             {
-                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow!, roleName);
+                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName);
                                 selectOperationResponse = await _queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
                             }
 
@@ -404,7 +412,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         throw _dabExceptionWithTransactionErrorMessage;
                     }
 
-                    Dictionary<string, object?> resultRow = upsertOperationResultSetRow!.Columns;
+                    Dictionary<string, object?> resultRow = upsertOperationResultSetRow.Columns;
 
                     // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
                     // With postgresql, even if it is the first result, the upsert could have resulted in an INSERT. So, that condition is evaluated.
@@ -457,40 +465,41 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                         context.OperationType,
                                         parameters);
 
-                            if (context.OperationType is EntityActionOperation.Insert)
+                            if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
                             {
-                                if (mutationResultRow is null)
+                                if (context.OperationType is EntityActionOperation.Insert)
                                 {
-                                    // Ideally this case should not happen, however may occur due to unexpected reasons,
-                                    // like the DbDataReader being null. We throw an exception
-                                    // which will be returned as an Unexpected InternalServerError
-                                    throw new DataApiBuilderException(
-                                        message: "An unexpected error occurred while trying to execute the query.",
-                                        statusCode: HttpStatusCode.InternalServerError,
-                                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                }
+                                    if (mutationResultRow is null)
+                                    {
+                                        // Ideally this case should not happen, however may occur due to unexpected reasons,
+                                        // like the DbDataReader being null. We throw an exception
+                                        // which will be returned as an Unexpected InternalServerError
+                                        throw new DataApiBuilderException(
+                                            message: "An unexpected error occurred while trying to execute the query.",
+                                            statusCode: HttpStatusCode.InternalServerError,
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                    }
 
-                                if (mutationResultRow.Columns.Count == 0)
+                                    if (mutationResultRow.Columns.Count == 0)
+                                    {
+                                        throw new DataApiBuilderException(
+                                            message: "Could not insert row with given values.",
+                                            statusCode: HttpStatusCode.Forbidden,
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
+                                            );
+                                    }
+                                }
+                                else
                                 {
-                                    throw new DataApiBuilderException(
-                                        message: "Could not insert row with given values.",
-                                        statusCode: HttpStatusCode.Forbidden,
-                                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
-                                        );
+                                    // This code block is reached when Update or UpdateIncremental operation does not successfully find the record to
+                                    // update. An exception is thrown which will be returned as a PreconditionFailed response.
+                                    if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                                    {
+                                        throw new DataApiBuilderException(message: "No Update could be performed, record not found",
+                                                                           statusCode: HttpStatusCode.PreconditionFailed,
+                                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                                    }
                                 }
-
-                            }
-
-                            if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
-                            {
-                                // Nothing to update means we throw Exception
-                                if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
-                                {
-                                    throw new DataApiBuilderException(message: "No Update could be performed, record not found",
-                                                                       statusCode: HttpStatusCode.PreconditionFailed,
-                                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
-                                }
-
                             }
 
                             // The role with which the REST request is executed can have database policies defined for the read action.
@@ -498,7 +507,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             // is executed to fetch the results.
                             if (isDatabasePolicyDefinedForReadAction)
                             {
-                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow!, roleName);
+                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow, roleName);
                                 selectOperationResponse = await _queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
                             }
 

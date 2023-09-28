@@ -97,7 +97,6 @@ update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:upd
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:delete" --fields.include "*" --policy-database "@item.id eq 9"
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_08:read" --fields.include "*"
 update Book --config "dab-config.MsSql.json" --permissions "test_role_with_noread:create,update,delete"
-update Book --config "dab-config.MsSql.json" --permissions "test_role_with_noread:create,update,delete"
 update Book --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields:create,update,delete"
 update Book --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields:read" --fields.exclude "publisher_id"
 update Book --config "dab-config.MsSql.json" --permissions "test_role_with_policy_excluded_fields:create,update,delete"

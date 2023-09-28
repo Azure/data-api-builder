@@ -192,15 +192,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 string error = sw is null ? ex.Message : sw.ToString();
                 Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 if (sw is not null)
                 {
-                    Assert.IsTrue(sw.ToString().StartsWith("Deserialization of the configuration file failed during a post-processing step."));
-                    Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-                }
-                else
-                {
-                    Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-
+                    Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
                 }
             }
 

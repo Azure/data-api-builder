@@ -120,7 +120,7 @@
     },
     "data-source-files": {
       "type": "array",
-      "description": "Child runtime configs pointing to other databases for multisource scenario.",
+      "description": "Names of runtime configuration files referencing additional databases.",
       "default": null
     },
     "runtime": {

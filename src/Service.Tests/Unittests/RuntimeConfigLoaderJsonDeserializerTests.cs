@@ -5,6 +5,7 @@ using System;
 using System.Data;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
@@ -185,6 +186,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
             Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
+        }
+
+        /// <summary>
+        /// Method to validate that FilenotFoundexception is thrown if sub-data source file is not found.
+        /// </summary>
+        [TestMethod]
+        public void TestLoadRuntimeConfigSubFilesFails()
+        {
+            string actualJson = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                        ""options"": {
+                                        // Whether we want to send user data to the underlying database.
+                                            ""set-session-context"": true
+                                        },
+                                    ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+    
+                                    },
+                                    ""data-source-files"":[""FileNotFound.json""],
+                                    ""entities"":{ }
+                                }";
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig runtimeConfig), "Should parse the data-source-files correctly.");
+            Assert.IsTrue(runtimeConfig.ListAllDataSources().Count() == 1);
         }
 
         #endregion Negative Tests

@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -105,7 +106,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IQueryExecutor> queryExecutor = new();
             IQueryBuilder queryBuilder = new MsSqlQueryBuilder();
 
-            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryExecutor.Object, queryBuilder, sqlMetadataLogger);
+            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
+            queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
+            queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
+
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().GetDefaultDataSourceName());
             string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
             Assert.AreEqual(tableprefix, expectedPrefix);
         }
@@ -160,16 +165,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
-
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             try
             {
+                string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+                // Setup Mock query manager Factory
+                Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
+                queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
                 ISqlMetadataProvider sqlMetadataProvider = databaseType switch
                 {
-                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
                     _ => throw new ArgumentException($"Invalid database type: {databaseType}")
                 };
 

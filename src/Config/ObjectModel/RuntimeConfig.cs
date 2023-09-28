@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -18,6 +19,14 @@ public record RuntimeConfig
     public RuntimeOptions Runtime { get; init; }
 
     public RuntimeEntities Entities { get; init; }
+
+    public DataSourceFiles? DataSourceFiles { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool CosmosDataSourceUsed { get; private set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public bool SqlDataSourceUsed { get; private set; }
 
     private string _defaultDataSourceName;
 
@@ -44,28 +53,100 @@ public record RuntimeConfig
 
     /// <summary>
     /// Constructor for runtimeConfig.
+    /// To be used when setting up from cli json scenario.
     /// </summary>
-    /// <param name="Schema">schema.</param>
+    /// <param name="Schema">schema for config.</param>
     /// <param name="DataSource">Default datasource.</param>
     /// <param name="Runtime">Runtime settings.</param>
     /// <param name="Entities">Entities</param>
+    /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
     [JsonConstructor]
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities)
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, DataSourceFiles? DataSourceFiles = null)
     {
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        this._dataSourceNameToDataSource = new Dictionary<string, DataSource>();
-        this._defaultDataSourceName = Guid.NewGuid().ToString();
-        this._dataSourceNameToDataSource.Add(this._defaultDataSourceName, this.DataSource);
+        _defaultDataSourceName = Guid.NewGuid().ToString();
 
-        this._entityNameToDataSourceName = new Dictionary<string, string>();
+        // we will set them up with default values
+        _dataSourceNameToDataSource = new Dictionary<string, DataSource>
+        {
+            { _defaultDataSourceName, this.DataSource }
+        };
+
+        _entityNameToDataSourceName = new Dictionary<string, string>();
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            _entityNameToDataSourceName.TryAdd(entity.Key, this._defaultDataSourceName);
+            _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
         }
 
+        // Process data source and entities information for each database in multiple database scenario.
+        this.DataSourceFiles = DataSourceFiles;
+
+        if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
+        {
+            IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
+            // Iterate through all the datasource files and load the config.
+            IFileSystem fileSystem = new FileSystem();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+
+            foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
+            {
+                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
+                {
+                    try
+                    {
+                        _dataSourceNameToDataSource = _dataSourceNameToDataSource.Concat(config._dataSourceNameToDataSource).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        _entityNameToDataSourceName = _entityNameToDataSourceName.Concat(config._entityNameToDataSourceName).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+                        allEntities = allEntities.Concat(config.Entities.AsEnumerable());
+                    }
+                    catch (Exception e)
+                    {
+                        // Errors could include duplicate datasource names, duplicate entity names, etc.
+                        throw new DataApiBuilderException(
+                            $"Error while loading datasource file {dataSourceFile} with exception {e.Message}",
+                            HttpStatusCode.InternalServerError,
+                            DataApiBuilderException.SubStatusCodes.ConfigValidationError,
+                            e.InnerException);
+                    }
+                }
+            }
+
+            this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
+        }
+
+        SqlDataSourceUsed = _dataSourceNameToDataSource.Values.Any
+            (x => x.DatabaseType == DatabaseType.MSSQL || x.DatabaseType == DatabaseType.PostgreSQL || x.DatabaseType == DatabaseType.MySQL);
+
+        CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
+                (x => x.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+
+    }
+
+    /// <summary>
+    /// Constructor for runtimeConfig.
+    /// This constructor is to be used when dynamically setting up the config as opposed to using a cli json file.
+    /// </summary>
+    /// <param name="Schema">schema for config.</param>
+    /// <param name="DataSource">Default datasource.</param>
+    /// <param name="Runtime">Runtime settings.</param>
+    /// <param name="Entities">Entities</param>
+    /// <param name="DataSourceFiles">List of datasource files for multiple db scenario.Null for single db scenario.
+    /// <param name="DefaultDataSourceName">DefaultDataSourceName to maintain backward compatibility.</param>
+    /// <param name="DataSourceNameToDataSource">Dictionary mapping datasourceName to datasource object.</param>
+    /// <param name="EntityNameToDataSourceName">Dictionary mapping entityName to datasourceName.</param>
+    /// <param name="DataSourceFiles">Datasource files which represent list of child runtimeconfigs for multi-db scenario.</param>
+    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, string DefaultDataSourceName, Dictionary<string, DataSource> DataSourceNameToDataSource, Dictionary<string, string> EntityNameToDataSourceName, DataSourceFiles? DataSourceFiles = null)
+    {
+        this.Schema = Schema;
+        this.DataSource = DataSource;
+        this.Runtime = Runtime;
+        this.Entities = Entities;
+        _defaultDataSourceName = DefaultDataSourceName;
+        _dataSourceNameToDataSource = DataSourceNameToDataSource;
+        _entityNameToDataSourceName = EntityNameToDataSourceName;
+        this.DataSourceFiles = DataSourceFiles;
     }
 
     /// <summary>
@@ -81,17 +162,6 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Tries to add the datasource to the DataSourceNameToDataSource dictionary.
-    /// </summary>
-    /// <param name="dataSourceName">dataSourceName.</param>
-    /// <param name="dataSource">dataSource.</param>
-    /// <returns>True indicating success, False indicating failure.</returns>
-    public bool AddDataSource(string dataSourceName, DataSource dataSource)
-    {
-        return _dataSourceNameToDataSource.TryAdd(dataSourceName, dataSource);
-    }
-
-    /// <summary>
     /// Updates the DataSourceNameToDataSource dictionary with the new datasource.
     /// </summary>
     /// <param name="dataSourceName">Name of datasource</param>
@@ -101,18 +171,6 @@ public record RuntimeConfig
     {
         CheckDataSourceNamePresent(dataSourceName);
         _dataSourceNameToDataSource[dataSourceName] = dataSource;
-    }
-
-    /// <summary>
-    /// Removes the datasource from the DataSourceNameToDataSource dictionary.
-    /// </summary>
-    /// <param name="dataSourceName">DataSourceName.</param>
-    /// <returns>True indicating success, False indicating failure.</returns>
-    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public bool RemoveDataSource(string dataSourceName)
-    {
-        CheckDataSourceNamePresent(dataSourceName);
-        return _dataSourceNameToDataSource.Remove(dataSourceName);
     }
 
     /// <summary>
@@ -138,40 +196,11 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Add entity to the EntityNameToDataSourceName dictionary.
+    /// Validates if datasource is present in runtimeConfig.
     /// </summary>
-    /// <param name="entityName">EntityName</param>
-    /// <param name="dataSourceName">DatasourceName.</param>
-    /// <returns>True indicating success, False indicating failure.</returns>
-    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public bool AddEntity(string entityName, string dataSourceName)
+    public bool CheckDataSourceExists(string dataSourceName)
     {
-        CheckDataSourceNamePresent(dataSourceName);
-        return _entityNameToDataSourceName.TryAdd(entityName, dataSourceName);
-    }
-
-    /// <summary>
-    /// Updates the EntityNameToDataSourceName dictionary with the new Entity to datasource mapping.
-    /// </summary>
-    /// <param name="entityName">EntityName.</param>
-    /// <param name="dataSourceName">dataSourceName.</param>
-    /// <exception cref="DataApiBuilderException"></exception>
-    public void UpdateEntityNameToDataSourceName(string entityName, string dataSourceName)
-    {
-        CheckDataSourceNamePresent(dataSourceName);
-        CheckEntityNamePresent(entityName);
-        _entityNameToDataSourceName[entityName] = dataSourceName;
-    }
-
-    /// <summary>
-    /// Removes the entity from the EntityNameToDataSourceName dictionary.
-    /// </summary>
-    /// <param name="entityName">Name of Entity</param>
-    /// <exception cref="DataApiBuilderException">Not found exception if key is not found.</exception>
-    public bool RemoveEntity(string entityName)
-    {
-        CheckEntityNamePresent(entityName);
-        return _entityNameToDataSourceName.Remove(entityName);
+        return _dataSourceNameToDataSource.ContainsKey(dataSourceName);
     }
 
     /// <summary>
@@ -208,7 +237,10 @@ public record RuntimeConfig
     {
         if (!_entityNameToDataSourceName.ContainsKey(entityName))
         {
-            throw new DataApiBuilderException($"{nameof(entityName)}:{entityName} could not be found within the config", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.EntityNotFound);
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.NotFound,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
     }
 }

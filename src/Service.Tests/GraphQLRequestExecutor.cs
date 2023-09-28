@@ -14,6 +14,17 @@ namespace Azure.DataApiBuilder.Service.Tests
 {
     internal static class GraphQLRequestExecutor
     {
+        /// <summary>
+        /// Executes a GraphQL request for a single query node
+        /// </summary>
+        /// <param name="client">http client.</param>
+        /// <param name="configProvider">configProvider</param>
+        /// <param name="queryName">queryName.</param>
+        /// <param name="query">query</param>
+        /// <param name="variables">variables</param>
+        /// <param name="authToken">authToken</param>
+        /// <param name="clientRoleHeader">clientRoleHeader</param>
+        /// <returns>JsonResult</returns>
         public static async Task<JsonElement> PostGraphQLRequestAsync(
             HttpClient client,
             RuntimeConfigProvider configProvider,

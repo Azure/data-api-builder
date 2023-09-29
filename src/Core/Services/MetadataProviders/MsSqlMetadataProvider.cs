@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -24,10 +25,10 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
-            IQueryExecutor queryExecutor,
-            IQueryBuilder sqlQueryBuilder,
-            ILogger<ISqlMetadataProvider> logger)
-            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
+            IAbstractQueryManagerFactory queryManagerFactory,
+            ILogger<ISqlMetadataProvider> logger,
+            string dataSourceName)
+            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName)
         {
         }
 

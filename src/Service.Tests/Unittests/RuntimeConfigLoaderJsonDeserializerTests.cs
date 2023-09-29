@@ -84,13 +84,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 if (replaceEnvVar)
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repValues, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repValues, @"""postgresql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                         "Should read the expected config");
                 }
                 else
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repKeys, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repKeys, @"""postgresql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                         "Should read the expected config");
                 }
 
@@ -157,16 +157,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
         }
 
+        [DataRow("\"notsupporteddb\"", "",
+            DisplayName = "Tests that a database type which will not deserialize correctly fails.")]
+        [DataRow("\"mssql\"", "\"notsupportedconnectionstring\"",
+            DisplayName = "Tests that a malformed connection string fails during post-processing.")]
         [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
-        public void TestDeserializationFailures()
+        public void TestDataSourceDeserializationFailures(string dbType, string connectionString)
         {
             string configJson = @"
 {
     ""data-source"": {
-        ""database-type"": ""notsupporteddb""
-     }
+        ""database-type"": " + dbType + @",
+        ""connection-string"": " + connectionString + @"
+    },
+    ""entities"":{ }
 }";
-            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
+            // replaceEnvVar: true is needed to make sure we do post-processing for the connection string case
+            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, replaceEnvVar: true));
             Assert.IsNull(deserializedConfig);
         }
 
@@ -226,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Environment.SetEnvironmentVariable($"'envVarName", $"_envVarValue");
             Environment.SetEnvironmentVariable($"envVarName'", $"envVarValue_");
             Environment.SetEnvironmentVariable($"'envVarName'", $"_envVarValue_");
-            Environment.SetEnvironmentVariable($"enumVarName", $"mssql");
+            Environment.SetEnvironmentVariable($"enumVarName", $"postgresql");
         }
 
         /// <summary>

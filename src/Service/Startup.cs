@@ -66,7 +66,6 @@ namespace Azure.DataApiBuilder.Service
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
             services.Configure<RuntimeOptions>(Configuration.GetSection("RuntimeOptions"));
-            // services.AddSingleton(Options.Create(Configuration.GetValue<string>(nameof(RuntimeOptions)))); // just use OptionsMonitor instead
             services.AddSingleton<IOptionsMonitor<RuntimeOptions>>();
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
@@ -79,13 +78,14 @@ namespace Azure.DataApiBuilder.Service
                 if (serviceProvider.GetRequiredService<RuntimeConfigProvider>().TryGetConfig(out RuntimeConfig? runtimeConfig)
                 && runtimeConfig.Runtime.Host.Mode is HostMode.Development)
                 {
-                    ConfigFileWatcher configFileWatcher = new(configFileName,
+                    ConfigFileWatcher configFileWatcher = new(configLoader.ConfigFileName,
                         serviceProvider.GetRequiredService<IOptionsMonitor<RuntimeOptions>>(),
                         serviceProvider.GetRequiredService<RuntimeConfigProvider>());
                     return configFileWatcher;
                 }
 
-                return new(); // in this case configfile watcher is an empty object
+                // only instantiate file watcher in local development environment
+                return new();
             });
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {

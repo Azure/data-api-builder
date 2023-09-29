@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
@@ -92,14 +93,13 @@ public class RuntimeConfigLoaderTests
 
         FileSystemRuntimeConfigLoader loader = new(fs);
 
-        try
-        {
-            loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
-            Assert.Fail("Should not load config with duplicate entity names.");
-        }
-        catch (DataApiBuilderException ex)
-        {
-            Assert.IsTrue(ex.StatusCode == System.Net.HttpStatusCode.InternalServerError);
-        }
+        StringWriter sw = new();
+        Console.SetError(sw);
+
+        loader.TryLoadConfig("dab-config.json", out RuntimeConfig _);
+        string error = sw.ToString();
+
+        Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
+        Assert.IsTrue(error.Contains("An item with the same key has already been added."));
     }
 }

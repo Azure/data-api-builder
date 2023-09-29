@@ -372,7 +372,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string roleName = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                 bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);
                 bool isDatabasePolicyDefinedForReadAction = false;
-                
 
                 if (isReadPermissionConfiguredForRole)
                 {

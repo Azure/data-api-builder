@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Given the RestRequestContext, obtains the query text and executes it against the backend. This method returns the
         /// response as a JsonDocument.
         /// </summary>
-        public Task<JsonDocument?> ExecuteFollowUpReadAsync(FindRequestContext context, string datasourceName = "")
+        public Task<JsonDocument?> ExecuteFollowUpReadAsync(FindRequestContext context)
         {
             throw new NotImplementedException();
         }

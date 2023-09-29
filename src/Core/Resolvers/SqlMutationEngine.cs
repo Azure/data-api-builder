@@ -417,7 +417,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             }
 
                             // The role with which the REST request is executed can have a database policy defined for the read action.
-                            // In such a case, to get the results back, a select query which honors the database policy is excuted.
+                            // In such a case, to get the results back, a select query which honors the database policy is executed.
                             if (isDatabasePolicyDefinedForReadAction)
                             {
                                 FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName, sqlMetadataProvider);
@@ -467,9 +467,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         // Location Header is made up of the Base URL of the request and the primary key of the item created.
                         // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
-                        // would not be available in the URL and needs to be appened. Since, this is a PUT or PATCH request that has resulted in the creation of
+                        // would not be available in the URL and needs to be appended. Since, this is a PUT or PATCH request that has resulted in the creation of
                         // a new item, the URL already contains the primary key and hence, an empty string is passed as the primary key route.
-                        return ConstructCreatedResultResponse(resultRow, selectOperationResponse, string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                        return ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                     }
 
                     // When the upsert operation results in the update of an existing record, an HTTP 200 OK response is returned.
@@ -607,13 +607,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // results of the insert/update database operation.
             foreach (string primarykey in context.DatabaseObject.SourceDefinition.PrimaryKey)
             {
-                if (sqlMetadataProvider.TryGetBackingColumn(context.EntityName, primarykey, out string? backingColumnName))
+                // The primary keys can have a mapping defined. mutationResultRow contains the mapped column names as keys.
+                // So, the mapped field names are used to look up and fetch the values from mutationResultRow.
+                // TryGetExposedColumnName method populates the the mapped column name (if configured) or the original column name into exposedColumnName.
+                // It returns false if the primay key does not exist.
+                if (sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, primarykey, out string? exposedColumnName))
                 {
-                    findRequestContext.PrimaryKeyValuePairs.Add(backingColumnName, value: mutationResultRow.Columns[primarykey]!);
+                    context.PrimaryKeyValuePairs.Add(exposedColumnName, mutationResultRow.Columns[exposedColumnName]!);
                 }
                 else
                 {
-                    findRequestContext.PrimaryKeyValuePairs.Add(primarykey, value: mutationResultRow.Columns[primarykey]!);
+                    // This code block should never be reached because the information about primary keys gets populated during the startup.
+                    throw new DataApiBuilderException(
+                       message: "Insert/Upsert operation was successful but unexpected error when constructing the response",
+                       statusCode: HttpStatusCode.InternalServerError,
+                       subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 }
             }
 

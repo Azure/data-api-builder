@@ -612,7 +612,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // It returns false if the primay key does not exist.
                 if (sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, primarykey, out string? exposedColumnName))
                 {
-                    context.PrimaryKeyValuePairs.Add(exposedColumnName, mutationResultRow.Columns[exposedColumnName]!);
+                    findRequestContext.PrimaryKeyValuePairs.Add(exposedColumnName, mutationResultRow.Columns[exposedColumnName]!);
                 }
                 else
                 {

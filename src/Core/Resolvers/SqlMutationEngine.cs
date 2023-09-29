@@ -12,8 +12,11 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -29,13 +32,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public class SqlMutationEngine : IMutationEngine
     {
-        private readonly IQueryEngine _queryEngine;
-        private readonly ISqlMetadataProvider _sqlMetadataProvider;
-        private readonly IQueryExecutor _queryExecutor;
-        private readonly IQueryBuilder _queryBuilder;
+        private readonly IAbstractQueryManagerFactory _queryManagerFactory;
+        private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
+        private readonly IQueryEngineFactory _queryEngineFactory;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
 
@@ -47,21 +50,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Constructor
         /// </summary>
         public SqlMutationEngine(
-            IQueryEngine queryEngine,
-            IQueryExecutor queryExecutor,
-            IQueryBuilder queryBuilder,
-            ISqlMetadataProvider sqlMetadataProvider,
+            IAbstractQueryManagerFactory queryManagerFactory,
+            IMetadataProviderFactory sqlMetadataProviderFactory,
+            IQueryEngineFactory queryEngineFactory,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
-            _queryEngine = queryEngine;
-            _queryExecutor = queryExecutor;
-            _queryBuilder = queryBuilder;
-            _sqlMetadataProvider = sqlMetadataProvider;
+            _queryManagerFactory = queryManagerFactory;
+            _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
+            _queryEngineFactory = queryEngineFactory;
             _authorizationResolver = authorizationResolver;
             _httpContextAccessor = httpContextAccessor;
             _gQLFilterParser = gQLFilterParser;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -69,14 +72,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
+        /// <param name="dataSourceName">dataSourceName to execute against.</param>
         /// <returns>JSON object result and its related pagination metadata</returns>
-        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName = "")
         {
             if (context.Selection.Type.IsListType())
             {
                 throw new NotSupportedException("Returning list types from mutations not supported");
             }
 
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
             string graphqlMutationName = context.Selection.Field.Name.Value;
             IOutputType outputType = context.Selection.Field.Type;
             string entityName = outputType.TypeName();
@@ -87,6 +92,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 entityName = modelName;
             }
 
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
+
             Tuple<JsonDocument?, IMetadata?>? result = null;
             EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
@@ -96,18 +104,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             try
             {
                 // Creating an implicit transaction
-                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
                 {
                     if (mutationOperation is EntityActionOperation.Delete)
                     {
                         // compute the mutation result before removing the element,
                         // since typical GraphQL delete mutations return the metadata of the deleted item.
-                        result = await _queryEngine.ExecuteAsync(context, GetBackingColumnsFromCollection(entityName, parameters));
+                        result = await queryEngine.ExecuteAsync(
+                            context,
+                            GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
+                            dataSourceName);
 
                         Dictionary<string, object>? resultProperties =
                             await PerformDeleteOperation(
                                 entityName,
-                                parameters);
+                                parameters,
+                                sqlMetadataProvider);
 
                         // If the number of records affected by DELETE were zero,
                         // and yet the result was not null previously, it indicates this DELETE lost
@@ -129,6 +141,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 entityName,
                                 mutationOperation,
                                 parameters,
+                                sqlMetadataProvider,
                                 context);
 
                         if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
@@ -138,9 +151,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             // the column names must be converted to backing (source) column names so the
                             // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
                             // represent database column names.
-                            result = await _queryEngine.ExecuteAsync(
+                            result = await queryEngine.ExecuteAsync(
                                         context,
-                                        GetBackingColumnsFromCollection(entityName, mutationResultRow.Columns));
+                                        GetBackingColumnsFromCollection(entityName: entityName, parameters: mutationResultRow.Columns, sqlMetadataProvider: sqlMetadataProvider),
+                                        dataSourceName);
                         }
                     }
 
@@ -173,13 +187,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="entityName">Name of Entity</param>
         /// <param name="parameters">Key/Value collection where only the key is converted.</param>
         /// <returns>Dictionary where the keys now represent backing column names.</returns>
-        public Dictionary<string, object?> GetBackingColumnsFromCollection(string entityName, IDictionary<string, object?> parameters)
+        public static Dictionary<string, object?> GetBackingColumnsFromCollection(string entityName, IDictionary<string, object?> parameters, ISqlMetadataProvider sqlMetadataProvider)
         {
             Dictionary<string, object?> backingRowParams = new();
 
             foreach (KeyValuePair<string, object?> resultEntry in parameters)
             {
-                _sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
+                sqlMetadataProvider.TryGetBackingColumn(entityName, resultEntry.Key, out string? name);
                 if (!string.IsNullOrWhiteSpace(name))
                 {
                     backingRowParams.Add(name, resultEntry.Value);
@@ -199,28 +213,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// QueryStructure built does not depend on Operation enum, thus not useful to use
         /// PerformMutationOperation method.
         /// </summary>
-        public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
+        public async Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName = "")
         {
+            dataSourceName = GetValidatedDataSourceName(dataSourceName);
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
+            IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
             SqlExecuteStructure executeQueryStructure = new(
                 context.EntityName,
-                _sqlMetadataProvider,
+                sqlMetadataProvider,
                 _authorizationResolver,
                 _gQLFilterParser,
                 context.ResolvedParameters);
-            string queryText = _queryBuilder.Build(executeQueryStructure);
+            string queryText = queryBuilder.Build(executeQueryStructure);
 
             JsonArray? resultArray = null;
 
             try
             {
                 // Creating an implicit transaction
-                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
                 {
                     resultArray =
-                        await _queryExecutor.ExecuteQueryAsync(
+                        await queryExecutor.ExecuteQueryAsync(
                             queryText,
                             executeQueryStructure.Parameters,
-                            _queryExecutor.GetJsonArrayAsync,
+                            queryExecutor.GetJsonArrayAsync,
                             GetHttpContext());
 
                     transactionScope.Complete();
@@ -308,7 +326,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>IActionResult</returns>
         public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
         {
+            // for REST API scenarios, use the default datasource
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+
             Dictionary<string, object?> parameters = PrepareParameters(context);
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             if (context.OperationType is EntityActionOperation.Delete)
             {
@@ -317,11 +339,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 try
                 {
                     // Creating an implicit transaction
-                    using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                    using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
                     {
                         resultProperties = await PerformDeleteOperation(
-                                context.EntityName,
-                                parameters);
+                                entityName: context.EntityName,
+                                parameters: parameters,
+                                sqlMetadataProvider: sqlMetadataProvider);
                         transactionScope.Complete();
                     }
                 }
@@ -349,6 +372,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string roleName = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                 bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);
                 bool isDatabasePolicyDefinedForReadAction = false;
+                
 
                 if (isReadPermissionConfiguredForRole)
                 {
@@ -365,11 +389,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     try
                     {
                         // Creating an implicit transaction
-                        using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                        using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
                         {
                             upsertOperationResult = await PerformUpsertOperation(
-                                                                parameters,
-                                                                context);
+                                                                parameters: parameters,
+                                                                context: context,
+                                                                sqlMetadataProvider: sqlMetadataProvider);
 
                             if (upsertOperationResult is null)
                             {
@@ -395,8 +420,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             // In such a case, to get the results back, a select query which honors the database policy is excuted.
                             if (isDatabasePolicyDefinedForReadAction)
                             {
-                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName);
-                                selectOperationResponse = await _queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
+                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName, sqlMetadataProvider);
+                                IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
+                                selectOperationResponse = await queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
                             }
 
                             transactionScope.Complete();
@@ -416,7 +442,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
                     // With postgresql, even if it is the first result, the upsert could have resulted in an INSERT. So, that condition is evaluated.
-                    if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
+                    if (sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
                     {
                         isUpdateResultSet = !PostgresQueryBuilder.IsInsert(resultRow);
                     }
@@ -457,13 +483,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     try
                     {
                         // Creating an implicit transaction
-                        using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
+                        using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
                         {
                             mutationResultRow =
                                     await PerformMutationOperation(
-                                        context.EntityName,
-                                        context.OperationType,
-                                        parameters);
+                                        entityName: context.EntityName,
+                                        operationType: context.OperationType,
+                                        parameters: parameters,
+                                        sqlMetadataProvider: sqlMetadataProvider);
 
                             if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
                             {
@@ -507,8 +534,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             // is executed to fetch the results.
                             if (isDatabasePolicyDefinedForReadAction)
                             {
-                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow, roleName);
-                                selectOperationResponse = await _queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
+                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow, roleName, sqlMetadataProvider);
+                                IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
+                                selectOperationResponse = await queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
                             }
 
                             transactionScope.Complete();
@@ -524,7 +552,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         throw _dabExceptionWithTransactionErrorMessage;
                     }
 
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns);
+                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider);
 
                     // When read permission is configured without a database policy, a subsequent select query will not be executed.
                     // So, if the read action has include/exclude fields configured, additional fields present in the response
@@ -571,7 +599,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="mutationResultRow">Result of the insert/upsert database operation</param>
         /// <param name="roleName">Role with which the API request is executed</param>
         /// <returns>Returns a FindRequestContext object constructed from the existing context and create/upsert operation results.</returns>
-        private FindRequestContext ConstructFindRequestContext(RestRequestContext context, DbResultSetRow mutationResultRow, string roleName)
+        private FindRequestContext ConstructFindRequestContext(RestRequestContext context, DbResultSetRow mutationResultRow, string roleName, ISqlMetadataProvider sqlMetadataProvider)
         {
             FindRequestContext findRequestContext = new(entityName: context.EntityName, dbo: context.DatabaseObject, isList: false);
 
@@ -579,7 +607,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // results of the insert/update database operation.
             foreach (string primarykey in context.DatabaseObject.SourceDefinition.PrimaryKey)
             {
-                if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, primarykey, out string? backingColumnName))
+                if (sqlMetadataProvider.TryGetBackingColumn(context.EntityName, primarykey, out string? backingColumnName))
                 {
                     findRequestContext.PrimaryKeyValuePairs.Add(backingColumnName, value: mutationResultRow.Columns[primarykey]!);
                 }
@@ -707,8 +735,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string entityName,
                 EntityActionOperation operationType,
                 IDictionary<string, object?> parameters,
+                ISqlMetadataProvider sqlMetadataProvider,
                 IMiddlewareContext? context = null)
         {
+            IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
+            IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+
             string queryString;
             Dictionary<string, DbConnectionParam> queryParameters;
             switch (operationType)
@@ -718,7 +751,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     SqlInsertStructure insertQueryStruct = context is null
                         ? new(
                             entityName,
-                            _sqlMetadataProvider,
+                            sqlMetadataProvider,
                             _authorizationResolver,
                             _gQLFilterParser,
                             parameters,
@@ -726,36 +759,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         : new(
                             context,
                             entityName,
-                            _sqlMetadataProvider,
+                            sqlMetadataProvider,
                             _authorizationResolver,
                             _gQLFilterParser,
                             parameters,
                             GetHttpContext());
-                    queryString = _queryBuilder.Build(insertQueryStruct);
+                    queryString = queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
                     break;
                 case EntityActionOperation.Update:
                     SqlUpdateStructure updateStructure = new(
                         entityName,
-                        _sqlMetadataProvider,
+                        sqlMetadataProvider,
                         _authorizationResolver,
                         _gQLFilterParser,
                         parameters,
                         GetHttpContext(),
                         isIncrementalUpdate: false);
-                    queryString = _queryBuilder.Build(updateStructure);
+                    queryString = queryBuilder.Build(updateStructure);
                     queryParameters = updateStructure.Parameters;
                     break;
                 case EntityActionOperation.UpdateIncremental:
                     SqlUpdateStructure updateIncrementalStructure = new(
                         entityName,
-                        _sqlMetadataProvider,
+                        sqlMetadataProvider,
                         _authorizationResolver,
                         _gQLFilterParser,
                         parameters,
                         GetHttpContext(),
                         isIncrementalUpdate: true);
-                    queryString = _queryBuilder.Build(updateIncrementalStructure);
+                    queryString = queryBuilder.Build(updateIncrementalStructure);
                     queryParameters = updateIncrementalStructure.Parameters;
                     break;
                 case EntityActionOperation.UpdateGraphQL:
@@ -767,12 +800,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     SqlUpdateStructure updateGraphQLStructure = new(
                         context,
                         entityName,
-                        _sqlMetadataProvider,
+                        sqlMetadataProvider,
                         _authorizationResolver,
                         _gQLFilterParser,
                         parameters,
                         GetHttpContext());
-                    queryString = _queryBuilder.Build(updateGraphQLStructure);
+                    queryString = queryBuilder.Build(updateGraphQLStructure);
                     queryParameters = updateGraphQLStructure.Parameters;
                     break;
                 default:
@@ -784,7 +817,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (context is not null && !context.Selection.Type.IsScalarType())
             {
-                SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
+                SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
 
                 // To support GraphQL field mappings (DB column aliases), convert the sourceDefinition
                 // primary key column names (backing columns) to the exposed (mapped) column names to
@@ -792,7 +825,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 List<string> primaryKeyExposedColumnNames = new();
                 foreach (string primaryKey in sourceDefinition.PrimaryKey)
                 {
-                    if (_sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name) && !string.IsNullOrWhiteSpace(name))
+                    if (sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name) && !string.IsNullOrWhiteSpace(name))
                     {
                         primaryKeyExposedColumnNames.Add(name);
                     }
@@ -805,12 +838,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // When no exposed column names were resolved, it is safe to provide
                 // backing column names (sourceDefinition.Primary) as a list of arguments.
                 dbResultSet =
-                    await _queryExecutor.ExecuteQueryAsync(
+                    await queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        _queryExecutor.ExtractResultSetFromDbDataReader,
+                        queryExecutor.ExtractResultSetFromDbDataReader,
                         GetHttpContext(),
-                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
+                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey,
+                        dataSourceName);
 
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
@@ -847,11 +881,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // This is the scenario for all REST mutation operations covered by this function
                 // and the case when the Selection Type is a scalar for GraphQL.
                 dbResultSet =
-                    await _queryExecutor.ExecuteQueryAsync(
-                        queryString,
-                        queryParameters,
-                        _queryExecutor.ExtractResultSetFromDbDataReader,
-                        GetHttpContext());
+                    await queryExecutor.ExecuteQueryAsync(
+                        sqltext: queryString,
+                        parameters: queryParameters,
+                        dataReaderHandler: queryExecutor.ExtractResultSetFromDbDataReader,
+                        httpContext: GetHttpContext(),
+                        dataSourceName: dataSourceName);
                 dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new()) : null;
             }
 
@@ -865,30 +900,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="entityName">The name of the entity.</param>
         /// <param name="parameters">The parameters for the DELETE operation.</param>
+        /// <param name="sqlMetadataProvider">Metadataprovider for db on which to perform operation.</param>
         /// <returns>A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
         private async Task<Dictionary<string, object>?>
             PerformDeleteOperation(
                 string entityName,
-                IDictionary<string, object?> parameters)
+                IDictionary<string, object?> parameters,
+                ISqlMetadataProvider sqlMetadataProvider)
         {
+            IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
+            IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
             string queryString;
             Dictionary<string, DbConnectionParam> queryParameters;
             SqlDeleteStructure deleteStructure = new(
                 entityName,
-                _sqlMetadataProvider,
+                sqlMetadataProvider,
                 _authorizationResolver,
                 _gQLFilterParser,
                 parameters,
                 GetHttpContext());
-            queryString = _queryBuilder.Build(deleteStructure);
+            queryString = queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
 
             Dictionary<string, object>?
-                resultProperties = await _queryExecutor.ExecuteQueryAsync(
-                    queryString,
-                    queryParameters,
-                    _queryExecutor.GetResultProperties,
-                    GetHttpContext());
+                resultProperties = await queryExecutor.ExecuteQueryAsync(
+                    sqltext: queryString,
+                    parameters: queryParameters,
+                    dataReaderHandler: queryExecutor.GetResultProperties,
+                    httpContext: GetHttpContext(),
+                    dataSourceName: dataSourceName);
 
             return resultProperties;
         }
@@ -900,41 +941,46 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="parameters">The parameters for the mutation query.</param>
         /// <param name="context">The REST request context.</param>
+        /// <param name="sqlMetadataProvider">Metadataprovider for db on which to perform operation.</param>
         /// <returns>Single row read from DbDataReader.</returns>
         private async Task<DbResultSet?>
             PerformUpsertOperation(
                 IDictionary<string, object?> parameters,
-                RestRequestContext context)
+                RestRequestContext context,
+                ISqlMetadataProvider sqlMetadataProvider)
         {
             string queryString;
             Dictionary<string, DbConnectionParam> queryParameters;
             EntityActionOperation operationType = context.OperationType;
             string entityName = context.EntityName;
+            IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
+            IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
 
             if (operationType is EntityActionOperation.Upsert)
             {
                 SqlUpsertQueryStructure upsertStructure = new(
                     entityName,
-                    _sqlMetadataProvider,
+                    sqlMetadataProvider,
                     _authorizationResolver,
                     _gQLFilterParser,
                     parameters,
                     httpContext: GetHttpContext(),
                     incrementalUpdate: false);
-                queryString = _queryBuilder.Build(upsertStructure);
+                queryString = queryBuilder.Build(upsertStructure);
                 queryParameters = upsertStructure.Parameters;
             }
             else
             {
                 SqlUpsertQueryStructure upsertIncrementalStructure = new(
                     entityName,
-                    _sqlMetadataProvider,
+                    sqlMetadataProvider,
                     _authorizationResolver,
                     _gQLFilterParser,
                     parameters,
                     httpContext: GetHttpContext(),
                     incrementalUpdate: true);
-                queryString = _queryBuilder.Build(upsertIncrementalStructure);
+                queryString = queryBuilder.Build(upsertIncrementalStructure);
                 queryParameters = upsertIncrementalStructure.Parameters;
             }
 
@@ -942,12 +988,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 kv_pair => $"{kv_pair.Key}: {kv_pair.Value}"
                 )) + ">";
 
-            return await _queryExecutor.ExecuteQueryAsync(
+            return await queryExecutor.ExecuteQueryAsync(
                        queryString,
                        queryParameters,
-                       _queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       queryExecutor.GetMultipleResultSetsIfAnyAsync,
                        GetHttpContext(),
-                       new List<string> { prettyPrintPk, entityName });
+                       new List<string> { prettyPrintPk, entityName },
+                       dataSourceName);
         }
 
         /// <summary>
@@ -955,12 +1002,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// using the primary key names from metadata and their values
         /// from the JsonElement representing the entity.
         /// </summary>
-        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="context">RestRequestContext</param>
         /// <param name="entity">A Json element representing one instance of the entity.</param>
+        /// <param name="sqlMetadataProvider">Metadataprovider for db on which to perform operation.</param>
         /// <remarks> This function expects the Json element entity to contain all the properties
         /// that make up the primary keys.</remarks>
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
-        public string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity)
+        public static string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity, ISqlMetadataProvider sqlMetadataProvider)
         {
             if (context.DatabaseObject.SourceType is EntitySourceType.View)
             {
@@ -968,13 +1016,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string entityName = context.EntityName;
-            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(entityName);
+            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
             StringBuilder newPrimaryKeyRoute = new();
 
             foreach (string primaryKey in sourceDefinition.PrimaryKey)
             {
                 // get backing column for lookup, previously validated to be non-null
-                _sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName);
+                sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName);
                 newPrimaryKeyRoute.Append(pkExposedName);
                 newPrimaryKeyRoute.Append("/");
                 newPrimaryKeyRoute.Append(entity[pkExposedName!]!.ToString());
@@ -1023,10 +1071,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="context">Rest request context.</param>
         private void PopulateParamsFromRestRequest(Dictionary<string, object?> parameters, RestRequestContext context)
         {
-            SourceDefinition sourceDefinition = _sqlMetadataProvider.GetSourceDefinition(context.EntityName);
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(context.EntityName);
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(context.EntityName);
             foreach ((string field, object? value) in context.FieldValuePairsInBody)
             {
-                if (_sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumnName)
+                if (sqlMetadataProvider.TryGetBackingColumn(context.EntityName, field, out string? backingColumnName)
                     && !sourceDefinition.Columns[backingColumnName].IsReadOnly)
                 {
                     // Use TryAdd because there can be primary key fields present in the request body as well
@@ -1124,10 +1174,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// For MySql database type, the isolation level is set at Repeatable Read as it is the default isolation level. Likewise, for MsSql and PostgreSql
         /// database types, the isolation level is set at Read Committed as it is the default.
         /// </summary>
+        /// <param name="sqlMetadataProvider">Metadataprovider.</param>
         /// <returns>TransactionScope object with the appropriate isolation level based on the database type</returns>
-        private TransactionScope ConstructTransactionScopeBasedOnDbType()
+        private static TransactionScope ConstructTransactionScopeBasedOnDbType(ISqlMetadataProvider sqlMetadataProvider)
         {
-            return _sqlMetadataProvider.GetDatabaseType() is DatabaseType.MySQL ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
+            return sqlMetadataProvider.GetDatabaseType() is DatabaseType.MySQL ? ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.RepeatableRead)
                                                                                 : ConstructTransactionScopeWithSpecifiedIsolationLevel(isolationLevel: System.Transactions.IsolationLevel.ReadCommitted);
         }
 
@@ -1148,6 +1199,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             IsolationLevel = isolationLevel
                         },
                         TransactionScopeAsyncFlowOption.Enabled);
+        }
+
+        /// <summary>
+        /// Returns the data source name if it is valid. If not, returns the default data source name.
+        /// </summary>
+        /// <param name="dataSourceName">datasourceName.</param>
+        /// <returns>datasourceName.</returns>
+        private string GetValidatedDataSourceName(string dataSourceName)
+        {
+            // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
+            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
         }
     }
 }

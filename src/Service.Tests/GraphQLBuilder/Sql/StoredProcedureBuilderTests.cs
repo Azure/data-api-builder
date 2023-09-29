@@ -126,12 +126,17 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             try
             {
+                Dictionary<string, DatabaseType> entityToDatabaseName = new()
+                {
+                    {"Foo", DatabaseType.MSSQL }
+                };
+
                 // Build GraphQL schema document for the mutation which hydrates parameter metadata and
                 // attempts to convert the parameter value provided in configuration
                 // to the value type denoted in the database schema (metadata supplied via DatabaseObject).
                 DocumentNode mutationRoot = MutationBuilder.Build(
                     root,
-                    DatabaseType.MSSQL,
+                    entityToDatabaseName,
                     entities: new(entities),
                     entityPermissionsMap: _entityPermissions,
                     dbObjects: new Dictionary<string, DatabaseObject> { { spMutationEntityName, spDbObj } }
@@ -146,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 // to the value type denoted in the database schema (metadata supplied via DatabaseObject).
                 DocumentNode queryRoot = QueryBuilder.Build(
                     root,
-                    DatabaseType.MSSQL,
+                    entityToDatabaseName,
                     entities: new(entities),
                     inputTypes: null,
                     entityPermissionsMap: _entityPermissions,

@@ -190,6 +190,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityGraphQLOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
+        options.Converters.Add(new DataSourceFilesConverter());
 
         if (replaceEnvVar)
         {

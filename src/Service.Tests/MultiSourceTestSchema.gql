@@ -1,0 +1,627 @@
+type Clients @model(name: "Clients") {
+  Index: Long @primaryKey(databaseType: "Int64")
+  CustomerId: String
+  FirstName: String
+  LastName: String
+  Company: String
+  City: String
+  Country: String
+  Phone1: String
+  Phone2: String
+  Email: String
+  SubscriptionDate: DateTime
+  Website: String
+}
+
+"Order by input for Clients GraphQL type"
+input ClientsOrderByInput {
+  "Order by options for Index"
+  Index: OrderBy
+  "Order by options for CustomerId"
+  CustomerId: OrderBy
+  "Order by options for FirstName"
+  FirstName: OrderBy
+  "Order by options for LastName"
+  LastName: OrderBy
+  "Order by options for Company"
+  Company: OrderBy
+  "Order by options for City"
+  City: OrderBy
+  "Order by options for Country"
+  Country: OrderBy
+  "Order by options for Phone1"
+  Phone1: OrderBy
+  "Order by options for Phone2"
+  Phone2: OrderBy
+  "Order by options for Email"
+  Email: OrderBy
+  "Order by options for SubscriptionDate"
+  SubscriptionDate: OrderBy
+  "Order by options for Website"
+  Website: OrderBy
+  "Conditions to be treated as AND operations"
+  and: [ClientsOrderByInput]
+  "Conditions to be treated as OR operations"
+  or: [ClientsOrderByInput]
+}
+
+"Input type for adding Long filters"
+input LongFilterInput {
+  "Equals"
+  eq: Long
+  "Greater Than"
+  gt: Long
+  "Greater Than or Equal To"
+  gte: Long
+  "Less Than"
+  lt: Long
+  "Less Than or Equal To"
+  lte: Long
+  "Not Equals"
+  neq: Long
+  "Not null test"
+  isNull: Boolean
+}
+
+"Input type for adding String filters"
+input StringFilterInput {
+  "Equals"
+  eq: String
+  "Contains"
+  contains: String
+  "Not Contains"
+  notContains: String
+  "Starts With"
+  startsWith: String
+  "Ends With"
+  endsWith: String
+  "Not Equals"
+  neq: String
+  "Case Insensitive"
+  caseInsensitive: Boolean = false
+  "Is null test"
+  isNull: Boolean
+}
+
+"Input type for adding DateTime filters"
+input DateTimeFilterInput {
+  "Equals"
+  eq: DateTime
+  "Greater Than"
+  gt: DateTime
+  "Greater Than or Equal To"
+  gte: DateTime
+  "Less Than"
+  lt: DateTime
+  "Less Than or Equal To"
+  lte: DateTime
+  "Not Equals"
+  neq: DateTime
+  "Not null test"
+  isNull: Boolean
+}
+
+"Filter input for Clients GraphQL type"
+input ClientsFilterInput {
+  "Filter options for Index"
+  Index: LongFilterInput
+  "Filter options for CustomerId"
+  CustomerId: StringFilterInput
+  "Filter options for FirstName"
+  FirstName: StringFilterInput
+  "Filter options for LastName"
+  LastName: StringFilterInput
+  "Filter options for Company"
+  Company: StringFilterInput
+  "Filter options for City"
+  City: StringFilterInput
+  "Filter options for Country"
+  Country: StringFilterInput
+  "Filter options for Phone1"
+  Phone1: StringFilterInput
+  "Filter options for Phone2"
+  Phone2: StringFilterInput
+  "Filter options for Email"
+  Email: StringFilterInput
+  "Filter options for SubscriptionDate"
+  SubscriptionDate: DateTimeFilterInput
+  "Filter options for Website"
+  Website: StringFilterInput
+  "Conditions to be treated as AND operations"
+  and: [ClientsFilterInput]
+  "Conditions to be treated as OR operations"
+  or: [ClientsFilterInput]
+}
+
+"The return object from a filter query that supports a pagination token for paging through results"
+type ClientsConnection {
+  "The list of items that matched the filter"
+  items: [Clients!]!
+  "A pagination token to provide to subsequent pages of a query"
+  endCursor: String
+  "Indicates if there are more pages of items to return"
+  hasNextPage: Boolean!
+}
+
+"Input type for creating Clients"
+input CreateClientsInput {
+  "Input for field Index on type CreateClientsInput"
+  Index: Long
+  "Input for field CustomerId on type CreateClientsInput"
+  CustomerId: String
+  "Input for field FirstName on type CreateClientsInput"
+  FirstName: String
+  "Input for field LastName on type CreateClientsInput"
+  LastName: String
+  "Input for field Company on type CreateClientsInput"
+  Company: String
+  "Input for field City on type CreateClientsInput"
+  City: String
+  "Input for field Country on type CreateClientsInput"
+  Country: String
+  "Input for field Phone1 on type CreateClientsInput"
+  Phone1: String
+  "Input for field Phone2 on type CreateClientsInput"
+  Phone2: String
+  "Input for field Email on type CreateClientsInput"
+  Email: String
+  "Input for field SubscriptionDate on type CreateClientsInput"
+  SubscriptionDate: DateTime
+  "Input for field Website on type CreateClientsInput"
+  Website: String
+}
+
+"Input type for updating Clients"
+input UpdateClientsInput {
+  "Input for field Index on type UpdateClientsInput"
+  Index: Long
+  "Input for field CustomerId on type UpdateClientsInput"
+  CustomerId: String
+  "Input for field FirstName on type UpdateClientsInput"
+  FirstName: String
+  "Input for field LastName on type UpdateClientsInput"
+  LastName: String
+  "Input for field Company on type UpdateClientsInput"
+  Company: String
+  "Input for field City on type UpdateClientsInput"
+  City: String
+  "Input for field Country on type UpdateClientsInput"
+  Country: String
+  "Input for field Phone1 on type UpdateClientsInput"
+  Phone1: String
+  "Input for field Phone2 on type UpdateClientsInput"
+  Phone2: String
+  "Input for field Email on type UpdateClientsInput"
+  Email: String
+  "Input for field SubscriptionDate on type UpdateClientsInput"
+  SubscriptionDate: DateTime
+  "Input for field Website on type UpdateClientsInput"
+  Website: String
+}
+
+type CustomersOther @model(name: "CustomersOther") {
+  Index: Long @primaryKey(databaseType: "Int64")
+  CustomerId: String
+  FirstName: String
+  LastName: String
+  Company: String
+  City: String
+  Country: String
+  Phone1: String
+  Phone2: String
+  Email: String
+  SubscriptionDate: DateTime
+  Website: String
+}
+
+"Order by input for CustomersOther GraphQL type"
+input CustomersOtherOrderByInput {
+  "Order by options for Index"
+  Index: OrderBy
+  "Order by options for CustomerId"
+  CustomerId: OrderBy
+  "Order by options for FirstName"
+  FirstName: OrderBy
+  "Order by options for LastName"
+  LastName: OrderBy
+  "Order by options for Company"
+  Company: OrderBy
+  "Order by options for City"
+  City: OrderBy
+  "Order by options for Country"
+  Country: OrderBy
+  "Order by options for Phone1"
+  Phone1: OrderBy
+  "Order by options for Phone2"
+  Phone2: OrderBy
+  "Order by options for Email"
+  Email: OrderBy
+  "Order by options for SubscriptionDate"
+  SubscriptionDate: OrderBy
+  "Order by options for Website"
+  Website: OrderBy
+  "Conditions to be treated as AND operations"
+  and: [CustomersOtherOrderByInput]
+  "Conditions to be treated as OR operations"
+  or: [CustomersOtherOrderByInput]
+}
+
+"Filter input for CustomersOther GraphQL type"
+input CustomersOtherFilterInput {
+  "Filter options for Index"
+  Index: LongFilterInput
+  "Filter options for CustomerId"
+  CustomerId: StringFilterInput
+  "Filter options for FirstName"
+  FirstName: StringFilterInput
+  "Filter options for LastName"
+  LastName: StringFilterInput
+  "Filter options for Company"
+  Company: StringFilterInput
+  "Filter options for City"
+  City: StringFilterInput
+  "Filter options for Country"
+  Country: StringFilterInput
+  "Filter options for Phone1"
+  Phone1: StringFilterInput
+  "Filter options for Phone2"
+  Phone2: StringFilterInput
+  "Filter options for Email"
+  Email: StringFilterInput
+  "Filter options for SubscriptionDate"
+  SubscriptionDate: DateTimeFilterInput
+  "Filter options for Website"
+  Website: StringFilterInput
+  "Conditions to be treated as AND operations"
+  and: [CustomersOtherFilterInput]
+  "Conditions to be treated as OR operations"
+  or: [CustomersOtherFilterInput]
+}
+
+"The return object from a filter query that supports a pagination token for paging through results"
+type CustomersOtherConnection {
+  "The list of items that matched the filter"
+  items: [CustomersOther!]!
+  "A pagination token to provide to subsequent pages of a query"
+  endCursor: String
+  "Indicates if there are more pages of items to return"
+  hasNextPage: Boolean!
+}
+
+"Input type for creating CustomersOther"
+input CreateCustomersOtherInput {
+  "Input for field Index on type CreateCustomersOtherInput"
+  Index: Long
+  "Input for field CustomerId on type CreateCustomersOtherInput"
+  CustomerId: String
+  "Input for field FirstName on type CreateCustomersOtherInput"
+  FirstName: String
+  "Input for field LastName on type CreateCustomersOtherInput"
+  LastName: String
+  "Input for field Company on type CreateCustomersOtherInput"
+  Company: String
+  "Input for field City on type CreateCustomersOtherInput"
+  City: String
+  "Input for field Country on type CreateCustomersOtherInput"
+  Country: String
+  "Input for field Phone1 on type CreateCustomersOtherInput"
+  Phone1: String
+  "Input for field Phone2 on type CreateCustomersOtherInput"
+  Phone2: String
+  "Input for field Email on type CreateCustomersOtherInput"
+  Email: String
+  "Input for field SubscriptionDate on type CreateCustomersOtherInput"
+  SubscriptionDate: DateTime
+  "Input for field Website on type CreateCustomersOtherInput"
+  Website: String
+}
+
+"Input type for updating CustomersOther"
+input UpdateCustomersOtherInput {
+  "Input for field Index on type UpdateCustomersOtherInput"
+  Index: Long
+  "Input for field CustomerId on type UpdateCustomersOtherInput"
+  CustomerId: String
+  "Input for field FirstName on type UpdateCustomersOtherInput"
+  FirstName: String
+  "Input for field LastName on type UpdateCustomersOtherInput"
+  LastName: String
+  "Input for field Company on type UpdateCustomersOtherInput"
+  Company: String
+  "Input for field City on type UpdateCustomersOtherInput"
+  City: String
+  "Input for field Country on type UpdateCustomersOtherInput"
+  Country: String
+  "Input for field Phone1 on type UpdateCustomersOtherInput"
+  Phone1: String
+  "Input for field Phone2 on type UpdateCustomersOtherInput"
+  Phone2: String
+  "Input for field Email on type UpdateCustomersOtherInput"
+  Email: String
+  "Input for field SubscriptionDate on type UpdateCustomersOtherInput"
+  SubscriptionDate: DateTime
+  "Input for field Website on type UpdateCustomersOtherInput"
+  Website: String
+}
+
+type Customers @model() {
+  Index: Long @primaryKey(databaseType: "Int64")
+  OrganizationId: String
+  Name: String
+  Website: String
+  Country: String
+  Description: String
+  Founded: Long
+  Industry: String
+  Numberofemployees: Long
+}
+
+type People @model(name: "People") {
+  Index: Long @primaryKey(databaseType: "Int64")
+  UserId: String
+  FirstName: String
+  LastName: String
+  Sex: String
+  Email: String
+  Phone: String
+  Dateofbirth: DateTime
+  JobTitle: String
+}
+
+"Order by input for Customers GraphQL type"
+input CustomersOrderByInput {
+  "Order by options for Index"
+  Index: OrderBy
+  "Order by options for OrganizationId"
+  OrganizationId: OrderBy
+  "Order by options for Name"
+  Name: OrderBy
+  "Order by options for Website"
+  Website: OrderBy
+  "Order by options for Country"
+  Country: OrderBy
+  "Order by options for Description"
+  Description: OrderBy
+  "Order by options for Founded"
+  Founded: OrderBy
+  "Order by options for Industry"
+  Industry: OrderBy
+  "Order by options for Numberofemployees"
+  Numberofemployees: OrderBy
+  "Conditions to be treated as AND operations"
+  and: [CustomersOrderByInput]
+  "Conditions to be treated as OR operations"
+  or: [CustomersOrderByInput]
+}
+
+"Filter input for Customers GraphQL type"
+input CustomersFilterInput {
+  "Filter options for Index"
+  Index: LongFilterInput
+  "Filter options for OrganizationId"
+  OrganizationId: StringFilterInput
+  "Filter options for Name"
+  Name: StringFilterInput
+  "Filter options for Website"
+  Website: StringFilterInput
+  "Filter options for Country"
+  Country: StringFilterInput
+  "Filter options for Description"
+  Description: StringFilterInput
+  "Filter options for Founded"
+  Founded: LongFilterInput
+  "Filter options for Industry"
+  Industry: StringFilterInput
+  "Filter options for Numberofemployees"
+  Numberofemployees: LongFilterInput
+  "Conditions to be treated as AND operations"
+  and: [CustomersFilterInput]
+  "Conditions to be treated as OR operations"
+  or: [CustomersFilterInput]
+}
+
+"Order by input for People GraphQL type"
+input PeopleOrderByInput {
+  "Order by options for Index"
+  Index: OrderBy
+  "Order by options for UserId"
+  UserId: OrderBy
+  "Order by options for FirstName"
+  FirstName: OrderBy
+  "Order by options for LastName"
+  LastName: OrderBy
+  "Order by options for Sex"
+  Sex: OrderBy
+  "Order by options for Email"
+  Email: OrderBy
+  "Order by options for Phone"
+  Phone: OrderBy
+  "Order by options for Dateofbirth"
+  Dateofbirth: OrderBy
+  "Order by options for JobTitle"
+  JobTitle: OrderBy
+  "Conditions to be treated as AND operations"
+  and: [PeopleOrderByInput]
+  "Conditions to be treated as OR operations"
+  or: [PeopleOrderByInput]
+}
+
+"Filter input for People GraphQL type"
+input PeopleFilterInput {
+  "Filter options for Index"
+  Index: LongFilterInput
+  "Filter options for UserId"
+  UserId: StringFilterInput
+  "Filter options for FirstName"
+  FirstName: StringFilterInput
+  "Filter options for LastName"
+  LastName: StringFilterInput
+  "Filter options for Sex"
+  Sex: StringFilterInput
+  "Filter options for Email"
+  Email: StringFilterInput
+  "Filter options for Phone"
+  Phone: StringFilterInput
+  "Filter options for Dateofbirth"
+  Dateofbirth: DateTimeFilterInput
+  "Filter options for JobTitle"
+  JobTitle: StringFilterInput
+  "Conditions to be treated as AND operations"
+  and: [PeopleFilterInput]
+  "Conditions to be treated as OR operations"
+  or: [PeopleFilterInput]
+}
+
+"The return object from a filter query that supports a pagination token for paging through results"
+type CustomersConnection {
+  "The list of items that matched the filter"
+  items: [Customers!]!
+  "A pagination token to provide to subsequent pages of a query"
+  endCursor: String
+  "Indicates if there are more pages of items to return"
+  hasNextPage: Boolean!
+}
+
+"The return object from a filter query that supports a pagination token for paging through results"
+type PeopleConnection {
+  "The list of items that matched the filter"
+  items: [People!]!
+  "A pagination token to provide to subsequent pages of a query"
+  endCursor: String
+  "Indicates if there are more pages of items to return"
+  hasNextPage: Boolean!
+}
+
+"Input type for creating Customers"
+input CreateCustomersInput {
+  "Input for field Index on type CreateCustomersInput"
+  Index: Long
+  "Input for field OrganizationId on type CreateCustomersInput"
+  OrganizationId: String
+  "Input for field Name on type CreateCustomersInput"
+  Name: String
+  "Input for field Website on type CreateCustomersInput"
+  Website: String
+  "Input for field Country on type CreateCustomersInput"
+  Country: String
+  "Input for field Description on type CreateCustomersInput"
+  Description: String
+  "Input for field Founded on type CreateCustomersInput"
+  Founded: Long
+  "Input for field Industry on type CreateCustomersInput"
+  Industry: String
+  "Input for field Numberofemployees on type CreateCustomersInput"
+  Numberofemployees: Long
+}
+
+"Input type for updating Customers"
+input UpdateCustomersInput {
+  "Input for field Index on type UpdateCustomersInput"
+  Index: Long
+  "Input for field OrganizationId on type UpdateCustomersInput"
+  OrganizationId: String
+  "Input for field Name on type UpdateCustomersInput"
+  Name: String
+  "Input for field Website on type UpdateCustomersInput"
+  Website: String
+  "Input for field Country on type UpdateCustomersInput"
+  Country: String
+  "Input for field Description on type UpdateCustomersInput"
+  Description: String
+  "Input for field Founded on type UpdateCustomersInput"
+  Founded: Long
+  "Input for field Industry on type UpdateCustomersInput"
+  Industry: String
+  "Input for field Numberofemployees on type UpdateCustomersInput"
+  Numberofemployees: Long
+}
+
+"Input type for creating People"
+input CreatePeopleInput {
+  "Input for field Index on type CreatePeopleInput"
+  Index: Long
+  "Input for field UserId on type CreatePeopleInput"
+  UserId: String
+  "Input for field FirstName on type CreatePeopleInput"
+  FirstName: String
+  "Input for field LastName on type CreatePeopleInput"
+  LastName: String
+  "Input for field Sex on type CreatePeopleInput"
+  Sex: String
+  "Input for field Email on type CreatePeopleInput"
+  Email: String
+  "Input for field Phone on type CreatePeopleInput"
+  Phone: String
+  "Input for field Dateofbirth on type CreatePeopleInput"
+  Dateofbirth: DateTime
+  "Input for field JobTitle on type CreatePeopleInput"
+  JobTitle: String
+}
+
+"Input type for updating People"
+input UpdatePeopleInput {
+  "Input for field Index on type UpdatePeopleInput"
+  Index: Long
+  "Input for field UserId on type UpdatePeopleInput"
+  UserId: String
+  "Input for field FirstName on type UpdatePeopleInput"
+  FirstName: String
+  "Input for field LastName on type UpdatePeopleInput"
+  LastName: String
+  "Input for field Sex on type UpdatePeopleInput"
+  Sex: String
+  "Input for field Email on type UpdatePeopleInput"
+  Email: String
+  "Input for field Phone on type UpdatePeopleInput"
+  Phone: String
+  "Input for field Dateofbirth on type UpdatePeopleInput"
+  Dateofbirth: DateTime
+  "Input for field JobTitle on type UpdatePeopleInput"
+  JobTitle: String
+}
+
+type Query {
+  "Get a list of all the Clients items from the database"
+  clients("The number of items to return from the page start point" first: Int "A pagination token from a previous query to continue through a paginated list" after: String "Filter options for query" filter: ClientsFilterInput "Ordering options for query" orderBy: ClientsOrderByInput): ClientsConnection!
+  "Get a Clients from the database by its ID\/primary key"
+  clients_by_pk(Index: Long): Clients
+  "Get a list of all the CustomersOther items from the database"
+  customersOther("The number of items to return from the page start point" first: Int "A pagination token from a previous query to continue through a paginated list" after: String "Filter options for query" filter: CustomersOtherFilterInput "Ordering options for query" orderBy: CustomersOtherOrderByInput): CustomersOtherConnection!
+  "Get a CustomersOther from the database by its ID\/primary key"
+  customersOther_by_pk(Index: Long): CustomersOther
+  "Get a list of all the Customers items from the database"
+  customers("The number of items to return from the page start point" first: Int "A pagination token from a previous query to continue through a paginated list" after: String "Filter options for query" filter: CustomersFilterInput "Ordering options for query" orderBy: CustomersOrderByInput): CustomersConnection!
+  "Get a Customers from the database by its ID\/primary key"
+  customers_by_pk(Index: Long): Customers
+  "Get a list of all the People items from the database"
+  people("The number of items to return from the page start point" first: Int "A pagination token from a previous query to continue through a paginated list" after: String "Filter options for query" filter: PeopleFilterInput "Ordering options for query" orderBy: PeopleOrderByInput): PeopleConnection!
+  "Get a People from the database by its ID\/primary key"
+  people_by_pk(Index: Long): People
+}
+
+type Mutation {
+  "Creates a new Clients"
+  createClients("Input representing all the fields for creating Clients" item: CreateClientsInput!): Clients
+  "Updates a Clients"
+  updateClients("The ID of the item being updated." Index: Long! "Input representing all the fields for updating Clients" item: UpdateClientsInput!): Clients
+  "Delete a Clients"
+  deleteClients("The ID of the item being deleted." Index: Long!): Clients
+  "Creates a new CustomersOther"
+  createCustomersOther("Input representing all the fields for creating CustomersOther" item: CreateCustomersOtherInput!): CustomersOther
+  "Updates a CustomersOther"
+  updateCustomersOther("The ID of the item being updated." Index: Long! "Input representing all the fields for updating CustomersOther" item: UpdateCustomersOtherInput!): CustomersOther
+  "Delete a CustomersOther"
+  deleteCustomersOther("The ID of the item being deleted." Index: Long!): CustomersOther
+  "Creates a new Customers"
+  createCustomers("Input representing all the fields for creating Customers" item: CreateCustomersInput!): Customers
+  "Updates a Customers"
+  updateCustomers("The ID of the item being updated." Index: Long! "Input representing all the fields for updating Customers" item: UpdateCustomersInput!): Customers
+  "Delete a Customers"
+  deleteCustomers("The ID of the item being deleted." Index: Long!): Customers
+  "Creates a new People"
+  createPeople("Input representing all the fields for creating People" item: CreatePeopleInput!): People
+  "Updates a People"
+  updatePeople("The ID of the item being updated." Index: Long! "Input representing all the fields for updating People" item: UpdatePeopleInput!): People
+  "Delete a People"
+  deletePeople("The ID of the item being deleted." Index: Long!): People
+}

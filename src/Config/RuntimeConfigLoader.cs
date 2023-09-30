@@ -145,9 +145,12 @@ public abstract class RuntimeConfigLoader
             }
 
         }
-        catch (JsonException ex)
+        catch (Exception ex) when (
+            ex is JsonException ||
+            ex is DataApiBuilderException)
         {
-            string errorMessage = "Deserialization of the configuration file failed.";
+            string errorMessage = ex is JsonException ? "Deserialization of the configuration file failed." :
+                "Deserialization of the configuration file failed during a post-processing step.";
 
             // logger can be null when called from CLI
             if (logger is null)

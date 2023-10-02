@@ -106,7 +106,7 @@ public record RuntimeConfig
                         // Errors could include duplicate datasource names, duplicate entity names, etc.
                         throw new DataApiBuilderException(
                             $"Error while loading datasource file {dataSourceFile} with exception {e.Message}",
-                            HttpStatusCode.InternalServerError,
+                            HttpStatusCode.ServiceUnavailable,
                             DataApiBuilderException.SubStatusCodes.ConfigValidationError,
                             e.InnerException);
                     }

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -74,16 +75,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with MSSQL as the database.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow(";;;;;fooBarBAZ")]
-        [DataRow("!&^%*&$$%#$%@$%#@()")]
-        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
-        [DataRow("")]
-        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString)
+        [DataRow(";;;;;fooBarBAZ", true)]
+        [DataRow("!&^%*&$$%#$%@$%#@()", true)]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", true)]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", true)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", true)]
+        [DataRow("", false)]
+        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString, bool isInvalidConnectionBuilderString)
         {
+            StringWriter sw = null;
+            // For strings that are an invalid format for the connection string builder, need to
+            // redirect std error to a string writer for comparison to expected error messaging later.
+            if (isInvalidConnectionBuilderString)
+            {
+                sw = new();
+                Console.SetError(sw);
+            }
+
             DatabaseEngine = TestCategory.MSSQL;
-            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString, sw);
         }
 
         /// <summary>
@@ -158,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="databaseType"></param>
         /// <param name="connectionString"></param>
         /// <returns></returns>
-        private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString)
+        private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString, StringWriter sw = null)
         {
             TestHelper.SetupDatabaseEnvironment(databaseType);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
@@ -188,9 +198,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException ex)
             {
                 // use contains to correctly cover db/user unique error messaging
-                Assert.IsTrue(ex.Message.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                // if sw is not null it holds the error messaging
+                string error = sw is null ? ex.Message : sw.ToString();
+                Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                if (sw is not null)
+                {
+                    Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
+                }
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();

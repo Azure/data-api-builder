@@ -421,7 +421,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             {
                                 FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName, sqlMetadataProvider);
                                 IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-                                selectOperationResponse = await queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
+                                selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
                             }
 
                             transactionScope.Complete();
@@ -535,7 +535,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             {
                                 FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow, roleName, sqlMetadataProvider);
                                 IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-                                selectOperationResponse = await queryEngine.ExecuteFollowUpReadAsync(findRequestContext);
+                                selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
                             }
 
                             transactionScope.Complete();

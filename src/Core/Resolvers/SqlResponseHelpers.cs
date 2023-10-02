@@ -24,8 +24,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="jsonDoc">The JsonDocument from the query.</param>
         /// <param name="context">The RequestContext.</param>
         /// <param name="sqlMetadataProvider">the metadataprovider.</param>
-        /// <param name="httpContextAccessor"></param>
-        /// <param name="runtimeConfigProvider">fetch the base route configured.</param>
+        /// <param name="runtimeConfig">Runtimeconfig object</param>
+        /// <param name="httpContext">HTTP context associated with the API request</param>
         /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
         public static OkObjectResult FormatFindResult(JsonDocument jsonDoc, FindRequestContext context, ISqlMetadataProvider sqlMetadataProvider, RuntimeConfig runtimeConfig, HttpContext httpContext)
         {

@@ -2,8 +2,10 @@
 // Licensed under the MIT License.
 
 #nullable disable
+using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Net;
@@ -14,6 +16,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -22,6 +25,7 @@ using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using static Azure.DataApiBuilder.Service.Tests.TestHelper;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -110,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity testEntity = new(
                 Source: entitySource,
-                Rest: new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+                Rest: new(EntityRestOptions.DEFAULT_HTTP_VERBS_ENABLED_FOR_SP),
                 GraphQL: new(AuthorizationHelpers.TEST_ENTITY, AuthorizationHelpers.TEST_ENTITY + "s"),
                 Permissions: permissionSettings.ToArray(),
                 Relationships: null,
@@ -123,10 +127,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ) with
             { Entities = new(new Dictionary<string, Entity>() { { AuthorizationHelpers.TEST_ENTITY, testEntity } }) };
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             try
             {
@@ -162,10 +163,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
@@ -259,15 +258,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} used for relationship is not defined in the config.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         }
@@ -323,15 +321,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
             // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} is disabled for GraphQL.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         }
@@ -403,9 +400,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup(x =>
                 x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
             // Exception thrown as foreignKeyPair not found in the DB.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
                 + $" and entity: {relationshipEntity}.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -423,7 +423,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Since, we have defined the relationship in Database,
             // the engine was able to find foreign key relation and validation will pass.
-            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
+            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
         }
 
         /// <summary>
@@ -521,16 +521,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(isForeignKeyPairBetTargetAndLinkingObject);
 
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
             if (isValidScenario)
             {
                 // No Exception will be thrown as the relationship exists where it's needed.
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
             }
             else
             {
                 // Exception thrown as foreignKeyPair is not present for the correct pair.
                 DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                    configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                    configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
                 Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
                     + $" and entity: {relationshipEntity}.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -596,10 +599,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
 
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
             // Exception is thrown as foreignKey pair is not specified in the config, nor defined
             // in the database.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"Could not find relationship between entities:"
                 + $" SampleEntity1 and SampleEntity2.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -615,9 +621,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     new DatabaseTable("dbo", "TEST_SOURCE2"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(true);
 
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
             // No Exception is thrown as foreignKey Pair was found in the DB between
             // source and target entity.
-            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
+            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
         }
 
         /// <summary>
@@ -637,10 +645,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: dbPolicy
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -672,10 +678,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
                 databasePolicy: policy
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -754,10 +758,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 operation: actionOp,
                 includedCols: new HashSet<string> { "*", "col2" }
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -780,10 +782,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 operation: actionOp,
                 excludedCols: new HashSet<string> { "*", "col1" }
                 );
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
@@ -854,10 +854,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 ),
                 Entities: new(entityMap));
 
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
             if (!exceptionExpected)
             {
                 RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
@@ -929,10 +927,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
                 );
 
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
             if (expectsException)
             {
                 DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-                    action: () => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig),
+                    action: () => configValidator.ValidateEntityConfiguration(runtimeConfig),
                     message: $"Entity name \"{entityNameFromConfig}\" incorrectly passed validation.");
 
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
@@ -940,7 +940,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                configValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1344,7 +1344,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Entity sampleEntity = new(
                 Source: new(source, EntitySourceType.Table, null, null),
-                Rest: restDetails ?? new(EntityRestOptions.DEFAULT_SUPPORTED_VERBS, Enabled: false),
+                Rest: restDetails ?? new(Enabled: false),
                 GraphQL: graphQLDetails,
                 Permissions: new[] { permissionForEntity },
                 Relationships: relationshipMap,
@@ -1626,7 +1626,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 @"""$schema"": ""test_schema""," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
                     ""options"":{
                         ""set-session-context"": false
                     }
@@ -1660,10 +1660,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }";
 
             RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
-            MockFileSystem fileSystem = new();
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Perform validation on the permissions in the config and assert the expected results.
             if (exceptionExpected)
@@ -1722,7 +1719,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 @"""$schema"": ""test_schema""," +
                 @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
+                    ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
                     ""options"":{
                         ""set-session-context"": false
                     }
@@ -1778,88 +1775,64 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that the rest methods are correctly configured for entities in the config.
-        /// Rest methods can only be configured for stored procedures as an array of valid REST operations. 
+        /// Validates that a warning is logged when REST methods are configured for tables and views. For stored procedures,
+        /// no warnings are logged.
         /// </summary>
         /// <param name="sourceType">The source type of the entity.</param>
         /// <param name="methods">Value of the rest methods property configured for the entity.</param>
         /// <param name="exceptionExpected">Boolean value representing whether an exception is expected or not.</param>
         /// <param name="expectedErrorMessage">Expected error message when an exception is expected for the test run.</param>
-        [Ignore]
         [DataTestMethod]
-        [DataRow(EntitySourceType.Table, "[\"get\"]", true,
-            $"The rest property 'methods' is present for entity: HybridEntity of type: Table, but is only valid for type: StoredProcedure.",
-            DisplayName = "Rest methods specified for non-storedprocedure entity fail config validation.")]
-        [DataRow(EntitySourceType.StoredProcedure, "[\"Get\", \"post\", \"PUT\", \"paTch\", \"delete\"]", false,
-            DisplayName = "Valid rest operations specified in rest methods for stored procedure pass config validation.")]
+        [DataRow(EntitySourceType.Table, new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }, true,
+            DisplayName = "Tables with REST Methods configured - Engine logs a warning during startup")]
+        [DataRow(EntitySourceType.StoredProcedure, new SupportedHttpVerb[] { SupportedHttpVerb.Get, SupportedHttpVerb.Post }, false,
+            DisplayName = "Stored Procedures with REST Methods configured - No warnings logged")]
         public void ValidateRestMethodsForEntityInConfig(
             EntitySourceType sourceType,
-            string methods,
-            bool exceptionExpected,
-            string expectedErrorMessage = "")
+            SupportedHttpVerb[] methods,
+            bool isWarningLogExpected)
         {
-            string runtimeConfigString = @"{
-                    " +
-                @"""$schema"": ""test_schema""," +
-                @"""data-source"": {
-                    ""database-type"": ""mssql"",
-                    ""connection-string"": ""testconnectionstring"",
-                    ""options"":{
-                        ""set-session-context"": false
-                    }
-                },
-                ""runtime"": {
-                    ""host"": {
-                    ""mode"": ""development"",
-                    ""authentication"": {
-                        ""provider"": ""StaticWebApps""
-                    }
-                  },
-                  ""rest"": {
-                    ""enabled"": true,
-                    ""path"": ""/api""
-                    },
-                  ""graphql"": {
-                       ""enabled"": true,
-                       ""path"": ""/graphql"",
-                       ""allow-introspection"": true
-                    }
-                },
-                ""entities"": {
-                    ""HybridEntity"":{
-                        ""source"": {
-                            ""object"": ""hybridSource"",
-                            ""type"":" + $"\"{sourceType}\"" + @"
-                        },
-                        ""permissions"": [
-                           {
-                            ""role"": ""anonymous"",
-                            ""actions"": [
-                               ""*""
-                            ]
-                           }
-                         ],
-                        ""rest"":{
-                            ""methods"":" + $"{methods}" + @"
-                         }
-                       }
-                    }
-                }";
+            Dictionary<string, Entity> entityMap = new();
+            string entityName = "EntityA";
+            // Sets REST method for the entity
+            Entity entity = new(Source: new("TEST_SOURCE", sourceType, null, null),
+                                 Rest: new(Methods: methods),
+                                 GraphQL: new(entityName, ""),
+                                 Permissions: Array.Empty<EntityPermission>(),
+                                 Relationships: new(),
+                                 Mappings: new());
+            entityMap.Add(entityName, entity);
 
-            RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, string.Empty, Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)),
+                Entities: new(entityMap));
 
-            // Perform validation on the entity in the config and assert the expected results.
-            if (exceptionExpected)
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
+
+            configValidator.ValidateEntityConfiguration(runtimeConfig);
+
+            if (isWarningLogExpected)
             {
-                DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
-                Assert.AreEqual(expectedErrorMessage, ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
-            else
-            {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                // Assert on the log message to verify the warning log
+                loggerMock.Verify(
+                    x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Equals($"Entity {entityName} has rest methods configured but is not a stored procedure. Values configured will be ignored and all 5 HTTP actions will be enabled.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()
+                    ),
+                    Times.Once
+                );
             }
         }
 
@@ -1914,17 +1887,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                configValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -1982,17 +1957,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(entityMap)
             );
 
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
             if (exceptionExpected)
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateEntityConfiguration(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateEntityConfiguration(runtimeConfig);
+                configValidator.ValidateEntityConfiguration(runtimeConfig);
             }
         }
 
@@ -2055,6 +2032,79 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
             }
+        }
+
+        /// <summary>
+        /// This test checks that the final config used by runtime engine doesn't lose the directory information
+        /// if provided by the user.
+        /// It also validates that if config file is provided by the user, it will be used directly irrespective of
+        /// environment variable being set or not. 
+        /// When user doesn't provide a config file, we check if environment variable is set and if it is, we use
+        /// the config file specified by the environment variable, else we use the default config file.
+        /// <param name="userProvidedConfigFilePath"></param>
+        /// <param name="environmentValue"></param>
+        /// <param name="useAbsolutePath"></param>
+        /// <param name="environmentFile"></param>
+        /// <param name="finalConfigFilePath"></param>
+        [DataTestMethod]
+        [DataRow("my-config.json", "", false, null, "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is not set")]
+        [DataRow("test-configs/my-config.json", "", false, null, "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is not set")]
+        [DataRow("my-config.json", "Test", false, "my-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set")]
+        [DataRow("test-configs/my-config.json", "Test", false, "test-configs/my-config.Test.json", "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is set")]
+        [DataRow("my-config.json", "Test", false, "dab-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set and environment file is present")]
+        [DataRow("test-configs/my-config.json", "Test", false, "test-configs/dab-config.Test.json", "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is set and environment file is present")]
+        [DataRow("my-config.json", "", true, null, "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is not set and absolute path is provided")]
+        [DataRow("test-configs/my-config.json", "", true, null, "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is not set and absolute path is provided")]
+        [DataRow("my-config.json", "Test", true, "my-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set and absolute path is provided")]
+        [DataRow("test-configs/my-config.json", "Test", true, "test-configs/my-config.Test.json", "test-configs/my-config.json", DisplayName = "Config file in different directory provided by user and environment variable is set and absolute path is provided")]
+        [DataRow("my-config.json", "Test", true, "dab-config.Test.json", "my-config.json", DisplayName = "Config file in the current directory provided by user and environment variable is set and environment file is present and absolute path is provided")]
+        [DataRow("test-configs/my-config.json", "Test", true, "test-configs/dab-config.Test.json", "test-configs/my-config.json", DisplayName = "Config file in the different directory provided by user and environment variable is set and environment file is present and absolute path is provided")]
+        [DataRow(null, "", false, null, "dab-config.json", DisplayName = "Config file not provided by user and environment variable is not set")]
+        [DataRow(null, "Test", false, "dab-config.Test.json", "dab-config.json", DisplayName = "Config file not provided by user and environment variable is set and environment file is present")]
+        [DataRow(null, "Test", false, null, "dab-config.json", DisplayName = "Config file not provided by user and environment variable is set and environment file is not present")]
+        public void TestCorrectConfigFileIsSelectedForRuntimeEngine(
+            string userProvidedConfigFilePath,
+            string environmentValue,
+            bool useAbsolutePath,
+            string environmentFile,
+            string finalConfigFilePath)
+        {
+            MockFileSystem fileSystem = new();
+            if (!string.IsNullOrWhiteSpace(Path.GetDirectoryName(userProvidedConfigFilePath)))
+            {
+                fileSystem.AddDirectory("test-configs");
+            }
+
+            if (useAbsolutePath)
+            {
+                userProvidedConfigFilePath = fileSystem.Path.GetFullPath(userProvidedConfigFilePath);
+                finalConfigFilePath = fileSystem.Path.GetFullPath(finalConfigFilePath);
+            }
+
+            if (environmentFile is not null)
+            {
+                fileSystem.AddEmptyFile(environmentFile);
+            }
+
+            FileSystemRuntimeConfigLoader runtimeConfigLoader;
+            if (userProvidedConfigFilePath is not null)
+            {
+                runtimeConfigLoader = new(fileSystem, userProvidedConfigFilePath);
+            }
+            else
+            {
+                runtimeConfigLoader = new(fileSystem);
+            }
+
+            Assert.AreEqual(finalConfigFilePath, runtimeConfigLoader.ConfigFilePath);
+        }
+
+        private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
+        {
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            return new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
         }
     }
 }

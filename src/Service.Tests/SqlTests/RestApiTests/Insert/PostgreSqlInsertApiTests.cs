@@ -34,9 +34,21 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                     SELECT to_jsonb(subq) AS data
                     FROM (
                         SELECT id as typeid, short_types, int_types, long_types, string_types, single_types,
-                        float_types, decimal_types, boolean_types, datetime_types, bytearray_types, guid_types
+                        float_types, decimal_types, boolean_types, datetime_types, bytearray_types, uuid_types
                         FROM " + _integrationTypeTable + @"
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                    ) AS subq
+                "
+            },
+            {
+                "InsertOneWithComputedFieldMissingInRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'Harry Potter' AND copies_sold = 50 AND last_sold_on = '9999-12-31 23:59:59.997'
+                        AND last_sold_on_date = '9999-12-31 23:59:59.997'
                     ) AS subq
                 "
             },
@@ -290,7 +302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         #endregion

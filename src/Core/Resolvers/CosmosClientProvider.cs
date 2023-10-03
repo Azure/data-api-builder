@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Product;
 using Azure.Identity;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Cosmos.Fluent;
@@ -14,19 +15,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class CosmosClientProvider
     {
-        private string? _connectionString;
-        private string? _accountEndpoint;
-        private string? _accountKey;
-        private readonly string? _accessToken;
-        public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
-        public static readonly string DEFAULT_APP_NAME = $"dab_oss_{ProductInfo.GetProductVersion()}";
+        private readonly Dictionary<string, string?> _accessToken;
 
-        public CosmosClient? Client { get; private set; }
+        public Dictionary<string, CosmosClient?> Clients { get; private set; }
+
+        public RuntimeConfigProvider RuntimeConfigProvider;
+
         public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)
         {
             // This access token is coming from ConfigurationController parameter, that's why it's not in RuntimeConfig file.
             // On engine first start-up, access token will be null since ConfigurationController hasn't been called at that time.
             _accessToken = runtimeConfigProvider.ManagedIdentityAccessToken;
+            Clients = new Dictionary<string, CosmosClient?>();
+            RuntimeConfigProvider = runtimeConfigProvider;
 
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
@@ -50,36 +51,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     "Cannot initialize a CosmosClientProvider without the runtime config.");
             }
 
-            if (configuration.DataSource.DatabaseType is not DatabaseType.CosmosDB_NoSQL)
+            if (!configuration.ListAllDataSources().Any(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
             {
-                throw new InvalidOperationException("We shouldn't need a CosmosClientProvider if we're not accessing a CosmosDb");
+                return;
             }
 
-            if (string.IsNullOrEmpty(_connectionString) || configuration.DataSource.ConnectionString != _connectionString)
+            IEnumerable<KeyValuePair<string, DataSource>> cosmosDb = configuration.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+
+            foreach ((string dataSourceName, DataSource dataSource) in cosmosDb)
             {
-                string userAgent = GetCosmosUserAgent();
-                CosmosClientOptions options = new()
+                if (!Clients.ContainsKey(dataSourceName))
                 {
-                    ApplicationName = userAgent
-                };
+                    CosmosClient client;
+                    string userAgent = ProductInfo.GetDataApiBuilderUserAgent();
+                    CosmosClientOptions options = new()
+                    {
+                        ApplicationName = userAgent
+                    };
 
-                _connectionString = configuration.DataSource.ConnectionString;
-                ParseCosmosConnectionString();
+                    (string? accountEndPoint, string? accountKey) = ParseCosmosConnectionString(dataSource.ConnectionString);
 
-                if (!string.IsNullOrEmpty(_accountKey))
-                {
-                    Client = new CosmosClientBuilder(_connectionString).WithContentResponseOnWrite(true)
-                        .WithApplicationName(userAgent)
-                        .Build();
-                }
-                else if (string.IsNullOrEmpty(_accessToken))
-                {
-                    Client = new CosmosClient(_accountEndpoint, new DefaultAzureCredential(), options);
-                }
-                else
-                {
-                    TokenCredential servicePrincipal = new AADTokenCredential(_accessToken);
-                    Client = new CosmosClient(_accountEndpoint, servicePrincipal, options);
+                    if (!string.IsNullOrEmpty(accountKey))
+                    {
+                        client = new CosmosClientBuilder(dataSource.ConnectionString).WithContentResponseOnWrite(true)
+                            .WithApplicationName(userAgent)
+                            .Build();
+                    }
+                    else if (!_accessToken.ContainsKey(dataSourceName))
+                    {
+                        client = new CosmosClient(accountEndPoint, new DefaultAzureCredential(), options);
+                    }
+                    else
+                    {
+                        TokenCredential servicePrincipal = new AADTokenCredential(_accessToken[dataSourceName]!);
+                        client = new CosmosClient(accountEndPoint, servicePrincipal, options);
+                    }
+
+                    Clients.Add(dataSourceName, client);
                 }
             }
         }
@@ -114,20 +122,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
-        private void ParseCosmosConnectionString()
+        private static (string?, string?) ParseCosmosConnectionString(string connectionString)
         {
             DbConnectionStringBuilder dbConnectionStringBuilder = new()
             {
-                ConnectionString = _connectionString
+                ConnectionString = connectionString
             };
 
-            _accountEndpoint = dbConnectionStringBuilder.ContainsKey("AccountEndpoint") ? (string)dbConnectionStringBuilder["AccountEndpoint"] : null;
-            _accountKey = dbConnectionStringBuilder.ContainsKey("AccountKey") ? (string)dbConnectionStringBuilder["AccountKey"] : null;
+            string? accountEndpoint = dbConnectionStringBuilder.ContainsKey("AccountEndpoint") ? (string)dbConnectionStringBuilder["AccountEndpoint"] : null;
+            string? accountKey = dbConnectionStringBuilder.ContainsKey("AccountKey") ? (string)dbConnectionStringBuilder["AccountKey"] : null;
+
+            return (accountEndpoint, accountKey);
         }
 
-        private static string GetCosmosUserAgent()
-        {
-            return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DEFAULT_APP_NAME;
-        }
     }
 }

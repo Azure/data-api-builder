@@ -8,6 +8,11 @@ namespace Cli.Tests
         // Config file name for tests
         public const string TEST_RUNTIME_CONFIG_FILE = "dab-config-test.json";
 
+        public const string TEST_CONNECTION_STRING = "testconnectionstring";
+        public const string TEST_ENV_CONN_STRING = "@env('connection-string')";
+
+        public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
+
         // test schema for cosmosDB
         public const string TEST_SCHEMA_FILE = "test-schema.gql";
         public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
@@ -39,6 +44,7 @@ namespace Cli.Tests
                 StartInfo =
                 {
                     FileName = @"./Microsoft.DataApiBuilder",
+                    CreateNoWindow = true,
                     Arguments = $"{command} {flags}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,
@@ -70,7 +76,7 @@ namespace Cli.Tests
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring""
+              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
             }
         ";
 
@@ -186,17 +192,17 @@ namespace Cli.Tests
         public const string SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION = @"
           {
               ""entities"": {
-                  ""MyEntity"": {
+                ""MyEntity"": {
                   ""source"": ""s001.book"",
                   ""permissions"": [
-                      {
+                    {
                       ""role"": ""anonymous"",
                       ""actions"": [
                           ""read""
                       ]
-                      }
+                    }
                   ]
-                  }
+                }
               }
           }";
 
@@ -1064,6 +1070,7 @@ namespace Cli.Tests
                 hostMode: HostMode.Development,
                 corsOrigin: new List<string>(),
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restRequestBodyStrict: CliBoolean.True,
                 config: config);
         }
     }

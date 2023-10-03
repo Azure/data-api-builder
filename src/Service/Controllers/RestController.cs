@@ -224,16 +224,21 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                 if (result is CreatedResult)
                 {
-                    // Location is made up of two parts, the first being constructed
-                    // from the HttpRequest found in the HttpContext. The other part
-                    // is the primary key route, which has already been saved in the
+                    // Location is made up of three parts, the first being constructed
+                    // from the Host property found in the HttpContext.Request. The second part being the
+                    // base route configured in the config file.
+                    // The third part is the primary key route, which has already been saved in the
                     // Location of the created result. So we form the entire location
-                    // from appending the primary key route  already stored in the
+                    // from appending the base route and the primary key route  already stored in the
                     // created result to the url constructed from the HttpRequest. We
                     // then update the Location of the created result to this value.
                     CreatedResult createdResult = (result as CreatedResult)!;
-                    string location = UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + createdResult.Location;
-                    createdResult.Location = location;
+                    string locationURL = UriHelper.BuildAbsolute(
+                                        scheme: HttpContext.Request.Scheme,
+                                        host: HttpContext.Request.Host,
+                                        pathBase: _restService.GetBaseRouteFromConfig(),
+                                        path: HttpContext.Request.Path);
+                    createdResult.Location = locationURL.EndsWith('/') ? locationURL + createdResult.Location : locationURL + "/" + createdResult.Location;
                     result = createdResult;
                 }
 
@@ -241,15 +246,21 @@ namespace Azure.DataApiBuilder.Service.Controllers
             }
             catch (DataApiBuilderException ex)
             {
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
+                _logger.LogError(
+                    exception: ex,
+                    message: "{correlationId} Error handling REST request.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
+
                 Response.StatusCode = (int)ex.StatusCode;
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
+                _logger.LogError(
+                    exception: ex,
+                    message: "{correlationId} Internal server error occured during REST request processing.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
+
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),
@@ -272,9 +283,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
             {
                 if (!string.Equals(HttpContext.Request.Headers["If-Match"], "*"))
                 {
-                    throw new DataApiBuilderException(message: "Etags not supported, use '*'",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "Etags not supported, use '*'",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 switch (operation)

@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -23,20 +24,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class CosmosMutationEngine : IMutationEngine
     {
         private readonly CosmosClientProvider _clientProvider;
-        private readonly ISqlMetadataProvider _metadataProvider;
+        private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly IAuthorizationResolver _authorizationResolver;
 
         public CosmosMutationEngine(
             CosmosClientProvider clientProvider,
-            ISqlMetadataProvider metadataProvider,
+            IMetadataProviderFactory metadataProviderFactory,
             IAuthorizationResolver authorizationResolver)
         {
             _clientProvider = clientProvider;
-            _metadataProvider = metadataProvider;
+            _metadataProviderFactory = metadataProviderFactory;
             _authorizationResolver = authorizationResolver;
         }
 
-        private async Task<JObject> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver)
+        private async Task<JObject> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> queryArgs, CosmosOperationMetadata resolver, string dataSourceName)
         {
             // TODO: add support for all mutation types
             // we only support CreateOrUpdate (Upsert) for now
@@ -47,7 +48,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new ArgumentNullException(nameof(queryArgs));
             }
 
-            CosmosClient? client = _clientProvider.Client;
+            CosmosClient? client = _clientProvider.Clients[dataSourceName];
             if (client is null)
             {
                 throw new DataApiBuilderException(
@@ -59,9 +60,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Container container = client.GetDatabase(resolver.DatabaseName)
                                         .GetContainer(resolver.ContainerName);
 
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             // If authorization fails, an exception will be thrown and request execution halts.
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
-            string entityName = _metadataProvider.GetEntityName(graphQLType);
+            string entityName = metadataProvider.GetEntityName(graphQLType);
             AuthorizeMutationFields(context, queryArgs, entityName, resolver.OperationType);
 
             ItemResponse<JObject>? response = resolver.OperationType switch
@@ -302,14 +304,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="context">context of graphql mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
+        /// <param name="dataSourceName">dataSourceName to execute against.</param>
         /// <returns>JSON object result</returns>
         public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context,
-            IDictionary<string, object?> parameters)
+            IDictionary<string, object?> parameters,
+            string dataSourceName)
         {
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
-            string entityName = _metadataProvider.GetEntityName(graphQLType);
-            string databaseName = _metadataProvider.GetSchemaName(entityName);
-            string containerName = _metadataProvider.GetDatabaseObjectName(entityName);
+            string entityName = metadataProvider.GetEntityName(graphQLType);
+            string databaseName = metadataProvider.GetSchemaName(entityName);
+            string containerName = metadataProvider.GetDatabaseObjectName(entityName);
 
             string graphqlMutationName = context.Selection.Field.Name.Value;
             EntityActionOperation mutationOperation =
@@ -318,7 +323,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosOperationMetadata mutation = new(databaseName, containerName, mutationOperation);
             // TODO: we are doing multiple round of serialization/deserialization
             // fixme
-            JObject jObject = await ExecuteAsync(context, parameters, mutation);
+            JObject jObject = await ExecuteAsync(context, parameters, mutation, dataSourceName);
 #pragma warning disable CS8625 // Cannot convert null literal to non-nullable reference type.
             return new Tuple<JsonDocument?, IMetadata?>((jObject is null) ? null! : JsonDocument.Parse(jObject.ToString()), null);
 #pragma warning restore CS8625 // Cannot convert null literal to non-nullable reference type.
@@ -335,7 +340,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc/>
-        public Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context)
+        public Task<IActionResult?> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName)
         {
             throw new NotImplementedException();
         }

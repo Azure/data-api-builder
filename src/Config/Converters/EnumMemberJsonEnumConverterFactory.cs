@@ -76,7 +76,7 @@ internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
     {
         return (JsonConverter?)Activator.CreateInstance(
             typeof(JsonStringEnumConverterEx<>).MakeGenericType(typeToConvert)
-        );
+            );
     }
 
     internal class JsonStringEnumConverterEx<TEnum> : JsonConverter<TEnum> where TEnum : struct, Enum
@@ -113,7 +113,8 @@ internal class EnumMemberJsonEnumConverterFactory : JsonConverterFactory
         /// <inheritdoc/>
         public override TEnum Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            string? stringValue = reader.DeserializeString();
+            // Always replace env variable in case of Enum otherwise string to enum conversion will fail.
+            string? stringValue = reader.DeserializeString(replaceEnvVar: true);
 
             if (stringValue == null)
             {

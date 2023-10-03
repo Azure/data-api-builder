@@ -26,9 +26,8 @@ class RuntimeEntitiesConverter : JsonConverter<RuntimeEntities>
         writer.WriteStartObject();
         foreach ((string key, Entity entity) in value.Entities)
         {
-            string json = JsonSerializer.Serialize(entity, options);
             writer.WritePropertyName(key);
-            writer.WriteRawValue(json);
+            JsonSerializer.Serialize(writer, entity, options);
         }
 
         writer.WriteEndObject();

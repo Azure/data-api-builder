@@ -41,8 +41,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -276,8 +275,7 @@
       },
       "rest": {
         "enabled": true,
-        "path": "/commodities",
-        "methods": []
+        "path": "/commodities"
       },
       "permissions": [
         {
@@ -369,8 +367,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -739,8 +736,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -799,8 +795,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -854,8 +849,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -914,8 +908,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1017,8 +1010,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1061,8 +1053,7 @@
         }
       },
       "rest": {
-        "enabled": false,
-        "methods": []
+        "enabled": false
       },
       "permissions": [
         {
@@ -1114,8 +1105,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1170,8 +1160,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1227,8 +1216,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1285,8 +1273,7 @@
       },
       "rest": {
         "enabled": true,
-        "path": "/plants",
-        "methods": []
+        "path": "/plants"
       },
       "permissions": [
         {
@@ -1341,8 +1328,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1453,8 +1439,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1487,14 +1472,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "enabled": true
       },
       "permissions": [
         {
@@ -1524,14 +1502,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "enabled": true
       },
       "permissions": [
         {
@@ -1560,14 +1531,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "enabled": true
       },
       "permissions": [
         {
@@ -1593,8 +1557,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1637,8 +1600,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1682,8 +1644,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true        
       },
       "permissions": [
         {
@@ -1781,8 +1742,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1822,8 +1782,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1902,8 +1861,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true        
       },
       "permissions": [
         {
@@ -1937,8 +1895,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -1976,8 +1933,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -2011,8 +1967,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -2037,6 +1992,33 @@
         "bkname": "name"
       }
     },
+    "BooksSold": {
+      "source": {
+        "object": "books_sold",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "books_sold",
+          "plural": "books_sold"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": []
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
     "PublisherNF": {
       "source": {
         "object": "publishers",
@@ -2050,8 +2032,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -2133,8 +2114,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {
@@ -2244,8 +2224,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {

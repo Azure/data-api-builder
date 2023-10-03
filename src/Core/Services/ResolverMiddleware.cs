@@ -1,16 +1,23 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Text.Json;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types.NodaTime;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using NodaTime.Text;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -23,16 +30,19 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         private static readonly string _contextMetadata = "metadata";
         internal readonly FieldDelegate _next;
-        internal readonly IQueryEngine _queryEngine;
-        internal readonly IMutationEngine _mutationEngine;
+        internal readonly IQueryEngineFactory _queryEngineFactory;
+        internal readonly IMutationEngineFactory _mutationEngineFactory;
+        internal readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public ResolverMiddleware(FieldDelegate next,
-            IQueryEngine queryEngine,
-            IMutationEngine mutationEngine)
+            IQueryEngineFactory queryEngineFactory,
+            IMutationEngineFactory mutationEngineFactory,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
             _next = next;
-            _queryEngine = queryEngine;
-            _mutationEngine = mutationEngine;
+            _queryEngineFactory = queryEngineFactory;
+            _mutationEngineFactory = mutationEngineFactory;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -47,6 +57,11 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InvokeAsync(IMiddlewareContext context)
         {
             JsonElement jsonElement;
+            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+            DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
+
             if (context.ContextData.TryGetValue("HttpContext", out object? value))
             {
                 if (value is not null)
@@ -60,18 +75,18 @@ namespace Azure.DataApiBuilder.Core.Services
             if (context.Selection.Field.Coordinate.TypeName.Value == "Mutation")
             {
                 IDictionary<string, object?> parameters = GetParametersFromContext(context);
-
                 // Only Stored-Procedure has ListType as returnType for Mutation
                 if (context.Selection.Type.IsListType())
                 {
                     // Both Query and Mutation execute the same SQL statement for Stored Procedure.
-                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result = await queryEngine.ExecuteListAsync(context, parameters, dataSourceName);
                     context.Result = GetListOfClonedElements(result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
-                    Tuple<JsonDocument?, IMetadata?> result = await _mutationEngine.ExecuteAsync(context, parameters);
+                    IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(ds.DatabaseType);
+                    Tuple<JsonDocument?, IMetadata?> result = await mutationEngine.ExecuteAsync(context, parameters, dataSourceName);
                     SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
@@ -82,13 +97,13 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (context.Selection.Type.IsListType())
                 {
-                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result = await _queryEngine.ExecuteListAsync(context, parameters);
+                    Tuple<IEnumerable<JsonDocument>, IMetadata?> result = await queryEngine.ExecuteListAsync(context, parameters, dataSourceName);
                     context.Result = GetListOfClonedElements(result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
                 else
                 {
-                    Tuple<JsonDocument?, IMetadata?> result = await _queryEngine.ExecuteAsync(context, parameters);
+                    Tuple<JsonDocument?, IMetadata?> result = await queryEngine.ExecuteAsync(context, parameters, dataSourceName);
                     SetContextResult(context, result.Item1);
                     SetNewMetadata(context, result.Item2);
                 }
@@ -111,7 +126,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     IMetadata metadata = GetMetadata(context);
-                    using JsonDocument? innerObject = _queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
+                    using JsonDocument? innerObject = queryEngine.ResolveInnerObject(jsonElement, context.Selection.Field, ref metadata);
                     if (innerObject is not null)
                     {
                         context.Result = innerObject.RootElement.Clone();
@@ -133,7 +148,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
                     IMetadata metadata = GetMetadata(context);
-                    context.Result = _queryEngine.ResolveListType(jsonElement, context.Selection.Field, ref metadata);
+                    context.Result = queryEngine.ResolveListType(jsonElement, context.Selection.Field, ref metadata);
                     SetNewMetadata(context, metadata);
                 }
             }
@@ -196,8 +211,9 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 ByteType => byte.Parse(leafJson),
                 SingleType => Single.Parse(leafJson),
-                DateTimeType => DateTimeOffset.Parse(leafJson),
+                DateTimeType => DateTimeOffset.Parse(leafJson, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 ByteArrayType => Convert.FromBase64String(leafJson),
+                LocalTimeType => LocalTimePattern.ExtendedIso.Parse(leafJson).Value,
                 _ => leafJson
             };
         }
@@ -261,6 +277,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
                 FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
                 DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
+                // If we reach here, we can be sure that the value will not be null.
+                UUID_TYPE => Guid.TryParse(value.Value!.ToString(), out Guid guidValue) ? guidValue : value.Value,
                 _ => value.Value
             };
         }

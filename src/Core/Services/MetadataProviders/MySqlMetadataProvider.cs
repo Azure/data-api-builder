@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 
@@ -18,14 +19,24 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         public const string MYSQL_INVALID_CONNECTION_STRING_MESSAGE = "Format of the initialization string";
         public const string MYSQL_INVALID_CONNECTION_STRING_OPTIONS = "GetOptionForKey";
+        private readonly string _databaseName = "mysql";
 
         public MySqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
-            IQueryExecutor queryExecutor,
-            IQueryBuilder sqlQueryBuilder,
-            ILogger<ISqlMetadataProvider> logger)
-            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
+            IAbstractQueryManagerFactory queryManagerFactory,
+            ILogger<ISqlMetadataProvider> logger,
+            string dataSourceName)
+            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName)
         {
+            try
+            {
+                using MySqlConnection conn = new(ConnectionString);
+                _databaseName = conn.Database;
+            }
+            catch
+            {
+                logger.LogWarning("Could not determine database name from the connection string. The default database name 'mysql' will be used.");
+            }
         }
 
         /// </inheritdoc>
@@ -36,7 +47,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string tableName)
         {
             using MySqlConnection conn = new(ConnectionString);
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             await conn.OpenAsync();
 
             // Each row in the allColumns table corresponds to a single column.
@@ -101,6 +112,12 @@ namespace Azure.DataApiBuilder.Core.Services
         public override string GetDefaultSchemaName()
         {
             return string.Empty;
+        }
+
+        /// <inheritdoc/>
+        public override string GetDatabaseName()
+        {
+            return _databaseName;
         }
 
         /// <inheritdoc />

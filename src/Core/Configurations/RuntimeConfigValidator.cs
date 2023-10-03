@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
@@ -96,13 +97,16 @@ namespace Azure.DataApiBuilder.Core.Configurations
             IFileSystem fileSystem,
             ILogger logger)
         {
-            // Connection string can't be null or empty
-            if (string.IsNullOrWhiteSpace(runtimeConfig.DataSource.ConnectionString))
+            foreach (DataSource dataSource in runtimeConfig.ListAllDataSources())
             {
-                throw new DataApiBuilderException(
-                    message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                // Connection string can't be null or empty
+                if (string.IsNullOrWhiteSpace(dataSource.ConnectionString))
+                {
+                    throw new DataApiBuilderException(
+                        message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
             }
 
             ValidateDatabaseType(runtimeConfig, fileSystem, logger);
@@ -119,26 +123,34 @@ namespace Azure.DataApiBuilder.Core.Configurations
         {
             // Schema file should be present in the directory if not specified in the config
             // when using CosmosDB_NoSQL database.
-            if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            foreach (DataSource dataSource in runtimeConfig.ListAllDataSources())
             {
-                CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
-                    runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
-                    throw new DataApiBuilderException(
-                        "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
-                        HttpStatusCode.ServiceUnavailable,
-                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-
-                if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
                 {
-                    throw new DataApiBuilderException(
-                        "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
-                        HttpStatusCode.ServiceUnavailable,
-                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                }
+                    CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
+                        dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
+                        throw new DataApiBuilderException(
+                            "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
+                            HttpStatusCode.ServiceUnavailable,
+                            DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
 
-                if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
-                {
-                    throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                    // The schema is provided through GraphQLSchema and not the Schema file when the configuration
+                    // is received after startup.
+                    if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
+                    {
+                        if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                        {
+                            throw new DataApiBuilderException(
+                                "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
+                                HttpStatusCode.ServiceUnavailable,
+                                DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
+
+                        if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
+                        {
+                            throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                        }
+                    }
                 }
             }
         }
@@ -235,7 +247,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// </summary>
         /// <seealso cref="https://spec.graphql.org/October2021/#Name"/>
         /// <param name="runtimeConfig">The runtime configuration.</param>
-        public static void ValidateEntityConfiguration(RuntimeConfig runtimeConfig)
+        public void ValidateEntityConfiguration(RuntimeConfig runtimeConfig)
         {
             // Stores the unique rest paths configured for different entities present in the config.
             HashSet<string> restPathsForEntities = new();
@@ -256,6 +268,8 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
                             );
                     }
+
+                    ValidateRestMethods(entity, entityName);
                 }
 
                 // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
@@ -264,6 +278,21 @@ namespace Azure.DataApiBuilder.Core.Configurations
                     ValidateNameRequirements(entity.GraphQL.Singular);
                     ValidateNameRequirements(entity.GraphQL.Plural);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to validate and let users know whether insignificant properties are present in the REST field.
+        /// Currently, it checks for the presence of Methods property when the entity type is table/view and logs a warning.
+        /// Methods property plays a role only in case of stored procedures.
+        /// </summary>
+        /// <param name="entity">Entity object for which validation is performed</param>
+        /// <param name="entityName">Name of the entity</param>
+        private void ValidateRestMethods(Entity entity, string entityName)
+        {
+            if (entity.Source.Type is not EntitySourceType.StoredProcedure && entity.Rest.Methods is not null && entity.Rest.Methods.Length > 0)
+            {
+                _logger.LogWarning("Entity {entityName} has rest methods configured but is not a stored procedure. Values configured will be ignored and all 5 HTTP actions will be enabled.", entityName);
             }
         }
 
@@ -373,12 +402,13 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// <param name="runtimeConfig"></param>
         public static void ValidateRestURI(RuntimeConfig runtimeConfig)
         {
-            // CosmosDB_NoSQL does not support rest. No need to do any validations.
-            if (runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            if (runtimeConfig.ListAllDataSources().All(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
             {
+                // if all dbs are cosmos no rest support.
                 return;
             }
 
+            // validate the rest path.
             string restPath = runtimeConfig.Runtime.Rest.Path;
             if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
             {
@@ -387,6 +417,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
+
         }
 
         /// <summary>
@@ -534,7 +565,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             }
                         }
 
-                        if (runtimeConfig.DataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                        DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
+
+                        if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The Create action does not support defining a database policy." +
@@ -595,9 +628,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// between source and target entity must be defined in the DB.
         /// </summary>
         /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
-        public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
         {
-            _logger.LogInformation("Validating Relationship Section in Config...");
+            _logger.LogInformation("Validating entity relationships.");
 
             // Loop through each entity in the config and verify its relationship.
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
@@ -617,6 +650,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
+
+                string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(databaseName);
 
                 foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
                 {
@@ -690,9 +726,21 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             string referencingTargetColumns = relationship.LinkingTargetFields is not null ? string.Join(",", relationship.LinkingTargetFields) :
                                 sqlMetadataProvider.PairToFkDefinition!.TryGetValue(linkedTargetRelationshipPair, out fKDef) ?
                                 string.Join(",", fKDef.ReferencingColumns) : string.Empty;
-                            _logger.LogDebug($"{entityName}: {sourceDBOName}({referencedSourceColumns}) related to {cardinality} " +
-                                $"{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
-                                $"{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})");
+
+                            _logger.LogDebug(
+                                message: "{entityName}: {sourceDBOName}({referencedSourceColumns}) is related to {cardinality} " +
+                                "{relationship.TargetEntity}: {targetDBOName}({referencedTargetColumns}) by " +
+                                "{relationship.LinkingObject}(linking.source.fields: {referencingSourceColumns}), (linking.target.fields: {referencingTargetColumns})",
+                                entityName,
+                                sourceDBOName,
+                                referencedSourceColumns,
+                                cardinality,
+                                relationship.TargetEntity,
+                                targetDBOName,
+                                referencedTargetColumns,
+                                relationship.LinkingObject,
+                                referencingSourceColumns,
+                                referencingTargetColumns);
                         }
                     }
 
@@ -702,9 +750,9 @@ namespace Azure.DataApiBuilder.Core.Configurations
                         if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(sourceDatabaseObject, targetDatabaseObject))
                         {
                             throw new DataApiBuilderException(
-                            message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
                     }
 
@@ -726,8 +774,17 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             string.Join(",", fKDef.ReferencedColumns) :
                             sqlMetadataProvider.PairToFkDefinition!.TryGetValue(targetSourceRelationshipPair, out fKDef) ?
                             string.Join(",", fKDef.ReferencingColumns) : string.Empty;
-                        _logger.LogDebug($"{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} " +
-                            $"{relationship.TargetEntity}: {targetDBOName}({targetColumns}).");
+
+                        _logger.LogDebug(
+                            message: "{entityName}: {sourceDBOName}({sourceColumns}) is related to {cardinality} {relationshipTargetEntity}: {targetDBOName}({targetColumns}).",
+                            entityName,
+                            sourceDBOName,
+                            sourceColumns,
+                            cardinality,
+                            relationship.TargetEntity,
+                            targetDBOName,
+                            targetColumns
+                            );
                     }
                 }
             }
@@ -738,10 +795,13 @@ namespace Azure.DataApiBuilder.Core.Configurations
         /// the parameters that are specified for the stored procedure in DB.
         /// </summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Current use by dab workflow")]
-        public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, ISqlMetadataProvider sqlMetadataProvider)
+        public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
         {
+            RequestValidator requestValidator = new(sqlMetadataProviderFactory, _runtimeConfigProvider);
             foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
+                string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+                ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
                 // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
                 // so if the schema is not correct we will halt the engine
                 // but for rest we can do it when a request is made and only fail that particular request.
@@ -755,7 +815,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
                             EntityActionOperation.All);
                     try
                     {
-                        RequestValidator.ValidateStoredProcedureRequestContext(sqRequestContext, sqlMetadataProvider);
+                        requestValidator.ValidateStoredProcedureRequestContext(sqRequestContext);
                     }
                     catch (DataApiBuilderException e)
                     {

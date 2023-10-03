@@ -7,7 +7,10 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -22,9 +25,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
-        private readonly ISqlMetadataProvider _sqlMetadataProvider;
-        private readonly IQueryExecutor _queryExecutor;
-        private readonly IQueryBuilder _queryBuilder;
+        private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
+        private readonly IAbstractQueryManagerFactory _queryFactory;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly ILogger<IQueryEngine> _logger;
@@ -35,18 +37,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // Constructor.
         // </summary>
         public SqlQueryEngine(
-            IQueryExecutor queryExecutor,
-            IQueryBuilder queryBuilder,
-            ISqlMetadataProvider sqlMetadataProvider,
+            IAbstractQueryManagerFactory queryFactory,
+            IMetadataProviderFactory sqlMetadataProviderFactory,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider)
         {
-            _queryExecutor = queryExecutor;
-            _queryBuilder = queryBuilder;
-            _sqlMetadataProvider = sqlMetadataProvider;
+            _queryFactory = queryFactory;
+            _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
             _httpContextAccessor = httpContextAccessor;
             _authorizationResolver = authorizationResolver;
             _gQLFilterParser = gQLFilterParser;
@@ -61,12 +61,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
         /// <param name="parameters">GraphQL Query Parameters from schema retrieved from ResolverMiddleware.GetParametersFromSchemaAndQueryFields()</param>
-        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if empty</param>
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName)
         {
             SqlQueryStructure structure = new(
                 context,
                 parameters,
-                _sqlMetadataProvider,
+                _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName),
                 _authorizationResolver,
                 _runtimeConfigProvider,
                 _gQLFilterParser);
@@ -74,13 +75,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure), structure.PaginationMetadata),
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName), structure.PaginationMetadata),
                     structure.PaginationMetadata);
             }
             else
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    await ExecuteAsync(structure),
+                    await ExecuteAsync(structure, dataSourceName),
                     structure.PaginationMetadata);
             }
         }
@@ -89,19 +90,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Executes the given IMiddlewareContext of the GraphQL and expecting result of stored-procedure execution as
         /// list of Jsons and the relevant pagination metadata back.
         /// </summary>
-        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters)
+        public async Task<Tuple<IEnumerable<JsonDocument>, IMetadata?>> ExecuteListAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName)
         {
-            if (_sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            if (sqlMetadataProvider.GraphQLStoredProcedureExposedNameToEntityNameMap.TryGetValue(context.Selection.Field.Name.Value, out string? entityName))
             {
                 SqlExecuteStructure sqlExecuteStructure = new(
                     entityName,
-                    _sqlMetadataProvider,
+                    sqlMetadataProvider,
                     _authorizationResolver,
                     _gQLFilterParser,
                     parameters);
 
                 return new Tuple<IEnumerable<JsonDocument>, IMetadata?>(
-                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure)),
+                        FormatStoredProcedureResultAsJsonList(await ExecuteAsync(sqlExecuteStructure, dataSourceName)),
                         PaginationMetadata.MakeEmptyPaginationMetadata());
             }
             else
@@ -109,18 +111,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 SqlQueryStructure structure = new(
                     context,
                     parameters,
-                    _sqlMetadataProvider,
+                    sqlMetadataProvider,
                     _authorizationResolver,
                     _runtimeConfigProvider,
                     _gQLFilterParser);
 
-                string queryString = _queryBuilder.Build(structure);
-                List<JsonDocument>? jsonListResult =
-                    await _queryExecutor.ExecuteQueryAsync(
-                        queryString,
-                        structure.Parameters,
-                        _queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
-                        _httpContextAccessor.HttpContext!);
+                List<JsonDocument>? jsonListResult = await ExecuteListAsync(structure, dataSourceName);
 
                 if (jsonListResult is null)
                 {
@@ -138,33 +134,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // </summary>
         public async Task<IActionResult> ExecuteAsync(FindRequestContext context)
         {
+            // for REST API scenarios, use the default datasource
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SqlQueryStructure structure = new(
                 context,
-                _sqlMetadataProvider,
+                sqlMetadataProvider,
                 _authorizationResolver,
                 _runtimeConfigProvider,
                 _gQLFilterParser,
                 _httpContextAccessor.HttpContext!);
-            using JsonDocument? queryJson = await ExecuteAsync(structure);
+            using JsonDocument? queryJson = await ExecuteAsync(structure, dataSourceName);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty table, return an empty json array
-            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context) :
-                                       FormatFindResult(queryJson, context);
+            return queryJson is null ? FormatFindResult(JsonDocument.Parse("[]"), context, sqlMetadataProvider) :
+                                       FormatFindResult(queryJson, context, sqlMetadataProvider);
         }
 
         /// <summary>
         /// Given the StoredProcedureRequestContext, obtains the query text and executes it against the backend. Useful for REST API scenarios.
         /// Only the first result set will be returned, regardless of the contents of the stored procedure.
         /// </summary>
-        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context)
+        public async Task<IActionResult> ExecuteAsync(StoredProcedureRequestContext context, string dataSourceName)
         {
             SqlExecuteStructure structure = new(
                 context.EntityName,
-                _sqlMetadataProvider,
+                _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName),
                 _authorizationResolver,
                 _gQLFilterParser,
                 context.ResolvedParameters);
-            using JsonDocument? queryJson = await ExecuteAsync(structure);
+            using JsonDocument? queryJson = await ExecuteAsync(structure, dataSourceName);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty result set, return an empty json array
             return queryJson is null ? OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :
@@ -178,33 +178,57 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="jsonDoc">The JsonDocument from the query.</param>
         /// <param name="context">The RequestContext.</param>
+        /// <param name="sqlMetadataProvider">the metadataprovider.</param>
         /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
-        private OkObjectResult FormatFindResult(JsonDocument jsonDoc, FindRequestContext context)
+        private OkObjectResult FormatFindResult(JsonDocument jsonDoc, FindRequestContext context, ISqlMetadataProvider sqlMetadataProvider)
         {
             JsonElement jsonElement = jsonDoc.RootElement.Clone();
 
-            // If the results are not a collection or if the query does not have a next page
-            // no nextLink is needed, return JsonDocument as is
-            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            // When there are no rows returned from the database, the jsonElement will be an empty array.
+            // In that case, the response is returned as is.
+            if (jsonElement.ValueKind is JsonValueKind.Array && jsonElement.GetArrayLength() == 0)
             {
-                // Clones the root element to a new JsonElement that can be
-                // safely stored beyond the lifetime of the original JsonDocument.
                 return OkResponse(jsonElement);
             }
 
+            HashSet<string> extraFieldsInResponse = (jsonElement.ValueKind is not JsonValueKind.Array)
+                                                  ? DetermineExtraFieldsInResponse(jsonElement, context)
+                                                  : DetermineExtraFieldsInResponse(jsonElement.EnumerateArray().First(), context);
+
+            // If the results are not a collection or if the query does not have a next page
+            // no nextLink is needed. So, the response is returned after removing the extra fields.
+            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            {
+                // If there are no additional fields present, the response is returned directly. When there
+                // are extra fields, they are removed before returning the response.
+                if (extraFieldsInResponse.Count == 0)
+                {
+                    return OkResponse(jsonElement);
+                }
+                else
+                {
+                    return jsonElement.ValueKind is JsonValueKind.Array ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(jsonElement.EnumerateArray().ToList(), extraFieldsInResponse)))
+                                                                        : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(jsonElement, extraFieldsInResponse));
+                }
+            }
+
+            List<JsonElement> rootEnumerated = jsonElement.EnumerateArray().ToList();
+
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
-            IEnumerable<JsonElement> rootEnumerated = jsonElement.EnumerateArray();
+            rootEnumerated.RemoveAt(rootEnumerated.Count - 1);
 
-            rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+            // The fields such as primary keys, fields in $orderby clause that are retrieved in addition to the
+            // fields requested in the $select clause are required for calculating the $after element which is part of nextLink.
+            // So, the extra fields are removed post the calculation of $after element.
             string after = SqlPaginationUtil.MakeCursorFromJsonElement(
-                               element: rootEnumerated.Last(),
+                               element: rootEnumerated[rootEnumerated.Count - 1],
                                orderByColumns: context.OrderByClauseOfBackingColumns,
-                               primaryKey: _sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
+                               primaryKey: sqlMetadataProvider.GetSourceDefinition(context.EntityName).PrimaryKey,
                                entityName: context.EntityName,
                                schemaName: context.DatabaseObject.SchemaName,
                                tableName: context.DatabaseObject.Name,
-                               sqlMetadataProvider: _sqlMetadataProvider);
+                               sqlMetadataProvider: sqlMetadataProvider);
 
             // nextLink is the URL needed to get the next page of records using the same query options
             // with $after base64 encoded for opaqueness
@@ -230,8 +254,84 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                   path,
                                   nvc: context!.ParsedQueryString,
                                   after);
-            rootEnumerated = rootEnumerated.Append(nextLink);
+
+            // When there are extra fields present, they are removed before returning the response.
+            if (extraFieldsInResponse.Count > 0)
+            {
+                rootEnumerated = RemoveExtraFieldsInResponseWithMultipleItems(rootEnumerated, extraFieldsInResponse);
+            }
+
+            rootEnumerated.Add(nextLink);
             return OkResponse(JsonSerializer.SerializeToElement(rootEnumerated));
+        }
+
+        /// <summary>
+        /// To support pagination and $first clause with Find requests, it is necessary to provide the nextLink
+        /// field in the response. For the calculation of nextLink, the fields such as primary keys, fields in $orderby clause
+        /// are retrieved from the database in addition to the fields requested in the $select clause.
+        /// However, these fields are not required in the response.
+        /// This function helps to determine those additional fields that are present in the response.
+        /// </summary>
+        /// <param name="response">Response json retrieved from the database</param>
+        /// <param name="context">FindRequestContext for the GET request.</param>
+        /// <returns>Additional fields that are present in the response</returns>
+        private static HashSet<string> DetermineExtraFieldsInResponse(JsonElement response, FindRequestContext context)
+        {
+            HashSet<string> fieldsPresentInResponse = new();
+
+            foreach (JsonProperty property in response.EnumerateObject())
+            {
+                fieldsPresentInResponse.Add(property.Name);
+            }
+
+            // context.FieldsToBeReturned will contain the fields requested in the $select clause.
+            // If $select clause is absent, it will contain the list of columns that can be returned in the
+            // response taking into account the include and exclude fields configured for the entity.
+            // So, the other fields in the response apart from the fields in context.FieldsToBeReturned
+            // are not required.
+            return fieldsPresentInResponse.Except(context.FieldsToBeReturned).ToHashSet();
+        }
+
+        /// <summary>
+        /// Helper function that removes the extra fields from each item of a list of json elements.
+        /// </summary>
+        /// <param name="jsonElementList">List of Json Elements with extra fields</param>
+        /// <param name="extraFields">Additional fields that needs to be removed from the list of Json elements</param>
+        /// <returns>List of Json Elements after removing the additional fields</returns>
+        private static List<JsonElement> RemoveExtraFieldsInResponseWithMultipleItems(List<JsonElement> jsonElementList, IEnumerable<string> extraFields)
+        {
+            for (int i = 0; i < jsonElementList.Count; i++)
+            {
+                jsonElementList[i] = RemoveExtraFieldsInResponseWithSingleItem(jsonElementList[i], extraFields);
+            }
+
+            return jsonElementList;
+        }
+
+        /// <summary>
+        /// Helper function that removes the extra fields from a single json element.
+        /// </summary>
+        /// <param name="jsonElement"> Json Element with extra fields</param>
+        /// <param name="extraFields">Additional fields that needs to be removed from the Json element</param>
+        /// <returns>Json Element after removing the additional fields</returns>
+        private static JsonElement RemoveExtraFieldsInResponseWithSingleItem(JsonElement jsonElement, IEnumerable<string> extraFields)
+        {
+            JsonObject? jsonObject = JsonObject.Create(jsonElement);
+
+            if (jsonObject is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "While processing your request the server ran into an unexpected error",
+                    statusCode: System.Net.HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            foreach (string extraField in extraFields)
+            {
+                jsonObject.Remove(extraField);
+            }
+
+            return JsonSerializer.SerializeToElement(jsonObject);
         }
 
         /// <summary>
@@ -309,16 +409,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure)
+        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName)
         {
+            DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
+            IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
+
             // Open connection and execute query using _queryExecutor
-            string queryString = _queryBuilder.Build(structure);
+            string queryString = queryBuilder.Build(structure);
             JsonDocument? jsonDocument =
-                await _queryExecutor.ExecuteQueryAsync(
-                    queryString,
-                    structure.Parameters,
-                    _queryExecutor.GetJsonResultAsync<JsonDocument>,
-                    _httpContextAccessor.HttpContext!);
+                await queryExecutor.ExecuteQueryAsync(
+                    sqltext: queryString,
+                    parameters: structure.Parameters,
+                    dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
+                    httpContext: _httpContextAccessor.HttpContext!,
+                    args: null,
+                    dataSourceName: dataSourceName);
             return jsonDocument;
         }
 
@@ -327,16 +433,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // Unlike a normal query, result from database may not be JSON. Instead we treat output as SqlMutationEngine does (extract by row).
         // As such, this could feasibly be moved to the mutation engine. 
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure)
+        private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName)
         {
-            string queryString = _queryBuilder.Build(structure);
+            DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
+            IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
+            string queryString = queryBuilder.Build(structure);
 
             JsonArray? resultArray =
-                await _queryExecutor.ExecuteQueryAsync(
-                    queryString,
-                    structure.Parameters,
-                    _queryExecutor.GetJsonArrayAsync,
-                    _httpContextAccessor.HttpContext!);
+                await queryExecutor.ExecuteQueryAsync(
+                    sqltext: queryString,
+                    parameters: structure.Parameters,
+                    dataReaderHandler: queryExecutor.GetJsonArrayAsync,
+                    httpContext: _httpContextAccessor.HttpContext!,
+                    args: null,
+                    dataSourceName: dataSourceName);
 
             JsonDocument? jsonDocument = null;
 
@@ -347,11 +458,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                _logger.LogInformation($"{HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext)}" +
-                    "Did not return enough rows.");
+                _logger.LogInformation(
+                    message: "{correlationId} Result set did not have any rows.",
+                    HttpContextExtensions.GetLoggerCorrelationId(_httpContextAccessor.HttpContext));
             }
 
             return jsonDocument;
+        }
+
+        private async Task<List<JsonDocument>?> ExecuteListAsync(SqlQueryStructure structure, string dataSourceName)
+        {
+            DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
+            IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
+
+            string queryString = queryBuilder.Build(structure);
+
+            List<JsonDocument>? jsonListResult =
+                await queryExecutor.ExecuteQueryAsync(
+                    sqltext: queryString,
+                    parameters: structure.Parameters,
+                    dataReaderHandler: queryExecutor.GetJsonResultAsync<List<JsonDocument>>,
+                    httpContext: _httpContextAccessor.HttpContext!,
+                    args: null,
+                    dataSourceName: dataSourceName);
+            return jsonListResult;
         }
     }
 }

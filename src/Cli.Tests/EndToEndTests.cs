@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Service;
+using Azure.DataApiBuilder.Product;
+using Microsoft.Data.SqlClient;
+using static Azure.DataApiBuilder.Product.ProductInfo;
 
 namespace Cli.Tests;
 
@@ -33,6 +35,8 @@ public class EndToEndTests
         _cliLogger = loggerFactory.CreateLogger<Program>();
         SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());
         SetCliUtilsLogger(loggerFactory.CreateLogger<Utils>());
+
+        Environment.SetEnvironmentVariable($"connection-string", TEST_CONNECTION_STRING);
     }
 
     [TestCleanup]
@@ -50,7 +54,7 @@ public class EndToEndTests
     public Task TestInitForCosmosDBNoSql()
     {
         string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "cosmosdb_nosql",
-                          "--connection-string", "localhost:5000", "--cosmosdb_nosql-database",
+                          "--connection-string", TEST_ENV_CONN_STRING, "--cosmosdb_nosql-database",
                           "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", TEST_SCHEMA_FILE, "--cors-origin", "localhost:3000,www.nolocalhost.com:80" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
@@ -104,10 +108,16 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
-        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.disabled", "--graphql.path", "/graphql-api" };
+        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.enabled", "false", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
-        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
+            TEST_RUNTIME_CONFIG_FILE,
+            out RuntimeConfig? runtimeConfig,
+            replaceEnvVar: true));
+
+        SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
+        Assert.AreEqual(DEFAULT_APP_NAME, builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
@@ -124,7 +134,8 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntity()
     {
-        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql", "--connection-string", "localhost:5000", "--auth.provider", "StaticWebApps" };
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING, "--auth.provider", "StaticWebApps" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -140,6 +151,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? addRuntimeConfig));
         Assert.IsNotNull(addRuntimeConfig);
+        Assert.AreEqual(TEST_ENV_CONN_STRING, addRuntimeConfig.DataSource.ConnectionString);
         Assert.AreEqual(1, addRuntimeConfig.Entities.Count()); // 1 new entity added
         Assert.IsTrue(addRuntimeConfig.Entities.ContainsKey("todo"));
         Entity entity = addRuntimeConfig.Entities["todo"];
@@ -185,7 +197,7 @@ public class EndToEndTests
     [DataRow("prod", HostMode.Production, false)]
     public void EnsureHostModeEnumIsCaseInsensitive(string hostMode, HostMode hostModeEnumType, bool expectSuccess)
     {
-        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", hostMode, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", hostMode, "--database-type", "mssql", "--connection-string", SAMPLE_TEST_CONN_STRING };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         _runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig);
@@ -206,7 +218,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestAddEntityWithoutIEnumerable()
     {
-        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "localhost:5000" };
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", SAMPLE_TEST_CONN_STRING };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig), "Expected to parse the config file.");
@@ -239,7 +251,7 @@ public class EndToEndTests
     [TestMethod]
     public Task TestConfigGeneratedAfterAddingEntityWithoutIEnumerables()
     {
-        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", "localhost:5000",
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", SAMPLE_TEST_CONN_STRING,
             "--set-session-context", "true" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
@@ -261,7 +273,7 @@ public class EndToEndTests
     public Task TestConfigGeneratedAfterAddingEntityWithSourceAsStoredProcedure()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
-            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
+            "--host-mode", "Development", "--connection-string", SAMPLE_TEST_CONN_STRING, "--set-session-context", "true" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -302,7 +314,7 @@ public class EndToEndTests
     public Task TestAddingStoredProcedureWithRestMethodsAndGraphQLOperations()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
-            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
+            "--host-mode", "Development", "--connection-string", SAMPLE_TEST_CONN_STRING, "--set-session-context", "true" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -324,7 +336,7 @@ public class EndToEndTests
     public Task TestUpdatingStoredProcedureWithRestMethodsAndGraphQLOperations()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
-            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
+            "--host-mode", "Development", "--connection-string", SAMPLE_TEST_CONN_STRING, "--set-session-context", "true" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -352,7 +364,7 @@ public class EndToEndTests
     public Task TestConfigGeneratedAfterAddingEntityWithSourceWithDefaultType()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--host-mode", "Development",
-            "--connection-string", "testconnectionstring", "--set-session-context", "true"  };
+            "--connection-string", SAMPLE_TEST_CONN_STRING, "--set-session-context", "true"  };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -374,7 +386,7 @@ public class EndToEndTests
     public void TestUpdateEntity()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type",
-                              "mssql", "--connection-string", "localhost:5000" };
+                              "mssql", "--connection-string", TEST_ENV_CONN_STRING };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -416,6 +428,7 @@ public class EndToEndTests
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updateRuntimeConfig));
         Assert.IsNotNull(updateRuntimeConfig);
+        Assert.AreEqual(TEST_ENV_CONN_STRING, updateRuntimeConfig.DataSource.ConnectionString);
         Assert.AreEqual(2, updateRuntimeConfig.Entities.Count()); // No new entity added
 
         Assert.IsTrue(updateRuntimeConfig.Entities.ContainsKey("todo"));
@@ -476,7 +489,7 @@ public class EndToEndTests
     public Task TestUpdatingStoredProcedureWithRestMethods()
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql",
-            "--host-mode", "Development", "--connection-string", "testconnectionstring", "--set-session-context", "true" };
+            "--host-mode", "Development", "--connection-string", SAMPLE_TEST_CONN_STRING, "--set-session-context", "true" };
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
@@ -733,7 +746,7 @@ public class EndToEndTests
     public void TestBaseRouteIsConfigurableForSWA(string authProvider, bool isExceptionExpected)
     {
         string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
-            "--connection-string", "localhost:5000", "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
+            "--connection-string", SAMPLE_TEST_CONN_STRING, "--auth.provider", authProvider, "--runtime.base-route", "base-route" };
 
         if (!Enum.TryParse(authProvider, ignoreCase: true, out EasyAuthType _))
         {
@@ -754,5 +767,94 @@ public class EndToEndTests
             Assert.IsNotNull(runtimeConfig);
             Assert.AreEqual("/base-route", runtimeConfig.Runtime.BaseRoute);
         }
+    }
+
+    [DataTestMethod]
+    [DataRow(ApiType.REST, false, false, true, true, DisplayName = "Validate that REST endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
+    [DataRow(ApiType.REST, false, true, true, true, DisplayName = "Validate that REST endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
+    [DataRow(ApiType.REST, true, false, true, false, DisplayName = "Validate that REST endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
+    [DataRow(ApiType.REST, true, true, false, false, DisplayName = "Validate that REST endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
+    [DataRow(ApiType.REST, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for REST endpoint.")]
+    [DataRow(ApiType.GraphQL, false, false, true, true, DisplayName = "Validate that GraphQL endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
+    [DataRow(ApiType.GraphQL, false, true, true, true, DisplayName = "Validate that GraphQL endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
+    [DataRow(ApiType.GraphQL, true, false, true, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
+    [DataRow(ApiType.GraphQL, true, true, false, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
+    [DataRow(ApiType.GraphQL, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for GraphQL endpoint.")]
+    public void TestEnabledDisabledFlagsForApis(
+        ApiType apiType,
+        bool includeDisabledFlag,
+        bool includeEnabledFlag,
+        bool enabledFlagValue,
+        bool expectedEnabledFlagValueInConfig,
+        bool isExceptionExpected = false)
+    {
+        string apiName = apiType.ToString().ToLower();
+        string disabledFlag = $"--{apiName}.disabled";
+        string enabledFlag = $"--{apiName}.enabled";
+
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", SAMPLE_TEST_CONN_STRING };
+
+        string[] enabledDisabledArgs = { };
+
+        if (includeDisabledFlag)
+        {
+            enabledDisabledArgs = enabledDisabledArgs.Append(disabledFlag).ToArray();
+        }
+
+        if (includeEnabledFlag)
+        {
+            enabledDisabledArgs = enabledDisabledArgs.Append(enabledFlag).ToArray();
+            enabledDisabledArgs = enabledDisabledArgs.Append(enabledFlagValue.ToString()).ToArray();
+        }
+
+        initArgs = initArgs.Concat(enabledDisabledArgs).ToArray();
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+        if (isExceptionExpected)
+        {
+            Assert.IsFalse(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNull(runtimeConfig);
+        }
+        else
+        {
+            Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig);
+
+            if (apiType is ApiType.REST)
+            {
+                Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Rest.Enabled);
+            }
+            else
+            {
+                Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.GraphQL.Enabled);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Test to validate that whenever the option rest.request-body-strict is included in the init command,
+    /// the runtimeconfig is initialized with the appropriate value of the above option in the rest runtime section, as it is assigned in the init command.
+    /// When the above mentioned option is not included in the init command, the default behavior - that of not allowing any extraneous fields in request body, is observed.
+    /// </summary>
+    /// <param name="includeRestRequestBodyStrictFlag">Whether or not to include --rest.request-body-strict option in the init command.</param>
+    /// <param name="isRequestBodyStrict">Value of the rest.request-body-strict option in the init command.</param>
+    [DataTestMethod]
+    [DataRow(true, false, DisplayName = "dab init command specifies --rest.request-body-strict as false - REST request body allows extraneous fields.")]
+    [DataRow(true, true, DisplayName = "dab init command specifies --rest.request-body-strict as true - REST request body doesn't allow extraneous fields.")]
+    [DataRow(false, true, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body doesn't allow extraneous fields.")]
+    public void TestRestRequestBodyStrictMode(bool includeRestRequestBodyStrictFlag, bool isRequestBodyStrict)
+    {
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
+            "--connection-string", SAMPLE_TEST_CONN_STRING};
+
+        if (includeRestRequestBodyStrictFlag)
+        {
+            string[] restRequestBodyArgs = { "--rest.request-body-strict", isRequestBodyStrict.ToString() };
+            initArgs = initArgs.Concat(restRequestBodyArgs).ToArray();
+        }
+
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.AreEqual(isRequestBodyStrict, runtimeConfig.Runtime.Rest.RequestBodyStrict);
     }
 }

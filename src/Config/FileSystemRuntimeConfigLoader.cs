@@ -25,7 +25,9 @@ namespace Azure.DataApiBuilder.Config;
 /// </remarks>
 public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
 {
-    private string _baseConfigFileName;
+    // This stores either the default config name e.g. dab-config.json
+    // or user provided config file which could be a relative file path, absolute file path or simply the file name assumed to be in current directory.
+    private string _baseConfigFilePath;
 
     private readonly IFileSystem _fileSystem;
 
@@ -42,13 +44,21 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public const string DEFAULT_CONFIG_FILE_NAME = $"{CONFIGFILE_NAME}{CONFIG_EXTENSION}";
 
-    public string ConfigFileName => GetFileNameForEnvironment(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"), false);
+    /// <summary>
+    /// Stores the config file actually loaded by the engine.
+    /// It could be the base config file (e.g. dab-config.json), any of its derivatives with
+    /// environment specific suffixes (e.g. dab-config.Development.json) or the user provided
+    /// config file name.
+    /// It could also be the config file provided by the user.
+    /// </summary>
+    public string ConfigFilePath { get; internal set; }
 
-    public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFileName = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
+    public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
         : base(connectionString)
     {
         _fileSystem = fileSystem;
-        _baseConfigFileName = baseConfigFileName;
+        _baseConfigFilePath = baseConfigFilePath;
+        ConfigFilePath = GetFinalConfigFilePath();
     }
 
     /// <summary>
@@ -56,13 +66,25 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public bool TryLoadConfig(string path, [NotNullWhen(true)] out RuntimeConfig? config)
+    public bool TryLoadConfig(
+        string path,
+        [NotNullWhen(true)] out RuntimeConfig? config,
+        bool replaceEnvVar = false)
     {
         if (_fileSystem.File.Exists(path))
         {
+            Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
-            return TryParseConfig(json, out config, connectionString: _connectionString);
+            return TryParseConfig(json, out config, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
+        }
+        else
+        {
+            // Unable to use ILogger because this code is invoked before LoggerFactory
+            // is instantiated.
+            Console.WriteLine($"Unable to find config file: {path} does not exist.");
         }
 
         config = null;
@@ -73,10 +95,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Tries to load the config file using the filename known to the RuntimeConfigLoader and for the default environment.
     /// </summary>
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
+    /// <param name="replaceEnvVar">Whether to replace environment variable with its
+    /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config)
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
-        return TryLoadConfig(ConfigFileName, out config);
+        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
     }
 
     /// <summary>
@@ -122,6 +146,29 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
+    /// This method returns the final config file name that will be used by the runtime engine.
+    /// </summary>
+    private string GetFinalConfigFilePath()
+    {
+        if (!string.Equals(_baseConfigFilePath, DEFAULT_CONFIG_FILE_NAME))
+        {
+            // user provided config file is honoured.
+            return _baseConfigFilePath;
+        }
+
+        // ConfigFile not explicitly provided by user, so we need to get the config file name based on environment.
+        string configFilePath = GetFileNameForEnvironment(Environment.GetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME), false);
+
+        // If file for environment is not found, then the baseConfigFile is used as the final configFile for runtime engine.
+        if (string.IsNullOrWhiteSpace(configFilePath))
+        {
+            return _baseConfigFilePath;
+        }
+
+        return configFilePath;
+    }
+
+    /// <summary>
     /// Generates the config file name and a corresponding overridden file name,
     /// With precedence given to overridden file name, returns that name
     /// if the file exists in the current directory, else an empty string.
@@ -132,21 +179,24 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns></returns>
     public string GetFileName(string? environmentValue, bool considerOverrides)
     {
-        string fileNameWithoutExtension = _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFileName);
-        string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFileName);
-        string configFileName =
+        // If the baseConfigFilePath contains directory info, we need to ensure that it is not lost. for example: baseConfigFilePath = "config/dab-config.json"
+        // in this case, we need to get the directory name and the file name without extension and then combine them back. Else, we will lose the path
+        // and the file will be searched in the current directory.
+        string filePathWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFilePath) ?? string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFilePath));
+        string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFilePath);
+        string configFilePath =
             !string.IsNullOrEmpty(environmentValue)
-            ? $"{fileNameWithoutExtension}.{environmentValue}"
-            : $"{fileNameWithoutExtension}";
-        string configFileNameWithExtension = $"{configFileName}{fileExtension}";
-        string overriddenConfigFileNameWithExtension = GetOverriddenName(configFileName);
+            ? $"{filePathWithoutExtension}.{environmentValue}"
+            : $"{filePathWithoutExtension}";
+        string configFileNameWithExtension = $"{configFilePath}{fileExtension}";
+        string overriddenConfigFileNameWithExtension = GetOverriddenName(configFilePath);
 
-        if (considerOverrides && DoesFileExistInCurrentDirectory(overriddenConfigFileNameWithExtension))
+        if (considerOverrides && DoesFileExistInDirectory(overriddenConfigFileNameWithExtension))
         {
             return overriddenConfigFileNameWithExtension;
         }
 
-        if (DoesFileExistInCurrentDirectory(configFileNameWithExtension))
+        if (DoesFileExistInDirectory(configFileNameWithExtension))
         {
             return configFileNameWithExtension;
         }
@@ -154,9 +204,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         return string.Empty;
     }
 
-    private static string GetOverriddenName(string fileName)
+    private static string GetOverriddenName(string filePath)
     {
-        return $"{fileName}.overrides{CONFIG_EXTENSION}";
+        return $"{filePath}.overrides{CONFIG_EXTENSION}";
     }
 
     /// <summary>
@@ -168,24 +218,16 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         return $"{fileName}.{environmentValue}{CONFIG_EXTENSION}";
     }
 
-    public bool DoesFileExistInCurrentDirectory(string fileName)
+    /// <summary>
+    /// Checks if the file exists in the directory.
+    /// Works for both relative and absolute paths.
+    /// </summary>
+    /// <param name="filePath"></param>
+    /// <returns>True if file is found, else false.</returns>
+    public bool DoesFileExistInDirectory(string filePath)
     {
         string currentDir = _fileSystem.Directory.GetCurrentDirectory();
-        // Unable to use ILogger because this code is invoked before LoggerFactory
-        // is instantiated.
-        if (_fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, fileName)))
-        {
-            // This config file is logged as being found, but may not actually be used!
-            Console.WriteLine($"Found config file: {fileName}.");
-            return true;
-        }
-        else
-        {
-            // Unable to use ILogger because this code is invoked before LoggerFactory
-            // is instantiated.
-            Console.WriteLine($"Unable to find config file: {fileName} does not exist.");
-            return false;
-        }
+        return _fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, filePath));
     }
 
     /// <summary>
@@ -244,11 +286,13 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Allows the base config file name to be updated. This is commonly done when the CLI is starting up.
+    /// Allows the base config file and the actually loaded config file name(tracked by the property ConfigFileName)
+    /// to be updated. This is commonly done when the CLI is starting up.
     /// </summary>
     /// <param name="fileName"></param>
-    public void UpdateBaseConfigFileName(string fileName)
+    public void UpdateConfigFilePath(string filePath)
     {
-        _baseConfigFileName = fileName;
+        _baseConfigFilePath = filePath;
+        ConfigFilePath = filePath;
     }
 }

@@ -5,7 +5,11 @@
 [![Documentation](https://img.shields.io/badge/docs-website-%23fc0)](https://learn.microsoft.com/azure/data-api-builder/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest stable version of Data API builder is **0.7.6** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
+Latest stable version of Data API builder is **0.8.52** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
+
+## Community
+
+Join the Data API builder community! This sign up will help us maintain a list of interested developers to be part of our roadmap and to help us better understand the different ways DAB is being used. Sign up [here](https://forms.office.com/pages/responsepage.aspx?id=v4j5cvGGr0GRqy180BHbR1S1JdzGAxhDrefV-tBYtwZUNE1RWVo0SUVMTkRESUZLMVVOS0wwUFNVRy4u).
 
 ## About
 
@@ -48,6 +52,10 @@ Documentation is available [here](https://learn.microsoft.com/azure/data-api-bui
 Several samples are available already. To follow the [Getting Started](https://learn.microsoft.com/azure/data-api-builder/get-started/get-started-with-data-api-builder) tutorial you'll find the associated code in the [`samples`](https://github.com/Azure/data-api-builder/tree/main/samples) folder.
 
 More samples, including end-to-end samples using the most common frontend frameworks, are available in the [https://github.com/Azure-Samples/data-api-builder](https://github.com/Azure-Samples/data-api-builder) repository
+
+## Getting Started Videos
+
+We've put together a playlist of short videos to help you get started with Data API builder and fullstack/jamstack development: https://www.youtube.com/playlist?list=PLYA3nHmjWIYE1PUl8_dVR-yKtCLgVhie4
 
 ## Known Issues
 

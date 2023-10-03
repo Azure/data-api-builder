@@ -5,7 +5,8 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /api
+      Path: /api,
+      RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,
@@ -41,11 +42,7 @@
         },
         Rest: {
           Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
+            Post
           ],
           Enabled: true
         },

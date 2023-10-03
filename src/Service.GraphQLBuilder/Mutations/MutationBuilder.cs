@@ -26,14 +26,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// Creates a DocumentNode containing FieldDefinitionNodes representing mutations
         /// </summary>
         /// <param name="root">Root of GraphQL schema</param>
-        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
+        /// <param name="databaseTypes">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
         /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
         /// <param name="dbObjects">Database object metadata</param>
         /// <returns>Mutations DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
-            DatabaseType databaseType,
+            Dictionary<string, DatabaseType> databaseTypes,
             RuntimeEntities entities,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
             Dictionary<string, DatabaseObject>? dbObjects = null)
@@ -66,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             else
                             {
                                 throw new DataApiBuilderException(
-                                    message: "GraphQL schema creation for stored procedures requires the associated database object's schema metadata.",
+                                    message: $"GraphQL schema creation for stored procedures requires the associated database object's schema metadata.",
                                     statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                             }
@@ -74,9 +74,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     }
                     else
                     {
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseType, entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
                     }
                 }
             }

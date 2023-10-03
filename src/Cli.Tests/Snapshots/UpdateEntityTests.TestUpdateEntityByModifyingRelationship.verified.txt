@@ -5,7 +5,8 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /
+      Path: /,
+      RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,
@@ -38,13 +39,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [

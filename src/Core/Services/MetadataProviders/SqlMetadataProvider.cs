@@ -5,6 +5,7 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -14,10 +15,12 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
+[assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Core.Services
 {
     /// <summary>
@@ -33,7 +36,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly DatabaseType _databaseType;
 
-        private readonly RuntimeEntities _entities;
+        private readonly IReadOnlyDictionary<string, Entity> _entities;
+
+        protected readonly string _dataSourceName;
 
         // Dictionary containing mapping of graphQL stored procedure exposed query/mutation name
         // to their corresponding entity names defined in the config.
@@ -61,41 +66,46 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
+        protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
+
         /// <summary>
         /// Maps an entity name to a DatabaseObject.
         /// </summary>
         public Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; } =
             new(StringComparer.InvariantCulture);
 
-        private readonly ILogger<ISqlMetadataProvider> _logger;
+        protected readonly ILogger<ISqlMetadataProvider> _logger;
 
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
-            IQueryExecutor queryExecutor,
-            IQueryBuilder queryBuilder,
-            ILogger<ISqlMetadataProvider> logger)
+            IAbstractQueryManagerFactory engineFactory,
+            ILogger<ISqlMetadataProvider> logger,
+            string dataSourceName)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _runtimeConfigProvider = runtimeConfigProvider;
-            _databaseType = runtimeConfig.DataSource.DatabaseType;
-            _entities = runtimeConfig.Entities;
+            _dataSourceName = dataSourceName;
+            _databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            _entities = runtimeConfig.Entities.Where(x => string.Equals(runtimeConfig.GetDataSourceNameFromEntityName(x.Key), _dataSourceName, StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value);
             _logger = logger;
-            foreach ((string key, Entity _) in _entities)
+            foreach ((string entityName, Entity entityMetatdata) in _entities)
             {
                 if (runtimeConfig.Runtime.Rest.Enabled)
                 {
-                    _logger.LogInformation($"{key} path: {runtimeConfig.Runtime.Rest.Path}/{key}");
+                    string restPath = entityMetatdata.Rest?.Path ?? entityName;
+                    _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.Runtime.Rest.Path, restPath);
                 }
                 else
                 {
-                    _logger.LogInformation($"REST calls are disabled for Entity: {key}");
+                    _logger.LogInformation(message: "REST calls are disabled for the entity: {entity}", entityName);
                 }
             }
 
-            ConnectionString = runtimeConfig.DataSource.ConnectionString;
+            ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
             EntitiesDataSet = new();
-            SqlQueryBuilder = queryBuilder;
-            QueryExecutor = queryExecutor;
+            QueryManagerFactory = engineFactory;
+            SqlQueryBuilder = QueryManagerFactory.GetQueryBuilder(_databaseType);
+            QueryExecutor = QueryManagerFactory.GetQueryExecutor(_databaseType);
         }
 
         /// <inheritdoc />
@@ -131,6 +141,11 @@ namespace Azure.DataApiBuilder.Core.Services
 
             return databaseObject!.SchemaName;
         }
+
+        /// <summary>
+        /// Gets the database name. This method is only relevant for MySql where the terms schema and database are used interchangeably.
+        /// </summary>
+        public virtual string GetDatabaseName() => string.Empty;
 
         /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
@@ -253,11 +268,17 @@ namespace Azure.DataApiBuilder.Core.Services
                     column = sourceDefinition.Columns[pK];
                     if (TryGetExposedColumnName(entityName, pK, out string? exposedPKeyName))
                     {
-                        _logger.LogDebug($"Primary key column name: {pK}\n" +
-                        $"      Primary key mapped name: {exposedPKeyName}\n" +
-                        $"      Type: {column.SystemType.Name}\n" +
-                        $"      IsNullable: {column.IsNullable}\n" +
-                        $"      IsAutoGenerated: {column.IsAutoGenerated}");
+                        _logger.LogDebug(
+                            message: "Primary key column name: {pK}\n" +
+                            "      Primary key mapped name: {exposedPKeyName}\n" +
+                            "      Type: {column.SystemType.Name}\n" +
+                            "      IsNullable: {column.IsNullable}\n" +
+                            "      IsAutoGenerated: {column.IsAutoGenerated}",
+                            pK,
+                            exposedPKeyName,
+                            column.SystemType.Name,
+                            column.IsNullable,
+                            column.IsAutoGenerated);
                     }
                 }
             }
@@ -275,10 +296,8 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             await conn.OpenAsync();
-
-            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
 
             string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
@@ -348,6 +367,19 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Takes a string version of a sql data type and returns its .NET common language runtime (CLR) counterpart
         /// </summary>
         public abstract Type SqlToCLRType(string sqlType);
+
+        /// <summary>
+        /// Updates a table's SourceDefinition object's metadata with whether any enabled insert/update DML triggers exist for the table.
+        /// This method is only called for tables in MsSql.
+        /// </summary>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="schemaName">Name of the schema in which the table is present.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="sourceDefinition">Table definition to update.</param>
+        public virtual Task PopulateTriggerMetadataForTable(string entityName, string schemaName, string tableName, SourceDefinition sourceDefinition)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Generates the map used to find a given entity based
@@ -840,7 +872,9 @@ namespace Azure.DataApiBuilder.Core.Services
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: queryForResultSetDetails,
                 parameters: null!,
-                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
+                dataSourceName: _dataSourceName);
+
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
 
             // Iterate through each row returned by the query which corresponds to
@@ -963,6 +997,12 @@ namespace Azure.DataApiBuilder.Core.Services
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
+            _entities.TryGetValue(entityName, out Entity? entity);
+            if (GetDatabaseType() is DatabaseType.MSSQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
+            {
+                await PopulateTriggerMetadataForTable(entityName, schemaName, tableName, sourceDefinition);
+            }
+
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
@@ -971,7 +1011,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
 
                 if (runtimeConfig.Runtime.GraphQL.Enabled
-                    && _entities.TryGetValue(entityName, out Entity? entity)
+                    && entity is not null
                     && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.Runtime.GraphQL.Enabled))
                 {
                     throw new DataApiBuilderException(
@@ -986,7 +1026,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     IsNullable = (bool)columnInfoFromAdapter["AllowDBNull"],
                     IsAutoGenerated = (bool)columnInfoFromAdapter["IsAutoIncrement"],
                     SystemType = systemTypeOfColumn,
-                    DbType = TypeHelper.GetDbTypeFromSystemType(systemTypeOfColumn)
+                    DbType = TypeHelper.GetDbTypeFromSystemType(systemTypeOfColumn),
+                    // An auto-increment column is also considered as a read-only column. For other types of read-only columns,
+                    // the flag is populated later via PopulateColumnDefinitionsWithReadOnlyFlag() method.
+                    IsReadOnly = (bool)columnInfoFromAdapter["IsAutoIncrement"]
                 };
 
                 // Tests may try to add the same column simultaneously
@@ -997,10 +1040,52 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
-
             PopulateColumnDefinitionWithHasDefault(
                 sourceDefinition,
                 columnsInTable);
+
+            if (entity is not null && entity.Source.Type is EntitySourceType.Table)
+            {
+                // For MySql, database name is equivalent to schema name.
+                string schemaOrDatabaseName = GetDatabaseType() is DatabaseType.MySQL ? GetDatabaseName() : schemaName;
+                await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaOrDatabaseName, sourceDefinition);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to populate the column definitions of each column in a table with the info about
+        /// whether the column can be updated or not.
+        /// </summary>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="schemaOrDatabaseName">Name of the schema (for MsSql/PgSql)/database (for MySql) of the table.</param>
+        /// <param name="sourceDefinition">Table definition.</param>
+        private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaOrDatabaseName, SourceDefinition sourceDefinition)
+        {
+            string schemaOrDatabaseParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
+            string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
+            string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns(schemaOrDatabaseParamName, tableParamName);
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                { schemaOrDatabaseParamName, new(schemaOrDatabaseName, DbType.String) },
+                { tableParamName, new(tableName, DbType.String) }
+            };
+
+            List<string>? readOnlyFields = await QueryExecutor.ExecuteQueryAsync(
+                sqltext: queryToGetReadOnlyColumns,
+                parameters: parameters,
+                dataReaderHandler: SummarizeReadOnlyFieldsMetadata);
+
+            if (readOnlyFields is not null && readOnlyFields.Count > 0)
+            {
+                foreach (string readOnlyField in readOnlyFields)
+                {
+                    if (sourceDefinition.Columns.TryGetValue(readOnlyField, out ColumnDefinition? columnDefinition))
+                    {
+                        // Mark the column as read-only.
+                        columnDefinition.IsReadOnly = true;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -1118,7 +1203,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // for non-MySql DB types, this will throw an exception
                 // for malformed connection strings
                 conn.ConnectionString = ConnectionString;
-                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             }
             catch (Exception ex)
             {
@@ -1140,21 +1225,39 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             string tablePrefix = GetTablePrefix(conn.Database, schemaName);
+            string queryPrefix = string.IsNullOrEmpty(tablePrefix) ? string.Empty : $"{tablePrefix}.";
             selectCommand.CommandText
-                = $"SELECT * FROM {tablePrefix}.{SqlQueryBuilder.QuoteIdentifier(tableName)}";
+                = $"SELECT * FROM {queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
             return dataTable[0];
         }
 
-        private string GetTablePrefix(string databaseName, string schemaName)
+        internal string GetTablePrefix(string databaseName, string schemaName)
         {
-            StringBuilder tablePrefix = new(SqlQueryBuilder.QuoteIdentifier(databaseName));
-            if (!string.IsNullOrEmpty(schemaName))
+            IQueryBuilder queryBuilder = GetQueryBuilder();
+            StringBuilder tablePrefix = new();
+
+            if (!string.IsNullOrEmpty(databaseName))
             {
-                schemaName = SqlQueryBuilder.QuoteIdentifier(schemaName);
-                tablePrefix.Append($".{schemaName}");
+                // Determine databaseName for prefix.
+                databaseName = queryBuilder.QuoteIdentifier(databaseName);
+                tablePrefix.Append(databaseName);
+
+                if (!string.IsNullOrEmpty(schemaName))
+                {
+                    // Determine schemaName for prefix.
+                    schemaName = queryBuilder.QuoteIdentifier(schemaName);
+                    tablePrefix.Append($".{schemaName}");
+                }
+            }
+            else if (!string.IsNullOrEmpty(schemaName))
+            {
+                // Determine schemaName for prefix.
+                schemaName = queryBuilder.QuoteIdentifier(schemaName);
+                // Database name is empty we just need the schema name.
+                tablePrefix.Append(schemaName);
             }
 
             return tablePrefix.ToString();
@@ -1172,7 +1275,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             await conn.OpenAsync();
             // We can specify the Catalog, Schema, Table Name, Column Name to get
             // the specified column(s).
@@ -1238,7 +1341,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Build the query required to get the foreign key information.
             string queryForForeignKeyInfo =
-                ((BaseSqlQueryBuilder)SqlQueryBuilder).BuildForeignKeyInfoQuery(tableNames.Count);
+                ((BaseSqlQueryBuilder)GetQueryBuilder()).BuildForeignKeyInfoQuery(tableNames.Count);
 
             // Build the parameters dictionary for the foreign key info query
             // consisting of all schema names and table names.
@@ -1249,7 +1352,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
-            PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(queryForForeignKeyInfo, parameters, SummarizeFkMetadata);
+            PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(
+                queryForForeignKeyInfo, parameters, SummarizeFkMetadata, httpContext: null, args: null, _dataSourceName);
 
             if (PairToFkDefinition is not null)
             {
@@ -1379,6 +1483,33 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return pairToFkDefinition;
+        }
+
+        /// <summary>
+        /// Helper method to get all the read-only fields name in a table by processing the DbDataReader instance
+        /// which contains the name of all the fields - one field per DbResult row.
+        /// </summary>
+        /// <param name="reader">The DbDataReader.</param>
+        /// <param name="args">Arguments to this function. This parameter is unused in this method.
+        /// This is added so that the method conforms with the Func delegate's signature.</param>
+        /// <returns>List of read-only fields present in the table.</returns>
+        private async Task<List<string>>
+            SummarizeReadOnlyFieldsMetadata(DbDataReader reader, List<string>? args = null)
+        {
+            // Extract all the rows in the current Result Set of DbDataReader.
+            DbResultSet readOnlyFieldRowsWithProperties =
+                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
+
+            List<string> readOnlyFields = new();
+
+            foreach (DbResultSetRow readOnlyFieldRowWithProperties in readOnlyFieldRowsWithProperties.Rows)
+            {
+                Dictionary<string, object?> readOnlyFieldInfo = readOnlyFieldRowWithProperties.Columns;
+                string fieldName = (string)readOnlyFieldInfo["column_name"]!;
+                readOnlyFields.Add(fieldName);
+            }
+
+            return readOnlyFields;
         }
 
         /// <summary>

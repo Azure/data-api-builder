@@ -10,7 +10,8 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /abc
+      Path: /abc,
+      RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,

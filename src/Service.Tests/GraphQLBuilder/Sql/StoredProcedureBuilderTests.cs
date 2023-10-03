@@ -54,6 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(DateTime), DATETIME_TYPE, "12/31/2030 12:00:00 AM", false, DisplayName = "DateTime")]
         [DataRow(typeof(DateTime), DATETIME_TYPE, "12/31/2030 12000 AM", true, DisplayName = "DateTime")]
         [DataRow(typeof(DateTimeOffset), DATETIME_TYPE, "11/19/2012 10:57:11 AM -08:00", false, DisplayName = "DateTimeOffset")]
+        [DataRow(typeof(TimeOnly), LOCALTIME_TYPE, "10:57:11.0000", false, DisplayName = "LocalTime")]
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE, "AgQGCAoMDhASFA==", false, DisplayName = "Byte[]")]
         public void StoredProcedure_ParameterValueTypeResolution(
             Type systemType,
@@ -125,12 +126,17 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             try
             {
+                Dictionary<string, DatabaseType> entityToDatabaseName = new()
+                {
+                    {"Foo", DatabaseType.MSSQL }
+                };
+
                 // Build GraphQL schema document for the mutation which hydrates parameter metadata and
                 // attempts to convert the parameter value provided in configuration
                 // to the value type denoted in the database schema (metadata supplied via DatabaseObject).
                 DocumentNode mutationRoot = MutationBuilder.Build(
                     root,
-                    DatabaseType.MSSQL,
+                    entityToDatabaseName,
                     entities: new(entities),
                     entityPermissionsMap: _entityPermissions,
                     dbObjects: new Dictionary<string, DatabaseObject> { { spMutationEntityName, spDbObj } }
@@ -145,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 // to the value type denoted in the database schema (metadata supplied via DatabaseObject).
                 DocumentNode queryRoot = QueryBuilder.Build(
                     root,
-                    DatabaseType.MSSQL,
+                    entityToDatabaseName,
                     entities: new(entities),
                     inputTypes: null,
                     entityPermissionsMap: _entityPermissions,

@@ -5,7 +5,8 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /api
+      Path: /api,
+      RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,
@@ -1325,13 +1326,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1394,13 +1388,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1431,13 +1418,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1467,13 +1447,6 @@
           Enabled: true
         },
         Rest: {
-          Methods: [
-            Get,
-            Post,
-            Put,
-            Patch,
-            Delete
-          ],
           Enabled: true
         },
         Permissions: [
@@ -1925,6 +1898,32 @@
           bkname: name,
           id: bkid
         }
+      }
+    },
+    {
+      BooksSold: {
+        Source: {
+          Object: books_sold,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: books_sold,
+          Plural: books_sold,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
       }
     },
     {

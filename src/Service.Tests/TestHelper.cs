@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             Entity entity = new(
                 Source: new(entityName, EntitySourceType.Table, null, null),
                 GraphQL: new(entityKey, entityKey.Pluralize()),
-                Rest: new(Array.Empty<SupportedHttpVerb>()),
+                Rest: new(Enabled: true),
                 Permissions: new[]
                 {
                     new EntityPermission("anonymous", new EntityAction[] {
@@ -109,13 +109,18 @@ namespace Azure.DataApiBuilder.Service.Tests
           ""$schema"": """ + FileSystemRuntimeConfigLoader.SCHEMA + @"""";
 
         /// <summary>
+        /// A sample connection string for unit tests
+        /// </summary>
+        public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
+
+        /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
         /// for unit tests
         /// </summary>
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring""
+              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
             }
         ";
 
@@ -152,6 +157,9 @@ namespace Azure.DataApiBuilder.Service.Tests
 
         /// <summary>
         /// A minimal valid config json without any entities. This config string is used in tests.
+        /// Note: The test ConfigurationTests.ValidateStrictModeAsDefaultForRestRequestBody depends on BASE_CONFIG
+        /// omitting the request-body-strict property.
+        /// If there is a need to include this property here, the test needs to be adjusted accordingly.
         /// </summary>
         public const string BASE_CONFIG =
           "{" +

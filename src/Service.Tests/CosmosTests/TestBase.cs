@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests;
@@ -29,6 +30,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests;
 public class TestBase
 {
     internal const string DATABASE_NAME = "graphqldb";
+    // Intentionally removed name attibute from Planet model to test scenario where the 'name' attribute
+    // is not explicitly added in the schema
     internal const string GRAPHQL_SCHEMA = @"
 type Character @model(name:""Character"") {
     id : ID,
@@ -39,7 +42,7 @@ type Character @model(name:""Character"") {
     star: Star
 }
 
-type Planet @model(name:""Planet"") {
+type Planet @model {
     id : ID!,
     name : String,
     character: Character,
@@ -123,7 +126,10 @@ type Sun @model(name:""Sun"") {
         RuntimeConfigProvider provider = new(loader);
 
         ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);
-        IAuthorizationResolver authorizationResolverCosmos = new AuthorizationResolver(provider, cosmosSqlMetadataProvider);
+        Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+        metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(cosmosSqlMetadataProvider);
+
+        IAuthorizationResolver authorizationResolverCosmos = new AuthorizationResolver(provider, metadataProviderFactory.Object);
 
         return new WebApplicationFactory<Startup>()
             .WithWebHostBuilder(builder =>
@@ -153,7 +159,8 @@ type Sun @model(name:""Sun"") {
     internal List<string> CreateItems(string dbName, string containerName, int numItems)
     {
         List<string> idList = new();
-        CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+        CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
+        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
         for (int i = 0; i < numItems; i++)
         {
             string uid = Guid.NewGuid().ToString();
@@ -185,7 +192,8 @@ type Sun @model(name:""Sun"") {
         {
             MaxItemCount = pageSize,
         };
-        CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+        CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
+        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
         Container c = cosmosClient.GetContainer(DATABASE_NAME, containerName);
         QueryDefinition queryDef = new(query);
         FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);

@@ -3,9 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -133,30 +131,6 @@ namespace Cli
         }
 
         /// <summary>
-        /// Returns the Serialization option used to convert objects into JSON.
-        /// Not escaping any special unicode characters.
-        /// Ignoring properties with null values.
-        /// Keeping all the keys in lowercase.
-        /// </summary>
-        public static JsonSerializerOptions GetSerializationOptions()
-        {
-            JsonSerializerOptions? options = new()
-            {
-                Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-                WriteIndented = true,
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                PropertyNamingPolicy = new LowerCaseNamingPolicy(),
-                // As of .NET Core 7, JsonDocument and JsonSerializer only support skipping or disallowing
-                // of comments; they do not support loading them. If we set JsonCommentHandling.Allow for either,
-                // it will throw an exception.
-                ReadCommentHandling = JsonCommentHandling.Skip
-            };
-
-            options.Converters.Add(new JsonStringEnumConverter(namingPolicy: new LowerCaseNamingPolicy()));
-            return options;
-        }
-
-        /// <summary>
         /// Returns true on successful parsing of mappings Dictionary from IEnumerable list.
         /// Returns false in case the format of the input is not correct.
         /// </summary>
@@ -171,8 +145,7 @@ namespace Cli
                 string[] map = item.Split(SEPARATOR);
                 if (map.Length != 2)
                 {
-                    _logger.LogError("Invalid format for --map. " +
-                        "Acceptable format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
+                    _logger.LogError("Invalid format for --map. Acceptable format --map \"backendName1:exposedName1,backendName2:exposedName2,...\".");
                     return false;
                 }
 
@@ -384,14 +357,14 @@ namespace Cli
             if (!string.IsNullOrEmpty(userProvidedConfigFile))
             {
                 /// The existence of user provided config file is not checked here.
-                _logger.LogInformation($"User provided config file: {userProvidedConfigFile}");
+                _logger.LogInformation("User provided config file: {userProvidedConfigFile}", userProvidedConfigFile);
                 runtimeConfigFile = userProvidedConfigFile;
                 return true;
             }
             else
             {
                 _logger.LogInformation("Config not provided. Trying to get default config based on DAB_ENVIRONMENT...");
-                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {value}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
+                _logger.LogInformation("Environment variable DAB_ENVIRONMENT is {environment}", Environment.GetEnvironmentVariable("DAB_ENVIRONMENT"));
                 runtimeConfigFile = loader.GetFileNameForEnvironment(null, considerOverrides: false);
             }
 
@@ -626,7 +599,7 @@ namespace Cli
             }
             catch (Exception e)
             {
-                _logger.LogError($"Failed to generate the config file, operation failed with exception:{e}.");
+                _logger.LogError("Failed to generate the config file, operation failed with exception: {e}.", e);
                 return false;
             }
         }
@@ -639,7 +612,7 @@ namespace Cli
             }
             catch (Exception e)
             {
-                _logger.LogError($"Failed to generate the config file, operation failed with exception:{e}.");
+                _logger.LogError("Failed to generate the config file, operation failed with exception:{e}.", e);
                 return false;
             }
 
@@ -705,7 +678,10 @@ namespace Cli
         {
             if (!Enum.TryParse(operation, ignoreCase: true, out graphQLOperation))
             {
-                _logger.LogError($"Invalid GraphQL Operation. Supported operations are {GraphQLOperation.Query.ToString()!.ToLower()} and {GraphQLOperation.Mutation.ToString()!.ToLower()!}.");
+                _logger.LogError(
+                    "Invalid GraphQL Operation. Supported operations are {queryName} and {mutationName}.",
+                    GraphQLOperation.Query,
+                    GraphQLOperation.Mutation);
                 return false;
             }
 
@@ -813,12 +789,12 @@ namespace Cli
         /// <param name="supportedHttpVerbs">Supported HTTP verbs for the entity.</param>
         /// <param name="isCosmosDbNoSql">True when the entity is a CosmosDB NoSQL entity, and if it is true, REST is disabled.</param>
         /// <returns>Constructed REST options for the entity.</returns>
-        public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[] supportedHttpVerbs, bool isCosmosDbNoSql)
+        public static EntityRestOptions ConstructRestOptions(string? restRoute, SupportedHttpVerb[]? supportedHttpVerbs, bool isCosmosDbNoSql)
         {
             // REST is not supported for CosmosDB NoSQL, so we'll forcibly disable it.
             if (isCosmosDbNoSql)
             {
-                return new(Array.Empty<SupportedHttpVerb>(), Enabled: false);
+                return new(Enabled: false);
             }
 
             EntityRestOptions restOptions = new(supportedHttpVerbs);
@@ -902,7 +878,7 @@ namespace Cli
         {
             if (string.IsNullOrWhiteSpace(entity))
             {
-                cliLogger.LogError($"Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]");
+                cliLogger.LogError("Entity name is missing. Usage: dab {command} [entity-name] [{command}-options]", command, command);
                 return false;
             }
 

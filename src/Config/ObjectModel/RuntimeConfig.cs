@@ -62,6 +62,7 @@ public record RuntimeConfig
     /// <summary>
     /// The path at which Rest APIs are available
     /// </summary>
+    [JsonIgnore]
     public string RestPath
     {
         get
@@ -80,6 +81,7 @@ public record RuntimeConfig
     /// <summary>
     /// The path at which GraphQL API is available
     /// </summary>
+    [JsonIgnore]
     public string GraphQLPath
     {
         get
@@ -98,6 +100,7 @@ public record RuntimeConfig
     /// <summary>
     /// Indicates whether introspection is allowed or not.
     /// </summary>
+    [JsonIgnore]
     public bool AllowIntrospection
     {
         get

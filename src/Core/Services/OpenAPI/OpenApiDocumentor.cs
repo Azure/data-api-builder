@@ -432,7 +432,7 @@ namespace Azure.DataApiBuilder.Core.Services
             };
 
             return operation;
-        }   
+        }
 
         /// <summary>
         /// This method creates a list of OpenApiParameter objects for the parameters of a stored procedure.
@@ -461,7 +461,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         private static List<OpenApiParameter> CreateTableAndViewQueryParameters()
         {
-            List<OpenApiParameter> parameters = new ();
+            List<OpenApiParameter> parameters = new();
 
             // Add $select query parameter
             parameters.Add(

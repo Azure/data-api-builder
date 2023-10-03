@@ -11,7 +11,6 @@ public class ConfigFileWatcher
 {
     private string? _configFilePath;
     private FileSystemWatcher? _fileWatcher;
-    private readonly IOptionsMonitor<RuntimeOptions>? _optionsMonitor;
     RuntimeConfigProvider? _configProvider;
 
     public ConfigFileWatcher(string configFilePath, IOptionsMonitor<RuntimeOptions> optionsMonitor, RuntimeConfigProvider? configProvider)
@@ -23,7 +22,6 @@ public class ConfigFileWatcher
             Filter = Path.GetFileName(_configFilePath)
         };
 
-        _optionsMonitor = optionsMonitor;
         _configProvider = configProvider;
         _fileWatcher.Changed += OnConfigFileChange;
     }
@@ -36,7 +34,6 @@ public class ConfigFileWatcher
         // update the runtimeconfig
         _configProvider!.HotReloadConfig();
         // update the IOptions<RuntimeOptions>.Value
-
     }
 }
 

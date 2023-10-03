@@ -65,8 +65,6 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
-            services.Configure<RuntimeOptions>(Configuration.GetSection("RuntimeOptions"));
-            services.AddSingleton<IOptionsMonitor<RuntimeOptions>>();
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 return new RuntimeConfigProvider(configLoader);

@@ -333,17 +333,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(json, out RuntimeConfig parsedConfig));
             Assert.AreEqual(RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK, parsedConfig.Schema);
-            Assert.IsTrue(parsedConfig.Runtime.Rest.Enabled);
-            Assert.AreEqual(RestRuntimeOptions.DEFAULT_PATH, parsedConfig.Runtime.Rest.Path);
-            Assert.IsTrue(parsedConfig.Runtime.GraphQL.Enabled);
-            Assert.AreEqual(GraphQLRuntimeOptions.DEFAULT_PATH, parsedConfig.Runtime.GraphQL.Path);
-            Assert.IsTrue(parsedConfig.Runtime.GraphQL.AllowIntrospection);
-            Assert.IsNull(parsedConfig.Runtime.BaseRoute);
-            Assert.AreEqual(HostMode.Development, parsedConfig.Runtime.Host.Mode);
+            Assert.IsTrue(parsedConfig.IsRestEnabled);
+            Assert.AreEqual(RestRuntimeOptions.DEFAULT_PATH, parsedConfig.RestPath);
+            Assert.IsTrue(parsedConfig.IsGraphQLEnabled);
+            Assert.AreEqual(GraphQLRuntimeOptions.DEFAULT_PATH, parsedConfig.GraphQLPath);
+            Assert.IsTrue(parsedConfig.AllowIntrospection);
+            Assert.IsNull(parsedConfig.Runtime?.BaseRoute);
+            Assert.IsTrue(parsedConfig.IsDevelopmentMode());
             if (isHostSpecifiedButEmpty)
             {
-                Assert.IsNull(parsedConfig.Runtime.Host.Cors);
-                Assert.IsNull(parsedConfig.Runtime.Host.Authentication);
+                Assert.IsNull(parsedConfig.Runtime?.Host?.Cors);
+                Assert.IsNull(parsedConfig.Runtime?.Host?.Authentication);
             }
             else
             {

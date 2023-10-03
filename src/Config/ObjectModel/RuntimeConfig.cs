@@ -143,11 +143,7 @@ public record RuntimeConfig
     {
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
-        this.Runtime = Runtime ??
-           new RuntimeOptions(
-               new RestRuntimeOptions(Enabled: DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL),
-               GraphQL: null, // even though we pass null here, the constructor will take care of initializing with defaults.
-               Host: null);
+        this.Runtime = Runtime;
         this.Entities = Entities;
         this._dataSourceNameToDataSource = new Dictionary<string, DataSource>();
         this._defaultDataSourceName = Guid.NewGuid().ToString();

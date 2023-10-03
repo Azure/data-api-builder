@@ -403,7 +403,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
             }
 
             // validate the rest path.
-            string restPath = runtimeConfig.Runtime.Rest.Path;
+            string restPath = runtimeConfig.RestPath;
             if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
             {
                 throw new DataApiBuilderException(
@@ -827,8 +827,7 @@ namespace Azure.DataApiBuilder.Core.Configurations
         {
             // Find all the claimTypes from the policy
             MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
-            bool isStaticWebAppsAuthConfigured = Enum.TryParse(runtimeConfig.Runtime?.Host?.Authentication?.Provider, ignoreCase: true, out EasyAuthType easyAuthMode) ?
-                easyAuthMode is EasyAuthType.StaticWebApps : false;
+            bool isStaticWebAppsAuthConfigured = runtimeConfig.IsStaticWebAppsIdentityProvider;
 
             foreach (Match claimType in claimTypes)
             {

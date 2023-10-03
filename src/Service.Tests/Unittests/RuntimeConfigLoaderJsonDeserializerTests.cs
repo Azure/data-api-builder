@@ -342,8 +342,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(parsedConfig.IsDevelopmentMode());
             if (isHostSpecifiedButEmpty)
             {
-                Assert.IsNull(parsedConfig.Runtime?.Host?.Cors);
-                Assert.IsNull(parsedConfig.Runtime?.Host?.Authentication);
+                Assert.IsNotNull(parsedConfig.Runtime);
+                Assert.IsNotNull(parsedConfig.Runtime.Host);
+                Assert.IsNull(parsedConfig.Runtime.Host.Cors);
+                Assert.IsNull(parsedConfig.Runtime.Host.Authentication);
             }
             else
             {

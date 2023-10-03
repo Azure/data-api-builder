@@ -92,13 +92,17 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.CosmosDB_PostgreSQL, runtimeConfig.DataSource.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
-        Assert.AreEqual("/rest-api", runtimeConfig.Runtime!.Rest?.Path);
-        Assert.IsTrue(runtimeConfig.Runtime!.Rest?.Enabled);
-        Assert.AreEqual("/graphql-api", runtimeConfig.Runtime!.GraphQL?.Path);
-        Assert.IsTrue(runtimeConfig.Runtime!.GraphQL?.Enabled);
+        Assert.IsNotNull(runtimeConfig.Runtime.Rest);
+        Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
+        Assert.IsTrue(runtimeConfig.Runtime.Rest.Enabled);
+        Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
+        Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL.Path);
+        Assert.IsTrue(runtimeConfig.Runtime.GraphQL.Enabled);
 
         HostOptions? hostGlobalSettings = runtimeConfig.Runtime?.Host;
-        CollectionAssert.AreEqual(new string[] { "localhost:3000", "www.nolocalhost.com:80" }, hostGlobalSettings?.Cors!.Origins);
+        Assert.IsNotNull(hostGlobalSettings);
+        Assert.IsNotNull(hostGlobalSettings.Cors);
+        CollectionAssert.AreEqual(new string[] { "localhost:3000", "www.nolocalhost.com:80" }, hostGlobalSettings.Cors.Origins);
     }
 
     /// <summary>

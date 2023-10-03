@@ -7,9 +7,9 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record RuntimeOptions
 {
-    public RestRuntimeOptions Rest;
-    public GraphQLRuntimeOptions GraphQL;
-    public HostOptions Host;
+    public RestRuntimeOptions? Rest;
+    public GraphQLRuntimeOptions? GraphQL;
+    public HostOptions? Host;
     public string? BaseRoute;
 
     [JsonConstructor]

@@ -347,7 +347,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public bool IsDevelopmentMode()
         {
-            return _runtimeConfig.Runtime.Host.Mode is HostMode.Development;
+            return _runtimeConfig.IsDevelopmentMode();
         }
     }
 }

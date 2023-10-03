@@ -36,10 +36,4 @@ public record AuthenticationOptions(string Provider = nameof(EasyAuthType.Static
     /// </summary>
     /// <returns>True if the provider is enabled for JWT, otherwise false.</returns>
     public bool IsJwtConfiguredIdentityProvider() => !IsEasyAuthAuthenticationProvider() && !IsAuthenticationSimulatorEnabled();
-
-    /// <summary>
-    /// A shorthand method to determine whether Static Web Apps is configured for the current authentication provider.
-    /// </summary>
-    /// <returns>True if the provider is enabled for Static Web Apps, otherwise false.</returns>
-    public bool IsStaticWebAppsIdentityProvider() => EasyAuthType.StaticWebApps.ToString().Equals(Provider, StringComparison.OrdinalIgnoreCase);
 };

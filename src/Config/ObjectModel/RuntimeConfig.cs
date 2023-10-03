@@ -17,9 +17,96 @@ public record RuntimeConfig
 
     public DataSource DataSource { get; init; }
 
-    public RuntimeOptions Runtime { get; init; }
+    public RuntimeOptions? Runtime { get; init; }
 
     public RuntimeEntities Entities { get; init; }
+
+    /// <summary>
+    /// Retrieves the value of runtime.rest.request-body-strict property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsRequestBodyStrict =>
+        Runtime is null ||
+        Runtime.Rest is null ||
+        Runtime.Rest.RequestBodyStrict;
+
+    /// <summary>
+    /// Retrieves the value of runtime.graphql.enabled property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsGraphQLEnabled => Runtime is null ||
+        Runtime.GraphQL is null ||
+        Runtime.GraphQL.Enabled;
+
+    /// <summary>
+    /// Retrieves the value of runtime.rest.enabled property if present, default is true if its not cosmosdb.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsRestEnabled =>
+        (Runtime is null ||
+         Runtime.Rest is null ||
+         Runtime.Rest.Enabled) &&
+         DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
+
+    /// <summary>
+    /// A shorthand method to determine whether Static Web Apps is configured for the current authentication provider.
+    /// </summary>
+    /// <returns>True if the authentication provider is enabled for Static Web Apps, otherwise false.</returns>
+    [JsonIgnore]
+    public bool IsStaticWebAppsIdentityProvider =>
+        Runtime is null ||
+        Runtime.Host is null ||
+        Runtime.Host.Authentication is null ||
+        EasyAuthType.StaticWebApps.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The path at which Rest APIs are available
+    /// </summary>
+    public string RestPath
+    {
+        get
+        {
+            if (Runtime is null || Runtime.Rest is null)
+            {
+                return RestRuntimeOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.Rest.Path;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The path at which GraphQL API is available
+    /// </summary>
+    public string GraphQLPath
+    {
+        get
+        {
+            if (Runtime is null || Runtime.GraphQL is null)
+            {
+                return GraphQLRuntimeOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.GraphQL.Path;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Indicates whether introspection is allowed or not.
+    /// </summary>
+    public bool AllowIntrospection
+    {
+        get
+        {
+            return Runtime is null ||
+                Runtime.GraphQL is null ||
+                Runtime.GraphQL.AllowIntrospection;
+        }
+    }
 
     private string _defaultDataSourceName;
 
@@ -201,6 +288,8 @@ public record RuntimeConfig
         jsonSerializerOptions = jsonSerializerOptions ?? RuntimeConfigLoader.GetSerializationOptions();
         return JsonSerializer.Serialize(this, jsonSerializerOptions);
     }
+
+    public bool IsDevelopmentMode() => Runtime is null || Runtime.Host is null || Runtime.Host.Mode is HostMode.Development;
 
     private void CheckDataSourceNamePresent(string dataSourceName)
     {

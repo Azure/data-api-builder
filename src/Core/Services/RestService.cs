@@ -365,7 +365,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// does not match the configured REST path or the global REST endpoint is disabled.</exception>
         public string GetRouteAfterPathBase(string route)
         {
-            string configuredRestPathBase = _runtimeConfigProvider.GetConfig().Runtime.Rest.Path;
+            string configuredRestPathBase = _runtimeConfigProvider.GetConfig().RestPath;
 
             // Strip the leading '/' from the REST path provided in the runtime configuration
             // because the input argument 'route' has no starting '/'.
@@ -395,9 +395,9 @@ namespace Azure.DataApiBuilder.Core.Services
         public bool TryGetRestRouteFromConfig([NotNullWhen(true)] out string? configuredRestRoute)
         {
             if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) &&
-                config.Runtime.Rest.Enabled)
+                config.IsRestEnabled)
             {
-                configuredRestRoute = config.Runtime.Rest.Path;
+                configuredRestRoute = config.RestPath;
                 return true;
             }
 
@@ -411,7 +411,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public string GetBaseRouteFromConfig()
         {
             if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
-                && config.Runtime.BaseRoute is not null)
+                && config.Runtime?.BaseRoute is not null)
             {
                 return config.Runtime.BaseRoute;
             }

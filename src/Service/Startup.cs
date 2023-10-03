@@ -22,7 +22,6 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using DotNetEnv;
 using HotChocolate.AspNetCore;
 using HotChocolate.Types;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

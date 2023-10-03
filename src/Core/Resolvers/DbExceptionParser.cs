@@ -3,7 +3,6 @@
 
 using System.Data.Common;
 using System.Net;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 

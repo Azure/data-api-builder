@@ -7,4 +7,5 @@ public record RuntimeOptions(
     RestRuntimeOptions? Rest,
     GraphQLRuntimeOptions? GraphQL,
     HostOptions? Host,
-    string? BaseRoute = null);
+    string? BaseRoute = null,
+    TelemetryOptions? Telemetry = null);

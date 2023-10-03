@@ -9,8 +9,10 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
+using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using HotChocolate.Types.NodaTime;
 using NodaTime.Text;
@@ -269,6 +271,63 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
                         innerException: error);
             }
+        }
+
+        /// <summary>
+        /// Generates the entity name from the GraphQL context.
+        /// </summary>
+        /// <param name="context">Middleware context.</param>
+        /// <returns></returns>
+        public static string GetDataSourceNameFromGraphQLContext(IMiddlewareContext context, RuntimeConfig runtimeConfig)
+        {
+            string rootNode = context.Selection.Field.Coordinate.TypeName.Value;
+            string dataSourceName;
+
+            if (string.Equals(rootNode, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(rootNode, "query", StringComparison.OrdinalIgnoreCase))
+            {
+                // we are at the root query node - need to determine return type and store on context.
+                // Output type below would be the graphql object return type - Books,BooksConnectionObject.
+                IOutputType outputType = context.Selection.Field.Type;
+                string entityName = outputType.TypeName();
+
+                // Below is only needed if say we have an Array return type or items object for plural case.
+                ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+
+                // Example: CustomersConnectionObject - for get all scenarios.
+                if (QueryBuilder.IsPaginationType(underlyingFieldType))
+                {
+                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+                    outputType = subField.Type;
+                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+                    entityName = underlyingFieldType.Name;
+                }
+
+                // if name on schema is different from name in config.
+                // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
+                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
+                {
+                    entityName = modelName;
+                }
+
+                dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+
+                // Store dataSourceName on context for later use.
+                context.ContextData.TryAdd(GenerateDataSourceNameKeyFromPath(context), dataSourceName);
+            }
+            else
+            {
+                // Derive node from path - e.g. /books/{id} - node would be books.
+                // for this queryNode path we have stored the datasourceName needed to retrieve query and mutation engine of inner objects
+                object? obj = context.ContextData[GenerateDataSourceNameKeyFromPath(context)];
+                dataSourceName = obj?.ToString()!;
+            }
+
+            return dataSourceName;
+        }
+
+        private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
+        {
+            return $"{context.Path.ToList()[0]}";
         }
     }
 }

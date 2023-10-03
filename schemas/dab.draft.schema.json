@@ -118,6 +118,11 @@
         "connection-string"
       ]
     },
+    "data-source-files": {
+      "type": "array",
+      "description": "Names of runtime configuration files referencing additional databases.",
+      "default": null
+    },
     "runtime": {
       "type": "object",
       "description": "Runtime configuration settings",

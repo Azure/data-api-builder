@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
 
@@ -22,10 +23,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public MySqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
-            IQueryExecutor queryExecutor,
-            IQueryBuilder sqlQueryBuilder,
-            ILogger<ISqlMetadataProvider> logger)
-            : base(runtimeConfigProvider, queryExecutor, sqlQueryBuilder, logger)
+            IAbstractQueryManagerFactory queryManagerFactory,
+            ILogger<ISqlMetadataProvider> logger,
+            string dataSourceName)
+            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName)
         {
             try
             {
@@ -46,7 +47,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string tableName)
         {
             using MySqlConnection conn = new(ConnectionString);
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             await conn.OpenAsync();
 
             // Each row in the allColumns table corresponds to a single column.

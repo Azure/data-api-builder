@@ -140,14 +140,9 @@ public class EnvironmentTests
     /// Validates that engine startup fails when the CONN_STRING environment
     /// variable is not found. This test simulates this by defining the
     /// environment variable COMM_STRINGX and not setting the expected
-    /// variable CONN_STRING.
-    /// This test has been disabled as it is causing the build server to hang indefinitely.
-    /// There is something problematic with reading from stderr and stdout in this test
-    /// that is causing the issue. It's possible that the stream is not being flushed
-    /// by the process so when the test tries to read it, it hangs waiting for the stream
-    /// to be readable, but it will require more investigation to determine the root cause.
-    /// I feel confident that the overarching scenario is covered through other testing
-    /// so disabling temporarily while we investigate should be acceptable.
+    /// variable CONN_STRING. This will cause an exception during the post
+    /// processing of the deserialization of the config. We verify the expected
+    /// error message returns.
     /// </summary>
     [TestMethod]
     public async Task FailureToStartEngineWhenEnvVarNamedWrong()
@@ -162,6 +157,8 @@ public class EnvironmentTests
         );
 
         string? output = await process.StandardError.ReadLineAsync();
+        Assert.AreEqual("Deserialization of the configuration file failed during a post-processing step.", output);
+        output = await process.StandardError.ReadToEndAsync();
         StringAssert.Contains(output, "Environmental Variable, "
             + expectedEnvVarName + ", not found.", StringComparison.Ordinal);
         process.Kill();

@@ -74,7 +74,7 @@ public class RuntimeConfigProvider
         {
             throw new DataApiBuilderException(
                 message: "Runtime config isn't setup.",
-                statusCode: HttpStatusCode.InternalServerError,
+                statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
@@ -158,6 +158,34 @@ public class RuntimeConfigProvider
         IsLateConfigured = true;
 
         return configLoadSucceeded;
+    }
+
+    /// <summary>
+    /// Set the runtime configuration provider with the specified accessToken for the specified datasource.
+    /// This initialization method is used to set the access token for the current runtimeConfig.
+    /// As opposed to using a json input and regenerating the runtimconfig, it sets the access token for the current runtimeConfig on the provider.
+    /// </summary>
+    /// <param name="accessToken">The string representation of a managed identity access token</param>
+    /// <param name="dataSourceName">Name of the datasource for which to assign the token.</param>
+    /// <returns>true if the initialization succeeded, false otherwise.</returns>
+    public bool TrySetAccesstoken(
+        string? accessToken,
+        string dataSourceName)
+    {
+        if (_runtimeConfig is null)
+        {
+            // if runtimeConfig is not set up, throw as cannot initialize.
+            throw new DataApiBuilderException($"{nameof(RuntimeConfig)} has not been loaded.", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        // Validate that the datasource exists in the runtimeConfig and then add or update access token.
+        if (_runtimeConfig.CheckDataSourceExists(dataSourceName))
+        {
+            ManagedIdentityAccessToken[dataSourceName] = accessToken;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>

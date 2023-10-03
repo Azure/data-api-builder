@@ -30,14 +30,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// Also populates the DocumentNode with return types.
         /// </summary>
         /// <param name="root">Root of GraphQL schema</param>
-        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
+        /// <param name="databaseTypes">EnitityName to database Type of entity.</param>
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
         /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
         /// <param name="dbObjects">Database object metadata</param>
         /// <returns>Queries DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
-            DatabaseType databaseType,
+            Dictionary<string, DatabaseType> databaseTypes,
             RuntimeEntities entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                         if (rolesAllowedForRead.Any())
                         {
                             queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
-                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
+                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseTypes[entityName], entity, rolesAllowedForRead));
                         }
 
                         if (paginationReturnType is not null)

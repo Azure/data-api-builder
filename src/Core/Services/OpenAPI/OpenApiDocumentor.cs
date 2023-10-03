@@ -9,6 +9,7 @@ using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
@@ -21,7 +22,7 @@ namespace Azure.DataApiBuilder.Core.Services
     /// </summary>
     public class OpenApiDocumentor : IOpenApiDocumentor
     {
-        private readonly ISqlMetadataProvider _metadataProvider;
+        private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly RuntimeConfig _runtimeConfig;
         private OpenApiResponses _defaultOpenApiResponses;
         private OpenApiDocument? _openApiDocument;
@@ -54,9 +55,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(ISqlMetadataProvider sqlMetadataProvider, RuntimeConfigProvider runtimeConfigProvider)
+        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider)
         {
-            _metadataProvider = sqlMetadataProvider;
+            _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
         }
@@ -166,14 +167,16 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             OpenApiPaths pathsCollection = new();
 
-            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in _metadataProvider.EntityToDatabaseObject)
+            string defaultDataSourceName = _runtimeConfig.GetDefaultDataSourceName();
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
+            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
                 string entityName = entityDbMetadataMap.Key;
                 string entityRestPath = GetEntityRestPath(entityName);
                 string entityBasePathComponent = $"/{entityRestPath}";
 
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
-                SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
+                SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
 
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
@@ -225,7 +228,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         includePrimaryKeyPathComponent: true,
                         tags: tags);
 
-                    Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName);
+                    Tuple<string, List<OpenApiParameter>> pkComponents = CreatePrimaryKeyPathComponentAndParameters(entityName, metadataProvider);
                     string pkPathComponents = pkComponents.Item1;
                     string fullPathComponent = entityBasePathComponent + pkPathComponents;
 
@@ -546,9 +549,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
         /// <returns>Primary Key path component and associated parameters. Empty string if no primary keys exist on database object source definition.</returns>
-        private Tuple<string, List<OpenApiParameter>> CreatePrimaryKeyPathComponentAndParameters(string entityName)
+        private static Tuple<string, List<OpenApiParameter>> CreatePrimaryKeyPathComponentAndParameters(string entityName, ISqlMetadataProvider metadataProvider)
         {
-            SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
+            SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
             List<OpenApiParameter> parameters = new();
             StringBuilder pkComponents = new();
 
@@ -557,7 +560,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 string columnNameForComponent = column;
 
-                if (_metadataProvider.TryGetExposedColumnName(entityName, column, out string? mappedColumnAlias) && !string.IsNullOrEmpty(mappedColumnAlias))
+                if (metadataProvider.TryGetExposedColumnName(entityName, column, out string? mappedColumnAlias) && !string.IsNullOrEmpty(mappedColumnAlias))
                 {
                     columnNameForComponent = mappedColumnAlias;
                 }
@@ -796,7 +799,11 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             Dictionary<string, OpenApiSchema> schemas = new();
 
-            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in _metadataProvider.EntityToDatabaseObject)
+            // for rest scenario we need the default datasource name.
+            string defaultDataSourceName = _runtimeConfig.GetDefaultDataSourceName();
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
+
+            foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
                 // Entities which disable their REST endpoint must not be included in
                 // the OpenAPI description document.
@@ -811,8 +818,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
                 }
 
-                SourceDefinition sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
-                HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList());
+                SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
+                HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList(), metadataProvider);
                 HashSet<string> nonAutoGeneratedPKColumnNames = new();
 
                 if (dbObject.SourceType is EntitySourceType.StoredProcedure)
@@ -823,13 +830,13 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // Response body schema whose properties map to the stored procedure's first result set columns
                     // as described by sys.dm_exec_describe_first_result_set. 
-                    schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames));
+                    schemas.Add(entityName + SP_RESPONSE_SUFFIX, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
                 }
                 else
                 {
                     // Create component schema for FULL entity with all primary key columns (included auto-generated)
                     // which will typically represent the response body of a request or a stored procedure's request body.
-                    schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames));
+                    schemas.Add(entityName, CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
 
                     // Create an entity's request body component schema excluding autogenerated primary keys.
                     // A POST request requires any non-autogenerated primary key references to be in the request body.
@@ -842,14 +849,14 @@ namespace Azure.DataApiBuilder.Core.Services
                             continue;
                         }
 
-                        if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                        if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
                             && exposedColumnName is not null)
                         {
                             exposedColumnNames.Remove(exposedColumnName);
                         }
                     }
 
-                    schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames));
+                    schemas.Add($"{entityName}_NoAutoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
 
                     // Create an entity's request body component schema excluding all primary keys
                     // by removing the tracked non-autogenerated primary key column names and removing them from
@@ -858,14 +865,14 @@ namespace Azure.DataApiBuilder.Core.Services
                     // those operations require all primary key references to be in the URI path, not the request body.
                     foreach (string primaryKeyColumn in nonAutoGeneratedPKColumnNames)
                     {
-                        if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
+                        if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: primaryKeyColumn, out string? exposedColumnName)
                             && exposedColumnName is not null)
                         {
                             exposedColumnNames.Remove(exposedColumnName);
                         }
                     }
 
-                    schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames));
+                    schemas.Add($"{entityName}_NoPK", CreateComponentSchema(entityName, fields: exposedColumnNames, metadataProvider));
                 }
             }
 
@@ -917,9 +924,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException">Raised when an entity's database metadata can't be found,
         /// indicating a failure due to the provided entityName.</exception>
         /// <returns>Entity's OpenApiSchema representation.</returns>
-        private OpenApiSchema CreateComponentSchema(string entityName, HashSet<string> fields)
+        private static OpenApiSchema CreateComponentSchema(string entityName, HashSet<string> fields, ISqlMetadataProvider metadataProvider)
         {
-            if (!_metadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
+            if (!metadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject) || dbObject is null)
             {
                 throw new DataApiBuilderException(
                     message: $"{DOCUMENT_CREATION_FAILED_ERROR}: Database object metadata not found for the entity {entityName}.",
@@ -933,7 +940,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // used to resolve the correct Json data type. 
             foreach (string field in fields)
             {
-                if (_metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))
+                if (metadataProvider.TryGetBackingColumn(entityName, field, out string? backingColumnValue) && !string.IsNullOrEmpty(backingColumnValue))
                 {
                     string typeMetadata = string.Empty;
                     string formatMetadata = string.Empty;
@@ -965,13 +972,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="unmappedColumnNames">List of unmapped column names for the entity.</param>
         /// <returns>List of mapped columns names</returns>
-        private HashSet<string> GetExposedColumnNames(string entityName, IEnumerable<string> unmappedColumnNames)
+        private static HashSet<string> GetExposedColumnNames(string entityName, IEnumerable<string> unmappedColumnNames, ISqlMetadataProvider metadataProvider)
         {
             HashSet<string> mappedColumnNames = new();
 
             foreach (string dbColumnName in unmappedColumnNames)
             {
-                if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumnName, out string? exposedColumnName))
+                if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumnName, out string? exposedColumnName))
                 {
                     if (exposedColumnName is not null)
                     {

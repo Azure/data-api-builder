@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const string OPENAPI_DOCUMENT_ENDPOINT = "openapi";
         private const string BROWSER_USER_AGENT_HEADER = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36";
         private const string BROWSER_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9";
-
+        private const string REFERENCE_CONFIG_FILE_SUFFIX = "reference";
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
 
@@ -941,6 +941,66 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(jsonString, out RuntimeConfig runtimeConfig), "Deserialization of the config file failed.");
             return Verify(runtimeConfig);
+        }
+
+        /// <summary>
+        /// Validates that the checked-in reference config file for MsSql (dab-config.MsSql.reference.json) reflects the latest format with which
+        /// the CLI generates the config files.
+        /// The pipeline that runs the integration tests for MsSql, generates a config file (dab-config.MsSql.json) and uses this for all the tests.
+        /// This test compares these two files to make sure that the reference config file is up to date.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public void TestReferenceConfigFileIsInLatestFormatForMsSql()
+        {
+            string sampleConfigJson = File.ReadAllText($"{CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}.{REFERENCE_CONFIG_FILE_SUFFIX}{CONFIG_EXTENSION}");
+            string cliGeneratedConfigJson = File.ReadAllText($"{CONFIGFILE_NAME}.{MSSQL_ENVIRONMENT}{CONFIG_EXTENSION}");
+            SqlTestHelper.PerformTestEqualJsonStrings(sampleConfigJson, cliGeneratedConfigJson);
+        }
+
+        /// <summary>
+        /// Validates that the checked-in reference config file for MySql (dab-config.MySql.reference.json) reflects the latest format with which
+        /// the CLI generates the config files.
+        /// The pipeline that runs the integration tests for MySql, generates a config file (dab-config.MySql.json) and uses this for all the tests.
+        /// This test compares these two files to make sure that the reference config file is up to date.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MYSQL)]
+        public void TestReferenceConfigFileIsInLatestFormatForMySql()
+        {
+            string sampleConfigJson = File.ReadAllText($"{CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}.{REFERENCE_CONFIG_FILE_SUFFIX}{CONFIG_EXTENSION}");
+            string cliGeneratedConfigJson = File.ReadAllText($"{CONFIGFILE_NAME}.{MYSQL_ENVIRONMENT}{CONFIG_EXTENSION}");
+            SqlTestHelper.PerformTestEqualJsonStrings(sampleConfigJson, cliGeneratedConfigJson);
+        }
+
+        /// <summary>
+        /// Validates that the checked-in reference config file for PostgreSql (dab-config.PostgreSql.reference.json) reflects the latest format with which
+        /// the CLI generates the config files.
+        /// The pipeline that runs the integration tests for PostgreSql generates a config file (dab-config.PostgreSql.json) and uses this for all the tests.
+        /// This test compares these two files to make sure that the reference config file is up to date.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.POSTGRESQL)]
+        public void TestReferenceConfigFileIsInLatestFormatForPostgreSql()
+        {
+            string sampleConfigJson = File.ReadAllText($"{CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}.{REFERENCE_CONFIG_FILE_SUFFIX}{CONFIG_EXTENSION}");
+            string cliGeneratedConfigJson = File.ReadAllText($"{CONFIGFILE_NAME}.{POSTGRESQL_ENVIRONMENT}{CONFIG_EXTENSION}");
+            SqlTestHelper.PerformTestEqualJsonStrings(sampleConfigJson, cliGeneratedConfigJson);
+        }
+
+        /// <summary>
+        /// Validates that the checked-in reference config file for CosmosDb_NoSql (dab-config.CosmosDb_NoSql.reference.json) reflects the latest format with which
+        /// the CLI generates the config files.
+        /// The pipeline that runs the integration tests for CosmosDb_NoSql generates a config file (dab-config.CosmosDb_NoSql.json) and uses this for all the tests.
+        /// This test compares these two files to make sure that the reference config file is up to date.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public void TestReferenceConfigFileIsInLatestFormatForCosmosDbNoSql()
+        {
+            string sampleConfigJson = File.ReadAllText($"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}.{REFERENCE_CONFIG_FILE_SUFFIX}{CONFIG_EXTENSION}");
+            string cliGeneratedConfigJson = File.ReadAllText($"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}");
+            SqlTestHelper.PerformTestEqualJsonStrings(sampleConfigJson, cliGeneratedConfigJson);
         }
 
         /// <summary>

@@ -2,12 +2,14 @@
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "data-source": {
     "database-type": "postgresql",
-    "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"
+    "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME",
+    "options": {}
   },
   "runtime": {
     "rest": {
       "enabled": true,
-      "path": "/api"
+      "path": "/api",
+      "request-body-strict": true
     },
     "graphql": {
       "enabled": true,
@@ -416,7 +418,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title eq \u0027Policy-Test-01\u0027"
+                "database": "@item.title eq 'Policy-Test-01'"
               }
             },
             {
@@ -448,7 +450,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title ne \u0027Policy-Test-01\u0027"
+                "database": "@item.title ne 'Policy-Test-01'"
               }
             },
             {
@@ -480,7 +482,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title eq \u0027Policy-Test-01\u0027"
+                "database": "@item.title eq 'Policy-Test-01'"
               }
             },
             {
@@ -512,7 +514,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title ne \u0027Policy-Test-01\u0027"
+                "database": "@item.title ne 'Policy-Test-01'"
               }
             },
             {
@@ -1256,7 +1258,7 @@
       ],
       "mappings": {
         "species": "Scientific Name",
-        "region": "United State\u0027s Region"
+        "region": "United State's Region"
       }
     },
     "Shrub": {
@@ -1377,7 +1379,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.region ne \u0027northeast\u0027"
+                "database": "@item.region ne 'northeast'"
               }
             }
           ]
@@ -1403,14 +1405,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "enabled": true
       },
       "permissions": [
         {
@@ -1644,7 +1639,7 @@
         }
       },
       "rest": {
-        "enabled": true        
+        "enabled": true
       },
       "permissions": [
         {
@@ -1763,10 +1758,10 @@
         }
       ],
       "mappings": {
-        "DetailAssessmentAndPlanning": "\u59CB\u8A08",
-        "WagingWar": "\u4F5C\u6230",
-        "StrategicAttack": "\u8B00\u653B",
-        "NoteNum": "\u252C\u2500\u252C\u30CE( \u00BA _ \u00BA\u30CE)"
+        "DetailAssessmentAndPlanning": "始計",
+        "WagingWar": "作戰",
+        "StrategicAttack": "謀攻",
+        "NoteNum": "┬─┬ノ( º _ ºノ)"
       }
     },
     "series": {
@@ -1861,7 +1856,7 @@
         }
       },
       "rest": {
-        "enabled": true        
+        "enabled": true
       },
       "permissions": [
         {
@@ -2005,8 +2000,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {

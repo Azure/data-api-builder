@@ -19,10 +19,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 public class RuntimeConfigLoaderTests
 {
     [DataTestMethod]
-    [DataRow("dab-config.CosmosDb_NoSql.json")]
-    [DataRow("dab-config.MsSql.json")]
-    [DataRow("dab-config.MySql.json")]
-    [DataRow("dab-config.PostgreSql.json")]
+    [DataRow("dab-config.CosmosDb_NoSql.reference.json")]
+    [DataRow("dab-config.MsSql.reference.json")]
+    [DataRow("dab-config.MySql.reference.json")]
+    [DataRow("dab-config.PostgreSql.reference.json")]
     public async Task CanLoadStandardConfig(string configPath)
     {
         string fileContents = await File.ReadAllTextAsync(configPath);
@@ -71,7 +71,7 @@ public class RuntimeConfigLoaderTests
     /// Example: Publisher entity present in the 3 sql.json files.
     /// </summary>
     [DataTestMethod]
-    [DataRow("dab-config.CosmosDb_NoSql.json", new string[] { "dab-config.MsSql.json", "dab-config.MySql.json", "dab-config.PostgreSql.json" })]
+    [DataRow("dab-config.CosmosDb_NoSql.reference.json", new string[] { "dab-config.MsSql.reference.json", "dab-config.MySql.reference.json", "dab-config.PostgreSql.reference.json" })]
     public async Task FailLoadMultiDataSourceConfigDuplicateEntities(string configPath, IEnumerable<string> dataSourceFiles)
     {
         string fileContents = await File.ReadAllTextAsync(configPath);

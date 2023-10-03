@@ -102,6 +102,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <code>Check: </code> Making sure table prefix matches expected prefix.
         /// </summary>
         [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
         [DataRow("", "", "")]
         [DataRow("", "model", "[model]")]
         [DataRow("TestDB", "", "[TestDB]")]

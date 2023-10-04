@@ -208,11 +208,7 @@ public record RuntimeConfig
             this.Entities = new RuntimeEntities(allEntities.ToDictionary(x => x.Key, x => x.Value));
         }
 
-        SqlDataSourceUsed = _dataSourceNameToDataSource.Values.Any
-            (x => x.DatabaseType == DatabaseType.MSSQL || x.DatabaseType == DatabaseType.PostgreSQL || x.DatabaseType == DatabaseType.MySQL);
-
-        CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
-                (x => x.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+        SetupDataSourcesUsed();
 
     }
 
@@ -239,6 +235,8 @@ public record RuntimeConfig
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
         this.DataSourceFiles = DataSourceFiles;
+
+        SetupDataSourcesUsed();
     }
 
     /// <summary>
@@ -336,5 +334,14 @@ public record RuntimeConfig
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
+    }
+
+    private void SetupDataSourcesUsed()
+    {
+        SqlDataSourceUsed = _dataSourceNameToDataSource.Values.Any
+            (x => x.DatabaseType is DatabaseType.MSSQL || x.DatabaseType is DatabaseType.PostgreSQL || x.DatabaseType is DatabaseType.MySQL);
+
+        CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
+            (x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL);
     }
 }

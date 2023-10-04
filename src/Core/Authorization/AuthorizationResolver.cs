@@ -314,7 +314,6 @@ public class AuthorizationResolver : IAuthorizationResolver
                     // Calculate the set of allowed backing column names.
                     allowedColumns.UnionWith(operationToColumn.Included.Except(operationToColumn.Excluded));
 
-
                     // Populate allowed exposed columns for each entity/role/operation combination during startup,
                     // so that it doesn't need to be evaluated per request.
                     PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns, metadataProvider);

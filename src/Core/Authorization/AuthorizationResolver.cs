@@ -123,7 +123,6 @@ public class AuthorizationResolver : IAuthorizationResolver
         bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
             && entityMetadata is not null
             && entityMetadata.RoleToOperationMap.TryGetValue(roleName, out _);
-        
         return executionPermitted;
     }
 
@@ -416,7 +415,6 @@ public class AuthorizationResolver : IAuthorizationResolver
 
         return operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperations : new List<EntityActionOperation> { operation };
     }
-    
     /// <summary>
     /// From the given parameters, processes the included and excluded column permissions to output
     /// a list of columns that are "allowed".

@@ -348,6 +348,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         /// Test to validate that for a successful POST API request, the response returned takes
         /// into account the fields configuration set for READ action of the role with which
         /// the request was executed.
+        /// The role test_role_with_excluded_fields with which the POST request excludes the field 'publisher_id' from read action. So, the response returned
+        /// should not contain the 'publisher_id' field.
         /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithExcludeFieldsTest()

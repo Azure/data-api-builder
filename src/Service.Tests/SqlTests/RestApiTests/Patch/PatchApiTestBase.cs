@@ -304,10 +304,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 ""book_name"": ""New book"",
                 ""copies_sold"": 50
             }";
-            string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldMissingFromRequestBody"),
@@ -324,10 +323,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 ""book_name"": ""New book"",
                 ""copies_sold"": 50
             }";
-            expectedLocationHeader = $"id/2";
-
+            
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/2",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneInsertWithComputedFieldMissingFromRequestBody"),

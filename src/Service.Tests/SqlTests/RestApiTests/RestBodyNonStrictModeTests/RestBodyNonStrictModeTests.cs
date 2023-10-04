@@ -216,10 +216,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""copies_sold"": 50,
                 ""last_sold_on_date"": ""2023-09-13 17:37:20""
             }";
-            string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldInRequestBody"),

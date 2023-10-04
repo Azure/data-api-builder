@@ -27,39 +27,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="runtimeConfig">Runtimeconfig object</param>
         /// <param name="httpContext">HTTP context associated with the API request</param>
         /// <returns>An OkObjectResult from a Find operation that has been correctly formatted.</returns>
-        public static OkObjectResult FormatFindResult(JsonDocument jsonDoc, FindRequestContext context, ISqlMetadataProvider sqlMetadataProvider, RuntimeConfig runtimeConfig, HttpContext httpContext)
+        public static OkObjectResult FormatFindResult(
+            JsonElement findOperationResponse,
+            FindRequestContext context,
+            ISqlMetadataProvider sqlMetadataProvider,
+            RuntimeConfig runtimeConfig,
+            HttpContext httpContext)
         {
-            JsonElement jsonElement = jsonDoc.RootElement.Clone();
 
             // When there are no rows returned from the database, the jsonElement will be an empty array.
             // In that case, the response is returned as is.
-            if (jsonElement.ValueKind is JsonValueKind.Array && jsonElement.GetArrayLength() == 0)
+            if (findOperationResponse.ValueKind is JsonValueKind.Array && findOperationResponse.GetArrayLength() == 0)
             {
-                return OkResponse(jsonElement);
+                return OkResponse(findOperationResponse);
             }
 
-            HashSet<string> extraFieldsInResponse = (jsonElement.ValueKind is not JsonValueKind.Array)
-                                                  ? DetermineExtraFieldsInResponse(jsonElement, context)
-                                                  : DetermineExtraFieldsInResponse(jsonElement.EnumerateArray().First(), context);
+            HashSet<string> extraFieldsInResponse = (findOperationResponse.ValueKind is not JsonValueKind.Array)
+                                                  ? DetermineExtraFieldsInResponse(findOperationResponse, context.FieldsToBeReturned)
+                                                  : DetermineExtraFieldsInResponse(findOperationResponse.EnumerateArray().First(), context.FieldsToBeReturned);
 
             // If the results are not a collection or if the query does not have a next page
             // no nextLink is needed. So, the response is returned after removing the extra fields.
-            if (jsonElement.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(jsonElement, context.First))
+            if (findOperationResponse.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(findOperationResponse, context.First))
             {
                 // If there are no additional fields present, the response is returned directly. When there
                 // are extra fields, they are removed before returning the response.
                 if (extraFieldsInResponse.Count == 0)
                 {
-                    return OkResponse(jsonElement);
+                    return OkResponse(findOperationResponse);
                 }
                 else
                 {
-                    return jsonElement.ValueKind is JsonValueKind.Array ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(jsonElement.EnumerateArray().ToList(), extraFieldsInResponse)))
-                                                                        : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(jsonElement, extraFieldsInResponse));
+                    return findOperationResponse.ValueKind is JsonValueKind.Array ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(findOperationResponse.EnumerateArray().ToList(), extraFieldsInResponse)))
+                                                                        : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(findOperationResponse, extraFieldsInResponse));
                 }
             }
 
-            List<JsonElement> rootEnumerated = jsonElement.EnumerateArray().ToList();
+            List<JsonElement> rootEnumerated = findOperationResponse.EnumerateArray().ToList();
 
             // More records exist than requested, we know this by requesting 1 extra record,
             // that extra record is removed here.
@@ -119,9 +123,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// This function helps to determine those additional fields that are present in the response.
         /// </summary>
         /// <param name="response">Response json retrieved from the database</param>
-        /// <param name="context">FindRequestContext for the GET request.</param>
+        /// <param name="fieldsToBeReturned">List of fields to be returned in the response.</param>
         /// <returns>Additional fields that are present in the response</returns>
-        private static HashSet<string> DetermineExtraFieldsInResponse(JsonElement response, FindRequestContext context)
+        private static HashSet<string> DetermineExtraFieldsInResponse(JsonElement response, List<string> fieldsToBeReturned)
         {
             HashSet<string> fieldsPresentInResponse = new();
 
@@ -135,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // response taking into account the include and exclude fields configured for the entity.
             // So, the other fields in the response apart from the fields in context.FieldsToBeReturned
             // are not required.
-            return fieldsPresentInResponse.Except(context.FieldsToBeReturned).ToHashSet();
+            return fieldsPresentInResponse.Except(fieldsToBeReturned).ToHashSet();
         }
 
         /// <summary>
@@ -195,9 +199,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
             }
 
-            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+            List<JsonElement> resultEnumerated = jsonResult.EnumerateArray().ToList();
             // More than 0 records, and the last element is of type array, then we have pagination
-            if (resultEnumerated.Count() > 0 && resultEnumerated.Last().ValueKind == JsonValueKind.Array)
+            if (resultEnumerated.Count > 0 && resultEnumerated[resultEnumerated.Count - 1].ValueKind == JsonValueKind.Array)
             {
                 // Get the nextLink
                 // resultEnumerated will be an array of the form
@@ -206,9 +210,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // we strip the "[" and "]" and then save the nextLink element
                 // into a dictionary with a key of "nextLink" and a value that
                 // represents the nextLink data we require.
-                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated.Last());
+                string nextLinkJsonString = JsonSerializer.Serialize(resultEnumerated[resultEnumerated.Count - 1]);
                 Dictionary<string, object> nextLink = JsonSerializer.Deserialize<Dictionary<string, object>>(nextLinkJsonString[1..^1])!;
-                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count() - 1);
+                IEnumerable<JsonElement> value = resultEnumerated.Take(resultEnumerated.Count - 1);
                 return new OkObjectResult(new
                 {
                     value = value,

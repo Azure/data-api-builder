@@ -383,7 +383,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     DbResultSet? upsertOperationResult;
                     DbResultSetRow upsertOperationResultSetRow;
                     JsonDocument? selectOperationResponse = null;
-                    bool isUpdateResultSet = false;
+
+                    // This variable indicates whether the upsert resulted in an update operation. If true, then the upsert resulted in an update operation.
+                    // If false, the upsert resulted in an insert operation.
+                    bool hasPerformedUpdate = false;
 
                     try
                     {
@@ -412,7 +415,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
                             {
 
-                                isUpdateResultSet = Convert.ToBoolean(isUpdateResultSetValue);
+                                hasPerformedUpdate = Convert.ToBoolean(isUpdateResultSetValue);
                             }
 
                             // The role with which the REST request is executed can have a database policy defined for the read action.
@@ -439,11 +442,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     Dictionary<string, object?> resultRow = upsertOperationResultSetRow.Columns;
 
-                    // For MsSql, MySql, if it's not the first result, the upsert resulted in an INSERT operation.
-                    // With postgresql, even if it is the first result, the upsert could have resulted in an INSERT. So, that condition is evaluated.
+                    // For all SQL database types, the IS_UPDATE_RESULT_SET field is added to the resultset to indicate if the resultant operation was an update or insert.
+                    // For MsSQL and MySQL, the result set will contain one entry when the resultant operation is update and two entries incase of insert.
+                    // For insert operation, the first result row will not contain any columns. This is used to determine that the resultant operation was an update.
+                    // In this case, IS_UPDATE_RESULT_SET field is added to the result set.
+                    // However, this logic is inapplicable for PostgreSQL, as the result set of an upsert operation will contain only one entry when both update or an insert takes place.
+                    // The result set will contain a field (___upsert_op___) that indicates whether the resultant operation was an update or an insert. So, the value present in this field
+                    // is used to determine whether the upsert resulted in an update.
                     if (sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
                     {
-                        isUpdateResultSet = !PostgresQueryBuilder.IsInsert(resultRow);
+                        hasPerformedUpdate = !PostgresQueryBuilder.IsInsert(resultRow);
                     }
 
                     // When read permissions is configured without database policy, a subsequent select query will not be executed.
@@ -462,7 +470,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     // When the upsert operation results in the creation of a new record, an HTTP 201 CreatedResult response is returned.
-                    if (!isUpdateResultSet)
+                    if (!hasPerformedUpdate)
                     {
                         // Location Header is made up of the Base URL of the request and the primary key of the item created.
                         // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
@@ -476,6 +484,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
                 else
                 {
+                    // This code block gets executed when the operation type is one among Insert, Update or UpdateIncremental.
                     DbResultSetRow? mutationResultRow = null;
                     JsonDocument? selectOperationResponse = null;
 
@@ -503,7 +512,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                         throw new DataApiBuilderException(
                                             message: "An unexpected error occurred while trying to execute the query.",
                                             statusCode: HttpStatusCode.InternalServerError,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedRestInsertOperationFailure);
                                     }
 
                                     if (mutationResultRow.Columns.Count == 0)
@@ -518,13 +527,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     // This code block is reached when Update or UpdateIncremental operation does not successfully find the record to
-                                    // update. An exception is thrown which will be returned as a PreconditionFailed response.
-                                    if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
-                                    {
-                                        throw new DataApiBuilderException(message: "No Update could be performed, record not found",
-                                                                           statusCode: HttpStatusCode.PreconditionFailed,
-                                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
-                                    }
+                                    // update. An exception is thrown which will be returned as a 404 NotFound response.
+                                    throw new DataApiBuilderException(message: "No Update could be performed, record not found",
+                                                                        statusCode: HttpStatusCode.NotFound,
+                                                                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateOperationFailure);
+                                    
                                 }
                             }
 
@@ -551,7 +558,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         throw _dabExceptionWithTransactionErrorMessage;
                     }
 
-                    string primaryKeyRoute = ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider);
+                    string primaryKeyRouteForLocationHeader = ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider);
 
                     // When read permission is configured without a database policy, a subsequent select query will not be executed.
                     // So, if the read action has include/exclude fields configured, additional fields present in the response
@@ -574,7 +581,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
                         // would not be available in the URL and needs to be appened. So, the primary key of the newly created item which is stored in the primaryKeyRoute
                         // is used to construct the Location Header.
-                        return ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRoute, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                        return ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                     }
 
                     if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
@@ -591,7 +598,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Constructs a FindRequestContext from the Insert/Upsert RequestContext and the results of insert/upsert database operation.
-        /// For REST POST, PUT AND PATCH API reqeusts, when there are database policies defined for the read action,
+        /// For REST POST, PUT AND PATCH API requests, when there are database policies defined for the read action,
         /// a subsequent select query that honors the database policy is executed to fetch the results.
         /// </summary>
         /// <param name="context">Insert/Upsert Request context for the REST POST, PUT and PATCH request</param>
@@ -609,7 +616,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // The primary keys can have a mapping defined. mutationResultRow contains the mapped column names as keys.
                 // So, the mapped field names are used to look up and fetch the values from mutationResultRow.
                 // TryGetExposedColumnName method populates the the mapped column name (if configured) or the original column name into exposedColumnName.
-                // It returns false if the primay key does not exist.
+                // It returns false if the primary key does not exist.
                 if (sqlMetadataProvider.TryGetExposedColumnName(context.EntityName, primarykey, out string? exposedColumnName))
                 {
                     findRequestContext.PrimaryKeyValuePairs.Add(exposedColumnName, mutationResultRow.Columns[exposedColumnName]!);
@@ -620,7 +627,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw new DataApiBuilderException(
                        message: "Insert/Upsert operation was successful but unexpected error when constructing the response",
                        statusCode: HttpStatusCode.InternalServerError,
-                       subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                       subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedErrorFindingExposedFieldName);
                 }
             }
 
@@ -640,9 +647,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="jsonDocument">Result of the select database operation</param>
         /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
-        private static CreatedResult ConstructCreatedResultResponse(Dictionary<string, object?> resultRow, JsonDocument? jsonDocument, string primaryKeyRoute, bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
+        private static CreatedResult ConstructCreatedResultResponse(
+            Dictionary<string, object?> resultRow,
+            JsonDocument? jsonDocument,
+            string primaryKeyRoute,
+            bool isReadPermissionConfiguredForRole,
+            bool isDatabasePolicyDefinedForReadAction)
         {
-            // When the database policy is defined for the read action, a select query in another roundtrip to the database will be executed to fetch the results.
+            // When the database policy is defined for the read action, a select query in another roundtrip to the database was executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.
             if (isDatabasePolicyDefinedForReadAction)
             {
@@ -667,9 +679,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="jsonDocument">Result of the select database operation</param>
         /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
-        private static OkObjectResult ConstructOkMutationResponse(Dictionary<string, object?> resultRow, JsonDocument? jsonDocument, bool isReadPermissionConfiguredForRole, bool isDatabasePolicyDefinedForReadAction)
+        private static OkObjectResult ConstructOkMutationResponse(
+            Dictionary<string, object?> resultRow,
+            JsonDocument? jsonDocument,
+            bool isReadPermissionConfiguredForRole,
+            bool isDatabasePolicyDefinedForReadAction)
         {
-            // When the database policy is defined for the read action, a subsequent select query will be executed to fetch the results.
+            // When a database policy is defined for the read action, a subsequent select query in another roundtrip to the databas was executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.
             if (isDatabasePolicyDefinedForReadAction)
             {

@@ -51,9 +51,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 ""content"": ""Good book to read""
             }";
 
-            string expectedLocationHeader = $"book_id/1/id/568";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: expectedLocationHeader,
+                primaryKeyRoute: $"book_id/1/id/568",
                 queryString: null,
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery("PutOne_Update_Default_Test"),
@@ -69,9 +68,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                ""piecesRequired"":""5""
             }";
 
-            expectedLocationHeader = $"categoryid/2/pieceid/1";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: expectedLocationHeader,
+                primaryKeyRoute: $"categoryid/2/pieceid/1",
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Update_CompositeNonAutoGenPK_Test"),
@@ -88,9 +86,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 ""piecesRequired"":""5""
             }";
 
-            expectedLocationHeader = $"categoryid/1/pieceid/1";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: expectedLocationHeader,
+                primaryKeyRoute: $"categoryid/1/pieceid/1",
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Update_NullOutMissingField_Test"),
@@ -106,9 +103,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                ""piecesRequired"":""3""
             }";
 
-            expectedLocationHeader = $"categoryid/2/pieceid/1";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: expectedLocationHeader,
+                primaryKeyRoute: $"categoryid/2/pieceid/1",
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("PutOne_Update_Empty_Test"),
@@ -522,10 +518,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 ""copies_sold"": 101,
                 ""last_sold_on"": ""2023-09-12 05:30:30""
             }";
-            string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneUpdateWithComputedFieldMissingFromRequestBody"),

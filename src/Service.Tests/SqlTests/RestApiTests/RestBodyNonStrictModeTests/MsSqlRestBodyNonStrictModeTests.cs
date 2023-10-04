@@ -188,10 +188,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""last_sold_on"": null,
                 ""row_version"": ""AAAAAAAHgqw=""
             }";
-            string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneUpdateWithRowversionFieldInRequestBody"),
@@ -210,10 +209,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""row_version"": ""AAAAAAAHgqw=""
             }";
 
-            expectedLocationHeader = $"id/2";
-
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/2",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneInsertWithRowversionFieldInRequestBody"),
@@ -243,10 +240,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""last_sold_on"": null,
                 ""row_version"": ""AAAAAAAHgqw=""
             }";
-            string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneUpdateWithRowversionFieldInRequestBody"),
@@ -265,10 +261,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""last_sold_on"": null
             }";
 
-            expectedLocationHeader = $"id/2";
-
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/2",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneInsertWithRowversionFieldInRequestBody"),

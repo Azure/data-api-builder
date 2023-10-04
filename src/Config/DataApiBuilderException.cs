@@ -102,6 +102,19 @@ public class DataApiBuilderException : Exception
         /// DataSource not found for multiple db scenario.
         /// </summary>
         DataSourceNotFound,
+        /// <summary>
+        /// Unexpected failure when processing a REST Update request.
+        /// </summary>
+        UnexpectedRestUpdateOperationFailure,
+        /// <summary>
+        /// Unexpected failure when processing a REST Insert request.
+        /// </summary>
+        UnexpectedRestInsertOperationFailure,
+        /// <summary>
+        /// Unexpected error when determining the exposed field name for a given field.
+        /// </summary>
+        UnexpectedErrorFindingExposedFieldName
+
     }
 
     public HttpStatusCode StatusCode { get; }

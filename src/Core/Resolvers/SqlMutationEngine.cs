@@ -4,6 +4,7 @@
 using System.Data;
 using System.Data.Common;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -720,8 +721,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">The parameters for the DELETE operation.</param>
         /// <param name="sqlMetadataProvider">Metadataprovider for db on which to perform operation.</param>
         /// <returns>A dictionary of properties of the Db Data Reader like RecordsAffected, HasRows.</returns>
-        private async Task<Dictionary<string, object>?>
-            PerformDeleteOperation(
+        private async Task<Dictionary<string, object>?> PerformDeleteOperation(
                 string entityName,
                 IDictionary<string, object?> parameters,
                 ISqlMetadataProvider sqlMetadataProvider)
@@ -738,6 +738,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _gQLFilterParser,
                 parameters,
                 GetHttpContext());
+
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                EntityActionOperation.Delete,
+                deleteStructure,
+                GetHttpContext(),
+                _authorizationResolver,
+                sqlMetadataProvider
+                );
+
             queryString = queryBuilder.Build(deleteStructure);
             queryParameters = deleteStructure.Parameters;
 

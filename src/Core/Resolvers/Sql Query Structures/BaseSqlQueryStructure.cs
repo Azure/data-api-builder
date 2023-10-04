@@ -62,29 +62,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<Predicate>? predicates = null,
             string entityName = "",
             IncrementingInteger? counter = null,
-            HttpContext? httpContext = null,
-            EntityActionOperation operationType = EntityActionOperation.None
+            HttpContext? httpContext = null
             )
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
             Joins = new();
-
-            // For GraphQL read operation, we are deliberately not passing httpContext to this point
-            // and hence it will take its default value i.e. null here.
-            // For GraphQL read operation, the database policy predicates are added later in the Sql{*}QueryStructure classes.
-            if (httpContext is not null)
-            {
-                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                operationType,
-                this,
-                httpContext,
-                authorizationResolver,
-                metadataProvider
-                );
-            }
         }
 
         /// <summary>
+        /// /////this should be in updatequerystructure and upsertquerystructure at the very least, since it is not a base operation for ALL only for those two.
+        /// //// adds update operation predicates
         /// For UPDATE (OVERWRITE) operation
         /// Adds result of (SourceDefinition.Columns minus MutationFields) to UpdateOperations with null values
         /// There will not be any columns leftover that are PK, since they are handled in request validation.
@@ -92,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="leftoverSchemaColumns"></param>
         /// <param name="updateOperations">List of Predicates representing UpdateOperations.</param>
         /// <param name="sourceDefinition">The definition for the entity (table/view).</param>
-        public void AddNullifiedUnspecifiedFields(
+        protected void AddNullifiedUnspecifiedFields(
             List<string> leftoverSchemaColumns,
             List<Predicate> updateOperations,
             SourceDefinition sourceDefinition)
@@ -121,6 +108,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// // this should be in SourceDefinition not here.
         /// Get column type from table underlying the query structure
         /// </summary>
         public Type GetColumnSystemType(string columnName)
@@ -260,6 +248,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// // this is static, not an issue necessarily, but makes me consider whether this should be in its own QueryStructureBuilderHelpers class.
         /// Creates equality predicates between the columns of the left table and
         /// the columns of the right table. The columns are compared in order,
         /// thus the lists should be the same length.
@@ -286,6 +275,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// // why is this even in this class?? 
         /// Return the StoredProcedureDefinition associated with this database object
         /// </summary>
         protected StoredProcedureDefinition GetUnderlyingStoredProcedureDefinition()

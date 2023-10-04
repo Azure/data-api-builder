@@ -144,12 +144,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Returns the SourceDefinitionDefinition for the entity(table/view) of this query.
         /// </summary>
+        #pragma warning disable CA1024
         public SourceDefinition GetUnderlyingSourceDefinition()
         {
-            return MetadataProvider.GetSourceDefinition(EntityName);
+            return DatabaseObject.SourceDefinition;
         }
+        #pragma warning restore CA1024
 
         /// <summary>
+        ///
+        /// // this is GraphQL specific, why is it here. 
         /// Extracts the *Connection.items query field from the *Connection query field
         /// </summary>
         /// <returns> The query field or null if **Conneciton.items is not requested in the query</returns>
@@ -172,6 +176,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// more graphql related methods, and should not be in the Querystructure classes.
         /// Extracts the *Connection.items schema field from the *Connection schema field
         /// </summary>
         internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)

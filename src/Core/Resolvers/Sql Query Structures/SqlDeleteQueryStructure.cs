@@ -17,6 +17,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     ///</summary>
     public class SqlDeleteStructure : BaseSqlQueryStructure
     {
+        // Constructor creates WHERE clause predicates to populate Predicates with the
+        // provided mutation parameters.
+        // Each mutation parameter references a primary key of the entity to be deleted.
         public SqlDeleteStructure(
             string entityName,
             ISqlMetadataProvider sqlMetadataProvider,
@@ -29,8 +32,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
               authorizationResolver: authorizationResolver,
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
-              httpContext: httpContext,
-              operationType: EntityActionOperation.Delete)
+              httpContext: httpContext)
         {
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
 

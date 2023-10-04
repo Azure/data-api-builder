@@ -123,6 +123,7 @@ public class AuthorizationResolver : IAuthorizationResolver
         bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
             && entityMetadata is not null
             && entityMetadata.RoleToOperationMap.TryGetValue(roleName, out _);
+        
         return executionPermitted;
     }
 
@@ -266,7 +267,6 @@ public class AuthorizationResolver : IAuthorizationResolver
                 {
                     EntityActionOperation operation = entityAction.Action;
                     OperationMetadata operationToColumn = new();
-
 
                     // Use a HashSet to store all the backing field names
                     // that are accessible to the user.

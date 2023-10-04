@@ -17,7 +17,9 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Controllers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -45,6 +47,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static IQueryBuilder _queryBuilder;
         protected static Mock<IAuthorizationService> _authorizationService;
         protected static Mock<IHttpContextAccessor> _httpContextAccessor;
+        protected static Mock<IAbstractQueryManagerFactory> _queryManagerFactory;
+        protected static Mock<IQueryEngineFactory> _queryEngineFactory;
+        protected static Mock<IMetadataProviderFactory> _metadataProviderFactory;
         protected static DbExceptionParser _dbExceptionParser;
         protected static ISqlMetadataProvider _sqlMetadataProvider;
         protected static string _defaultSchemaName;
@@ -108,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             // Setup Mock HttpContextAccess to return user as required when calling AuthorizationService.AuthorizeAsync
             _httpContextAccessor = new Mock<IHttpContextAccessor>();
             _httpContextAccessor.Setup(x => x.HttpContext.User).Returns(new ClaimsPrincipal());
-            _gQLFilterParser = new(_sqlMetadataProvider);
+
             await ResetDbStateAsync();
 
             // Execute additional queries, if any.
@@ -116,13 +121,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             await _sqlMetadataProvider.InitializeAsync();
 
+            // Setup Mock metadataprovider Factory
+            _metadataProviderFactory = new Mock<IMetadataProviderFactory>();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider);
+
+            // Setup Mock engine Factory
+            _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
+            _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+            _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
+            _gQLFilterParser = new(runtimeConfigProvider, _metadataProviderFactory.Object);
+
             // sets the database name using the connection string
             SetDatabaseNameFromConnectionString(runtimeConfig.DataSource.ConnectionString);
 
             //Initialize the authorization resolver object
             _authorizationResolver = new AuthorizationResolver(
                 runtimeConfigProvider,
-                _sqlMetadataProvider);
+                _metadataProviderFactory.Object);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
@@ -135,9 +151,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
                         {
                             return new SqlQueryEngine(
-                                _queryExecutor,
-                                _queryBuilder,
-                                _sqlMetadataProvider,
+                                _queryManagerFactory.Object,
+                                ActivatorUtilities.GetServiceOrCreateInstance<MetadataProviderFactory>(serviceProvider),
                                 ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
                                 _authorizationResolver,
                                 _gQLFilterParser,
@@ -148,13 +163,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
                         {
                             return new SqlMutationEngine(
-                                    ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider),
-                                    _queryExecutor,
-                                    _queryBuilder,
-                                    _sqlMetadataProvider,
+                                    _queryManagerFactory.Object,
+                                    ActivatorUtilities.GetServiceOrCreateInstance<MetadataProviderFactory>(serviceProvider),
+                                    _queryEngineFactory.Object,
                                     _authorizationResolver,
                                     _gQLFilterParser,
-                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider));
+                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
+                                    runtimeConfigProvider);
                         });
                         services.AddSingleton(_sqlMetadataProvider);
                         services.AddSingleton(_authorizationResolver);
@@ -230,8 +245,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static void SetUpSQLMetadataProvider(RuntimeConfigProvider runtimeConfigProvider)
         {
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+            _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-
+            string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:
@@ -244,12 +260,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         _dbExceptionParser,
                         pgQueryExecutorLogger.Object,
                         httpContextAccessor.Object);
+                    _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                    _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
                     _sqlMetadataProvider =
                         new PostgreSqlMetadataProvider(
                             runtimeConfigProvider,
-                            _queryExecutor,
-                            _queryBuilder,
-                            _sqlMetadataLogger);
+                            _queryManagerFactory.Object,
+                            _sqlMetadataLogger,
+                            dataSourceName);
                     break;
                 case TestCategory.MSSQL:
                     Mock<ILogger<QueryExecutor<SqlConnection>>> msSqlQueryExecutorLogger = new();
@@ -261,11 +280,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         _dbExceptionParser,
                         msSqlQueryExecutorLogger.Object,
                         httpContextAccessor.Object);
+                    _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                    _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
                     _sqlMetadataProvider =
                         new MsSqlMetadataProvider(
                             runtimeConfigProvider,
-                            _queryExecutor, _queryBuilder,
-                            _sqlMetadataLogger);
+                            _queryManagerFactory.Object,
+                            _sqlMetadataLogger,
+                            dataSourceName);
                     break;
                 case TestCategory.MYSQL:
                     Mock<ILogger<MySqlQueryExecutor>> mySqlQueryExecutorLogger = new();
@@ -277,12 +300,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                         _dbExceptionParser,
                         mySqlQueryExecutorLogger.Object,
                         httpContextAccessor.Object);
+                    _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                    _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
                     _sqlMetadataProvider =
                          new MySqlMetadataProvider(
                              runtimeConfigProvider,
-                             _queryExecutor,
-                             _queryBuilder,
-                             _sqlMetadataLogger);
+                             _queryManagerFactory.Object,
+                             _sqlMetadataLogger,
+                             dataSourceName);
                     break;
             }
         }

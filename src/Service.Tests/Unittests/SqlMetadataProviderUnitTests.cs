@@ -3,12 +3,14 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -73,16 +75,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <code>Check: </code>  Verify malformed connection string throws correct exception with MSSQL as the database.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow(";;;;;fooBarBAZ")]
-        [DataRow("!&^%*&$$%#$%@$%#@()")]
-        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;")]
-        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests")]
-        [DataRow("")]
-        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString)
+        [DataRow(";;;;;fooBarBAZ", true)]
+        [DataRow("!&^%*&$$%#$%@$%#@()", true)]
+        [DataRow("Server=<>;Databases=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", true)]
+        [DataRow("Servers=<>;Database=<>;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;", true)]
+        [DataRow("DO NOT EDIT, look at CONTRIBUTING.md on how to run tests", true)]
+        [DataRow("", false)]
+        public async Task CheckExceptionForBadConnectionStringForMsSql(string connectionString, bool isInvalidConnectionBuilderString)
         {
+            StringWriter sw = null;
+            // For strings that are an invalid format for the connection string builder, need to
+            // redirect std error to a string writer for comparison to expected error messaging later.
+            if (isInvalidConnectionBuilderString)
+            {
+                sw = new();
+                Console.SetError(sw);
+            }
+
             DatabaseEngine = TestCategory.MSSQL;
-            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString, sw);
         }
 
         /// <summary>
@@ -105,7 +116,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IQueryExecutor> queryExecutor = new();
             IQueryBuilder queryBuilder = new MsSqlQueryBuilder();
 
-            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryExecutor.Object, queryBuilder, sqlMetadataLogger);
+            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
+            queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
+            queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
+
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().GetDefaultDataSourceName());
             string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
             Assert.AreEqual(tableprefix, expectedPrefix);
         }
@@ -153,23 +168,28 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="databaseType"></param>
         /// <param name="connectionString"></param>
         /// <returns></returns>
-        private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString)
+        private static async Task CheckExceptionForBadConnectionStringHelperAsync(string databaseType, string connectionString, StringWriter sw = null)
         {
             TestHelper.SetupDatabaseEnvironment(databaseType);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
 
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
-
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             try
             {
+                string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+                // Setup Mock query manager Factory
+                Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
+                queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
                 ISqlMetadataProvider sqlMetadataProvider = databaseType switch
                 {
-                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
-                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, _queryExecutor, _queryBuilder, sqlMetadataLogger),
+                    TestCategory.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.MYSQL => new MySqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
+                    TestCategory.POSTGRESQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, dataSourceName),
                     _ => throw new ArgumentException($"Invalid database type: {databaseType}")
                 };
 
@@ -178,9 +198,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             catch (DataApiBuilderException ex)
             {
                 // use contains to correctly cover db/user unique error messaging
-                Assert.IsTrue(ex.Message.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                // if sw is not null it holds the error messaging
+                string error = sw is null ? ex.Message : sw.ToString();
+                Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                if (sw is not null)
+                {
+                    Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
+                }
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();

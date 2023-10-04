@@ -53,6 +53,10 @@ Several samples are available already. To follow the [Getting Started](https://l
 
 More samples, including end-to-end samples using the most common frontend frameworks, are available in the [https://github.com/Azure-Samples/data-api-builder](https://github.com/Azure-Samples/data-api-builder) repository
 
+## Getting Started Videos
+
+We've put together a playlist of short videos to help you get started with Data API builder and fullstack/jamstack development: https://www.youtube.com/playlist?list=PLYA3nHmjWIYE1PUl8_dVR-yKtCLgVhie4
+
 ## Known Issues
 
 List of known issues and possible workarounds, where applicable and possible, is available here: [Known Issues](https://learn.microsoft.com/azure/data-api-builder/known-issues).

@@ -359,13 +359,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             AuthorizationResolver authorizationResolver = new(
                 runtimeConfigProvider,
-                _sqlMetadataProvider);
+                _metadataProviderFactory.Object);
             Mock<SqlQueryStructure> structure = new(
                 context,
                 _sqlMetadataProvider,
                 authorizationResolver,
                 runtimeConfigProvider,
-                new GQLFilterParser(_sqlMetadataProvider),
+                new GQLFilterParser(runtimeConfigProvider, _metadataProviderFactory.Object),
                 null) // setting httpContext as null for the tests.
             { CallBase = true }; // setting CallBase = true enables calling the actual method on the mocked object without needing to mock the method behavior.
             return new ODataASTVisitor(structure.Object, _sqlMetadataProvider);

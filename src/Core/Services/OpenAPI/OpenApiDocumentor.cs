@@ -376,6 +376,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // POST requests for stored procedure entities must include primary key(s) in request body.
                 OpenApiOperation postOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                postOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
                 postOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true, isStoredProcedure: true));
                 postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
                 postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
@@ -389,6 +390,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // PUT requests for stored procedure entities must include primary key(s) in request body.
                 OpenApiOperation putOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                putOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
                 putOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, requestBodyRequired);
                 putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: spResponseObjectSchemaName));
                 putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
@@ -399,6 +401,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // PATCH requests for stored procedure entities must include primary key(s) in request body
                 OpenApiOperation patchOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                patchOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
                 patchOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, requestBodyRequired);
                 patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: spResponseObjectSchemaName));
                 patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
@@ -408,6 +411,7 @@ namespace Azure.DataApiBuilder.Core.Services
             if (configuredRestOperations[OperationType.Delete])
             {
                 OpenApiOperation deleteOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                deleteOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
                 deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
                 openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
             }
@@ -435,7 +439,8 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// This method creates a list of OpenApiParameter objects for the parameters of a stored procedure.
+        /// This method creates a list of OpenApiParameter objects for the query parameters of a stored procedure.
+        /// A query parameter will be marked REQUIRED if default value is not available.
         /// </summary>
         private static List<OpenApiParameter> CreateStoredProcedureParameters(StoredProcedureDefinition spDefinition)
         {
@@ -444,7 +449,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach ((string paramKey, ParameterDefinition parameterDefinition) in spDefinition.Parameters)
             {
                 parameters.Add(
-                    GetOpenApiParameter(
+                    GetOpenApiQueryParameter(
                         name: paramKey,
                         description: "Query parameter for stored procedure parameter",
                         required: !parameterDefinition.HasConfigDefault,
@@ -457,15 +462,18 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// 
-        /// <summary>
+        /// Creates a list of OpenAPI parameters for querying tables and views.
+        /// The query parameters include $select, $filter, $orderby, $first, and $after, which allow the user to specify which fields to return,
+        /// filter the results based on a predicate expression, sort the results, and paginate the results.
+        /// </summary>
+        /// <returns>A list of OpenAPI parameters.</returns>
         private static List<OpenApiParameter> CreateTableAndViewQueryParameters()
         {
             List<OpenApiParameter> parameters = new();
 
             // Add $select query parameter
             parameters.Add(
-                GetOpenApiParameter(
+                GetOpenApiQueryParameter(
                     name: "$select",
                     description: "The query parameter $select allow to specify which fields must be returned.",
                     required: false,
@@ -475,7 +483,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Add $filter query parameter
             parameters.Add(
-                GetOpenApiParameter(
+                GetOpenApiQueryParameter(
                     name: "$filter",
                     description: "The value of the $filter option is predicate expression (an expression that returns a boolean value) using entity's fields.",
                     required: false,
@@ -485,7 +493,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Add $orderby query parameter
             parameters.Add(
-                GetOpenApiParameter(
+                GetOpenApiQueryParameter(
                     name: "$orderby",
                     description: "The value of the orderby parameter is a comma-separated list of expressions used to sort the items.",
                     required: false,
@@ -495,7 +503,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Add $first query parameter
             parameters.Add(
-                GetOpenApiParameter(
+                GetOpenApiQueryParameter(
                     name: "$first",
                     description: "The value of the $first option is an integer value that specifies the number of items to return.",
                     required: false,
@@ -505,7 +513,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Add $after query parameter
             parameters.Add(
-                GetOpenApiParameter(
+                GetOpenApiQueryParameter(
                     name: "$after",
                     description: "The value of the $after option is a base64 encoded string value that specifies the cursor position after which items should be returned.",
                     required: false,
@@ -516,7 +524,15 @@ namespace Azure.DataApiBuilder.Core.Services
             return parameters;
         }
 
-        private static OpenApiParameter GetOpenApiParameter(string name, string description, bool required, string type)
+        /// <summary>
+        /// Creates a new OpenAPI query parameter with the specified name, description, required flag, and data type.
+        /// </summary>
+        /// <param name="name">The name of the query parameter.</param>
+        /// <param name="description">The description of the query parameter.</param>
+        /// <param name="required">A flag indicating whether the query parameter is required.</param>
+        /// <param name="type">The data type of the query parameter.</param>
+        /// <returns>A new OpenAPI query parameter.</returns>
+        private static OpenApiParameter GetOpenApiQueryParameter(string name, string description, bool required, string type)
         {
             return new OpenApiParameter
             {

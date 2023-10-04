@@ -415,6 +415,7 @@ public class AuthorizationResolver : IAuthorizationResolver
 
         return operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperations : new List<EntityActionOperation> { operation };
     }
+
     /// <summary>
     /// From the given parameters, processes the included and excluded column permissions to output
     /// a list of columns that are "allowed".

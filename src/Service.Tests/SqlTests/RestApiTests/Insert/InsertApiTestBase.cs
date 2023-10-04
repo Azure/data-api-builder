@@ -376,7 +376,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
 
         /// <summary>
         /// Test to validate that for a successful POST API request, the response returned takes into account that no read action is configured for the role
-        /// and returns an empty response.
+        /// and returns an empty response. Since, the role has no read permission defined, the primary key route computed and the
+        /// eventual location header returned in the response will be empty strings.
         /// </summary>
         [TestMethod]
         public virtual async Task InsertOneWithNoReadPermissionsTest()
@@ -387,7 +388,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""publisher_id"": 1234
             }";
 
-            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: null,
                 queryString: null,
@@ -396,7 +396,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: expectedLocationHeader,
+                expectedLocationHeader: string.Empty,
                 clientRoleHeader: "test_role_with_noread"
             );
         }

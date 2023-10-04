@@ -547,5 +547,19 @@ namespace Azure.DataApiBuilder.Core.Services
                     );
             }
         }
+
+        /// <summary>
+        /// Helper method to fetch the entity source type from the entity name
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        /// <returns>Type of the database object backing the entity - Table, View or Stored Procedure </returns>
+        public EntitySourceType FetchEntitySourceType(string entityName)
+        {
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
+            return dbObject.SourceType;
+        }
+
     }
 }

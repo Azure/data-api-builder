@@ -236,14 +236,18 @@ namespace Azure.DataApiBuilder.Service.Controllers
 
                     // For PUT and PATCH API requests, the users are aware of the Pks as it is required to be passed in the request URL.
                     // In case of tables with auto-gen PKs, PUT or PATCH will not result in an insert but error out. Seeing that Location Header does not provide users with
-                    // any additional information, it is set as an empty string always.
-                    // For POST API requests, the primary key route calculated will be an empty string only when the read action for the role does not have access to one
-                    // or more PKs. So, in this case too, the Location Header is set to an empty string.
+                    // any additional information, it is set as an empty string always. For stored procedures too, an empty location header is returned to be consistent.
+                    // For POST API requests, the primary key route calculated will be an empty string in the following cases
+                    // 1. When the entity type is stored procedure
+                    // 2. When the read action for the role does not have access to one or more PKs.
+                    // When the read action does not have access to read primary keys, the Location Header is set to an empty string.
+                    // For stored procedures, the only valid action is execute and field level include/exclude setup is not supported. So, a non-empty
+                    // location header is returned.
                     if (operationType is EntityActionOperation.Upsert ||
-                        operationType is EntityActionOperation.UpsertIncremental ||
-                        operationType is EntityActionOperation.Update ||
-                        operationType is EntityActionOperation.UpdateIncremental ||
-                        (operationType is EntityActionOperation.Insert && string.IsNullOrEmpty(createdResult.Location)))
+                         operationType is EntityActionOperation.UpsertIncremental ||
+                         operationType is EntityActionOperation.Update ||
+                         operationType is EntityActionOperation.UpdateIncremental ||
+                         (_restService.FetchEntitySourceType(entityName) is not EntitySourceType.StoredProcedure && operationType is EntityActionOperation.Insert && string.IsNullOrEmpty(createdResult.Location)))
                     {
                         createdResult.Location = string.Empty;
                     }

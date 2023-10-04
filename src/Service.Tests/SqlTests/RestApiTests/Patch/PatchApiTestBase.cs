@@ -323,7 +323,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 ""book_name"": ""New book"",
                 ""copies_sold"": 50
             }";
-            
+
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: $"id/2",
                     queryString: null,
@@ -765,7 +765,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         /// <summary>
         /// Tests the PatchOne functionality with a REST PATCH request using
         /// headers that include as a key "If-Match" with an item that does not exist,
-        /// resulting in a DataApiBuilderException with status code of Precondition Failed.
+        /// resulting in a DataApiBuilderException with 404 status code with  .
         /// </summary>
         [TestMethod]
         public virtual async Task PatchOne_Update_IfMatchHeaders_NoUpdatePerformed_Test()
@@ -789,8 +789,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "No Update could be performed, record not found",
-                    expectedStatusCode: HttpStatusCode.PreconditionFailed,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateOperationFailure.ToString()
                 );
         }
 

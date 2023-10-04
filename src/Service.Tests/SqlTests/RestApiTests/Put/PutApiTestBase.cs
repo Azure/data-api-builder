@@ -991,8 +991,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "No Update could be performed, record not found",
-                    expectedStatusCode: HttpStatusCode.PreconditionFailed,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed.ToString()
+                    expectedStatusCode: HttpStatusCode.NotFound,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateOperationFailure.ToString()
                 );
         }
 

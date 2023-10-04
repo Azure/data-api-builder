@@ -233,12 +233,30 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     // created result to the url constructed from the HttpRequest. We
                     // then update the Location of the created result to this value.
                     CreatedResult createdResult = (result as CreatedResult)!;
-                    string locationURL = UriHelper.BuildAbsolute(
+
+                    // For PUT and PATCH API requests, the users are aware of the Pks as it is required to be passed in the request URL.
+                    // In case of tables with auto-gen PKs, PUT or PATCH will not result in an insert but error out. Seeing that Location Header does not provide users with
+                    // any additional information, it is set as an empty string always.
+                    // For POST API requests, the primary key route calculated will be an empty string only when the read action for the role does not have access to one
+                    // or more PKs. So, in this case too, the Location Header is set to an empty string.
+                    if (operationType is EntityActionOperation.Upsert ||
+                        operationType is EntityActionOperation.UpsertIncremental ||
+                        operationType is EntityActionOperation.Update ||
+                        operationType is EntityActionOperation.UpdateIncremental ||
+                        (operationType is EntityActionOperation.Insert && string.IsNullOrEmpty(createdResult.Location)))
+                    {
+                        createdResult.Location = string.Empty;
+                    }
+                    else
+                    {
+                        string locationURL = UriHelper.BuildAbsolute(
                                         scheme: HttpContext.Request.Scheme,
                                         host: HttpContext.Request.Host,
                                         pathBase: _restService.GetBaseRouteFromConfig(),
                                         path: HttpContext.Request.Path);
-                    createdResult.Location = locationURL.EndsWith('/') ? locationURL + createdResult.Location : locationURL + "/" + createdResult.Location;
+                        createdResult.Location = locationURL.EndsWith('/') ? locationURL + createdResult.Location : locationURL + "/" + createdResult.Location;
+                    }
+
                     result = createdResult;
                 }
 

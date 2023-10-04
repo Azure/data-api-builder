@@ -216,7 +216,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             if (context is FindRequestContext findRequestContext)
             {
-                JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
+                using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
                 return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
                                                : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
             }

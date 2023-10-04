@@ -531,7 +531,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     throw new DataApiBuilderException(message: "No Update could be performed, record not found",
                                                                         statusCode: HttpStatusCode.NotFound,
                                                                         subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateOperationFailure);
-                                    
+
                                 }
                             }
 
@@ -558,8 +558,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         throw _dabExceptionWithTransactionErrorMessage;
                     }
 
-                    string primaryKeyRouteForLocationHeader = ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider);
-
                     // When read permission is configured without a database policy, a subsequent select query will not be executed.
                     // So, if the read action has include/exclude fields configured, additional fields present in the response
                     // need to be removed.
@@ -574,6 +572,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             }
                         }
                     }
+
+                    string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider)
+                                                                                                : string.Empty;
 
                     if (context.OperationType is EntityActionOperation.Insert)
                     {
@@ -1026,12 +1027,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// from the JsonElement representing the entity.
         /// </summary>
         /// <param name="context">RestRequestContext</param>
-        /// <param name="entity">A Json element representing one instance of the entity.</param>
+        /// <param name="dbOperationResultSet">Result set from the insert/upsert operation</param>
         /// <param name="sqlMetadataProvider">Metadataprovider for db on which to perform operation.</param>
-        /// <remarks> This function expects the Json element entity to contain all the properties
-        /// that make up the primary keys.</remarks>
+        /// <remarks> When one or more primary keys are not present an empty string will be returned.</remarks>
         /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
-        public static string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> entity, ISqlMetadataProvider sqlMetadataProvider)
+        public static string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> dbOperationResultSet, ISqlMetadataProvider sqlMetadataProvider)
         {
             if (context.DatabaseObject.SourceType is EntitySourceType.View)
             {
@@ -1048,7 +1048,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName);
                 newPrimaryKeyRoute.Append(pkExposedName);
                 newPrimaryKeyRoute.Append("/");
-                newPrimaryKeyRoute.Append(entity[pkExposedName!]!.ToString());
+
+                if (!dbOperationResultSet.ContainsKey(pkExposedName!))
+                {
+                    // A primary key will not be present in the upsert/insert operation result set in the following two cases.
+                    // 1. The role does not have read action configured
+                    // 2. The read action excludes one or more primary keys
+                    // In both the cases, an empty location header will be returned eventually and so the primary key route calculation can be short circuited.
+                    return string.Empty;
+                }
+
+                newPrimaryKeyRoute.Append(dbOperationResultSet[pkExposedName!]!.ToString());
                 newPrimaryKeyRoute.Append("/");
             }
 

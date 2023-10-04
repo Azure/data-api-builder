@@ -494,7 +494,7 @@ namespace Azure.DataApiBuilder.Service
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
         private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig.Runtime.Telemetry is not null
+            if (runtimeConfig?.Runtime?.Telemetry is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights is not null)
             {
                 AppInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;

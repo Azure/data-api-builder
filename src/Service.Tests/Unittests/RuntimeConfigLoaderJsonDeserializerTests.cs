@@ -6,6 +6,7 @@ using System.Data;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Text;
+using System.Linq;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;

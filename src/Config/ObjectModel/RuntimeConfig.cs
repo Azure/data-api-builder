@@ -245,9 +245,9 @@ public record RuntimeConfig
     private void SetupDataSourcesUsed()
     {
         SqlDataSourceUsed = _dataSourceNameToDataSource.Values.Any
-            (x => x.DatabaseType == DatabaseType.MSSQL || x.DatabaseType == DatabaseType.PostgreSQL || x.DatabaseType == DatabaseType.MySQL);
+            (x => x.DatabaseType is DatabaseType.MSSQL || x.DatabaseType is DatabaseType.PostgreSQL || x.DatabaseType is DatabaseType.MySQL);
 
         CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
-            (x => x.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            (x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL);
     }
 }

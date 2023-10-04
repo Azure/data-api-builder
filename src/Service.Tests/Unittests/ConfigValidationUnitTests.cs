@@ -2131,10 +2131,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { entityName, sampleEntity1 }
             };
 
-            DataSource ds = new(DatabaseType: DatabaseType.MSSQL, "", Options: null);
+            DataSource testDataSource = new(DatabaseType: DatabaseType.MSSQL, "", Options: null);
             Dictionary<string, DataSource> dataSourceNameToDataSource = new()
             {
-                { dataSourceName, ds }
+                { dataSourceName, testDataSource }
             };
 
             Dictionary<string, string> entityNameToDataSourceName = new()
@@ -2144,7 +2144,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: ds,
+                DataSource: testDataSource,
                 Runtime: new(
                     Rest: new(),
                     GraphQL: new(),
@@ -2156,7 +2156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 EntityNameToDataSourceName: entityNameToDataSourceName
             );
 
-            Assert.AreEqual(ds, runtimeConfig.DataSource, "RuntimeConfig datasource must match datasource passed into constructor");
+            Assert.AreEqual(testDataSource, runtimeConfig.DataSource, "RuntimeConfig datasource must match datasource passed into constructor");
             Assert.AreEqual(dataSourceNameToDataSource.Count(), runtimeConfig.ListAllDataSources().Count(),
                 "RuntimeConfig datasource count must match datasource count passed into constructor");
             Assert.IsTrue(runtimeConfig.SqlDataSourceUsed,

@@ -655,8 +655,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="resultRow">Reuslt of the upsert database operation</param>
         /// <param name="jsonDocument">Result of the select database operation</param>
+        /// <param name="primaryKeyRoute">Primary key route to be used in the Location Header</param>
         /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
+        /// <param name="httpContext">HTTP Context associated with the API request.</param>
+        /// <param name="operationType">Resultant Operation type - Update, Insert, etc.</param>
         private CreatedResult ConstructCreatedResultResponse(
             Dictionary<string, object?> resultRow,
             JsonDocument? jsonDocument,

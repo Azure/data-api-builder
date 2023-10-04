@@ -5,33 +5,32 @@ using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
-namespace Azure.DataApiBuilder.Core.Models
+namespace Azure.DataApiBuilder.Core.Models;
+
+/// <summary>
+/// UpsertRequestContext provides the major components of a REST query
+/// corresponding to the PutOne operations.
+/// </summary>
+public class UpsertRequestContext : RestRequestContext
 {
     /// <summary>
-    /// UpsertRequestContext provides the major components of a REST query
-    /// corresponding to the PutOne operations.
+    /// Constructor.
     /// </summary>
-    public class UpsertRequestContext : RestRequestContext
+    public UpsertRequestContext(
+        string entityName,
+        DatabaseObject dbo,
+        JsonElement insertPayloadRoot,
+        EntityActionOperation operationType)
+        : base(entityName, dbo)
     {
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        public UpsertRequestContext(
-            string entityName,
-            DatabaseObject dbo,
-            JsonElement insertPayloadRoot,
-            EntityActionOperation operationType)
-            : base(entityName, dbo)
-        {
-            FieldsToBeReturned = new();
-            PrimaryKeyValuePairs = new();
-            OperationType = operationType;
+        FieldsToBeReturned = new();
+        PrimaryKeyValuePairs = new();
+        OperationType = operationType;
 
-            PopulateFieldValuePairsInBody(insertPayloadRoot);
+        PopulateFieldValuePairsInBody(insertPayloadRoot);
 
-            // We don't support UpsertMany as yet.
-            IsMany = false;
-        }
+        // We don't support UpsertMany as yet.
+        IsMany = false;
     }
 }
 

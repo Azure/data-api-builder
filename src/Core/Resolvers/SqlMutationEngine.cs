@@ -22,6 +22,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
 
@@ -265,6 +266,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // Returns a 204 No Content so long as the stored procedure executes without error
                     return new NoContentResult();
                 case EntityActionOperation.Insert:
+
+                    HttpContext httpContext = GetHttpContext();
+                    string locationHeaderURL = UriHelper.BuildAbsolute(
+                            scheme: httpContext.Request.Scheme,
+                            host: httpContext.Request.Host,
+                            pathBase: GetBaseRouteFromConfig(),
+                            path: httpContext.Request.Path);
+
                     // Returns a 201 Created with whatever the first result set is returned from the procedure
                     // A "correctly" configured stored procedure would INSERT INTO ... OUTPUT ... VALUES as the result set
                     if (resultArray is not null && resultArray.Count > 0)
@@ -273,14 +282,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         {
                             // The final location header for stored procedures should be of the form ../api/<SP-Entity-Name>
                             // Location header is constructed using the base URL, base-route and the set location value.
-                            // Since, SP-Entity-Name is already available in the base URL, location is set as an empty string.
-                            return new CreatedResult(location: string.Empty, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
+
+                            return new CreatedResult(location: locationHeaderURL, OkMutationResponse(jsonDocument.RootElement.Clone()).Value);
                         }
                     }
                     else
                     {   // If no result set returned, just return a 201 Created with empty array instead of array with single null value
                         return new CreatedResult(
-                            location: string.Empty,
+                            location: locationHeaderURL,
                             value: new
                             {
                                 value = JsonDocument.Parse("[]").RootElement.Clone()
@@ -476,7 +485,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
                         // would not be available in the URL and needs to be appended. Since, this is a PUT or PATCH request that has resulted in the creation of
                         // a new item, the URL already contains the primary key and hence, an empty string is passed as the primary key route.
-                        return ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                        return ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetHttpContext());
                     }
 
                     // When the upsert operation results in the update of an existing record, an HTTP 200 OK response is returned.
@@ -582,7 +591,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
                         // would not be available in the URL and needs to be appened. So, the primary key of the newly created item which is stored in the primaryKeyRoute
                         // is used to construct the Location Header.
-                        return ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                        return ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetHttpContext());
                     }
 
                     if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
@@ -648,27 +657,52 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="jsonDocument">Result of the select database operation</param>
         /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
-        private static CreatedResult ConstructCreatedResultResponse(
+        private CreatedResult ConstructCreatedResultResponse(
             Dictionary<string, object?> resultRow,
             JsonDocument? jsonDocument,
             string primaryKeyRoute,
             bool isReadPermissionConfiguredForRole,
-            bool isDatabasePolicyDefinedForReadAction)
+            bool isDatabasePolicyDefinedForReadAction,
+            EntityActionOperation operationType,
+            HttpContext httpContext)
         {
+
+            string locationHeaderURL = string.Empty;
+
+            // For PUT and PATCH API requests, the users are aware of the Pks as it is required to be passed in the request URL.
+            // In case of tables with auto-gen PKs, PUT or PATCH will not result in an insert but error out. Seeing that Location Header does not provide users with
+            // any additional information, it is set as an empty string always.
+            // For POST API requests, the primary key route calculated will be an empty string
+            // when the read action for the role does not have access to one or more PKs.
+            // When the computed primaryKeyRoute is non-empty, the location header is calculated.
+            // Location is made up of three parts, the first being constructed from the Host property found in the HttpContext.Request.
+            // The second part being the base route configured in the config file.
+            // The third part is the computed primary key route.
+            if (operationType is EntityActionOperation.Insert && !string.IsNullOrEmpty(primaryKeyRoute))
+            {
+                locationHeaderURL = UriHelper.BuildAbsolute(
+                                        scheme: httpContext.Request.Scheme,
+                                        host: httpContext.Request.Host,
+                                        pathBase: GetBaseRouteFromConfig(),
+                                        path: httpContext.Request.Path);
+
+                locationHeaderURL = locationHeaderURL.EndsWith('/') ? locationHeaderURL + primaryKeyRoute : locationHeaderURL + "/" + primaryKeyRoute;
+            }
+
             // When the database policy is defined for the read action, a select query in another roundtrip to the database was executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.
             if (isDatabasePolicyDefinedForReadAction)
             {
-                return (jsonDocument is not null) ? new CreatedResult(location: primaryKeyRoute, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
-                                                  : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+                return (jsonDocument is not null) ? new CreatedResult(location: locationHeaderURL, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
+                                                  : new CreatedResult(location: locationHeaderURL, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
             }
 
             // When no database policy is defined for the read action, the results from the upsert database operation is
             // used to construct the final response.
             // When no read permission is configured for the role, or all the fields are excluded
             // an empty response is returned.
-            return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? new CreatedResult(location: primaryKeyRoute, OkMutationResponse(resultRow).Value)
-                                                     : new CreatedResult(location: primaryKeyRoute, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+            return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? new CreatedResult(location: locationHeaderURL, OkMutationResponse(resultRow).Value)
+                                                                              : new CreatedResult(location: locationHeaderURL, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
         }
 
         /// <summary>
@@ -686,7 +720,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             bool isReadPermissionConfiguredForRole,
             bool isDatabasePolicyDefinedForReadAction)
         {
-            // When a database policy is defined for the read action, a subsequent select query in another roundtrip to the databas was executed to fetch the results.
+            // When a database policy is defined for the read action, a subsequent select query in another roundtrip to the database was executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.
             if (isDatabasePolicyDefinedForReadAction)
             {
@@ -700,6 +734,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // an empty response is returned.
             return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? OkMutationResponse(resultRow)
                                                      : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+        }
+
+        /// <summary>
+        /// Helper method to extract the configured base route
+        /// </summary>
+        private string GetBaseRouteFromConfig()
+        {
+            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
+                && config.Runtime.BaseRoute is not null)
+            {
+                return config.Runtime.BaseRoute;
+            }
+
+            return string.Empty;
         }
 
         /// <summary>
@@ -1044,12 +1092,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (string primaryKey in sourceDefinition.PrimaryKey)
             {
-                // get backing column for lookup, previously validated to be non-null
-                sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName);
+                if (!sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName))
+                {
+                    throw new DataApiBuilderException(
+                       message: "Insert/Upsert operation was successful but unexpected error when constructing the response",
+                       statusCode: HttpStatusCode.InternalServerError,
+                       subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedErrorFindingExposedFieldName);
+                }
+
                 newPrimaryKeyRoute.Append(pkExposedName);
                 newPrimaryKeyRoute.Append("/");
 
-                if (!dbOperationResultSet.ContainsKey(pkExposedName!))
+                if (!dbOperationResultSet.ContainsKey(pkExposedName))
                 {
                     // A primary key will not be present in the upsert/insert operation result set in the following two cases.
                     // 1. The role does not have read action configured
@@ -1058,7 +1112,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return string.Empty;
                 }
 
-                newPrimaryKeyRoute.Append(dbOperationResultSet[pkExposedName!]!.ToString());
+                // This code block is reached after the successful execution of database update/insert operations.
+                // So, it is a safe assumption that a non-null value will be present in the result set for a primary key.
+                newPrimaryKeyRoute.Append(dbOperationResultSet[pkExposedName]!.ToString());
                 newPrimaryKeyRoute.Append("/");
             }
 

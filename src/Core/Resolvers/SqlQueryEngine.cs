@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _authorizationResolver,
                 _gQLFilterParser,
                 context.ResolvedParameters);
-            JsonDocument? queryJson = await ExecuteAsync(structure, dataSourceName);
+            using JsonDocument? queryJson = await ExecuteAsync(structure, dataSourceName);
             // queryJson is null if dbreader had no rows to return
             // If no rows/empty result set, return an empty json array
             return queryJson is null ? SqlResponseHelpers.OkResponse(JsonDocument.Parse("[]").RootElement.Clone()) :

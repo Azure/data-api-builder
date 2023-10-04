@@ -423,20 +423,6 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to extract the configured base route
-        /// </summary>
-        public string GetBaseRouteFromConfig()
-        {
-            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
-                && config.Runtime.BaseRoute is not null)
-            {
-                return config.Runtime.BaseRoute;
-            }
-
-            return string.Empty;
-        }
-
-        /// <summary>
         /// Tries to get the Entity name and primary key route from the provided string
         /// returns the entity name via a lookup using the string which includes
         /// characters up until the first '/', and then resolves the primary key
@@ -547,19 +533,5 @@ namespace Azure.DataApiBuilder.Core.Services
                     );
             }
         }
-
-        /// <summary>
-        /// Helper method to fetch the entity source type from the entity name
-        /// </summary>
-        /// <param name="entityName">Name of the entity</param>
-        /// <returns>Type of the database object backing the entity - Table, View or Stored Procedure </returns>
-        public EntitySourceType FetchEntitySourceType(string entityName)
-        {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
-            DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-            return dbObject.SourceType;
-        }
-
     }
 }

@@ -10,7 +10,6 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -220,48 +219,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         message: $"Not Found",
                         statusCode: HttpStatusCode.NotFound,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                }
-
-                if (result is CreatedResult)
-                {
-                    // Location is made up of three parts, the first being constructed
-                    // from the Host property found in the HttpContext.Request. The second part being the
-                    // base route configured in the config file.
-                    // The third part is the primary key route, which has already been saved in the
-                    // Location of the created result. So we form the entire location
-                    // from appending the base route and the primary key route  already stored in the
-                    // created result to the url constructed from the HttpRequest. We
-                    // then update the Location of the created result to this value.
-                    CreatedResult createdResult = (result as CreatedResult)!;
-
-                    // For PUT and PATCH API requests, the users are aware of the Pks as it is required to be passed in the request URL.
-                    // In case of tables with auto-gen PKs, PUT or PATCH will not result in an insert but error out. Seeing that Location Header does not provide users with
-                    // any additional information, it is set as an empty string always. For stored procedures too, an empty location header is returned to be consistent.
-                    // For POST API requests, the primary key route calculated will be an empty string in the following cases
-                    // 1. When the entity type is stored procedure
-                    // 2. When the read action for the role does not have access to one or more PKs.
-                    // When the read action does not have access to read primary keys, the Location Header is set to an empty string.
-                    // For stored procedures, the only valid action is execute and field level include/exclude setup is not supported. So, a non-empty
-                    // location header is returned.
-                    if (operationType is EntityActionOperation.Upsert ||
-                         operationType is EntityActionOperation.UpsertIncremental ||
-                         operationType is EntityActionOperation.Update ||
-                         operationType is EntityActionOperation.UpdateIncremental ||
-                         (_restService.FetchEntitySourceType(entityName) is not EntitySourceType.StoredProcedure && operationType is EntityActionOperation.Insert && string.IsNullOrEmpty(createdResult.Location)))
-                    {
-                        createdResult.Location = string.Empty;
-                    }
-                    else
-                    {
-                        string locationURL = UriHelper.BuildAbsolute(
-                                        scheme: HttpContext.Request.Scheme,
-                                        host: HttpContext.Request.Host,
-                                        pathBase: _restService.GetBaseRouteFromConfig(),
-                                        path: HttpContext.Request.Path);
-                        createdResult.Location = locationURL.EndsWith('/') ? locationURL + createdResult.Location : locationURL + "/" + createdResult.Location;
-                    }
-
-                    result = createdResult;
                 }
 
                 return result;

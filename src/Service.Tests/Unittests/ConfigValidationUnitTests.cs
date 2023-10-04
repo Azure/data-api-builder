@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -259,10 +260,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} used for relationship is not defined in the config.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         }
@@ -320,10 +323,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
             // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} is disabled for GraphQL.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         }
@@ -395,9 +400,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup(x =>
                 x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
             // Exception thrown as foreignKeyPair not found in the DB.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
                 + $" and entity: {relationshipEntity}.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -415,7 +423,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Since, we have defined the relationship in Database,
             // the engine was able to find foreign key relation and validation will pass.
-            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
+            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
         }
 
         /// <summary>
@@ -513,16 +521,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(isForeignKeyPairBetTargetAndLinkingObject);
 
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
             if (isValidScenario)
             {
                 // No Exception will be thrown as the relationship exists where it's needed.
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
             }
             else
             {
                 // Exception thrown as foreignKeyPair is not present for the correct pair.
                 DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                    configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                    configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
                 Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
                     + $" and entity: {relationshipEntity}.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -588,10 +599,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
 
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
             // Exception is thrown as foreignKey pair is not specified in the config, nor defined
             // in the database.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object));
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"Could not find relationship between entities:"
                 + $" SampleEntity1 and SampleEntity2.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -607,9 +621,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     new DatabaseTable("dbo", "TEST_SOURCE2"), new DatabaseTable("dbo", "TEST_SOURCE1")
                 )).Returns(true);
 
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
             // No Exception is thrown as foreignKey Pair was found in the DB between
             // source and target entity.
-            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _sqlMetadataProvider.Object);
+            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
         }
 
         /// <summary>
@@ -2081,6 +2097,72 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
             Assert.AreEqual(finalConfigFilePath, runtimeConfigLoader.ConfigFilePath);
+        }
+
+        /// <summary>
+        /// Method to validate that runtimeConfig is successfully set up using constructor
+        /// where members are passed in without json config file.
+        /// RuntimeConfig has two constructors, one that loads from the config json and one that takes in all the members.
+        /// This test makes sure that the constructor that takes in all the members works as expected.
+        /// </summary>
+        [TestMethod]
+        public void TestRuntimeConfigSetupWithNonJsonConstructor()
+        {
+            EntitySource entitySource = new(
+                    Type: EntitySourceType.Table,
+                    Object: "sourceName",
+                    Parameters: null,
+                    KeyFields: null
+                );
+
+            Entity sampleEntity1 = new(
+                Source: entitySource,
+                GraphQL: null,
+                Rest: null,
+                Permissions: null,
+                Mappings: null,
+                Relationships: null);
+
+            string entityName = "SampleEntity1";
+            string dataSourceName = "Test1";
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { entityName, sampleEntity1 }
+            };
+
+            DataSource testDataSource = new(DatabaseType: DatabaseType.MSSQL, "", Options: null);
+            Dictionary<string, DataSource> dataSourceNameToDataSource = new()
+            {
+                { dataSourceName, testDataSource }
+            };
+
+            Dictionary<string, string> entityNameToDataSourceName = new()
+            {
+                { entityName, dataSourceName }
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: testDataSource,
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new RuntimeEntities(entityMap),
+                DefaultDataSourceName: dataSourceName,
+                DataSourceNameToDataSource: dataSourceNameToDataSource,
+                EntityNameToDataSourceName: entityNameToDataSourceName
+            );
+
+            Assert.AreEqual(testDataSource, runtimeConfig.DataSource, "RuntimeConfig datasource must match datasource passed into constructor");
+            Assert.AreEqual(dataSourceNameToDataSource.Count(), runtimeConfig.ListAllDataSources().Count(),
+                "RuntimeConfig datasource count must match datasource count passed into constructor");
+            Assert.IsTrue(runtimeConfig.SqlDataSourceUsed,
+                $"Config has a sql datasource and member {nameof(runtimeConfig.SqlDataSourceUsed)} must be marked as true.");
+            Assert.IsFalse(runtimeConfig.CosmosDataSourceUsed,
+                $"Config does not have a cosmos datasource and member {nameof(runtimeConfig.CosmosDataSourceUsed)} must be marked as false.");
         }
 
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()

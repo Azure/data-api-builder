@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -22,8 +23,8 @@ namespace Azure.DataApiBuilder.Core.Authorization;
 /// </summary>
 public class AuthorizationResolver : IAuthorizationResolver
 {
-    private readonly ISqlMetadataProvider _metadataProvider;
     private readonly RuntimeConfigProvider _runtimeConfigProvider;
+    private readonly IMetadataProviderFactory _metadataProviderFactory;
     public const string WILDCARD = "*";
     public const string CLAIM_PREFIX = "@claims.";
     public const string FIELD_PREFIX = "@item.";
@@ -35,11 +36,10 @@ public class AuthorizationResolver : IAuthorizationResolver
 
     public AuthorizationResolver(
         RuntimeConfigProvider runtimeConfigProvider,
-        ISqlMetadataProvider sqlMetadataProvider
+        IMetadataProviderFactory metadataProviderFactory
         )
     {
-        _metadataProvider = sqlMetadataProvider;
-        _runtimeConfigProvider = runtimeConfigProvider;
+        _metadataProviderFactory = metadataProviderFactory;
         if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
         {
             // Datastructure constructor will pull required properties from metadataprovider.
@@ -53,6 +53,8 @@ public class AuthorizationResolver : IAuthorizationResolver
                 return Task.FromResult(true);
             });
         }
+
+        _runtimeConfigProvider = runtimeConfigProvider;
     }
 
     /// <summary>
@@ -121,14 +123,14 @@ public class AuthorizationResolver : IAuthorizationResolver
         bool executionPermitted = EntityPermissionsMap.TryGetValue(entityName, out EntityMetadata? entityMetadata)
             && entityMetadata is not null
             && entityMetadata.RoleToOperationMap.TryGetValue(roleName, out _);
-
         return executionPermitted;
     }
 
     /// <inheritdoc />
-    public bool AreColumnsAllowedForOperation(string entityIdentifier, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
+    public bool AreColumnsAllowedForOperation(string entityName, string roleName, EntityActionOperation operation, IEnumerable<string> columns)
     {
-        string entityName = _metadataProvider.GetEntityName(entityIdentifier);
+        string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+        ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
         if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata) && roleMetadata is null)
         {
@@ -146,7 +148,7 @@ public class AuthorizationResolver : IAuthorizationResolver
             // Failure indicates that request contain invalid exposedColumn for entity.
             foreach (string exposedColumn in columns)
             {
-                if (_metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
+                if (metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                 {
                     // backingColumn will not be null when TryGetBackingColumn() is true.
                     if (operationToColumnMap.Excluded.Contains(backingColumn!) ||
@@ -253,6 +255,8 @@ public class AuthorizationResolver : IAuthorizationResolver
             // In case the authenticated role is not defined on the entity,
             // this will help in copying over permissions from anonymous role to authenticated role.
             HashSet<string> allowedColumnsForAnonymousRole = new();
+            string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+            ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             foreach (EntityPermission permission in entity.Permissions)
             {
                 string role = permission.Role;
@@ -263,14 +267,15 @@ public class AuthorizationResolver : IAuthorizationResolver
                     EntityActionOperation operation = entityAction.Action;
                     OperationMetadata operationToColumn = new();
 
+
                     // Use a HashSet to store all the backing field names
                     // that are accessible to the user.
                     HashSet<string> allowedColumns = new();
-                    IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName);
+                    IEnumerable<string> allTableColumns = ResolveEntityDefinitionColumns(entityName, metadataProvider);
 
                     if (entityAction.Fields is null)
                     {
-                        operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
+                        operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider));
                     }
                     else
                     {
@@ -281,7 +286,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                         if (entityAction.Fields.Include is null ||
                             (entityAction.Fields.Include.Count == 1 && entityAction.Fields.Include.Contains(WILDCARD)))
                         {
-                            operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName));
+                            operationToColumn.Included.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider));
                         }
                         else
                         {
@@ -293,7 +298,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                         if (entityAction.Fields.Exclude is null ||
                             (entityAction.Fields.Exclude.Count == 1 && entityAction.Fields.Exclude.Contains(WILDCARD)))
                         {
-                            operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName));
+                            operationToColumn.Excluded.UnionWith(ResolveEntityDefinitionColumns(entityName, metadataProvider));
                         }
                         else
                         {
@@ -309,9 +314,10 @@ public class AuthorizationResolver : IAuthorizationResolver
                     // Calculate the set of allowed backing column names.
                     allowedColumns.UnionWith(operationToColumn.Included.Except(operationToColumn.Excluded));
 
+
                     // Populate allowed exposed columns for each entity/role/operation combination during startup,
                     // so that it doesn't need to be evaluated per request.
-                    PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns);
+                    PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns, metadataProvider);
 
                     IEnumerable<EntityActionOperation> operations = GetAllOperationsForObjectType(operation, entity.Source.Type);
                     foreach (EntityActionOperation crudOperation in operations)
@@ -411,7 +417,7 @@ public class AuthorizationResolver : IAuthorizationResolver
 
         return operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperations : new List<EntityActionOperation> { operation };
     }
-
+    
     /// <summary>
     /// From the given parameters, processes the included and excluded column permissions to output
     /// a list of columns that are "allowed".
@@ -421,13 +427,14 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="allowedExposedColumns">Set of fields exposed to user.</param>
     /// <param name="entityName">Entity from request</param>
     /// <param name="allowedDBColumns">Set of allowed backing field names.</param>
-    private void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
+    private static void PopulateAllowedExposedColumns(HashSet<string> allowedExposedColumns,
         string entityName,
-        HashSet<string> allowedDBColumns)
+        HashSet<string> allowedDBColumns,
+        ISqlMetadataProvider metadataProvider)
     {
         foreach (string dbColumn in allowedDBColumns)
         {
-            if (_metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
+            if (metadataProvider.TryGetExposedColumnName(entityName, backingFieldName: dbColumn, out string? exposedName))
             {
                 if (exposedName is not null)
                 {
@@ -661,15 +668,15 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// </summary>
     /// <param name="entityName">Used to lookup table definition of specific entity</param>
     /// <returns>Collection of columns in table definition.</returns>
-    private IEnumerable<string> ResolveEntityDefinitionColumns(string entityName)
+    private static IEnumerable<string> ResolveEntityDefinitionColumns(string entityName, ISqlMetadataProvider metadataProvider)
     {
-        if (_metadataProvider.GetDatabaseType() is DatabaseType.CosmosDB_NoSQL)
+        if (metadataProvider.GetDatabaseType() is DatabaseType.CosmosDB_NoSQL)
         {
-            return _metadataProvider.GetSchemaGraphQLFieldNamesForEntityName(entityName);
+            return metadataProvider.GetSchemaGraphQLFieldNamesForEntityName(entityName);
         }
 
         // Table definition is null on stored procedure entities
-        SourceDefinition? sourceDefinition = _metadataProvider.GetSourceDefinition(entityName);
+        SourceDefinition? sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
         return sourceDefinition is null ? new List<string>() : sourceDefinition.Columns.Keys;
     }
 

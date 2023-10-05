@@ -745,8 +745,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         private string GetBaseRouteFromConfig()
         {
-            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
-                && config.Runtime.BaseRoute is not null)
+            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config) && config.Runtime.BaseRoute is not null)
             {
                 return config.Runtime.BaseRoute;
             }

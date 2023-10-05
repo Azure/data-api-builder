@@ -485,7 +485,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
                         // would not be available in the URL and needs to be appended. Since, this is a PUT or PATCH request that has resulted in the creation of
                         // a new item, the URL already contains the primary key and hence, an empty string is passed as the primary key route.
-                        return ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetHttpContext());
+                        return ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType);
                     }
 
                     // When the upsert operation results in the update of an existing record, an HTTP 200 OK response is returned.
@@ -591,7 +591,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
                         // would not be available in the URL and needs to be appened. So, the primary key of the newly created item which is stored in the primaryKeyRoute
                         // is used to construct the Location Header.
-                        return ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetHttpContext());
+                        return ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType);
                     }
 
                     if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
@@ -658,7 +658,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="primaryKeyRoute">Primary key route to be used in the Location Header</param>
         /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
         /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
-        /// <param name="httpContext">HTTP Context associated with the API request.</param>
         /// <param name="operationType">Resultant Operation type - Update, Insert, etc.</param>
         private CreatedResult ConstructCreatedResultResponse(
             Dictionary<string, object?> resultRow,
@@ -666,9 +665,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string primaryKeyRoute,
             bool isReadPermissionConfiguredForRole,
             bool isDatabasePolicyDefinedForReadAction,
-            EntityActionOperation operationType,
-            HttpContext httpContext)
+            EntityActionOperation operationType)
         {
+            // This code block is reached when the REST API request resulted in a successful creation of an item.
+            // So, it is a safe assumption that the HTTP Context associated with the request will not be null.
+            HttpContext httpContext = _httpContextAccessor.HttpContext!;
 
             string locationHeaderURL = string.Empty;
 
@@ -1097,10 +1098,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (!sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName))
                 {
-                    throw new DataApiBuilderException(
-                       message: "Insert/Upsert operation was successful but unexpected error when constructing the response",
-                       statusCode: HttpStatusCode.InternalServerError,
-                       subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedErrorFindingExposedFieldName);
+                    return string.Empty;
                 }
 
                 newPrimaryKeyRoute.Append(pkExposedName);

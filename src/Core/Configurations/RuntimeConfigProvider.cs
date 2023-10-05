@@ -43,6 +43,8 @@ public class RuntimeConfigProvider
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
+    private ConfigFileWatcher? ConfigFileWatcher { get; set; }
+
     private RuntimeConfig? _runtimeConfig;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
@@ -78,7 +80,23 @@ public class RuntimeConfigProvider
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
+        CheckForAndSetupConfigFileWatcher();
         return _runtimeConfig;
+    }
+
+    private void CheckForAndSetupConfigFileWatcher()
+    {
+        if (ConfigFileWatcher is null)
+        {
+            if (!IsLateConfigured && _runtimeConfig!.Runtime.Host.Mode is HostMode.Development)
+            {
+                ConfigFileWatcher = new(this);
+            }
+            else
+            {
+                ConfigFileWatcher = new();
+            }
+        }
     }
 
     /// <summary>
@@ -93,6 +111,7 @@ public class RuntimeConfigProvider
             if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
             {
                 _runtimeConfig = config;
+                CheckForAndSetupConfigFileWatcher();
             }
         }
 

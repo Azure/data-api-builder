@@ -38,7 +38,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
@@ -94,18 +93,10 @@ namespace Azure.DataApiBuilder.Service
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
-                if (serviceProvider.GetRequiredService<RuntimeConfigProvider>().TryGetConfig(out RuntimeConfig? runtimeConfig)
-                && runtimeConfig.Runtime.Host.Mode is HostMode.Development)
-                {
-                    ConfigFileWatcher configFileWatcher = new(configLoader.ConfigFileName,
-                        serviceProvider.GetRequiredService<IOptionsMonitor<RuntimeOptions>>(),
-                        serviceProvider.GetRequiredService<RuntimeConfigProvider>());
-                    return configFileWatcher;
-                }
-
-                // only instantiate file watcher in local development environment
-                return new();
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<ConfigFileWatcher>();
             });
+
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
@@ -174,7 +165,7 @@ namespace Azure.DataApiBuilder.Service
                 ConfigureAuthentication(services, serviceProvider.GetRequiredService<RuntimeConfigProvider>());
                 return string.Empty;
             });
-            
+
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>

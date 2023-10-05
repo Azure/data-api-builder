@@ -1,39 +1,48 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Microsoft.Extensions.Options;
+using System.IO.Abstractions;
+using Azure.DataApiBuilder.Config;
+//using Microsoft.Extensions.Logging;
 using Path = System.IO.Path;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
 public class ConfigFileWatcher
 {
-    private string? _configFilePath;
     private FileSystemWatcher? _fileWatcher;
     RuntimeConfigProvider? _configProvider;
+    // ILogger<ConfigFileWatcher>? _logger;
 
-    public ConfigFileWatcher(string configFilePath, IOptionsMonitor<RuntimeOptions> optionsMonitor, RuntimeConfigProvider? configProvider)
+    public ConfigFileWatcher(RuntimeConfigProvider configProvider)
     {
-        _configFilePath = configFilePath;
-
-        _fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(this._configFilePath)!)
+        string configFileName = ((FileSystemRuntimeConfigLoader)configProvider.ConfigLoader).ConfigFilePath;
+        FileSystem fileSystem = new();
+        string? currentDirectoryPath = fileSystem.Directory.GetCurrentDirectory();
+        string configFilePath = Path.Combine(currentDirectoryPath!, configFileName);
+        _fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(configFilePath)!)
         {
-            Filter = Path.GetFileName(_configFilePath)
+            Filter = Path.GetFileName(configFilePath)
         };
 
         _configProvider = configProvider;
         _fileWatcher.Changed += OnConfigFileChange;
     }
 
-    public ConfigFileWatcher(){}
+    public ConfigFileWatcher() { }
 
     private void OnConfigFileChange(object sender, FileSystemEventArgs e)
     {
-        // update the runtimeconfig and update the instance of IOptions<TOptions>
-        // update the runtimeconfig
-        _configProvider!.HotReloadConfig();
-        // update the IOptions<RuntimeOptions>.Value
+        try
+        {
+            _configProvider!.HotReloadConfig();
+        }
+        catch (Exception ex) // improve exception handling based on errors that come back in tests
+        {
+            // replace with logger
+            // use dependancy injection when first constructing ConfigFileWatcher to get logger
+            Console.WriteLine("Unable to Hot Reload configuration file due to " + ex.Message); // add better messaging
+        }
     }
 }
 

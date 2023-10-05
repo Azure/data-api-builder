@@ -22,13 +22,13 @@ Data API builder (DAB) is a .NET application written in C#, consisting of severa
 
 Before running the code, ensure you have the correct version of .NET installed (refer to the [global.json](global.json) file) and open the solution from `src/Azure.DataApiBuilder.Service.sln` in Visual Studio (or other editor of choice).
 
-The next step is to ensure you have a config file for DAB defined. You can pick a sample one from the `src/Service.Tests` project and copy the `dab-config.<engine>.json` file to the `src/Service` directory (and if the database is CosmosDb_NoSql the GraphQL schema file too). You can also use the [generator tool](#an-alternative-way-to-generate-config-files) described below. Note these sample configuration files rely on the backend schema to be as per the respective `src/Service.Tests/DatabaseSchema-<engine>.sql` schema file in the `src/Service.Tests` project.
+The next step is to ensure you have a config file for DAB defined. You can pick a sample one from the `src/Service.Tests` project and copy the `dab-config.<engine>.json` file to the `src/Service` directory (and if the database is CosmosDb_NoSql the GraphQL schema file too). You can also use the [generator tool](#an-alternative-way-to-generate-config-files) described below. Note these sample configuration files expect the backend database schema to be created from the respective `src/Service.Tests/DatabaseSchema-<engine>.sql` schema file in the `src/Service.Tests` project.
 
 Make sure the config has a valid connection string, or you use the [`@env` syntax to reference an environment variable](https://learn.microsoft.com/azure/data-api-builder/configuration-file#accessing-environment-variables).
 
 #### Visual Studio
 
-Before running the code in Visual Studio you must be sure to have your config file is correctly populated with a valid connection string to your configured back end. Once you have the back end running and your configuration file set correctly you may do the following to run the code in Visual Studio without using the CLI.
+Before running the sample code in Visual Studio, you must be sure to have your config file correctly populated with a valid connection string for your configured back end. Once you have the back end running and your configuration file set correctly, you may do the following to run the code in Visual Studio without using the CLI.
 
 1. Open the solution `src/Azure.DataApiBuilder.Service.sln`
 2. Select the **Startup Project** `Azure.DataApiBuilder.Service`.

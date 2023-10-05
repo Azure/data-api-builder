@@ -166,7 +166,6 @@ namespace Azure.DataApiBuilder.Service
                 return string.Empty;
             });
 
-
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
             {

@@ -325,6 +325,11 @@
                       "required": [
                         "methods"
                       ]
+                    },
+                    {
+                      "required": [
+                        "enabled"
+                      ]
                     }
                   ]
                 }
@@ -363,6 +368,11 @@
                     {
                       "required": [
                         "operation"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "enabled"
                       ]
                     }
                   ]

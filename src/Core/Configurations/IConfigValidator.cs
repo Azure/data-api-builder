@@ -3,7 +3,6 @@
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
-
 /// <summary>
 /// Validates the runtime config.
 /// </summary>

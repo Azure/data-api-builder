@@ -5,7 +5,6 @@ using Azure.DataApiBuilder.Core.Resolvers;
 
 namespace Azure.DataApiBuilder.Core.Models;
 
-
 /// <summary>
 /// Holds pagination related information for the query and its subqueries
 /// </summary>

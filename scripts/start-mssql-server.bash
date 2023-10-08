@@ -6,8 +6,6 @@
 DOCKER_SQL_PASS=$1
 CERT_DIR=~/container/customerdb
 
-echo $DOCKER_SQL_PASS
-
 # Create directory to store certificate
 mkdir -p $CERT_DIR
 

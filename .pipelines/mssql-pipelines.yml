@@ -57,7 +57,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        $sourceString = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        $sourceString = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-="
         $password = -join ($sourceString.ToCharArray() | Get-Random -Count 20)
         Write-Host "##vso[task.setvariable variable=dbPassword]$password"
   
@@ -77,7 +77,7 @@ jobs:
       script: |
         echo "Executing script with arguments."
         chmod +x ./scripts/start-mssql-server.bash
-        ./scripts/start-mssql-server.bash "$dbPassword"
+        ./scripts/start-mssql-server.bash $(dbPassword)
 
   - task: DotNetCoreCLI@2
     displayName: Build

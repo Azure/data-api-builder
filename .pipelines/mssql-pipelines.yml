@@ -24,6 +24,8 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
+      dbPassword: ''
+      data-source.connection-string: ''
 
   steps:
   - task: NuGetAuthenticate@0
@@ -49,13 +51,29 @@ jobs:
     inputs:
       dockerVersion: 17.09.0-ce
       releaseType: stable
+  
+  - task: PowerShell@2
+    displayName: 'Generate DB password'
+    inputs:
+      targetType: 'inline'
+      script: |
+        $password = [System.Web.Security.Membership]::GeneratePassword(20, 5)
+        Write-Host "##vso[task.setvariable variable=dbPassword]$password"
+  
+  - task: PowerShell@2
+    displayName: 'Set Connection String'
+    inputs:
+      targetType: 'inline'
+      script: |
+        $connectionString=Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=SA;Password=$(dbPassword);MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;Encrypt=False;
+        Write-Host "##vso[task.setvariable variable=data-source.connection-string]$connectionString"
 
   - task: Bash@3
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker with SSL enabled
     inputs:
       filePath: scripts/start-mssql-server.bash
-      arguments: $(DockerSQLPass)
+      arguments: $(dbPassword)
 
   - task: DotNetCoreCLI@2
     displayName: Build
@@ -120,7 +138,7 @@ jobs:
       # since windows needs a different string.
       # The variable setting on the pipeline UI sets the connection string
       # for the linux job above.
-      data-source.connection-string: $(ConnectionStringLocalDBVariable)
+      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;
       InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
       SqlVersionCode: '15.0'
 

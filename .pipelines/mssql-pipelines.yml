@@ -76,6 +76,7 @@ jobs:
       targetType: 'inline'
       script: |
         echo "Executing script with arguments."
+        chmod +x ./scripts/start-mssql-server.bash
         ./scripts/start-mssql-server.bash "$dbPassword"
 
   - task: DotNetCoreCLI@2

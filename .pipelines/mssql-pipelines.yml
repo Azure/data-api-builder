@@ -57,7 +57,8 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        $password = [System.Web.Security.Membership]::GeneratePassword(20, 5)
+        $chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-="
+        $password = -join ($chars | Get-Random -Count 20)
         Write-Host "##vso[task.setvariable variable=dbPassword]$password"
   
   - task: PowerShell@2

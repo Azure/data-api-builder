@@ -5,7 +5,7 @@ WORKDIR /src
 COPY . .
 RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker -o /out -r linux-x64
 
-FROM mcr.microsoft.com/cbl-mariner/base/core:2.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-cbl-mariner2.0 AS runtime
 
 COPY --from=build /out /App
 WORKDIR /App

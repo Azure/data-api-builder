@@ -8,8 +8,10 @@ using System.Net.Mime;
 using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
@@ -379,7 +381,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 openApiPathItemOperations.Add(OperationType.Post, postOperation);
             }
 
-            // PUT and PATCH requests have the same criteria for decided whether a request body is required.
+            // PUT and PATCH requests have the same criteria for deciding whether a request body is required.
             bool requestBodyRequired = IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: false, isStoredProcedure: true);
 
             if (configuredRestOperations[OperationType.Put])
@@ -428,7 +430,41 @@ namespace Azure.DataApiBuilder.Core.Services
                 Responses = new(_defaultOpenApiResponses)
             };
 
+            // Add custom headers for operation.
+            AddCustomHeadersToOperation(operation);
             return operation;
+        }
+
+        /// <summary>
+        /// Helper method to populate operation parameters with all the custom headers like X-MS-API-ROLE, Authorization etc. headers.
+        /// </summary>
+        /// <param name="operation">OpenApi operation.</param>
+        private static void AddCustomHeadersToOperation(OpenApiOperation operation)
+        {
+            OpenApiSchema stringParamSchema = new()
+            {
+                Type = JsonDataType.String.ToString().ToLower()
+            };
+
+            // Add parameter for X-MS-API-ROLE header.
+            OpenApiParameter paramForClientHeader = new()
+            {
+                Required = false,
+                In = ParameterLocation.Header,
+                Name = AuthorizationResolver.CLIENT_ROLE_HEADER,
+                Schema = stringParamSchema
+            };
+            operation.Parameters.Add(paramForClientHeader);
+
+            // Add parameter for Authorization header.
+            OpenApiParameter paramForAuthHeader = new()
+            {
+                Required = false,
+                In = ParameterLocation.Header,
+                Name = "Authorization",
+                Schema = stringParamSchema
+            };
+            operation.Parameters.Add(paramForAuthHeader);
         }
 
         /// <summary>

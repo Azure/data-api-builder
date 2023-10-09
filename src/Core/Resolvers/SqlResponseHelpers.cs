@@ -13,6 +13,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
+    /// <summary>
+    /// Class with helper methods that assist with the construction of API response for requests executed against SQL database types.
+    /// </summary>
     public class SqlResponseHelpers
     {
 
@@ -59,7 +62,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 else
                 {
                     return findOperationResponse.ValueKind is JsonValueKind.Array ? OkResponse(JsonSerializer.SerializeToElement(RemoveExtraFieldsInResponseWithMultipleItems(findOperationResponse.EnumerateArray().ToList(), extraFieldsInResponse)))
-                                                                        : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(findOperationResponse, extraFieldsInResponse));
+                                                                                  : OkResponse(RemoveExtraFieldsInResponseWithSingleItem(findOperationResponse, extraFieldsInResponse));
                 }
             }
 

@@ -415,7 +415,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 throw new DataApiBuilderException(
                                     message: "An unexpected error occurred while trying to execute the query.",
                                     statusCode: HttpStatusCode.InternalServerError,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                    subStatusCode: context.OperationType is EntityActionOperation.Upsert ? DataApiBuilderException.SubStatusCodes.UnexpectedRestUpsertOperationFailure
+                                                                                                         : DataApiBuilderException.SubStatusCodes.UnexpectedRestUpsertIncrementalOperationFailure);
                             }
 
                             upsertOperationResultSetRow = upsertOperationResult.Rows.FirstOrDefault() ?? new();
@@ -451,13 +452,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     Dictionary<string, object?> resultRow = upsertOperationResultSetRow.Columns;
 
-                    // For all SQL database types, the IS_UPDATE_RESULT_SET field is added to the resultset to indicate if the resultant operation was an update or insert.
-                    // For MsSQL and MySQL, the result set will contain one entry when the resultant operation is update and two entries incase of insert.
-                    // For insert operation, the first result row will not contain any columns. This is used to determine that the resultant operation was an update.
-                    // In this case, IS_UPDATE_RESULT_SET field is added to the result set.
-                    // However, this logic is inapplicable for PostgreSQL, as the result set of an upsert operation will contain only one entry when both update or an insert takes place.
-                    // The result set will contain a field (___upsert_op___) that indicates whether the resultant operation was an update or an insert. So, the value present in this field
-                    // is used to determine whether the upsert resulted in an update.
+                    // For all SQL database types, when an upsert operation results in an update operation, an entry <IsUpdateResultSet,true> is added to the result set dictionary.
+                    // For MsSQL and MySQL database types, the "IsUpdateResultSet" field is sufficient to determine whether the resultant operation was an insert or an update.
+                    // For PostgreSQL, the result set dictionary will always contain the entry <IsUpdateResultSet,true> irrespective of the upsert resulting in an insert/update operation.
+                    // PostgreSQL result sets will contain a field "___upsert_op___" that indicates whether the resultant operation was an update or an insert. So, the value present in this field
+                    // is used to determine whether the upsert resulted in an update/insert.
                     if (sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
                     {
                         hasPerformedUpdate = !PostgresQueryBuilder.IsInsert(resultRow);
@@ -517,7 +516,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     {
                                         // Ideally this case should not happen, however may occur due to unexpected reasons,
                                         // like the DbDataReader being null. We throw an exception
-                                        // which will be returned as an Unexpected InternalServerError
+                                        // which will be returned as an UnexpectedRestInsertOperationFailure
                                         throw new DataApiBuilderException(
                                             message: "An unexpected error occurred while trying to execute the query.",
                                             statusCode: HttpStatusCode.InternalServerError,
@@ -539,8 +538,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     // update. An exception is thrown which will be returned as a 404 NotFound response.
                                     throw new DataApiBuilderException(message: "No Update could be performed, record not found",
                                                                         statusCode: HttpStatusCode.NotFound,
-                                                                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateOperationFailure);
-
+                                                                        subStatusCode: context.OperationType is EntityActionOperation.Update ? DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateOperationFailure
+                                                                                                                                             : DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateIncrementalOperationFailure);
                                 }
                             }
 
@@ -588,9 +587,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (context.OperationType is EntityActionOperation.Insert)
                     {
                         // Location Header is made up of the Base URL of the request and the primary key of the item created.
-                        // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
-                        // would not be available in the URL and needs to be appened. So, the primary key of the newly created item which is stored in the primaryKeyRoute
-                        // is used to construct the Location Header.
+                        // For POST requests, the primary key info would not be available in the URL and needs to be appened. So, the primary key of the newly created item
+                        // which is stored in the primaryKeyRoute is used to construct the Location Header.
                         return ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType);
                     }
 
@@ -614,6 +612,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="context">Insert/Upsert Request context for the REST POST, PUT and PATCH request</param>
         /// <param name="mutationResultRow">Result of the insert/upsert database operation</param>
         /// <param name="roleName">Role with which the API request is executed</param>
+        /// <param name="sqlMetadataProvider">SqlMetadataProvider object - provides helper method to get the exposed column name for a given column name</param>
         /// <returns>Returns a FindRequestContext object constructed from the existing context and create/upsert operation results.</returns>
         private FindRequestContext ConstructFindRequestContext(RestRequestContext context, DbResultSetRow mutationResultRow, string roleName, ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -650,7 +649,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Constructs and returns a HTTP 201 Created response.
-        /// The response is constructed using results of the upsert database operation when database policy is not defined for the read permission.
+        /// The response is constructed using results of the insert/upsert(resulting into an insert) database operation when database policy is not defined for the read permission.
         /// If database policy is defined, the results of the subsequent select statement is used for constructing the response.
         /// </summary>
         /// <param name="resultRow">Reuslt of the upsert database operation</param>
@@ -676,8 +675,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // For PUT and PATCH API requests, the users are aware of the Pks as it is required to be passed in the request URL.
             // In case of tables with auto-gen PKs, PUT or PATCH will not result in an insert but error out. Seeing that Location Header does not provide users with
             // any additional information, it is set as an empty string always.
-            // For POST API requests, the primary key route calculated will be an empty string
-            // when the read action for the role does not have access to one or more PKs.
+            // For POST API requests, the primary key route calculated will be an empty string in the following scenarions.
+            // 1. When read action is not configured for the role.
+            // 2. When the read action for the role does not have access to one or more PKs.
             // When the computed primaryKeyRoute is non-empty, the location header is calculated.
             // Location is made up of three parts, the first being constructed from the Host property found in the HttpContext.Request.
             // The second part being the base route configured in the config file.

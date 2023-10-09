@@ -103,13 +103,25 @@ public class DataApiBuilderException : Exception
         /// </summary>
         DataSourceNotFound,
         /// <summary>
-        /// Unexpected failure when processing a REST Update request.
+        /// Unexpected failure when processing a REST Update - PUT request with If-Match Header.
         /// </summary>
         UnexpectedRestUpdateOperationFailure,
         /// <summary>
-        /// Unexpected failure when processing a REST Insert request.
+        /// Unexpected failure when processing a REST UpdateIncremental - PATCH request with If-Match header.
+        /// </summary>
+        UnexpectedRestUpdateIncrementalOperationFailure,
+        /// <summary>
+        /// Unexpected failure when processing a REST Insert - POST request.
         /// </summary>
         UnexpectedRestInsertOperationFailure,
+        /// <summary>
+        /// Unexpected failure when processing a REST Upsert - PUT request.
+        /// </summary>
+        UnexpectedRestUpsertOperationFailure,
+        /// <summary>
+        /// Unexpected failure when processing a REST UpsertIncremental - PATCH request.
+        /// </summary>
+        UnexpectedRestUpsertIncrementalOperationFailure,
         /// <summary>
         /// Unexpected error when determining the exposed field name for a given field.
         /// </summary>

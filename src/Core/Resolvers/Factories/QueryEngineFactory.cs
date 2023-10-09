@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -29,7 +30,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IHttpContextAccessor contextAccessor,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            ILogger<IQueryEngine> logger)
+            ILogger<IQueryEngine> logger,
+            IFusionCache cache)
         {
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
 
@@ -38,7 +40,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             if (config.SqlDataSourceUsed)
             {
                 IQueryEngine queryEngine = new SqlQueryEngine(
-                    queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider);
+                    queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider, cache);
                 _queryEngines.Add(DatabaseType.MSSQL, queryEngine);
                 _queryEngines.Add(DatabaseType.MySQL, queryEngine);
                 _queryEngines.Add(DatabaseType.PostgreSQL, queryEngine);

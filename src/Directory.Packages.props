@@ -48,5 +48,6 @@
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="1.1.1" />
     <PackageVersion Include="Verify.MsTest" Version="20.1.0" />
     <PackageVersion Include="Verify.DiffPlex" Version="2.2.1" />
+    <PackageVersion Include="ZiggyCreatures.FusionCache" Version="0.23.0" />
   </ItemGroup>
 </Project>

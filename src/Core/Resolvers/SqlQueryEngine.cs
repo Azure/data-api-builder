@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -32,6 +33,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly ILogger<IQueryEngine> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
+        private readonly IFusionCache _cache;
 
         // <summary>
         // Constructor.
@@ -43,7 +45,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
-            RuntimeConfigProvider runtimeConfigProvider)
+            RuntimeConfigProvider runtimeConfigProvider,
+            IFusionCache cache)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -52,6 +55,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _gQLFilterParser = gQLFilterParser;
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _cache = cache;
         }
 
         /// <summary>
@@ -417,15 +421,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // Open connection and execute query using _queryExecutor
             string queryString = queryBuilder.Build(structure);
-            JsonDocument? jsonDocument =
-                await queryExecutor.ExecuteQueryAsync(
+            DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
+
+            JsonElement result = await _cache.GetOrSetAsync<JsonElement>(
+                key: queryMetadata.GetHashCode().ToString(),
+                async _ => await queryExecutor.ExecuteQueryAsync(
                     sqltext: queryString,
                     parameters: structure.Parameters,
-                    dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
+                    dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
                     httpContext: _httpContextAccessor.HttpContext!,
                     args: null,
-                    dataSourceName: dataSourceName);
-            return jsonDocument;
+                    dataSourceName: dataSourceName));
+
+            byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+            JsonDocument doc = JsonDocument.Parse(jsonBytes);
+            return doc;
         }
 
         // <summary>

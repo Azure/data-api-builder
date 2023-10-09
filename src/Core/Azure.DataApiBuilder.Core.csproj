@@ -32,6 +32,7 @@
     <PackageReference Include="Polly" />
     <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
     <PackageReference Include="System.IO.Abstractions" />
+    <PackageReference Include="ZiggyCreatures.FusionCache" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">

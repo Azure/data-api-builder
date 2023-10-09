@@ -38,6 +38,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
@@ -172,6 +173,11 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQLService(services);
+            services.AddFusionCache()
+                .WithDefaultEntryOptions(new FusionCacheEntryOptions
+                {
+                    Duration = TimeSpan.FromMinutes(1)
+                });
 
             services.AddControllers();
         }

@@ -358,7 +358,7 @@ public class RuntimeConfigValidator : IConfigValidator
         // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
         if (runtimeBaseRoute is not null)
         {
-            if (runtimeConfig.IsStaticWebAppsIdentityProvider)
+            if (!runtimeConfig.IsStaticWebAppsIdentityProvider)
             {
                 throw new DataApiBuilderException(
                     message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",

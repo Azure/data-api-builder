@@ -560,10 +560,10 @@ public static class FieldFilterParser
                     throw new NotSupportedException($"Operation {name} on int type not supported.");
             }
 
-                predicates.Push(new PredicateOperand(new Predicate(
-                    new PredicateOperand(column),
-                    op,
-                    new PredicateOperand(processLiteral ? $"{processLiterals(value, null)}" : value.ToString()))
+            predicates.Push(new PredicateOperand(new Predicate(
+                new PredicateOperand(column),
+                op,
+                new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
                 ));
             }
 

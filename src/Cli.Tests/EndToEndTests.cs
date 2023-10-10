@@ -108,7 +108,7 @@ public class EndToEndTests
     [TestMethod]
     public void TestInitializingRestAndGraphQLGlobalSettings()
     {
-        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.disabled", "--graphql.path", "/graphql-api" };
+        string[] args = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql", "--rest.path", "/rest-api", "--rest.enabled", "false", "--graphql.path", "/graphql-api" };
         Program.Execute(args, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
@@ -767,5 +767,94 @@ public class EndToEndTests
             Assert.IsNotNull(runtimeConfig);
             Assert.AreEqual("/base-route", runtimeConfig.Runtime.BaseRoute);
         }
+    }
+
+    [DataTestMethod]
+    [DataRow(ApiType.REST, false, false, true, true, DisplayName = "Validate that REST endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
+    [DataRow(ApiType.REST, false, true, true, true, DisplayName = "Validate that REST endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
+    [DataRow(ApiType.REST, true, false, true, false, DisplayName = "Validate that REST endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
+    [DataRow(ApiType.REST, true, true, false, false, DisplayName = "Validate that REST endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
+    [DataRow(ApiType.REST, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for REST endpoint.")]
+    [DataRow(ApiType.GraphQL, false, false, true, true, DisplayName = "Validate that GraphQL endpoint is enabled when both enabled and disabled options are omitted from the init command.")]
+    [DataRow(ApiType.GraphQL, false, true, true, true, DisplayName = "Validate that GraphQL endpoint is enabled when enabled option is set to true and disabled option is omitted from the init command.")]
+    [DataRow(ApiType.GraphQL, true, false, true, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is omitted and disabled option is included in the init command.")]
+    [DataRow(ApiType.GraphQL, true, true, false, false, DisplayName = "Validate that GraphQL endpoint is disabled when enabled option is set to false and disabled option is included in the init command.")]
+    [DataRow(ApiType.GraphQL, true, true, true, true, true, DisplayName = "Validate that config generation fails when enabled and disabled options provide conflicting values for GraphQL endpoint.")]
+    public void TestEnabledDisabledFlagsForApis(
+        ApiType apiType,
+        bool includeDisabledFlag,
+        bool includeEnabledFlag,
+        bool enabledFlagValue,
+        bool expectedEnabledFlagValueInConfig,
+        bool isExceptionExpected = false)
+    {
+        string apiName = apiType.ToString().ToLower();
+        string disabledFlag = $"--{apiName}.disabled";
+        string enabledFlag = $"--{apiName}.enabled";
+
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--database-type", "mssql", "--connection-string", SAMPLE_TEST_CONN_STRING };
+
+        string[] enabledDisabledArgs = { };
+
+        if (includeDisabledFlag)
+        {
+            enabledDisabledArgs = enabledDisabledArgs.Append(disabledFlag).ToArray();
+        }
+
+        if (includeEnabledFlag)
+        {
+            enabledDisabledArgs = enabledDisabledArgs.Append(enabledFlag).ToArray();
+            enabledDisabledArgs = enabledDisabledArgs.Append(enabledFlagValue.ToString()).ToArray();
+        }
+
+        initArgs = initArgs.Concat(enabledDisabledArgs).ToArray();
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+        if (isExceptionExpected)
+        {
+            Assert.IsFalse(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNull(runtimeConfig);
+        }
+        else
+        {
+            Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+            Assert.IsNotNull(runtimeConfig);
+
+            if (apiType is ApiType.REST)
+            {
+                Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Rest.Enabled);
+            }
+            else
+            {
+                Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.GraphQL.Enabled);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Test to validate that whenever the option rest.request-body-strict is included in the init command,
+    /// the runtimeconfig is initialized with the appropriate value of the above option in the rest runtime section, as it is assigned in the init command.
+    /// When the above mentioned option is not included in the init command, the default behavior - that of not allowing any extraneous fields in request body, is observed.
+    /// </summary>
+    /// <param name="includeRestRequestBodyStrictFlag">Whether or not to include --rest.request-body-strict option in the init command.</param>
+    /// <param name="isRequestBodyStrict">Value of the rest.request-body-strict option in the init command.</param>
+    [DataTestMethod]
+    [DataRow(true, false, DisplayName = "dab init command specifies --rest.request-body-strict as false - REST request body allows extraneous fields.")]
+    [DataRow(true, true, DisplayName = "dab init command specifies --rest.request-body-strict as true - REST request body doesn't allow extraneous fields.")]
+    [DataRow(false, true, DisplayName = "dab init command does not include --rest.request-body-strict flag. The default behavior is followed - REST request body doesn't allow extraneous fields.")]
+    public void TestRestRequestBodyStrictMode(bool includeRestRequestBodyStrictFlag, bool isRequestBodyStrict)
+    {
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type", "mssql",
+            "--connection-string", SAMPLE_TEST_CONN_STRING};
+
+        if (includeRestRequestBodyStrictFlag)
+        {
+            string[] restRequestBodyArgs = { "--rest.request-body-strict", isRequestBodyStrict.ToString() };
+            initArgs = initArgs.Concat(restRequestBodyArgs).ToArray();
+        }
+
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.AreEqual(isRequestBodyStrict, runtimeConfig.Runtime.Rest.RequestBodyStrict);
     }
 }

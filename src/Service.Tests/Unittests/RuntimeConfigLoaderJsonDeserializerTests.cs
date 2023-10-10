@@ -5,6 +5,7 @@ using System;
 using System.Data;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
@@ -83,13 +84,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 if (replaceEnvVar)
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repValues, @"""mssql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repValues, @"""postgresql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                         "Should read the expected config");
                 }
                 else
                 {
                     Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-                        GetModifiedJsonString(repKeys, @"""@env('enumVarName')"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
+                        GetModifiedJsonString(repKeys, @"""postgresql"""), out expectedConfig, replaceEnvVar: replaceEnvVar),
                         "Should read the expected config");
                 }
 
@@ -121,7 +122,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                             ""set-session-context"": true
                                         },
                                     ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
-                                    }
+                                    },
+                                    ""entities"":{ }
                                 }";
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
         }
@@ -155,16 +157,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.ThrowsException<DataApiBuilderException>(() => JsonSerializer.Deserialize<StubJsonType>(json, options));
         }
 
+        [DataRow("\"notsupporteddb\"", "",
+            DisplayName = "Tests that a database type which will not deserialize correctly fails.")]
+        [DataRow("\"mssql\"", "\"notsupportedconnectionstring\"",
+            DisplayName = "Tests that a malformed connection string fails during post-processing.")]
         [TestMethod("Validates that JSON deserialization failures are gracefully caught.")]
-        public void TestDeserializationFailures()
+        public void TestDataSourceDeserializationFailures(string dbType, string connectionString)
         {
             string configJson = @"
 {
     ""data-source"": {
-        ""database-type"": ""notsupporteddb""
-     }
+        ""database-type"": " + dbType + @",
+        ""connection-string"": " + connectionString + @"
+    },
+    ""entities"":{ }
 }";
-            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
+            // replaceEnvVar: true is needed to make sure we do post-processing for the connection string case
+            Assert.IsFalse(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, replaceEnvVar: true));
             Assert.IsNull(deserializedConfig);
         }
 
@@ -186,6 +195,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(loader.TryLoadConfig(configFileName, out RuntimeConfig _));
         }
 
+        /// <summary>
+        /// Method to validate that FilenotFoundexception is thrown if sub-data source file is not found.
+        /// </summary>
+        [TestMethod]
+        public void TestLoadRuntimeConfigSubFilesFails()
+        {
+            string actualJson = @"{
+                                    // Link for latest draft schema.
+                                    ""$schema"":""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch-alpha/dab.draft.schema.json"",
+                                    ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                        ""options"": {
+                                        // Whether we want to send user data to the underlying database.
+                                            ""set-session-context"": true
+                                        },
+                                    ""connection-string"": ""Server=tcp:127.0.0.1,1433;Persist Security Info=False;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=False;Connection Timeout=5;""
+    
+                                    },
+                                    ""data-source-files"":[""FileNotFound.json""],
+                                    ""entities"":{ }
+                                }";
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig runtimeConfig), "Should parse the data-source-files correctly.");
+            Assert.IsTrue(runtimeConfig.ListAllDataSources().Count() == 1);
+        }
+
         #endregion Negative Tests
 
         #region Helper Functions
@@ -199,7 +233,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Environment.SetEnvironmentVariable($"'envVarName", $"_envVarValue");
             Environment.SetEnvironmentVariable($"envVarName'", $"envVarValue_");
             Environment.SetEnvironmentVariable($"'envVarName'", $"_envVarValue_");
-            Environment.SetEnvironmentVariable($"enumVarName", $"mssql");
+            Environment.SetEnvironmentVariable($"enumVarName", $"postgresql");
         }
 
         /// <summary>
@@ -208,6 +242,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// fashion.
         /// </summary>
         /// <param name="reps">Replacement strings.</param>
+        /// <param name="enumString">Replacement string to use for a test enum.</param>
         /// <returns>Json string with replacements.</returns>
         public static string GetModifiedJsonString(string[] reps, string enumString)
         {

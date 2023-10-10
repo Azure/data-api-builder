@@ -92,13 +92,33 @@ namespace Cli
             Dictionary<string, JsonElement> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
-            bool restDisabled = options.RestDisabled;
+
+            // If --rest.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            if (options.RestDisabled is true)
+            {
+                _logger.LogWarning("The option --rest.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " We recommend that you use the --rest.enabled option instead.");
+            }
+
+            // If --graphql.disabled flag is included in the init command, we log a warning to not use this flag as it will be deprecated in future versions of DAB.
+            if (options.GraphQLDisabled is true)
+            {
+                _logger.LogWarning("The option --graphql.disabled will be deprecated and support for the option will be removed in future versions of Data API builder." +
+                    " We recommend that you use the --graphql.enabled option instead.");
+            }
+
+            bool restEnabled, graphQLEnabled;
+            if (!TryDetermineIfApiIsEnabled(options.RestDisabled, options.RestEnabled, ApiType.REST, out restEnabled) ||
+                !TryDetermineIfApiIsEnabled(options.GraphQLDisabled, options.GraphQLEnabled, ApiType.GraphQL, out graphQLEnabled))
+            {
+                return false;
+            }
 
             switch (dbType)
             {
                 case DatabaseType.CosmosDB_NoSQL:
                     // If cosmosdb_nosql is specified, rest is disabled.
-                    restDisabled = true;
+                    restEnabled = false;
 
                     string? cosmosDatabase = options.CosmosNoSqlDatabase;
                     string? cosmosContainer = options.CosmosNoSqlContainer;
@@ -119,7 +139,12 @@ namespace Cli
                     // rest is not supported for cosmosdb_nosql yet.
                     if (!RestRuntimeOptions.DEFAULT_PATH.Equals(restPath))
                     {
-                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since it does not support REST yet.");
+                        _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
+                    }
+
+                    if (options.RestRequestBodyStrict is not CliBoolean.None)
+                    {
+                        _logger.LogWarning("Configuration option --rest.request-body-strict is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
                     restPath = null;
@@ -206,8 +231,8 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(!restDisabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH),
-                    GraphQL: new(!options.GraphQLDisabled, graphQLPath),
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBoolean.False ? false : true),
+                    GraphQL: new(graphQLEnabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -217,6 +242,45 @@ namespace Cli
                     BaseRoute: runtimeBaseRoute
                 ),
                 Entities: new RuntimeEntities(new Dictionary<string, Entity>()));
+
+            return true;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the api is enabled or not based on the enabled/disabled options in the dab init command.
+        /// The method also validates that there is no mismatch in semantics of enabling/disabling the REST/GraphQL API(s)
+        /// based on the values supplied in the enabled/disabled options for the API in the init command.
+        /// </summary>
+        /// <param name="apiDisabledOptionValue">Value of disabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
+        /// <param name="apiEnabledOptionValue">Value of enabled option as in the init command. If the option is omitted in the command, default value is assigned.</param>
+        /// <param name="apiType">ApiType - REST/GraphQL.</param>
+        /// <param name="isApiEnabled">Boolean value indicating whether the API endpoint is enabled or not.</param>
+        private static bool TryDetermineIfApiIsEnabled(bool apiDisabledOptionValue, CliBool apiEnabledOptionValue, ApiType apiType, out bool isApiEnabled)
+        {
+            if (!apiDisabledOptionValue)
+            {
+                isApiEnabled = apiEnabledOptionValue == CliBool.False ? false : true;
+                // This indicates that the --api.disabled option was not included in the init command.
+                // In such a case, we honor the --api.enabled option.
+                return true;
+            }
+
+            if (apiEnabledOptionValue is CliBool.None)
+            {
+                // This means that the --api.enabled option was not included in the init command.
+                isApiEnabled = !apiDisabledOptionValue;
+                return true;
+            }
+
+            // We hit this code only when both --api.enabled and --api.disabled flags are included in the init command.
+            isApiEnabled = bool.Parse(apiEnabledOptionValue.ToString());
+            if (apiDisabledOptionValue == isApiEnabled)
+            {
+                string apiName = apiType.ToString().ToLower();
+                _logger.LogError($"Config generation failed due to mismatch in the semantics of enabling {apiType} API via " +
+                    $"--{apiName}.disabled and --{apiName}.enabled options");
+                return false;
+            }
 
             return true;
         }
@@ -949,7 +1013,7 @@ namespace Cli
         /// It will use the config provided by the user, else based on the environment value
         /// it will either merge the config if base config and environmentConfig is present
         /// else it will choose a single config based on precedence (left to right) of
-        /// overrides &lt; environmentConfig &lt; defaultConfig
+        /// overrides > environmentConfig > defaultConfig
         /// Also preforms validation to check connection string is not null or empty.
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
@@ -966,14 +1030,18 @@ namespace Cli
                 return false;
             }
 
-            loader.UpdateBaseConfigFileName(runtimeConfigFile);
+            loader.UpdateConfigFilePath(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
             {
-                _logger.LogError("Failed to parse the config file: {configFile}.", runtimeConfigFile);
+                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
+            }
+            else
+            {
+                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))

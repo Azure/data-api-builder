@@ -48,12 +48,12 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
         /// <inheritdoc/>
         public override EntityRestOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.StartObject)
+            if (reader.TokenType is JsonTokenType.StartObject)
             {
                 EntityRestOptions restOptions = new(Methods: Array.Empty<SupportedHttpVerb>(), Path: null, Enabled: true);
                 while (reader.Read())
                 {
-                    if (reader.TokenType == JsonTokenType.EndObject)
+                    if (reader.TokenType is JsonTokenType.EndObject)
                     {
                         break;
                     }
@@ -66,7 +66,7 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
                         {
                             reader.Read();
 
-                            if (reader.TokenType == JsonTokenType.String || reader.TokenType == JsonTokenType.Null)
+                            if (reader.TokenType is JsonTokenType.String || reader.TokenType is JsonTokenType.Null)
                             {
                                 restOptions = restOptions with { Path = reader.DeserializeString(_replaceEnvVar) };
                                 break;
@@ -80,12 +80,12 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
                             List<SupportedHttpVerb> methods = new();
                             while (reader.Read())
                             {
-                                if (reader.TokenType == JsonTokenType.StartArray)
+                                if (reader.TokenType is JsonTokenType.StartArray)
                                 {
                                     continue;
                                 }
 
-                                if (reader.TokenType == JsonTokenType.EndArray)
+                                if (reader.TokenType is JsonTokenType.EndArray)
                                 {
                                     break;
                                 }
@@ -112,12 +112,12 @@ internal class EntityRestOptionsConverterFactory : JsonConverterFactory
                 return restOptions;
             }
 
-            if (reader.TokenType == JsonTokenType.String)
+            if (reader.TokenType is JsonTokenType.String)
             {
                 return new EntityRestOptions(Array.Empty<SupportedHttpVerb>(), reader.DeserializeString(_replaceEnvVar), true);
             }
 
-            if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.False)
+            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
             {
                 bool enabled = reader.GetBoolean();
                 return new EntityRestOptions(

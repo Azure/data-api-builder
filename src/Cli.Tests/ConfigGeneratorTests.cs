@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text;
+
 namespace Cli.Tests;
 
 /// <summary>
@@ -117,6 +119,80 @@ public class ConfigGeneratorTests
                 Times.Once
             );
         }
+    }
+
+    /// <summary>
+    /// Test to verify creation of initial config with special characters
+    /// such as [!,@,#,$,%,^,&,*, ,(,)] in connection-string or graphql api
+    /// </summary>
+    [TestMethod]
+    public void TestSpecialCharactersInConnectionString()
+    {
+        HandleConfigFileCreationAndDeletion(TEST_RUNTIME_CONFIG_FILE, configFilePresent: false);
+        InitOptions options = new(
+            databaseType: DatabaseType.MSSQL,
+            connectionString: "A!string@with#some$special%characters^to&check*proper(serialization).'",
+            cosmosNoSqlDatabase: null,
+            cosmosNoSqlContainer: null,
+            graphQLSchemaPath: null,
+            graphQLPath: "/An_",
+            setSessionContext: false,
+            hostMode: HostMode.Production,
+            corsOrigin: null,
+            authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+            config: TEST_RUNTIME_CONFIG_FILE);
+
+        StringBuilder expectedRuntimeConfigJson = new(
+        @"{" +
+            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+            @"""data-source"": {
+                    ""database-type"": ""mssql"",
+                    ""connection-string"": ""A!string@with#some$special%characters^to&check*proper(serialization).'"",
+                    ""options"":{
+                        ""set-session-context"": false
+                    }
+                },
+           ""runtime"": {
+                ""rest"": {
+                  ""enabled"": true,
+                  ""path"": ""/api"",
+                  ""request-body-strict"": true
+                  },
+                ""graphql"": {
+                  ""enabled"": true,
+                  ""path"": ""/An_"",
+                  ""allow-introspection"": true
+                  },
+                ""host"": {
+                  ""cors"": {
+                    ""origins"": [],
+                    ""allow-credentials"": false
+                        },
+                  ""authentication"": {
+                    ""provider"": ""StaticWebApps""
+                        },
+                  ""mode"": ""production""
+                  }
+              },
+              ""entities"": {}
+            }");
+
+        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace(" ", string.Empty);
+        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\r\n", string.Empty);
+        expectedRuntimeConfigJson = expectedRuntimeConfigJson.Replace("\n", string.Empty);
+
+        Assert.IsTrue(TryGenerateConfig(options, _runtimeConfigLoader!, _fileSystem!));
+
+        StringBuilder actualRuntimeConfigJson = new(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE, Encoding.Default));
+        // The order of these replacements should be identical to the ones being done with expectedRuntimeConfigJson to ensure that
+        // the replacements done are identical.
+        actualRuntimeConfigJson = actualRuntimeConfigJson.Replace(" ", string.Empty);
+        actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\r\n", string.Empty);
+        actualRuntimeConfigJson = actualRuntimeConfigJson.Replace("\n", string.Empty);
+
+        // Comparing explicit strings here since parsing these into JSON would lose
+        // the test scenario of verifying escaped chars are not written to the file system.
+        Assert.AreEqual(expectedRuntimeConfigJson.ToString(), actualRuntimeConfigJson.ToString());
     }
 
     /// <summary>

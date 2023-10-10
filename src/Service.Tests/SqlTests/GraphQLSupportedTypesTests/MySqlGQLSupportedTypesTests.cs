@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         protected override string MakeQueryOnTypeTable(List<string> columnsToQuery, int id)
@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         {
             return type switch
             {
-                GUID_TYPE => false,
+                UUID_TYPE => false,
                 DATE_TYPE => false,
                 SMALLDATETIME_TYPE => false,
                 DATETIME2_TYPE => false,

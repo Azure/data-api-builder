@@ -9,9 +9,14 @@
 
   <ItemGroup>
     <None Remove="dab-config.CosmosDb_NoSql.json" />
+    <None Remove="dab-config.json" />
     <None Remove="dab-config.MsSql.json" />
     <None Remove="dab-config.MySql.json" />
     <None Remove="dab-config.PostgreSql.json" />
+    <None Remove="Multidab-config.CosmosDb_NoSql.json" />
+    <None Remove="Multidab-config.MsSql.json" />
+    <None Remove="Multidab-config.MySql.json" />
+    <None Remove="Multidab-config.PostgreSql.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -81,6 +86,20 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
     <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="dab-config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="MultiSourceTestSchema.gql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>

@@ -26,7 +26,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestInitialize]
         public void TestFixtureSetup()
         {
-            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, 10);
@@ -887,7 +888,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestCleanup]
         public void TestFixtureTearDown()
         {
-            CosmosClient cosmosClient = _application.Services.GetService<CosmosClientProvider>().Client;
+            CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }

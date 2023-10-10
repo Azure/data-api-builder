@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -22,6 +23,7 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Product;
@@ -32,14 +34,11 @@ using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
 using Microsoft.AspNetCore.TestHost;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using MySqlConnector;
-using Npgsql;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 
@@ -504,7 +503,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 replaceEnvVar: true));
 
             string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
-            Assert.AreEqual(expectedUpdatedConnectionString, actualUpdatedConnectionString);
+
+            // SourceLink appends the commit ID to the assembly metadata. The application name is extracted from the
+            // assembly metadata. So, the connection string after appending the application name will be of the form
+            // dab_oss_1.0.0+<commit-id> or dab_hosted_1.0.0+<commit-id> depending on oss or hosted scenario respectively.
+            // So, the updated connection string is validated to check if it starts with dab_oss_1.0.0 or dab_hosted_1.0.0.
+            Assert.IsTrue(actualUpdatedConnectionString.StartsWith(expectedUpdatedConnectionString));
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
@@ -698,6 +702,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.BadRequest, postConfigOpenApiSwaggerEndpointAvailability.StatusCode);
         }
 
+        /// <summary>
+        /// Tests that sending configuration to the DAB engine post-startup will properly hydrate even with data-source-files specified.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod("Validates RuntimeConfig setup for post-configuraiton hydration with datasource-files specified.")]
+        [DataRow(CONFIGURATION_ENDPOINT)]
+        [DataRow(CONFIGURATION_ENDPOINT_V2)]
+        public async Task TestValidMultiSourceRunTimePostStartupConfigurations(string configurationEndpoint)
+        {
+            TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+            HttpClient httpClient = server.CreateClient();
+
+            RuntimeConfig config = AuthorizationHelpers.InitRuntimeConfig(
+                entityName: POST_STARTUP_CONFIG_ENTITY,
+                entitySource: POST_STARTUP_CONFIG_ENTITY_SOURCE,
+                roleName: POST_STARTUP_CONFIG_ROLE,
+                operation: EntityActionOperation.Read,
+                includedCols: new HashSet<string>() { "*" });
+
+            // Set up Configuration with DataSource files.
+            config = config with { DataSourceFiles = new DataSourceFiles(new List<String>() { "file1", "file2" }) };
+
+            JsonContent content = GetPostStartupConfigParams(MSSQL_ENVIRONMENT, config, configurationEndpoint);
+
+            HttpResponseMessage postResult = await httpClient.PostAsync(configurationEndpoint, content);
+            Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+
+            RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
+
+            Assert.IsNotNull(configProvider, "Configuration Provider shouldn't be null after setting the configuration at runtime.");
+            Assert.IsTrue(configProvider.TryGetConfig(out RuntimeConfig configuration), "TryGetConfig should return true when the config is set.");
+            Assert.IsNotNull(configuration, "Config returned should not be null.");
+
+            Assert.IsNotNull(configuration.DataSource, "The base datasource should get populated in case of late hydration of config inspite of invalid multi-db files.");
+            Assert.AreEqual(1, configuration.ListAllDataSources().Count(), "There should be only 1 datasource populated for late hydration of config with invalid multi-db files.");
+        }
+
         [TestMethod("Validates that local CosmosDB_NoSQL settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void TestLoadingLocalCosmosSettings()
         {
@@ -722,7 +763,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(expected: HttpStatusCode.OK, actual: authorizedResponse.StatusCode);
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
-            Assert.IsNotNull(cosmosClientProvider.Client);
+            Assert.IsNotNull(cosmosClientProvider.Clients);
+            Assert.IsTrue(cosmosClientProvider.Clients.Any());
         }
 
         [TestMethod("Validates that local MsSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MSSQL)]
@@ -731,20 +773,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MSSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngine));
-            Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
+            Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MSSQL), typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
-            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
+            Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.MSSQL), typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
-            Assert.IsInstanceOfType(queryBuilder, typeof(MsSqlQueryBuilder));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IAbstractQueryManagerFactory));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.MSSQL), typeof(MsSqlQueryBuilder));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.MSSQL), typeof(MsSqlQueryExecutor));
 
-            object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
-            Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<SqlConnection>));
-
-            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
-            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MsSqlMetadataProvider));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory)server.Services.GetService(typeof(IMetadataProviderFactory));
+            Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(MsSqlMetadataProvider)));
         }
 
         [TestMethod("Validates that local PostgreSql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.POSTGRESQL)]
@@ -753,20 +793,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, POSTGRESQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngine));
-            Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
+            Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.PostgreSQL), typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
-            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
+            Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.PostgreSQL), typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
-            Assert.IsInstanceOfType(queryBuilder, typeof(PostgresQueryBuilder));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IAbstractQueryManagerFactory));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.PostgreSQL), typeof(PostgresQueryBuilder));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.PostgreSQL), typeof(PostgreSqlQueryExecutor));
 
-            object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
-            Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<NpgsqlConnection>));
-
-            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
-            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(PostgreSqlMetadataProvider));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory)server.Services.GetService(typeof(IMetadataProviderFactory));
+            Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(PostgreSqlMetadataProvider)));
         }
 
         [TestMethod("Validates that local MySql settings can be loaded and the correct classes are in the service provider."), TestCategory(TestCategory.MYSQL)]
@@ -775,20 +813,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Environment.SetEnvironmentVariable(ASP_NET_CORE_ENVIRONMENT_VAR_NAME, MYSQL_ENVIRONMENT);
             TestServer server = new(Program.CreateWebHostBuilder(Array.Empty<string>()));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngine));
-            Assert.IsInstanceOfType(queryEngine, typeof(SqlQueryEngine));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
+            Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.MySQL), typeof(SqlQueryEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
-            Assert.IsInstanceOfType(mutationEngine, typeof(SqlMutationEngine));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
+            Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.MySQL), typeof(SqlMutationEngine));
 
-            object queryBuilder = server.Services.GetService(typeof(IQueryBuilder));
-            Assert.IsInstanceOfType(queryBuilder, typeof(MySqlQueryBuilder));
+            QueryManagerFactory queryManagerFactory = (QueryManagerFactory)server.Services.GetService(typeof(IAbstractQueryManagerFactory));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryBuilder(DatabaseType.MySQL), typeof(MySqlQueryBuilder));
+            Assert.IsInstanceOfType(queryManagerFactory.GetQueryExecutor(DatabaseType.MySQL), typeof(MySqlQueryExecutor));
 
-            object queryExecutor = server.Services.GetService(typeof(IQueryExecutor));
-            Assert.IsInstanceOfType(queryExecutor, typeof(QueryExecutor<MySqlConnection>));
-
-            object sqlMetadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
-            Assert.IsInstanceOfType(sqlMetadataProvider, typeof(MySqlMetadataProvider));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory)server.Services.GetService(typeof(IMetadataProviderFactory));
+            Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(MySqlMetadataProvider)));
         }
 
         [TestMethod("Validates that trying to override configs that are already set fail."), TestCategory(TestCategory.COSMOSDBNOSQL)]
@@ -1594,6 +1630,91 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Test to validate that when the property rest.request-body-strict is absent from the rest runtime section in config file, DAB runs in strict mode.
+        /// In strict mode, presence of extra fields in the request body is not permitted and leads to HTTP 400 - BadRequest error.
+        /// </summary>
+        /// <param name="includeExtraneousFieldInRequestBody">Boolean value indicating whether or not to include extraneous field in request body.</param>
+        [DataTestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        [DataRow(false, DisplayName = "Mutation operation passes when no extraneous field is included in request body and rest.request-body-strict is omitted from the rest runtime section in the config file.")]
+        [DataRow(true, DisplayName = "Mutation operation fails when an extraneous field is included in request body and rest.request-body-strict is omitted from the rest runtime section in the config file.")]
+        public async Task ValidateStrictModeAsDefaultForRestRequestBody(bool includeExtraneousFieldInRequestBody)
+        {
+            string entityJson = @"
+            {
+                ""entities"": {
+                    ""Book"": {
+                        ""source"": {
+                        ""object"": ""books"",
+                        ""type"": ""table""
+                        },
+                        ""permissions"": [
+                        {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                            {
+                                ""action"": ""*""
+                            }
+                            ]
+                        }
+                        ]
+                    }
+                }
+            }";
+
+            // The BASE_CONFIG omits the rest.request-body-strict option in the runtime section.
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
+            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Post);
+                string requestBody = @"{
+                        ""title"": ""Harry Potter and the Order of Phoenix"",
+                        ""publisher_id"": 1234";
+
+                if (includeExtraneousFieldInRequestBody)
+                {
+                    requestBody += @",
+                    ""extraField"": 12";
+                }
+
+                requestBody += "}";
+                JsonElement requestBodyElement = JsonDocument.Parse(requestBody).RootElement.Clone();
+                HttpRequestMessage request = new(httpMethod, "api/Book")
+                {
+                    Content = JsonContent.Create(requestBodyElement)
+                };
+
+                HttpResponseMessage response = await client.SendAsync(request);
+                if (includeExtraneousFieldInRequestBody)
+                {
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    // Assert that including an extraneous field in request body while operating in strict mode leads to a bad request exception. 
+                    Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+                    Assert.IsTrue(responseBody.Contains("Invalid request body. Contained unexpected fields in body: extraField"));
+                }
+                else
+                {
+                    // When no extraneous fields are included in request body, the operation executes successfully.
+                    Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+                    string locationHeader = response.Headers.Location.AbsoluteUri;
+
+                    // Delete the new record created as part of this test.
+                    HttpRequestMessage cleanupRequest = new(HttpMethod.Delete, locationHeader);
+                    await client.SendAsync(cleanupRequest);
+                }
+            }
+        }
+
+        /// <summary>
         /// Engine supports config with some views that do not have keyfields specified in the config for MsSQL.
         /// This Test validates that support. It creates a custom config with a view and no keyfields specified.
         /// It checks both Rest and GraphQL queries are tested to return Success.
@@ -2171,7 +2292,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     // exception. To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property
                     // from the token, if it's not valid, then we will throw an exception from our code before it
                     // initiating a client. Uses a valid fake JWT access token for testing purposes.
-                    RuntimeConfig overrides = new(null, new DataSource(DatabaseType.CosmosDB_NoSQL, "AccountEndpoint=https://localhost:8081/;", new()), null, null);
+                    RuntimeConfig overrides = new(
+                        Schema: null,
+                        DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, "AccountEndpoint=https://localhost:8081/;", new()),
+                        Runtime: null,
+                        Entities: new(new Dictionary<string, Entity>()));
 
                     configParams = configParams with
                     {
@@ -2209,9 +2334,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParameters GetCosmosConfigurationParameters()
         {
-            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
+            RuntimeConfig configuration = ReadCosmosConfigurationFromFile();
             return new(
-                File.ReadAllText(cosmosFile),
+                configuration.ToJson(),
                 File.ReadAllText("schema.gql"),
                 $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}",
                 AccessToken: null);
@@ -2219,18 +2344,33 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static ConfigurationPostParametersV2 GetCosmosConfigurationParametersV2()
         {
-            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
+            RuntimeConfig configuration = ReadCosmosConfigurationFromFile();
             RuntimeConfig overrides = new(
-                null,
-                new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
-                null,
-                null);
+                Schema: null,
+                DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
+                Runtime: null,
+                Entities: new(new Dictionary<string, Entity>()));
 
             return new(
-                File.ReadAllText(cosmosFile),
+                configuration.ToJson(),
                 overrides.ToJson(),
                 File.ReadAllText("schema.gql"),
                 AccessToken: null);
+        }
+
+        private static RuntimeConfig ReadCosmosConfigurationFromFile()
+        {
+            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
+
+            string configurationFileContents = File.ReadAllText(cosmosFile);
+            if (!RuntimeConfigLoader.TryParseConfig(configurationFileContents, out RuntimeConfig config))
+            {
+                throw new Exception("Failed to parse configuration file.");
+            }
+
+            // The Schema file isn't provided in the configuration file when going through the configuration endpoint so we're removing it.
+            config.DataSource.Options.Remove("Schema");
+            return config;
         }
 
         /// <summary>
@@ -2256,7 +2396,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             else if (configurationEndpoint == CONFIGURATION_ENDPOINT_V2)
             {
-                RuntimeConfig overrides = new(null, new DataSource(DatabaseType.MSSQL, connectionString, new()), null, null);
+                RuntimeConfig overrides = new(
+                    Schema: null,
+                    DataSource: new DataSource(DatabaseType.MSSQL, connectionString, new()),
+                    Runtime: null,
+                    Entities: new(new Dictionary<string, Entity>()));
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,
@@ -2394,6 +2538,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             { entityName, entity }
         };
 
+            // Adding an entity with only Authorized Access
+            Entity anotherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
+                Relationships: null,
+                Mappings: null
+                );
+            entityMap.Add("Publisher", anotherEntity);
+
             return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
@@ -2440,18 +2595,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static void ValidateCosmosDbSetup(TestServer server)
         {
-            object metadataProvider = server.Services.GetService(typeof(ISqlMetadataProvider));
-            Assert.IsInstanceOfType(metadataProvider, typeof(CosmosSqlMetadataProvider));
+            QueryEngineFactory queryEngineFactory = (QueryEngineFactory)server.Services.GetService(typeof(IQueryEngineFactory));
+            Assert.IsInstanceOfType(queryEngineFactory.GetQueryEngine(DatabaseType.CosmosDB_NoSQL), typeof(CosmosQueryEngine));
 
-            object queryEngine = server.Services.GetService(typeof(IQueryEngine));
-            Assert.IsInstanceOfType(queryEngine, typeof(CosmosQueryEngine));
+            MutationEngineFactory mutationEngineFactory = (MutationEngineFactory)server.Services.GetService(typeof(IMutationEngineFactory));
+            Assert.IsInstanceOfType(mutationEngineFactory.GetMutationEngine(DatabaseType.CosmosDB_NoSQL), typeof(CosmosMutationEngine));
 
-            object mutationEngine = server.Services.GetService(typeof(IMutationEngine));
-            Assert.IsInstanceOfType(mutationEngine, typeof(CosmosMutationEngine));
+            MetadataProviderFactory metadataProviderFactory = (MetadataProviderFactory)server.Services.GetService(typeof(IMetadataProviderFactory));
+            Assert.IsTrue(metadataProviderFactory.ListMetadataProviders().Any(x => x.GetType() == typeof(CosmosSqlMetadataProvider)));
 
             CosmosClientProvider cosmosClientProvider = server.Services.GetService(typeof(CosmosClientProvider)) as CosmosClientProvider;
             Assert.IsNotNull(cosmosClientProvider);
-            Assert.IsNotNull(cosmosClientProvider.Client);
+            Assert.IsNotNull(cosmosClientProvider.Clients);
+            Assert.IsTrue(cosmosClientProvider.Clients.Any());
         }
 
         /// <summary>

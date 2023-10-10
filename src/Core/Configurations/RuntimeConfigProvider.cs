@@ -36,9 +36,10 @@ public class RuntimeConfigProvider
     public bool IsLateConfigured { get; set; }
 
     /// <summary>
-    /// The access token representing a Managed Identity to connect to the database.
+    /// The access tokens representing a Managed Identity to connect to the database.
+    /// The key is the unique datasource name and the value is the access token.
     /// </summary>
-    public string? ManagedIdentityAccessToken { get; private set; }
+    public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
@@ -73,7 +74,7 @@ public class RuntimeConfigProvider
         {
             throw new DataApiBuilderException(
                 message: "Runtime config isn't setup.",
-                statusCode: HttpStatusCode.InternalServerError,
+                statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
@@ -116,6 +117,7 @@ public class RuntimeConfigProvider
     /// This initialization method is used when the configuration is sent to the ConfigurationController
     /// in the form of a string instead of reading the configuration from a configuration file.
     /// This method assumes the connection string is provided as part of the configuration.
+    /// Initialize the first database within the datasource list.
     /// </summary>
     /// <param name="configuration">The engine configuration.</param>
     /// <param name="schema">The GraphQL Schema. Can be left null for SQL configurations.</param>
@@ -147,15 +149,43 @@ public class RuntimeConfigProvider
             {
                 _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
             }
-        }
 
-        ManagedIdentityAccessToken = accessToken;
+            ManagedIdentityAccessToken[_runtimeConfig.GetDefaultDataSourceName()] = accessToken;
+        }
 
         bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
 
         IsLateConfigured = true;
 
         return configLoadSucceeded;
+    }
+
+    /// <summary>
+    /// Set the runtime configuration provider with the specified accessToken for the specified datasource.
+    /// This initialization method is used to set the access token for the current runtimeConfig.
+    /// As opposed to using a json input and regenerating the runtimconfig, it sets the access token for the current runtimeConfig on the provider.
+    /// </summary>
+    /// <param name="accessToken">The string representation of a managed identity access token</param>
+    /// <param name="dataSourceName">Name of the datasource for which to assign the token.</param>
+    /// <returns>true if the initialization succeeded, false otherwise.</returns>
+    public bool TrySetAccesstoken(
+        string? accessToken,
+        string dataSourceName)
+    {
+        if (_runtimeConfig is null)
+        {
+            // if runtimeConfig is not set up, throw as cannot initialize.
+            throw new DataApiBuilderException($"{nameof(RuntimeConfig)} has not been loaded.", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        // Validate that the datasource exists in the runtimeConfig and then add or update access token.
+        if (_runtimeConfig.CheckDataSourceExists(dataSourceName))
+        {
+            ManagedIdentityAccessToken[dataSourceName] = accessToken;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
@@ -180,8 +210,6 @@ public class RuntimeConfigProvider
             throw new ArgumentException($"'{nameof(jsonConfig)}' cannot be null or empty.", nameof(jsonConfig));
         }
 
-        ManagedIdentityAccessToken = accessToken;
-
         IsLateConfigured = true;
 
         if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
@@ -191,6 +219,8 @@ public class RuntimeConfigProvider
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
+            ManagedIdentityAccessToken[_runtimeConfig.GetDefaultDataSourceName()] = accessToken;
+            _runtimeConfig.UpdateDataSourceNameToDataSource(_runtimeConfig.GetDefaultDataSourceName(), _runtimeConfig.DataSource);
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -215,8 +245,13 @@ public class RuntimeConfigProvider
         return results.All(x => x);
     }
 
-    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString)
+    private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string dataSourceName = "")
     {
+        if (string.IsNullOrEmpty(dataSourceName))
+        {
+            dataSourceName = runtimeConfig.GetDefaultDataSourceName();
+        }
+
         DbConnectionStringBuilder dbConnectionStringBuilder = new()
         {
             ConnectionString = connectionString
@@ -229,10 +264,12 @@ public class RuntimeConfigProvider
 
         HyphenatedNamingPolicy namingPolicy = new();
 
+        DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
+
         Dictionary<string, JsonElement> options;
-        if (runtimeConfig.DataSource.Options is not null)
+        if (dataSource.Options is not null)
         {
-            options = new(runtimeConfig.DataSource.Options)
+            options = new(dataSource.Options)
             {
                 // push the "raw" GraphQL schema into the options to pull out later when requested
                 { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
@@ -252,13 +289,18 @@ public class RuntimeConfigProvider
             options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
         }
 
-        // Update the connection string in the parsed config with the one that was provided to the controller
-        return runtimeConfig
-            with
+        // Update the connection string in the datasource with the one that was provided to the controller
+        dataSource = dataSource with { Options = options, ConnectionString = connectionString };
+
+        if (dataSourceName == runtimeConfig.GetDefaultDataSourceName())
         {
-            DataSource = runtimeConfig.DataSource
-            with
-            { Options = options, ConnectionString = connectionString }
-        };
+            // update default db.
+            runtimeConfig = runtimeConfig with { DataSource = dataSource };
+        }
+
+        // update dictionary
+        runtimeConfig.UpdateDataSourceNameToDataSource(dataSourceName, dataSource);
+
+        return runtimeConfig;
     }
 }

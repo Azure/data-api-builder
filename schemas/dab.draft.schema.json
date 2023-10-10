@@ -118,6 +118,11 @@
         "connection-string"
       ]
     },
+    "data-source-files": {
+      "type": "array",
+      "description": "Names of runtime configuration files referencing additional databases.",
+      "default": null
+    },
     "runtime": {
       "type": "object",
       "description": "Runtime configuration settings",
@@ -133,6 +138,11 @@
             "enabled": {
               "type": "boolean",
               "description": "Allow enabling/disabling REST requests for all entities."
+            },
+            "request-body-strict": {
+              "type": "boolean",
+              "description": "Does not allow extraneous fields in request body when set to true.",
+              "default": true
             }
           }
         },

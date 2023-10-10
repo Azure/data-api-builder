@@ -48,7 +48,7 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
         /// <inheritdoc/>
         public override EntityGraphQLOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.StartObject)
+            if (reader.TokenType is JsonTokenType.StartObject)
             {
                 string singular = string.Empty;
                 string plural = string.Empty;
@@ -57,7 +57,7 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
 
                 while (reader.Read())
                 {
-                    if (reader.TokenType == JsonTokenType.EndObject)
+                    if (reader.TokenType is JsonTokenType.EndObject)
                     {
                         return new EntityGraphQLOptions(singular, plural, enabled, operation);
                     }
@@ -71,20 +71,20 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
                             enabled = reader.GetBoolean();
                             break;
                         case "type":
-                            if (reader.TokenType == JsonTokenType.String)
+                            if (reader.TokenType is JsonTokenType.String)
                             {
                                 singular = reader.DeserializeString(_replaceEnvVar) ?? string.Empty;
                             }
-                            else if (reader.TokenType == JsonTokenType.StartObject)
+                            else if (reader.TokenType is JsonTokenType.StartObject)
                             {
                                 while (reader.Read())
                                 {
-                                    if (reader.TokenType == JsonTokenType.EndObject)
+                                    if (reader.TokenType is JsonTokenType.EndObject)
                                     {
                                         break;
                                     }
 
-                                    if (reader.TokenType == JsonTokenType.PropertyName)
+                                    if (reader.TokenType is JsonTokenType.PropertyName)
                                     {
                                         string? property2 = reader.GetString();
                                         reader.Read();
@@ -124,17 +124,17 @@ internal class EntityGraphQLOptionsConverterFactory : JsonConverterFactory
                 }
             }
 
-            if (reader.TokenType == JsonTokenType.True)
+            if (reader.TokenType is JsonTokenType.True)
             {
                 return new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: true);
             }
 
-            if (reader.TokenType == JsonTokenType.False || reader.TokenType == JsonTokenType.Null)
+            if (reader.TokenType is JsonTokenType.False || reader.TokenType is JsonTokenType.Null)
             {
                 return new EntityGraphQLOptions(Singular: string.Empty, Plural: string.Empty, Enabled: false);
             }
 
-            if (reader.TokenType == JsonTokenType.String)
+            if (reader.TokenType is JsonTokenType.String)
             {
                 string? singular = reader.DeserializeString(_replaceEnvVar);
                 return new EntityGraphQLOptions(singular ?? string.Empty, string.Empty);

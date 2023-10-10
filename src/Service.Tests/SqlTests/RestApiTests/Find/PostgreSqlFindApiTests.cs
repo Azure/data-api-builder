@@ -60,12 +60,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindViewAll",
                 @"
-                    SELECT to_jsonb(subq) AS data
+                    SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
                         SELECT * FROM " + _simple_all_books + @"
-                        WHERE id = 2
                         ORDER BY id
-                        LIMIT 1
                     ) AS subq
                 "
             },
@@ -117,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
-                "FindByIdTestWithQueryStringFieldsOnView",
+                "FindByIdTestWithSelectFieldsOnView",
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
@@ -408,7 +406,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT id, book_id, content
+                        SELECT id, content
                         FROM reviews" + @"
                         WHERE id = 567 AND book_id = 1
                         ORDER BY id asc
@@ -746,7 +744,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT  ""treeId"" AS ""treeId"", ""species"" AS ""Scientific Name""
+                        SELECT ""species"" AS ""Scientific Name""
                         FROM " + _integrationMappingTable + @"
                     ) AS subq
                 "
@@ -833,6 +831,146 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         LIMIT 101
                     ) AS subq
                 "
+            },
+            {
+                "FindByIdTestWithSelectFieldsOnViewWithoutKeyFields",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT title FROM " + _simple_all_books + @"
+                        WHERE id = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithSelectFieldsWithoutKeyFieldsOnView",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT title FROM " + _simple_all_books + @"
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT categoryid, ""categoryName"" FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 1 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT categoryid, ""categoryName"" FROM " + _simple_subset_stocks + @"
+                        ORDER BY categoryid, pieceid
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT ""categoryName"" FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 1 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT ""categoryName"" FROM " + _simple_subset_stocks + @"
+                        ORDER BY categoryid, pieceid
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdWithSelectFieldsWithoutPKOnTable",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT title FROM " + _integrationTableName + @"
+                        WHERE id = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectFieldsWithoutPKOnTable",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT title FROM " + _integrationTableName + @"
+                        ORDER BY id
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT categoryid, ""categoryName"" FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectFieldsWithSomePKOnTableWithCompositePK",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT categoryid, ""categoryName"" FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        ORDER BY categoryid, pieceid
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT ""categoryName"" FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectFieldsWithoutPKOnTableWithCompositePK",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT ""categoryName"" FROM " + _Composite_NonAutoGenPK_TableName + @"        
+                        ORDER BY categoryid, pieceid
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectAndOrderbyQueryStringsOnViews",
+                 @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT categoryid, ""categoryName"" FROM " + _simple_subset_stocks + @"
+                        ORDER BY ""piecesAvailable"", categoryid, pieceid
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectAndOrderbyQueryStringsOnTables",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT id, title FROM " + _simple_all_books + @"
+                        ORDER BY publisher_id, id
+                    ) AS subq
+                "
             }
         };
 
@@ -847,7 +985,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         #endregion

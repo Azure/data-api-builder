@@ -3,7 +3,7 @@
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
-public record HostOptions(CorsOptions? Cors, AuthenticationOptions? Authentication, HostMode Mode = HostMode.Development)
+public record HostOptions(CorsOptions? Cors, AuthenticationOptions? Authentication, HostMode Mode = HostMode.Production)
 {
     /// <summary>
     /// Returns the default host Global Settings

@@ -37,7 +37,8 @@ public record RuntimeConfig
     public bool IsRequestBodyStrict =>
         Runtime is null ||
         Runtime.Rest is null ||
-        Runtime.Rest.RequestBodyStrict;
+        Runtime.Rest.RequestBodyStrict is null ||
+        Runtime.Rest.RequestBodyStrict.GetValueOrDefault();
 
     /// <summary>
     /// Retrieves the value of runtime.graphql.enabled property if present, default is true.
@@ -45,7 +46,8 @@ public record RuntimeConfig
     [JsonIgnore]
     public bool IsGraphQLEnabled => Runtime is null ||
         Runtime.GraphQL is null ||
-        Runtime.GraphQL.Enabled;
+        Runtime.GraphQL.Enabled is null ||
+        Runtime.GraphQL.Enabled.GetValueOrDefault();
 
     /// <summary>
     /// Retrieves the value of runtime.rest.enabled property if present, default is true if its not cosmosdb.
@@ -54,7 +56,8 @@ public record RuntimeConfig
     public bool IsRestEnabled =>
         (Runtime is null ||
          Runtime.Rest is null ||
-         Runtime.Rest.Enabled) &&
+         Runtime.Rest.Enabled is null ||
+         Runtime.Rest.Enabled.GetValueOrDefault()) &&
          DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
 
     /// <summary>
@@ -76,7 +79,7 @@ public record RuntimeConfig
     {
         get
         {
-            if (Runtime is null || Runtime.Rest is null)
+            if (Runtime is null || Runtime.Rest is null || Runtime.Rest.Path is null)
             {
                 return RestRuntimeOptions.DEFAULT_PATH;
             }
@@ -95,7 +98,7 @@ public record RuntimeConfig
     {
         get
         {
-            if (Runtime is null || Runtime.GraphQL is null)
+            if (Runtime is null || Runtime.GraphQL is null || Runtime.GraphQL.Path is null)
             {
                 return GraphQLRuntimeOptions.DEFAULT_PATH;
             }
@@ -116,7 +119,8 @@ public record RuntimeConfig
         {
             return Runtime is null ||
                 Runtime.GraphQL is null ||
-                Runtime.GraphQL.AllowIntrospection;
+                Runtime.GraphQL.AllowIntrospection is null ||
+                Runtime.GraphQL.AllowIntrospection.GetValueOrDefault();
         }
     }
 
@@ -315,7 +319,8 @@ public record RuntimeConfig
         return JsonSerializer.Serialize(this, jsonSerializerOptions);
     }
 
-    public bool IsDevelopmentMode() => Runtime is null || Runtime.Host is null || Runtime.Host.Mode is HostMode.Development;
+    public bool IsDevelopmentMode()
+        => Runtime is not null && Runtime.Host is not null && Runtime.Host.Mode is HostMode.Development;
 
     private void CheckDataSourceNamePresent(string dataSourceName)
     {

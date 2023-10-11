@@ -992,7 +992,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                     exceptionExpected: true,
                     expectedErrorMessage: "No Update could be performed, record not found",
                     expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateOperationFailure.ToString()
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
                 );
         }
 

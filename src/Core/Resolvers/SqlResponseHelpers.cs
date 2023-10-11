@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
@@ -229,5 +231,193 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 value = resultEnumerated
             });
         }
+
+        /// <summary>
+        /// For the given entity, constructs the primary key route
+        /// using the primary key names from metadata and their values
+        /// from the JsonElement representing the entity.
+        /// </summary>
+        /// <param name="context">RestRequestContext</param>
+        /// <param name="dbOperationResultSet">Result set from the insert/upsert operation</param>
+        /// <param name="sqlMetadataProvider">Metadataprovider for db on which to perform operation.</param>
+        /// <remarks> When one or more primary keys are not present an empty string will be returned.</remarks>
+        /// <returns>the primary key route e.g. /id/1/partition/2 where id and partition are primary keys.</returns>
+        public static string ConstructPrimaryKeyRoute(RestRequestContext context, Dictionary<string, object?> dbOperationResultSetRow, ISqlMetadataProvider sqlMetadataProvider)
+        {
+            if (context.DatabaseObject.SourceType is EntitySourceType.View)
+            {
+                return string.Empty;
+            }
+
+            string entityName = context.EntityName;
+            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
+            StringBuilder newPrimaryKeyRoute = new();
+
+            foreach (string primaryKey in sourceDefinition.PrimaryKey)
+            {
+                if (!sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? pkExposedName))
+                {
+                    return string.Empty;
+                }
+
+                newPrimaryKeyRoute.Append(pkExposedName);
+                newPrimaryKeyRoute.Append("/");
+
+                if (!dbOperationResultSetRow.ContainsKey(pkExposedName))
+                {
+                    // A primary key will not be present in the upsert/insert operation result set in the following two cases.
+                    // 1. The role does not have read action configured
+                    // 2. The read action excludes one or more primary keys
+                    // In both the cases, an empty location header will be returned eventually and so the primary key route calculation can be short circuited.
+                    return string.Empty;
+                }
+
+                // This code block is reached after the successful execution of database update/insert operations.
+                // So, it is a safe assumption that a non-null value will be present in the result set for a primary key.
+                newPrimaryKeyRoute.Append(dbOperationResultSetRow[pkExposedName]!.ToString());
+                newPrimaryKeyRoute.Append("/");
+            }
+
+            // Remove the trailing "/"
+            newPrimaryKeyRoute.Remove(newPrimaryKeyRoute.Length - 1, 1);
+
+            return newPrimaryKeyRoute.ToString();
+        }
+
+        /// <summary>
+        /// Constructs and returns a HTTP 200 Ok response.
+        /// The response is constructed using the results of an upsert database operation when database policy is not defined for the read permission.
+        /// If database policy is defined, the results of the subsequent select statement is used for constructing the response.
+        /// </summary>
+        /// <param name="resultRow">Result of the upsert database operation</param>
+        /// <param name="jsonDocument">Result of the select database operation</param>
+        /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
+        /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
+        public static OkObjectResult ConstructOkMutationResponse(
+            Dictionary<string, object?> resultRow,
+            JsonDocument? jsonDocument,
+            bool isReadPermissionConfiguredForRole,
+            bool isDatabasePolicyDefinedForReadAction)
+        {
+            // When a database policy is defined for the read action, a subsequent select query in another roundtrip to the database was executed to fetch the results.
+            // So, the response of that database query is used to construct the final response to be returned.
+            if (isDatabasePolicyDefinedForReadAction)
+            {
+                return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
+                                                  : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+            }
+
+            // When no database policy is defined for the read action, the result from the upsert database operation is
+            // used to construct the final response.
+            // When no read permission is configured for the role, or all the fields are excluded
+            // an empty response is returned.
+            return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? OkMutationResponse(resultRow)
+                                                                              : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+        }
+
+        /// <summary>
+        /// Constructs and returns a HTTP 201 Created response.
+        /// The response is constructed using results of the insert/upsert(resulting into an insert) database operation when database policy is not defined for the read permission.
+        /// If database policy is defined, the results of the subsequent select statement is used for constructing the response.
+        /// </summary>
+        /// <param name="resultRow">Reuslt of the upsert database operation</param>
+        /// <param name="jsonDocument">Result of the select database operation</param>
+        /// <param name="primaryKeyRoute">Primary key route to be used in the Location Header</param>
+        /// <param name="isReadPermissionConfiguredForRole">Indicates whether read permissions is configured for the role</param>
+        /// <param name="isDatabasePolicyDefinedForReadAction">Indicates whether database policy is configured for read action</param>
+        /// <param name="operationType">Resultant Operation type - Update, Insert, etc.</param>
+        /// <param name="baseRoute">Base Route configured in the config file</param>
+        /// <param name="httpContext">HTTP Context associated with the API request</param>
+        public static CreatedResult ConstructCreatedResultResponse(
+            Dictionary<string, object?> resultRow,
+            JsonDocument? jsonDocument,
+            string primaryKeyRoute,
+            bool isReadPermissionConfiguredForRole,
+            bool isDatabasePolicyDefinedForReadAction,
+            EntityActionOperation operationType,
+            string baseRoute,
+            HttpContext httpContext
+            )
+        {
+            string locationHeaderURL = string.Empty;
+
+            // For PUT and PATCH API requests, the users are aware of the Pks as it is required to be passed in the request URL.
+            // In case of tables with auto-gen PKs, PUT or PATCH will not result in an insert but error out. Seeing that Location Header does not provide users with
+            // any additional information, it is set as an empty string always.
+            // For POST API requests, the primary key route calculated will be an empty string in the following scenarions.
+            // 1. When read action is not configured for the role.
+            // 2. When the read action for the role does not have access to one or more PKs.
+            // When the computed primaryKeyRoute is non-empty, the location header is calculated.
+            // Location is made up of three parts, the first being constructed from the Host property found in the HttpContext.Request.
+            // The second part being the base route configured in the config file.
+            // The third part is the computed primary key route.
+            if (operationType is EntityActionOperation.Insert && !string.IsNullOrEmpty(primaryKeyRoute))
+            {
+                locationHeaderURL = UriHelper.BuildAbsolute(
+                                        scheme: httpContext.Request.Scheme,
+                                        host: httpContext.Request.Host,
+                                        pathBase: baseRoute,
+                                        path: httpContext.Request.Path);
+
+                locationHeaderURL = locationHeaderURL.EndsWith('/') ? locationHeaderURL + primaryKeyRoute : locationHeaderURL + "/" + primaryKeyRoute;
+            }
+
+            // When the database policy is defined for the read action, a select query in another roundtrip to the database was executed to fetch the results.
+            // So, the response of that database query is used to construct the final response to be returned.
+            if (isDatabasePolicyDefinedForReadAction)
+            {
+                return (jsonDocument is not null) ? new CreatedResult(location: locationHeaderURL, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
+                                                  : new CreatedResult(location: locationHeaderURL, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+            }
+
+            // When no database policy is defined for the read action, the results from the upsert database operation is
+            // used to construct the final response.
+            // When no read permission is configured for the role, or all the fields are excluded
+            // an empty response is returned.
+            return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? new CreatedResult(location: locationHeaderURL, OkMutationResponse(resultRow).Value)
+                                                                              : new CreatedResult(location: locationHeaderURL, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+        }
+
+        /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// </summary>
+        /// <param name="result">Dictionary representing the results of the client's request.</param>
+        public static OkObjectResult OkMutationResponse(Dictionary<string, object?>? result)
+        {
+            // Convert Dictionary to array of JsonElements
+            string jsonString = $"[{JsonSerializer.Serialize(result)}]";
+            JsonElement jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+
+            return new OkObjectResult(new
+            {
+                value = resultEnumerated
+            });
+        }
+
+        /// <summary>
+        /// Helper function returns an OkObjectResult with provided arguments in a
+        /// form that complies with vNext Api guidelines.
+        /// The result is converted to a JSON Array if the result is not of that type already.
+        /// </summary>
+        /// <seealso>https://github.com/microsoft/api-guidelines/blob/vNext/Guidelines.md#92-serialization</seealso>
+        /// <param name="jsonResult">Value representing the Json results of the client's request.</param>
+        public static OkObjectResult OkMutationResponse(JsonElement jsonResult)
+        {
+            if (jsonResult.ValueKind != JsonValueKind.Array)
+            {
+                string jsonString = $"[{JsonSerializer.Serialize(jsonResult)}]";
+                jsonResult = JsonSerializer.Deserialize<JsonElement>(jsonString);
+            }
+
+            IEnumerable<JsonElement> resultEnumerated = jsonResult.EnumerateArray();
+
+            return new OkObjectResult(new
+            {
+                value = resultEnumerated
+            });
+        }
+
     }
 }

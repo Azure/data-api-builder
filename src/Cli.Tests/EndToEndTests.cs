@@ -94,10 +94,10 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig.Runtime);
         Assert.IsNotNull(runtimeConfig.Runtime.Rest);
         Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
-        Assert.IsTrue(runtimeConfig.Runtime.Rest.Enabled);
+        Assert.IsTrue(runtimeConfig.IsRestEnabled);
         Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
         Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL.Path);
-        Assert.IsTrue(runtimeConfig.Runtime.GraphQL.Enabled);
+        Assert.IsTrue(runtimeConfig.IsGraphQLEnabled);
 
         HostOptions? hostGlobalSettings = runtimeConfig.Runtime?.Host;
         Assert.IsNotNull(hostGlobalSettings);
@@ -129,7 +129,7 @@ public class EndToEndTests
         Assert.AreEqual("/rest-api", runtimeConfig.Runtime!.Rest?.Path);
         Assert.IsFalse(runtimeConfig.Runtime!.Rest?.Enabled);
         Assert.AreEqual("/graphql-api", runtimeConfig.Runtime!.GraphQL?.Path);
-        Assert.IsTrue(runtimeConfig.Runtime!.GraphQL?.Enabled);
+        Assert.IsTrue(runtimeConfig.IsGraphQLEnabled);
     }
 
     /// <summary>

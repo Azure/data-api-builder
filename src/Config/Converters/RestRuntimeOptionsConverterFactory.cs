@@ -45,9 +45,9 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
         public override void Write(Utf8JsonWriter writer, RestRuntimeOptions value, JsonSerializerOptions options)
         {
             writer.WriteStartObject();
-            writer.WriteBoolean("enabled", value.Enabled);
+            writer.WriteBoolean("enabled", value.Enabled.GetValueOrDefault());
             writer.WriteString("path", value.Path);
-            writer.WriteBoolean("request-body-strict", value.RequestBodyStrict);
+            writer.WriteBoolean("request-body-strict", value.RequestBodyStrict.GetValueOrDefault());
             writer.WriteEndObject();
         }
     }

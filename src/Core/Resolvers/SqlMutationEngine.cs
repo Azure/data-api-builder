@@ -410,12 +410,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             {
                                 // Ideally this case should not happen, however may occur due to unexpected reasons,
                                 // like the DbDataReader being null. We throw an exception
-                                // which will be returned as an Unexpected InternalServerError
+                                // which will be returned as an InternalServerError with UnexpectedError substatus code.
                                 throw new DataApiBuilderException(
                                     message: "An unexpected error occurred while trying to execute the query.",
                                     statusCode: HttpStatusCode.InternalServerError,
-                                    subStatusCode: context.OperationType is EntityActionOperation.Upsert ? DataApiBuilderException.SubStatusCodes.UnexpectedRestUpsertOperationFailure
-                                                                                                         : DataApiBuilderException.SubStatusCodes.UnexpectedRestUpsertIncrementalOperationFailure);
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                             }
 
                             upsertOperationResultSetRow = upsertOperationResult.Rows.FirstOrDefault() ?? new();
@@ -515,11 +514,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     {
                                         // Ideally this case should not happen, however may occur due to unexpected reasons,
                                         // like the DbDataReader being null. We throw an exception
-                                        // which will be returned as an UnexpectedRestInsertOperationFailure
+                                        // which will be returned as an UnexpectedError.
                                         throw new DataApiBuilderException(
                                             message: "An unexpected error occurred while trying to execute the query.",
                                             statusCode: HttpStatusCode.InternalServerError,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedRestInsertOperationFailure);
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                                     }
 
                                     if (mutationResultRow.Columns.Count == 0)
@@ -537,11 +536,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     {
                                         // Ideally this case should not happen, however may occur due to unexpected reasons,
                                         // like the DbDataReader being null. We throw an exception
-                                        // which will be returned as an UnexpectedRestUpdateOperationFailure or UnexpectedRestUpdateIncrementalOperationFailure  
+                                        // which will be returned as an UnexpectedError  
                                         throw new DataApiBuilderException(message: "An unexpected error occurred while trying to execute the query.",
                                                                             statusCode: HttpStatusCode.NotFound,
-                                                                            subStatusCode: context.OperationType is EntityActionOperation.Update ? DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateOperationFailure
-                                                                                                                                                 : DataApiBuilderException.SubStatusCodes.UnexpectedRestUpdateIncrementalOperationFailure);
+                                                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                                     }
 
                                     if (mutationResultRow.Columns.Count == 0)
@@ -649,7 +647,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     throw new DataApiBuilderException(
                        message: "Insert/Upsert operation was successful but unexpected error when constructing the response",
                        statusCode: HttpStatusCode.InternalServerError,
-                       subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedErrorFindingExposedFieldName);
+                       subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 }
             }
 

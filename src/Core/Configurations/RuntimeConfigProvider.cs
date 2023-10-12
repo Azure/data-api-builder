@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -35,6 +36,8 @@ public class RuntimeConfigProvider
     /// <remarks>This is most commonly used when DAB's config is provided via the <c>ConfigurationController</c>, such as when it's a hosted service.</remarks>
     public bool IsLateConfigured { get; set; }
 
+    private ILogger<ConfigFileWatcher> _logger;
+
     /// <summary>
     /// The access tokens representing a Managed Identity to connect to the database.
     /// The key is the unique datasource name and the value is the access token.
@@ -47,9 +50,10 @@ public class RuntimeConfigProvider
 
     private RuntimeConfig? _runtimeConfig;
 
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader, ILogger<ConfigFileWatcher> logger)
     {
         ConfigLoader = runtimeConfigLoader;
+        _logger = logger;
     }
 
     /// <summary>

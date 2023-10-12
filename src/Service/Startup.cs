@@ -79,10 +79,8 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
-            services.AddSingleton(implementationFactory: (serviceProvider) =>
-            {
-                return new RuntimeConfigProvider(configLoader);
-            });
+            RuntimeConfigProvider configProvider = new(configLoader);
+            services.AddSingleton(configProvider);
             services.AddSingleton(fileSystem);
             services.AddSingleton(configLoader);
 
@@ -160,11 +158,8 @@ namespace Azure.DataApiBuilder.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
-            services.AddTransient(implementationFactory: (serviceProvider) =>
-            {
-                ConfigureAuthentication(services, serviceProvider.GetRequiredService<RuntimeConfigProvider>());
-                return string.Empty;
-            });
+            ConfigureAuthentication(services, configProvider);
+            
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>

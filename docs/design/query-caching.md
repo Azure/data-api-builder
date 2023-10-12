@@ -55,6 +55,7 @@ The goals of the created key:
   - Important to note that we can't and won't use a hashcode as the verbatim string for a cache key. Microsoft Docs remarks on default implementation of GetHashCode() say not to use a hashcode as a key to retrieve an object from a keyed collection or to store the value in a database because the value is not “permanent.” https://learn.microsoft.com/en-us/dotnet/api/system.object.gethashcode?view=net-7.0#remarks
   - If in the future we determine that we want to optimize to creating a consistently sized string to provide as a cache key, we can evaluate hashing the string generated. One example would be SHA256 hashing, however sha256 is a crypto operation and may result in a performance degradation that makes caching benefits neglible.
 
+TODO: Does collation affect the cache key?
 
 #### Value
 
@@ -163,12 +164,33 @@ GET https://localhost:<port>/api/Entity/id/?$filter=id ne 1
 GET https://localhost:<port>/api/Entity/id/?$filter=1 ne id
 ```
 - The `rest-request-strict` configuration property doesn't affect caching because the property only affects requests with a request body. GET requests validated by DAB to not have request bodies. Additionally, any extraneous properties provided in a PUT, PATCH, or POST request are ignored by DAB.
+- Honor HTTP Header `cache-control` per https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control with the following two **request** directives:
+  1. `no-cache` - get a fresh response from the database and updates DAB's cache with the fresh result.
+  1. `no-store` - do not cache the request and response. This is a no-op if an entry already exists in the cache.
 
+Mozilla docs https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#preventing_storing suggest that "the most restrictive directive should be honored" when directives conflict. When both `no-cache` and `no-store` are present, `no-store` wins.
 
-Stored procedures/ views tables? -Should cache be enabled for stored procedure entities?
-o	Some stored procedure entities can be configured as GET. But the whole point of a stored procedure is to execute business logic, and we have no way to know whether consistent data will be returned or if that data can/should be cached. It would be up to the developer to decide, which may be a reason why to make this configurable.
+## Database object compatibility
 
-Track whether result was returned from the cache
-Tell server to skip/invalidate cache entry for this request and force database retrieval?
+| Database Objec Type | Cache compatible?                                            |
+|---------------------|--------------------------------------------------------------|
+| Table               | Yes                                                          |
+| View                | Yes                                                          |
+| Stored-Procedure    | Yes, only for stored procedures which query data. See below. |
 
-- Collation? 
+Stored procure entities must have the following configuration to allow for response caching.
+
+```json
+{
+  "entityName": {
+    "rest": {
+      "methods": [
+        "GET"
+      ]
+    },
+    "graphql": {
+      "operation": "query"
+    }
+  }
+}
+```

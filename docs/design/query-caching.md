@@ -165,8 +165,8 @@ GET https://localhost:<port>/api/Entity/id/?$filter=1 ne id
 ```
 - The `rest-request-strict` configuration property doesn't affect caching because the property only affects requests with a request body. GET requests validated by DAB to not have request bodies. Additionally, any extraneous properties provided in a PUT, PATCH, or POST request are ignored by DAB.
 - Honor HTTP Header `cache-control` per https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control with the following two **request** directives:
-  1. `no-cache` - get a fresh response from the database and updates DAB's cache with the fresh result.
-  1. `no-store` - do not cache the request and response. This is a no-op if an entry already exists in the cache.
+  1. `no-cache` - Get a fresh response from the database and updates DAB's cache with the fresh result.
+  1. `no-store` - Do not cache the request or response. Do not attempt to fetch a result from the cache.
 
 Mozilla docs https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#preventing_storing suggest that "the most restrictive directive should be honored" when directives conflict. When both `no-cache` and `no-store` are present, `no-store` wins.
 

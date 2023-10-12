@@ -277,8 +277,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
                 );
 
             requestBody = @"
@@ -295,8 +295,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
                 );
 
             await SetupAndRunRestApiTest(
@@ -308,8 +308,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
                 );
         }
         #endregion Negative tests

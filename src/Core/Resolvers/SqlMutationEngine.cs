@@ -369,9 +369,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Records affected tells us that item was successfully deleted.
                 // No records affected happens for a DELETE request on nonexistent object
                 if (resultProperties is not null
-                    && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
-                    && Convert.ToInt32(value) > 0)
+                    && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value))
                 {
+                    // DbDataReader.RecordsAffected contains the number of rows changed deleted. 0 if no records were deleted.
+                    // When the flow reaches this code block and the number of records affected is 0, then it means that no failure occurred at the database layer
+                    // and that the item identified by the specified PK was not found.
+                    if (Convert.ToInt32(value) == 0)
+                    {
+                        string prettyPrintPk = "<" + string.Join(", ", context.PrimaryKeyValuePairs.Select(kv_pair => $"{kv_pair.Key}: {kv_pair.Value}")) + ">";
+
+                        throw new DataApiBuilderException(
+                            message: $"Could not find item with {prettyPrintPk}",
+                            statusCode: HttpStatusCode.NotFound,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
+                    }
+
                     return new NoContentResult();
                 }
             }
@@ -819,9 +831,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     throw new DataApiBuilderException(
-                        message: $"Could not find entity with {searchedPK}",
+                        message: $"Could not find item with {searchedPK}",
                         statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
                 }
             }
             else

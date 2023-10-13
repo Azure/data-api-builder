@@ -499,7 +499,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 AppInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
 
-                if (!AppInsightsOptions.Enabled)
+                if (AppInsightsOptions.Enabled.GetValueOrDefault())
                 {
                     _logger.LogInformation("Application Insights are disabled.");
                     return;
@@ -637,7 +637,7 @@ namespace Azure.DataApiBuilder.Service
         public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, CorsOptions corsConfig)
         {
             string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : Array.Empty<string>();
-            if (corsConfig.AllowCredentials)
+            if (corsConfig.AllowCredentials.GetValueOrDefault())
             {
                 return builder
                     .WithOrigins(Origins)

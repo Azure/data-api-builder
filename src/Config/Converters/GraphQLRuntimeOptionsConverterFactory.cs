@@ -45,9 +45,9 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
         public override void Write(Utf8JsonWriter writer, GraphQLRuntimeOptions value, JsonSerializerOptions options)
         {
             writer.WriteStartObject();
-            writer.WriteBoolean("enabled", value.Enabled);
+            writer.WriteBoolean("enabled", value.Enabled.GetValueOrDefault());
             writer.WriteString("path", value.Path);
-            writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
+            writer.WriteBoolean("allow-introspection", value.AllowIntrospection.GetValueOrDefault());
             writer.WriteEndObject();
         }
     }

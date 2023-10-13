@@ -27,7 +27,7 @@ public record HostOptions(CorsOptions? Cors, AuthenticationOptions? Authenticati
         string? audience,
         string? issuer)
     {
-        string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
+        string[]? corsOriginArray = corsOrigin is null ? Array.Empty<string>() : corsOrigin.ToArray();
         CorsOptions cors = new(Origins: corsOriginArray);
         AuthenticationOptions AuthenticationOptions;
         if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)

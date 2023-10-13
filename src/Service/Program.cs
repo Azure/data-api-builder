@@ -126,7 +126,8 @@ namespace Azure.DataApiBuilder.Service
                     builder.AddFilter(category: "Default", logLevel);
 
                     // For Sending all the ILogger logs to Application Insights
-                    if (Startup.AppInsightsOptions.Enabled && !string.IsNullOrWhiteSpace(Startup.AppInsightsOptions.ConnectionString))
+                    if (Startup.AppInsightsOptions.Enabled.GetValueOrDefault()
+                    && !string.IsNullOrWhiteSpace(Startup.AppInsightsOptions.ConnectionString))
                     {
                         builder.AddApplicationInsights(configureTelemetryConfiguration: (config) =>
                             {

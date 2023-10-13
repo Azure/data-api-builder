@@ -5,8 +5,7 @@
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /api,
-      RequestBodyStrict: true
+      Path: /api
     },
     GraphQL: {
       Enabled: true,
@@ -22,7 +21,8 @@
       },
       Authentication: {
         Provider: StaticWebApps
-      }
+      },
+      Mode: Development
     }
   },
   Entities: [

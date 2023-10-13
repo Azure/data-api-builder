@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 _mockMetadataStore.Object,
                 expectsException: true,
                 statusCode: HttpStatusCode.NotFound,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField);
         }
 
         /// <summary>
@@ -281,7 +281,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             PerformTest(findRequestContext, _mockMetadataStore.Object,
                         expectsException: true,
                         statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField);
         }
 
         /// <summary>

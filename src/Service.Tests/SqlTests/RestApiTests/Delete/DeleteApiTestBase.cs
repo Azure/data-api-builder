@@ -166,7 +166,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     exceptionExpected: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
                     expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
                 );
         }
 

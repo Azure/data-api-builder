@@ -105,7 +105,11 @@ public class DataApiBuilderException : Exception
         /// <summary>
         /// Item identified by the PK is not found in the database.
         /// </summary>
-        ItemNotFound
+        ItemNotFound,
+        /// <summary>
+        /// Invalid PK field(s) specified in the request.
+        /// </summary>
+        InvalidPrimaryKeyField
     }
 
     public HttpStatusCode StatusCode { get; }

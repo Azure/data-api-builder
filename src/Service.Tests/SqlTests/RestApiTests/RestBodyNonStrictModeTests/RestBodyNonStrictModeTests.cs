@@ -276,7 +276,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
                 expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
                 );
 
             requestBody = @"
@@ -294,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
                     expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
                 );
 
             await SetupAndRunRestApiTest(
@@ -307,7 +307,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
                     expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
                 );
         }
         #endregion Negative tests

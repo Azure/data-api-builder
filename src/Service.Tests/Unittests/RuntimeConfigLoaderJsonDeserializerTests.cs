@@ -400,13 +400,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return true;
         }
 
-        private static void VerifySerializedJson(string originalJsonWithNoOpeningBracket, RuntimeConfig config)
+        private static void VerifySerializedJson(string originalJsonWithNoOpeningBrace, RuntimeConfig config)
         {
             string serializedSchemaLink = @"{ ""$schema"": """
                 + RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK + @""",";
             JsonSerializerOptions serializationOptions = RuntimeConfigLoader.GetSerializationOptions();
 
-            string expectedJson = serializedSchemaLink + originalJsonWithNoOpeningBracket;
+            string expectedJson = serializedSchemaLink + originalJsonWithNoOpeningBrace;
             string serializedJson = config.ToJson(serializationOptions);
             Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson, serializedJson));
         }

@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             };
 
             RuntimeEntities runtimeEntities = new(entities);
-            OpenApiDocument openApiDocument = await OpenApiTestBootstrap.GenerateOpenApiDocument(
+            OpenApiDocument openApiDocument = await OpenApiTestBootstrap.GenerateOpenApiDocumentAsync(
                 runtimeEntities: runtimeEntities,
                 configFileName: CUSTOM_CONFIG,
                 databaseEnvironment: MSSQL_ENVIRONMENT);

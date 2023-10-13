@@ -45,6 +45,9 @@ namespace Azure.DataApiBuilder.Core.Services
         // Routing constant
         public const string OPENAPI_ROUTE = "openapi";
 
+        // OpenApi query parameters
+        private static readonly List<OpenApiParameter> _tableAndViewQueryParameters = CreateTableAndViewQueryParameters();
+
         // Error messages
         public const string DOCUMENT_ALREADY_GENERATED_ERROR = "OpenAPI description document already generated.";
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
@@ -285,7 +288,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // which is returned when using Enum.ToString("D").
                 // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
                 OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
-                getOperation.Parameters = CreateTableAndViewQueryParameters();
+                getOperation.Parameters = _tableAndViewQueryParameters;
                 getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                 openApiPathItemOperations.Add(OperationType.Get, getOperation);
 
@@ -318,7 +321,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // Primary key(s) are not included in the URI paths of the GET (all) and POST operations.
                 OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
-                getAllOperation.Parameters = CreateTableAndViewQueryParameters();
+                getAllOperation.Parameters = _tableAndViewQueryParameters;
                 getAllOperation.Responses.Add(
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
@@ -362,7 +365,7 @@ namespace Azure.DataApiBuilder.Core.Services
             if (configuredRestOperations[OperationType.Get])
             {
                 OpenApiOperation getOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                getOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
+                getOperation.Parameters = CreateStoredProcedureInputParameters((StoredProcedureDefinition)sourceDefinition);
                 getOperation.Responses.Add(
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(
@@ -376,7 +379,6 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // POST requests for stored procedure entities must include primary key(s) in request body.
                 OpenApiOperation postOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                postOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
                 postOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, IsRequestBodyRequired(sourceDefinition, considerPrimaryKeys: true, isStoredProcedure: true));
                 postOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
                 postOperation.Responses.Add(HttpStatusCode.Conflict.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Conflict)));
@@ -390,7 +392,6 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // PUT requests for stored procedure entities must include primary key(s) in request body.
                 OpenApiOperation putOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                putOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
                 putOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, requestBodyRequired);
                 putOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: spResponseObjectSchemaName));
                 putOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
@@ -401,7 +402,6 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // PATCH requests for stored procedure entities must include primary key(s) in request body
                 OpenApiOperation patchOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                patchOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
                 patchOperation.RequestBody = CreateOpenApiRequestBodyPayload(spRequestObjectSchemaName, requestBodyRequired);
                 patchOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: spResponseObjectSchemaName));
                 patchOperation.Responses.Add(HttpStatusCode.Created.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.Created), responseObjectSchemaName: spResponseObjectSchemaName));
@@ -411,7 +411,6 @@ namespace Azure.DataApiBuilder.Core.Services
             if (configuredRestOperations[OperationType.Delete])
             {
                 OpenApiOperation deleteOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
-                deleteOperation.Parameters = CreateStoredProcedureParameters((StoredProcedureDefinition)sourceDefinition);
                 deleteOperation.Responses.Add(HttpStatusCode.NoContent.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.NoContent)));
                 openApiPathItemOperations.Add(OperationType.Delete, deleteOperation);
             }
@@ -439,10 +438,10 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// This method creates a list of OpenApiParameter objects for the query parameters of a stored procedure.
-        /// A query parameter will be marked REQUIRED if default value is not available.
+        /// This method creates a list of OpenApiParameter objects for the input parameters of a stored procedure.
+        /// A input parameter will be marked REQUIRED if default value is not available.
         /// </summary>
-        private static List<OpenApiParameter> CreateStoredProcedureParameters(StoredProcedureDefinition spDefinition)
+        private static List<OpenApiParameter> CreateStoredProcedureInputParameters(StoredProcedureDefinition spDefinition)
         {
             List<OpenApiParameter> parameters = new();
 
@@ -451,7 +450,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 parameters.Add(
                     GetOpenApiQueryParameter(
                         name: paramKey,
-                        description: "Query parameter for stored procedure parameter",
+                        description: "Input parameter for stored procedure parameter",
                         required: !parameterDefinition.HasConfigDefault,
                         type: TypeHelper.GetJsonDataTypeFromSystemType(parameterDefinition.SystemType).ToString().ToLower()
                     )
@@ -475,7 +474,7 @@ namespace Azure.DataApiBuilder.Core.Services
             parameters.Add(
                 GetOpenApiQueryParameter(
                     name: "$select",
-                    description: "The query parameter $select allow to specify which fields must be returned.",
+                    description: "A comma separated list of fields to return in the response.",
                     required: false,
                     type: "string"
                 )
@@ -485,7 +484,7 @@ namespace Azure.DataApiBuilder.Core.Services
             parameters.Add(
                 GetOpenApiQueryParameter(
                     name: "$filter",
-                    description: "The value of the $filter option is predicate expression (an expression that returns a boolean value) using entity's fields.",
+                    description: "A predicate expression (an expression that returns a boolean value) using entity's fields.",
                     required: false,
                     type: "string"
                 )
@@ -495,7 +494,7 @@ namespace Azure.DataApiBuilder.Core.Services
             parameters.Add(
                 GetOpenApiQueryParameter(
                     name: "$orderby",
-                    description: "The value of the orderby parameter is a comma-separated list of expressions used to sort the items.",
+                    description: "A comma-separated list of expressions used to sort the items.",
                     required: false,
                     type: "string"
                 )
@@ -505,7 +504,7 @@ namespace Azure.DataApiBuilder.Core.Services
             parameters.Add(
                 GetOpenApiQueryParameter(
                     name: "$first",
-                    description: "The value of the $first option is an integer value that specifies the number of items to return.",
+                    description: "An integer value that specifies the number of items to return.",
                     required: false,
                     type: "integer"
                 )
@@ -515,7 +514,7 @@ namespace Azure.DataApiBuilder.Core.Services
             parameters.Add(
                 GetOpenApiQueryParameter(
                     name: "$after",
-                    description: "The value of the $after option is a base64 encoded string value that specifies the cursor position after which items should be returned.",
+                    description: "A base64 encoded string that specifies the cursor position after which items should be returned.",
                     required: false,
                     type: "string"
                 )

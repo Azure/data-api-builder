@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
         /// <param name="configFileName"></param>
         /// <param name="databaseEnvironment"></param>
         /// <returns>Generated OpenApiDocument</returns>
-        internal static async Task<OpenApiDocument> GenerateOpenApiDocument(
+        internal static async Task<OpenApiDocument> GenerateOpenApiDocumentAsync(
             RuntimeEntities runtimeEntities,
             string configFileName,
             string databaseEnvironment)

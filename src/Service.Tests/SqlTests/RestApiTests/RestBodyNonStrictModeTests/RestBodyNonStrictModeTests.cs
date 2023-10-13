@@ -275,8 +275,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
 
             requestBody = @"
@@ -293,8 +293,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
 
             await SetupAndRunRestApiTest(
@@ -306,8 +306,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidPrimaryKeyField.ToString()
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
         }
         #endregion Negative tests

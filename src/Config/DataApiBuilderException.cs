@@ -109,7 +109,7 @@ public class DataApiBuilderException : Exception
         /// <summary>
         /// Invalid PK field(s) specified in the request.
         /// </summary>
-        InvalidPrimaryKeyField
+        InvalidIdentifierField
     }
 
     public HttpStatusCode StatusCode { get; }

@@ -108,8 +108,8 @@ public class ParameterValidationTests
     /// <param name="entityName">The name of the entity.</param>
     /// <param name="objectName">The name of the database object.</param>
     [DataTestMethod]
-    [DataRow("CountBooks", "count_books", DisplayName = "StoredProcedure with no parameters")]
-    [DataRow("UpdateBookTitle", "update_book_title", DisplayName = "StoredProcedure with parameters")]
+    [DataRow("CountBooks", "count_books", DisplayName = "StoredProcudure with no parameters results in 0 created input query params.")]
+    [DataRow("UpdateBookTitle", "update_book_title", DisplayName = "StoredProcedure with parameters results in created input query params.")]
     public async Task ValidateInputParametersForStoredProcedures(string entityName, string objectName)
     {
         Dictionary<string, object> parameterDefaults = null;

@@ -380,235 +380,244 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string roleName = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
                 bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);
                 bool isDatabasePolicyDefinedForReadAction = false;
+                JsonDocument? selectOperationResponse = null;
 
                 if (isReadPermissionConfiguredForRole)
                 {
                     isDatabasePolicyDefinedForReadAction = !string.IsNullOrWhiteSpace(_authorizationResolver.GetDBPolicyForRequest(context.EntityName, roleName, EntityActionOperation.Read));
                 }
 
-                if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
+                try
                 {
-                    DbResultSet? upsertOperationResult;
-                    DbResultSetRow upsertOperationResultSetRow;
-                    JsonDocument? selectOperationResponse = null;
-
-                    // This variable indicates whether the upsert resulted in an update operation. If true, then the upsert resulted in an update operation.
-                    // If false, the upsert resulted in an insert operation.
-                    bool hasPerformedUpdate = false;
-
-                    try
+                    if (context.OperationType is EntityActionOperation.Upsert || context.OperationType is EntityActionOperation.UpsertIncremental)
                     {
-                        // Creating an implicit transaction
-                        using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
+                        DbResultSet? upsertOperationResult;
+                        DbResultSetRow upsertOperationResultSetRow;
+
+                        // This variable indicates whether the upsert resulted in an update operation. If true, then the upsert resulted in an update operation.
+                        // If false, the upsert resulted in an insert operation.
+                        bool hasPerformedUpdate = false;
+
+                        try
                         {
-                            upsertOperationResult = await PerformUpsertOperation(
-                                                                parameters: parameters,
-                                                                context: context,
-                                                                sqlMetadataProvider: sqlMetadataProvider);
-
-                            if (upsertOperationResult is null)
+                            // Creating an implicit transaction
+                            using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
                             {
-                                // Ideally this case should not happen, however may occur due to unexpected reasons,
-                                // like the DbDataReader being null. We throw an exception
-                                // which will be returned as an InternalServerError with UnexpectedError substatus code.
-                                throw new DataApiBuilderException(
-                                    message: "An unexpected error occurred while trying to execute the query.",
-                                    statusCode: HttpStatusCode.InternalServerError,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                            }
+                                upsertOperationResult = await PerformUpsertOperation(
+                                                                    parameters: parameters,
+                                                                    context: context,
+                                                                    sqlMetadataProvider: sqlMetadataProvider);
 
-                            upsertOperationResultSetRow = upsertOperationResult.Rows.FirstOrDefault() ?? new();
-
-                            if (upsertOperationResultSetRow.Columns.Count > 0 &&
-                                upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
-                            {
-
-                                hasPerformedUpdate = Convert.ToBoolean(isUpdateResultSetValue);
-                            }
-
-                            // The role with which the REST request is executed can have a database policy defined for the read action.
-                            // In such a case, to get the results back, a select query which honors the database policy is executed.
-                            if (isDatabasePolicyDefinedForReadAction)
-                            {
-                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName, sqlMetadataProvider);
-                                IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-                                selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                            }
-
-                            transactionScope.Complete();
-                        }
-                    }
-
-                    // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
-                    // derive from TransactionException. Hence, TransactionException acts as a catch-all.
-                    // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
-                    // a DataApiBuilderException is thrown
-                    catch (TransactionException)
-                    {
-                        throw _dabExceptionWithTransactionErrorMessage;
-                    }
-
-                    Dictionary<string, object?> resultRow = upsertOperationResultSetRow.Columns;
-
-                    // For all SQL database types, when an upsert operation results in an update operation, an entry <IsUpdateResultSet,true> is added to the result set dictionary.
-                    // For MsSQL and MySQL database types, the "IsUpdateResultSet" field is sufficient to determine whether the resultant operation was an insert or an update.
-                    // For PostgreSQL, the result set dictionary will always contain the entry <IsUpdateResultSet,true> irrespective of the upsert resulting in an insert/update operation.
-                    // PostgreSQL result sets will contain a field "___upsert_op___" that indicates whether the resultant operation was an update or an insert. So, the value present in this field
-                    // is used to determine whether the upsert resulted in an update/insert.
-                    if (sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
-                    {
-                        hasPerformedUpdate = !PostgresQueryBuilder.IsInsert(resultRow);
-                    }
-
-                    // When read permissions is configured without database policy, a subsequent select query will not be executed.
-                    // However, the read action could have include and exclude fields configured. To honor that configuration setup,
-                    // any additional fields that are present in the response are removed.
-                    if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
-                    {
-                        IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
-                        foreach (string columnInResponse in resultRow.Keys)
-                        {
-                            if (!allowedExposedColumns.Contains(columnInResponse))
-                            {
-                                resultRow.Remove(columnInResponse);
-                            }
-                        }
-                    }
-
-                    // When the upsert operation results in the creation of a new record, an HTTP 201 CreatedResult response is returned.
-                    if (!hasPerformedUpdate)
-                    {
-                        // Location Header is made up of the Base URL of the request and the primary key of the item created.
-                        // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
-                        // would not be available in the URL and needs to be appended. Since, this is a PUT or PATCH request that has resulted in the creation of
-                        // a new item, the URL already contains the primary key and hence, an empty string is passed as the primary key route.
-                        return SqlResponseHelpers.ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
-                    }
-
-                    // When the upsert operation results in the update of an existing record, an HTTP 200 OK response is returned.
-                    return SqlResponseHelpers.ConstructOkMutationResponse(resultRow, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
-                }
-                else
-                {
-                    // This code block gets executed when the operation type is one among Insert, Update or UpdateIncremental.
-                    DbResultSetRow? mutationResultRow = null;
-                    JsonDocument? selectOperationResponse = null;
-
-                    try
-                    {
-                        // Creating an implicit transaction
-                        using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
-                        {
-                            mutationResultRow =
-                                    await PerformMutationOperation(
-                                        entityName: context.EntityName,
-                                        operationType: context.OperationType,
-                                        parameters: parameters,
-                                        sqlMetadataProvider: sqlMetadataProvider);
-
-                            if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
-                            {
-                                if (context.OperationType is EntityActionOperation.Insert)
+                                if (upsertOperationResult is null)
                                 {
-                                    if (mutationResultRow is null)
-                                    {
-                                        // Ideally this case should not happen, however may occur due to unexpected reasons,
-                                        // like the DbDataReader being null. We throw an exception
-                                        // which will be returned as an UnexpectedError.
-                                        throw new DataApiBuilderException(
-                                            message: "An unexpected error occurred while trying to execute the query.",
-                                            statusCode: HttpStatusCode.InternalServerError,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                    }
-
-                                    if (mutationResultRow.Columns.Count == 0)
-                                    {
-                                        throw new DataApiBuilderException(
-                                            message: "Could not insert row with given values.",
-                                            statusCode: HttpStatusCode.Forbidden,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
-                                            );
-                                    }
+                                    // Ideally this case should not happen, however may occur due to unexpected reasons,
+                                    // like the DbDataReader being null. We throw an exception
+                                    // which will be returned as an InternalServerError with UnexpectedError substatus code.
+                                    throw new DataApiBuilderException(
+                                        message: "An unexpected error occurred while trying to execute the query.",
+                                        statusCode: HttpStatusCode.InternalServerError,
+                                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                                 }
-                                else
+
+                                upsertOperationResultSetRow = upsertOperationResult.Rows.FirstOrDefault() ?? new();
+
+                                if (upsertOperationResultSetRow.Columns.Count > 0 &&
+                                    upsertOperationResult.ResultProperties.TryGetValue(IS_UPDATE_RESULT_SET, out object? isUpdateResultSetValue))
                                 {
-                                    if (mutationResultRow is null)
-                                    {
-                                        // Ideally this case should not happen, however may occur due to unexpected reasons,
-                                        // like the DbDataReader being null. We throw an exception
-                                        // which will be returned as an UnexpectedError  
-                                        throw new DataApiBuilderException(message: "An unexpected error occurred while trying to execute the query.",
-                                                                            statusCode: HttpStatusCode.NotFound,
-                                                                            subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                                    }
 
-                                    if (mutationResultRow.Columns.Count == 0)
-                                    {
-                                        // This code block is reached when Update or UpdateIncremental operation does not successfully find the record to
-                                        // update. An exception is thrown which will be returned as a 404 NotFound response.
-                                        throw new DataApiBuilderException(message: "No Update could be performed, record not found",
-                                                                            statusCode: HttpStatusCode.NotFound,
-                                                                            subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                                    }
+                                    hasPerformedUpdate = Convert.ToBoolean(isUpdateResultSetValue);
+                                }
 
+                                // The role with which the REST request is executed can have a database policy defined for the read action.
+                                // In such a case, to get the results back, a select query which honors the database policy is executed.
+                                if (isDatabasePolicyDefinedForReadAction)
+                                {
+                                    FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName, sqlMetadataProvider);
+                                    IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
+                                    selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
+                                }
+
+                                transactionScope.Complete();
+                            }
+                        }
+
+                        // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+                        // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+                        // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
+                        // a DataApiBuilderException is thrown
+                        catch (TransactionException)
+                        {
+                            throw _dabExceptionWithTransactionErrorMessage;
+                        }
+
+                        Dictionary<string, object?> resultRow = upsertOperationResultSetRow.Columns;
+
+                        // For all SQL database types, when an upsert operation results in an update operation, an entry <IsUpdateResultSet,true> is added to the result set dictionary.
+                        // For MsSQL and MySQL database types, the "IsUpdateResultSet" field is sufficient to determine whether the resultant operation was an insert or an update.
+                        // For PostgreSQL, the result set dictionary will always contain the entry <IsUpdateResultSet,true> irrespective of the upsert resulting in an insert/update operation.
+                        // PostgreSQL result sets will contain a field "___upsert_op___" that indicates whether the resultant operation was an update or an insert. So, the value present in this field
+                        // is used to determine whether the upsert resulted in an update/insert.
+                        if (sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
+                        {
+                            hasPerformedUpdate = !PostgresQueryBuilder.IsInsert(resultRow);
+                        }
+
+                        // When read permissions is configured without database policy, a subsequent select query will not be executed.
+                        // However, the read action could have include and exclude fields configured. To honor that configuration setup,
+                        // any additional fields that are present in the response are removed.
+                        if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
+                        {
+                            IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
+                            foreach (string columnInResponse in resultRow.Keys)
+                            {
+                                if (!allowedExposedColumns.Contains(columnInResponse))
+                                {
+                                    resultRow.Remove(columnInResponse);
                                 }
                             }
-
-                            // The role with which the REST request is executed can have database policies defined for the read action.
-                            // When the database policy is defined for the read action, a select query that honors the database policy
-                            // is executed to fetch the results.
-                            if (isDatabasePolicyDefinedForReadAction)
-                            {
-                                FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow, roleName, sqlMetadataProvider);
-                                IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-                                selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                            }
-
-                            transactionScope.Complete();
                         }
-                    }
 
-                    // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
-                    // derive from TransactionException. Hence, TransactionException acts as a catch-all.
-                    // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
-                    // a DataApiBuilderException is thrown
-                    catch (TransactionException)
-                    {
-                        throw _dabExceptionWithTransactionErrorMessage;
-                    }
-
-                    // When read permission is configured without a database policy, a subsequent select query will not be executed.
-                    // So, if the read action has include/exclude fields configured, additional fields present in the response
-                    // need to be removed.
-                    if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
-                    {
-                        IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
-                        foreach (string columnInResponse in mutationResultRow!.Columns.Keys)
+                        // When the upsert operation results in the creation of a new record, an HTTP 201 CreatedResult response is returned.
+                        if (!hasPerformedUpdate)
                         {
-                            if (!allowedExposedColumns.Contains(columnInResponse))
+                            // Location Header is made up of the Base URL of the request and the primary key of the item created.
+                            // However, for PATCH and PUT requests, the primary key would be present in the request URL. For POST request, however, the primary key
+                            // would not be available in the URL and needs to be appended. Since, this is a PUT or PATCH request that has resulted in the creation of
+                            // a new item, the URL already contains the primary key and hence, an empty string is passed as the primary key route.
+                            return SqlResponseHelpers.ConstructCreatedResultResponse(resultRow, selectOperationResponse, primaryKeyRoute: string.Empty, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
+                        }
+
+                        // When the upsert operation results in the update of an existing record, an HTTP 200 OK response is returned.
+                        return SqlResponseHelpers.ConstructOkMutationResponse(resultRow, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                    }
+                    else
+                    {
+                        // This code block gets executed when the operation type is one among Insert, Update or UpdateIncremental.
+                        DbResultSetRow? mutationResultRow = null;
+
+                        try
+                        {
+                            // Creating an implicit transaction
+                            using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
                             {
-                                mutationResultRow!.Columns.Remove(columnInResponse);
+                                mutationResultRow =
+                                        await PerformMutationOperation(
+                                            entityName: context.EntityName,
+                                            operationType: context.OperationType,
+                                            parameters: parameters,
+                                            sqlMetadataProvider: sqlMetadataProvider);
+
+                                if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
+                                {
+                                    if (context.OperationType is EntityActionOperation.Insert)
+                                    {
+                                        if (mutationResultRow is null)
+                                        {
+                                            // Ideally this case should not happen, however may occur due to unexpected reasons,
+                                            // like the DbDataReader being null. We throw an exception
+                                            // which will be returned as an UnexpectedError.
+                                            throw new DataApiBuilderException(
+                                                message: "An unexpected error occurred while trying to execute the query.",
+                                                statusCode: HttpStatusCode.InternalServerError,
+                                                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                        }
+
+                                        if (mutationResultRow.Columns.Count == 0)
+                                        {
+                                            throw new DataApiBuilderException(
+                                                message: "Could not insert row with given values.",
+                                                statusCode: HttpStatusCode.Forbidden,
+                                                subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure
+                                                );
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if (mutationResultRow is null)
+                                        {
+                                            // Ideally this case should not happen, however may occur due to unexpected reasons,
+                                            // like the DbDataReader being null. We throw an exception
+                                            // which will be returned as an UnexpectedError  
+                                            throw new DataApiBuilderException(message: "An unexpected error occurred while trying to execute the query.",
+                                                                                statusCode: HttpStatusCode.NotFound,
+                                                                                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                        }
+
+                                        if (mutationResultRow.Columns.Count == 0)
+                                        {
+                                            // This code block is reached when Update or UpdateIncremental operation does not successfully find the record to
+                                            // update. An exception is thrown which will be returned as a 404 NotFound response.
+                                            throw new DataApiBuilderException(message: "No Update could be performed, record not found",
+                                                                                statusCode: HttpStatusCode.NotFound,
+                                                                                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                                        }
+
+                                    }
+                                }
+
+                                // The role with which the REST request is executed can have database policies defined for the read action.
+                                // When the database policy is defined for the read action, a select query that honors the database policy
+                                // is executed to fetch the results.
+                                if (isDatabasePolicyDefinedForReadAction)
+                                {
+                                    FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow, roleName, sqlMetadataProvider);
+                                    IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
+                                    selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
+                                }
+
+                                transactionScope.Complete();
                             }
+                        }
+
+                        // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
+                        // derive from TransactionException. Hence, TransactionException acts as a catch-all.
+                        // When an exception related to Transactions is encountered, the mutation is deemed unsuccessful and
+                        // a DataApiBuilderException is thrown
+                        catch (TransactionException)
+                        {
+                            throw _dabExceptionWithTransactionErrorMessage;
+                        }
+
+                        // When read permission is configured without a database policy, a subsequent select query will not be executed.
+                        // So, if the read action has include/exclude fields configured, additional fields present in the response
+                        // need to be removed.
+                        if (isReadPermissionConfiguredForRole && !isDatabasePolicyDefinedForReadAction)
+                        {
+                            IEnumerable<string> allowedExposedColumns = _authorizationResolver.GetAllowedExposedColumns(context.EntityName, roleName, EntityActionOperation.Read);
+                            foreach (string columnInResponse in mutationResultRow!.Columns.Keys)
+                            {
+                                if (!allowedExposedColumns.Contains(columnInResponse))
+                                {
+                                    mutationResultRow!.Columns.Remove(columnInResponse);
+                                }
+                            }
+                        }
+
+                        string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider)
+                                                                                                    : string.Empty;
+
+                        if (context.OperationType is EntityActionOperation.Insert)
+                        {
+                            // Location Header is made up of the Base URL of the request and the primary key of the item created.
+                            // For POST requests, the primary key info would not be available in the URL and needs to be appended. So, the primary key of the newly created item
+                            // which is stored in the primaryKeyRoute is used to construct the Location Header.
+                            return SqlResponseHelpers.ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
+                        }
+
+                        if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
+                        {
+                            return SqlResponseHelpers.ConstructOkMutationResponse(mutationResultRow!.Columns, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
                         }
                     }
 
-                    string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider)
-                                                                                                : string.Empty;
-
-                    if (context.OperationType is EntityActionOperation.Insert)
+                }
+                finally
+                {
+                    if (selectOperationResponse is not null)
                     {
-                        // Location Header is made up of the Base URL of the request and the primary key of the item created.
-                        // For POST requests, the primary key info would not be available in the URL and needs to be appened. So, the primary key of the newly created item
-                        // which is stored in the primaryKeyRoute is used to construct the Location Header.
-                        return SqlResponseHelpers.ConstructCreatedResultResponse(mutationResultRow!.Columns, selectOperationResponse, primaryKeyRouteForLocationHeader, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction, context.OperationType, GetBaseRouteFromConfig(_runtimeConfigProvider.GetConfig()), GetHttpContext());
-                    }
-
-                    if (context.OperationType is EntityActionOperation.Update || context.OperationType is EntityActionOperation.UpdateIncremental)
-                    {
-                        return SqlResponseHelpers.ConstructOkMutationResponse(mutationResultRow!.Columns, selectOperationResponse, isReadPermissionConfiguredForRole, isDatabasePolicyDefinedForReadAction);
+                        selectOperationResponse.Dispose();
                     }
                 }
-
             }
 
             // if we have not yet returned, record is null

@@ -299,12 +299,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             bool isReadPermissionConfiguredForRole,
             bool isDatabasePolicyDefinedForReadAction)
         {
+            JsonDocument emptyResponseJsonDocument = JsonDocument.Parse("[]");
+
             // When a database policy is defined for the read action, a subsequent select query in another roundtrip to the database was executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.
             if (isDatabasePolicyDefinedForReadAction)
             {
                 return (jsonDocument is not null) ? OkMutationResponse(jsonDocument.RootElement.Clone())
-                                                  : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+                                                  : OkMutationResponse(emptyResponseJsonDocument.RootElement.Clone());
             }
 
             // When no database policy is defined for the read action, the result from the upsert database operation is
@@ -312,7 +314,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // When no read permission is configured for the role, or all the fields are excluded
             // an empty response is returned.
             return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? OkMutationResponse(resultRow)
-                                                                              : OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone());
+                                                                              : OkMutationResponse(emptyResponseJsonDocument.RootElement.Clone());
         }
 
         /// <summary>
@@ -340,6 +342,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             )
         {
             string locationHeaderURL = string.Empty;
+            using JsonDocument emptyResponseJsonDocument = JsonDocument.Parse("[]");
 
             // For PUT and PATCH API requests, the users are aware of the Pks as it is required to be passed in the request URL.
             // In case of tables with auto-gen PKs, PUT or PATCH will not result in an insert but error out. Seeing that Location Header does not provide users with
@@ -367,7 +370,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (isDatabasePolicyDefinedForReadAction)
             {
                 return (jsonDocument is not null) ? new CreatedResult(location: locationHeaderURL, OkMutationResponse(jsonDocument.RootElement.Clone()).Value)
-                                                  : new CreatedResult(location: locationHeaderURL, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+                                                  : new CreatedResult(location: locationHeaderURL, OkMutationResponse(emptyResponseJsonDocument.RootElement.Clone()).Value);
             }
 
             // When no database policy is defined for the read action, the results from the upsert database operation is
@@ -375,7 +378,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // When no read permission is configured for the role, or all the fields are excluded
             // an empty response is returned.
             return (isReadPermissionConfiguredForRole && resultRow.Count > 0) ? new CreatedResult(location: locationHeaderURL, OkMutationResponse(resultRow).Value)
-                                                                              : new CreatedResult(location: locationHeaderURL, OkMutationResponse(JsonDocument.Parse("[]").RootElement.Clone()).Value);
+                                                                              : new CreatedResult(location: locationHeaderURL, OkMutationResponse(emptyResponseJsonDocument.RootElement.Clone()).Value);
         }
 
         /// <summary>

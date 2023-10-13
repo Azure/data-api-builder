@@ -158,9 +158,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Test with empty sub properties of runtime
             minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
-                            ""base-route"" : "",");
-            StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : ""{ }"", ""host"" : ");
-            StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : ""{ }"", ""telemetry"" : ");
+                            ""base-route"" : """",");
+            StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
+            StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
 
             string emptyRuntimeSubProps = minJsonWithHostSubProps + "{ } } }";
             TryParseAndAssertOnDefaults("{" + emptyRuntimeSubProps, out parsedConfig);
@@ -400,13 +400,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return true;
         }
 
-        private static void VerifySerializedJson(string originalJson, RuntimeConfig config)
+        private static void VerifySerializedJson(string originalJsonWithNoOpeningBracket, RuntimeConfig config)
         {
-            string serializedSchemaLink = @"{ ""@schema"": """
+            string serializedSchemaLink = @"{ ""$schema"": """
                 + RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK + @""",";
             JsonSerializerOptions serializationOptions = RuntimeConfigLoader.GetSerializationOptions();
 
-            string expectedJson = serializedSchemaLink + originalJson;
+            string expectedJson = serializedSchemaLink + originalJsonWithNoOpeningBracket;
             string serializedJson = config.ToJson(serializationOptions);
             Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson, serializedJson));
         }

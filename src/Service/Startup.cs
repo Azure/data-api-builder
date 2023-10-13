@@ -423,7 +423,7 @@ namespace Azure.DataApiBuilder.Service
                 runtimeConfig.Runtime?.Host?.Authentication is not null)
             {
                 AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
-                HostMode mode = runtimeConfig.Runtime.Host.Mode;
+                bool isDevelopmentMode = runtimeConfig.IsDevelopmentMode();
                 if (!authOptions.IsAuthenticationSimulatorEnabled() && !authOptions.IsEasyAuthAuthenticationProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -441,13 +441,15 @@ namespace Azure.DataApiBuilder.Service
                 }
                 else if (authOptions.IsEasyAuthAuthenticationProvider())
                 {
-                    EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider);
-                    bool isProductionMode = mode != HostMode.Development;
+                    EasyAuthType easyAuthType = runtimeConfig.Runtime.Host.Authentication.Provider is not null ?
+                        EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider)
+                        : EasyAuthType.StaticWebApps;
+
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
 
                     if (easyAuthType == EasyAuthType.AppService && !appServiceEnvironmentDetected)
                     {
-                        if (isProductionMode)
+                        if (!isDevelopmentMode)
                         {
                             throw new DataApiBuilderException(
                                 message: AppServiceAuthenticationInfo.APPSERVICE_PROD_MISSING_ENV_CONFIG,
@@ -463,7 +465,7 @@ namespace Azure.DataApiBuilder.Service
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
                 }
-                else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())
+                else if (isDevelopmentMode && authOptions.IsAuthenticationSimulatorEnabled())
                 {
                     services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddSimulatorAuthentication();

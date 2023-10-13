@@ -11,7 +11,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </param>
 /// <param name="Jwt">Settings enabling validation of the received JWT token.
 /// Required only when Provider is other than EasyAuth.</param>
-public record AuthenticationOptions(string Provider = nameof(EasyAuthType.StaticWebApps), JwtOptions? Jwt = null)
+public record AuthenticationOptions(string? Provider = null, JwtOptions? Jwt = null)
 {
     public const string SIMULATOR_AUTHENTICATION = "Simulator";
     public const string CLIENT_PRINCIPAL_HEADER = "X-MS-CLIENT-PRINCIPAL";
@@ -23,13 +23,15 @@ public record AuthenticationOptions(string Provider = nameof(EasyAuthType.Static
     /// EasyAuth authentication type.
     /// </summary>
     /// <returns>True if Provider is an EasyAuth type.</returns>
-    public bool IsEasyAuthAuthenticationProvider() => Enum.GetNames(typeof(EasyAuthType)).Any(x => x.Equals(Provider, StringComparison.OrdinalIgnoreCase));
+    public bool IsEasyAuthAuthenticationProvider() =>
+        Provider is null || Enum.GetNames(typeof(EasyAuthType)).Any(x => x.Equals(Provider, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Returns whether the configured Provider value matches the simulator authentication type.
     /// </summary>
     /// <returns>True when development mode should authenticate all requests.</returns>
-    public bool IsAuthenticationSimulatorEnabled() => Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
+    public bool IsAuthenticationSimulatorEnabled() => Provider is not null
+        && Provider.Equals(SIMULATOR_AUTHENTICATION, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// A shorthand method to determine whether JWT is configured for the current authentication provider.

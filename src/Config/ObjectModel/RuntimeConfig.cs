@@ -37,7 +37,7 @@ public record RuntimeConfig
     public bool IsRequestBodyStrict =>
         Runtime is null ||
         Runtime.Rest is null ||
-        Runtime.Rest.RequestBodyStrict is null ||
+        !Runtime.Rest.RequestBodyStrict.HasValue ||
         Runtime.Rest.RequestBodyStrict.GetValueOrDefault();
 
     /// <summary>
@@ -46,7 +46,7 @@ public record RuntimeConfig
     [JsonIgnore]
     public bool IsGraphQLEnabled => Runtime is null ||
         Runtime.GraphQL is null ||
-        Runtime.GraphQL.Enabled is null ||
+        !Runtime.GraphQL.Enabled.HasValue ||
         Runtime.GraphQL.Enabled.GetValueOrDefault();
 
     /// <summary>
@@ -56,7 +56,7 @@ public record RuntimeConfig
     public bool IsRestEnabled =>
         (Runtime is null ||
          Runtime.Rest is null ||
-         Runtime.Rest.Enabled is null ||
+         !Runtime.Rest.Enabled.HasValue ||
          Runtime.Rest.Enabled.GetValueOrDefault()) &&
          DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
 
@@ -69,6 +69,7 @@ public record RuntimeConfig
         Runtime is null ||
         Runtime.Host is null ||
         Runtime.Host.Authentication is null ||
+        Runtime.Host.Authentication.Provider is null ||
         EasyAuthType.StaticWebApps.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
@@ -119,7 +120,7 @@ public record RuntimeConfig
         {
             return Runtime is null ||
                 Runtime.GraphQL is null ||
-                Runtime.GraphQL.AllowIntrospection is null ||
+                !Runtime.GraphQL.AllowIntrospection.HasValue ||
                 Runtime.GraphQL.AllowIntrospection.GetValueOrDefault();
         }
     }
@@ -320,7 +321,8 @@ public record RuntimeConfig
     }
 
     public bool IsDevelopmentMode()
-        => Runtime is not null && Runtime.Host is not null && Runtime.Host.Mode is HostMode.Development;
+        => Runtime is not null && Runtime.Host is not null && Runtime.Host.Mode.HasValue
+        && Runtime.Host.Mode is HostMode.Development;
 
     private void CheckDataSourceNamePresent(string dataSourceName)
     {

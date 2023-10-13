@@ -25,12 +25,12 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
     {
         public override RestRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.True)
+            if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
             {
                 return new RestRuntimeOptions();
             }
 
-            if (reader.TokenType == JsonTokenType.Null || reader.TokenType == JsonTokenType.False)
+            if (reader.TokenType == JsonTokenType.False)
             {
                 return new RestRuntimeOptions(Enabled: false);
             }
@@ -45,9 +45,21 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
         public override void Write(Utf8JsonWriter writer, RestRuntimeOptions value, JsonSerializerOptions options)
         {
             writer.WriteStartObject();
-            writer.WriteBoolean("enabled", value.Enabled.GetValueOrDefault());
-            writer.WriteString("path", value.Path);
-            writer.WriteBoolean("request-body-strict", value.RequestBodyStrict.GetValueOrDefault());
+            if (value.Enabled.HasValue)
+            {
+                writer.WriteBoolean("enabled", value.Enabled.GetValueOrDefault());
+            }
+
+            if (value.Path is not null)
+            {
+                writer.WriteString("path", value.Path);
+            }
+
+            if (value.RequestBodyStrict.HasValue)
+            {
+                writer.WriteBoolean("request-body-strict", value.RequestBodyStrict.GetValueOrDefault());
+            }
+
             writer.WriteEndObject();
         }
     }

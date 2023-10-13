@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test to validate that optional properties
-        /// are nullable, not contain defaults on serialization
+        /// are nullable, don't contain defaults on serialization
         /// but have the effect of default values when deserialized.
         /// It starts with a minimal config and incrementally
         /// adds the optional subproperties. At each step, tests for valid deserialization and
@@ -146,23 +146,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""connection-string"": ""@env('test-connection-string')""
                                     },
                                 ""entities"": { }");
-            string serializedSchemaLink = @"{ ""@schema"": """
-                + RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK + @""",";
-            Assert.IsTrue(TryParseAndAssertOnDefaults("{" + minJson + "}", out RuntimeConfig parsedConfig));
 
-            string expectedJson = serializedSchemaLink + minJson + "}";
-            JsonSerializerOptions serializationOptions = RuntimeConfigLoader.GetSerializationOptions();
-            string serializedJson = parsedConfig.ToJson(serializationOptions);
-            Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson, serializedJson));
+            TryParseAndAssertOnDefaults("{" + minJson + "}", out RuntimeConfig parsedConfig);
+            VerifySerializedJson(minJson + "}", parsedConfig);
 
             // Test with an empty runtime property
             minJson.Append(@", ""runtime"": ");
             string emptyRuntime = minJson + "{ }}";
             TryParseAndAssertOnDefaults("{" + emptyRuntime, out parsedConfig);
-
-            expectedJson = serializedSchemaLink + emptyRuntime;
-            serializedJson = parsedConfig.ToJson(serializationOptions);
-            Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson, serializedJson));
+            VerifySerializedJson(emptyRuntime, parsedConfig);
 
             // Test with empty sub properties of runtime
             minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
@@ -172,29 +164,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             string emptyRuntimeSubProps = minJsonWithHostSubProps + "{ } } }";
             TryParseAndAssertOnDefaults("{" + emptyRuntimeSubProps, out parsedConfig);
-
-            expectedJson = serializedSchemaLink + emptyRuntimeSubProps;
-            serializedJson = parsedConfig.ToJson(serializationOptions);
-            Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson, serializedJson));
+            VerifySerializedJson(emptyRuntimeSubProps, parsedConfig);
 
             // Test with empty host sub-properties
             minJsonWithHostSubProps.Append(@"{ ""cors"": { }, ""authentication"": { } } }");
             string emptyHostSubProps = minJsonWithHostSubProps + "}";
             TryParseAndAssertOnDefaults("{" + emptyHostSubProps, out parsedConfig);
-
-            expectedJson = serializedSchemaLink + emptyHostSubProps;
-            serializedJson = parsedConfig.ToJson(serializationOptions);
-            Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson, serializedJson));
+            VerifySerializedJson(emptyHostSubProps, parsedConfig);
 
             // Test with empty telemetry sub-properties
             minJsonWithTelemetrySubProps.Append(@"{ ""application-insights"": { } } }");
 
             string emptyTelemetrySubProps = minJsonWithTelemetrySubProps + "}";
             TryParseAndAssertOnDefaults("{" + emptyTelemetrySubProps, out parsedConfig);
-
-            expectedJson = serializedSchemaLink + emptyTelemetrySubProps;
-            serializedJson = parsedConfig.ToJson(serializationOptions);
-            Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson, serializedJson));
+            VerifySerializedJson(emptyTelemetrySubProps, parsedConfig);
         }
 
         #endregion Positive Tests
@@ -415,6 +398,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
             Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);
             return true;
+        }
+
+        private static void VerifySerializedJson(string originalJson, RuntimeConfig config)
+        {
+            string serializedSchemaLink = @"{ ""@schema"": """
+                + RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK + @""",";
+            JsonSerializerOptions serializationOptions = RuntimeConfigLoader.GetSerializationOptions();
+
+            string expectedJson = serializedSchemaLink + originalJson;
+            string serializedJson = config.ToJson(serializationOptions);
+            Assert.IsTrue(SqlTestHelper.JsonStringsDeepEqual(expectedJson, serializedJson));
         }
 
         #endregion Helper Functions

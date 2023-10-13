@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             bool isReadPermissionConfiguredForRole,
             bool isDatabasePolicyDefinedForReadAction)
         {
-            JsonDocument emptyResponseJsonDocument = JsonDocument.Parse("[]");
+            using JsonDocument emptyResponseJsonDocument = JsonDocument.Parse("[]");
 
             // When a database policy is defined for the read action, a subsequent select query in another roundtrip to the database was executed to fetch the results.
             // So, the response of that database query is used to construct the final response to be returned.

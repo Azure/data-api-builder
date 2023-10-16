@@ -164,9 +164,24 @@ GET https://localhost:<port>/api/Entity/id/?$filter=id ne 1
 GET https://localhost:<port>/api/Entity/id/?$filter=1 ne id
 ```
 - The `rest-request-strict` configuration property doesn't affect caching because the property only affects requests with a request body. GET requests validated by DAB to not have request bodies. Additionally, any extraneous properties provided in a PUT, PATCH, or POST request are ignored by DAB.
+
+#### `cache-control` HTTP header behavior
+
+The `cache-control`` header is defined as: 
+
+> The Cache-Control HTTP header field holds directives (instructions) — in both requests and responses — that control caching in browsers and shared caches (e.g. Proxies, CDNs). [developers.mozilla.org](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
+
+This document's caching design applies to Data API builder at the server level and not how caching is handled at the browser or CDN level. Data API builder's behavior centers around user-defined authorization to limit the scope of data returned by the API. By definition, authenticated and subsequently authorized requests will all contain the `Authorization` HTTP header whose contents consist of the authenticated user's access token. In other words, responses are generated for specific logged-in users which per [RFC9111 - HTTP Caching](https://www.rfc-editor.org/rfc/rfc9111) states the following restriction:
+
+> A shared cache MUST NOT use a cached response to a request with an Authorization header field (Section 11.6.2 of [HTTP]) to satisfy any subsequent request unless the response contains a Cache-Control field with a response directive (Section 5.2.2) that allows it to be stored by a shared cache, and the cache conforms to the requirements of that directive for that response. [Storing Responses to Authenticated Requests](https://www.rfc-editor.org/rfc/rfc9111#name-storing-responses-to-authen)
+
+Due to how cache keys and values are created in the scope of this document, caching Data API builder responses in CDNs and browsers is not in scope. This means that `cache-control` **response** directives are not in scope. While the spec does state that the server can return `cache-control` if desired, DAB performs authentication and authorization on requests prior to accessing the in-memory cache. That same level of validation can't occur in the browser or CDN headers for security purposes. We can validate that ASP.NET core returns `private` or `no-store` as the `cache-control` header value.
+
 - Honor HTTP Header `cache-control` per https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control with the following two **request** directives:
   1. `no-cache` - Get a fresh response from the database and updates DAB's cache with the fresh result.
   1. `no-store` - Do not cache the request or response. Do not attempt to fetch a result from the cache.
+
+Note that `cache-control` **request** directives will be ignored by browser and CDN caches when an `Authorization` header is included in the request. 
 
 Mozilla docs https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#preventing_storing suggest that "the most restrictive directive should be honored" when directives conflict. When both `no-cache` and `no-store` are present, `no-store` wins.
 

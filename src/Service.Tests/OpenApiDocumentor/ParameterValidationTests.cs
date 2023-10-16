@@ -160,10 +160,18 @@ public class ParameterValidationTests
         }
     }
 
+    /// <summary>
+    /// Test to validate that the custom header parameters are present for each of the operation irrespective of the operation and the type
+    /// of the entity.
+    /// </summary>
+    /// <param name="entityName">Name of the entity.</param>
+    /// <param name="objectName">Name of the database object backing the entity.</param>
+    /// <param name="entitySourceType">Sourcetype of the entity.</param>
+    /// <returns></returns>
     [DataTestMethod]
-    [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Assert custom header presence in header parameters for table.")]
-    [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "Assert custom header presence in header parameters for view.")]
-    [DataRow("UpdateBookTitle", "update_book_title", EntitySourceType.StoredProcedure, DisplayName = "Assert custom header presence in header parameters for stored procedure.")]
+    [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Validate custom header presence in header parameters for table.")]
+    [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "Validate custom header presence in header parameters for view.")]
+    [DataRow("UpdateBookTitle", "update_book_title", EntitySourceType.StoredProcedure, DisplayName = "Validate custom header presence in header parameters for stored procedure.")]
     public async Task ValidateHeaderParametersForEntity(string entityName, string objectName, EntitySourceType entitySourceType)
     {
         EntitySource entitySource = new(Object: objectName, entitySourceType, null, null);
@@ -173,8 +181,19 @@ public class ParameterValidationTests
         {
             foreach ((OperationType operationType, OpenApiOperation operation) in pathItem.Operations)
             {
-                Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Header && "Authorization".Equals(param.Name) && JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type)));
-                Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Header &&  AuthorizationResolver.CLIENT_ROLE_HEADER.Equals(param.Name) && JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type)));
+                // Assert presence of Authorization header and the expected parameter properties for the header parameter.
+                Assert.IsTrue(operation.Parameters.Any(
+                    param => param.In is ParameterLocation.Header &&
+                    "Authorization".Equals(param.Name) &&
+                    JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type) &&
+                    param.Required is false));
+
+                // Assert presence of X-MS-API-ROLE header and the expected parameter properties for the header parameter.
+                Assert.IsTrue(operation.Parameters.Any(
+                    param => param.In is ParameterLocation.Header &&
+                    AuthorizationResolver.CLIENT_ROLE_HEADER.Equals(param.Name) &&
+                    JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type) &&
+                    param.Required is false));
             }
         }
     }

@@ -47,6 +47,9 @@ namespace Azure.DataApiBuilder.Core.Services
         // Routing constant
         public const string OPENAPI_ROUTE = "openapi";
 
+        // OpenApi query parameters
+        private static readonly List<OpenApiParameter> _tableAndViewQueryParameters = CreateTableAndViewQueryParameters();
+
         // Error messages
         public const string DOCUMENT_ALREADY_GENERATED_ERROR = "OpenAPI description document already generated.";
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
@@ -287,6 +290,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // which is returned when using Enum.ToString("D").
                 // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
                 OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
+                AddQueryParameters(getOperation.Parameters);
                 getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                 openApiPathItemOperations.Add(OperationType.Get, getOperation);
 
@@ -319,6 +323,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // Primary key(s) are not included in the URI paths of the GET (all) and POST operations.
                 OpenApiOperation getAllOperation = CreateBaseOperation(description: GETALL_DESCRIPTION, tags: tags);
+                AddQueryParameters(getAllOperation.Parameters);
                 getAllOperation.Responses.Add(
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName, includeNextLink: true));
@@ -337,6 +342,18 @@ namespace Azure.DataApiBuilder.Core.Services
                 openApiPathItemOperations.Add(OperationType.Post, postOperation);
 
                 return openApiPathItemOperations;
+            }
+        }
+
+        /// <summary>
+        /// Helper method to add query parameters like $select, $first, $orderby etc. to get,getAll operations for tables/views.
+        /// </summary>
+        /// <param name="parameters">List of parameters for the operation.</param>
+        private static void AddQueryParameters(IList<OpenApiParameter> parameters)
+        {
+            foreach(OpenApiParameter openApiParameter in _tableAndViewQueryParameters)
+            {
+                parameters.Add(openApiParameter);
             }
         }
 
@@ -362,6 +379,7 @@ namespace Azure.DataApiBuilder.Core.Services
             if (configuredRestOperations[OperationType.Get])
             {
                 OpenApiOperation getOperation = CreateBaseOperation(description: SP_EXECUTE_DESCRIPTION, tags: tags);
+                AddStoredProcedureInputParameters(getOperation, (StoredProcedureDefinition)sourceDefinition);
                 getOperation.Responses.Add(
                     HttpStatusCode.OK.ToString("D"),
                     CreateOpenApiResponse(
@@ -433,6 +451,102 @@ namespace Azure.DataApiBuilder.Core.Services
             // Add custom headers for operation.
             AddCustomHeadersToOperation(operation);
             return operation;
+        }
+
+        /// <summary>
+        /// This adds a list of OpenApiParameter objects for the input parameters of a stored procedure.
+        /// A input parameter will be marked REQUIRED if default value is not available.
+        /// </summary>
+        private static void AddStoredProcedureInputParameters(OpenApiOperation operation, StoredProcedureDefinition spDefinition)
+        {
+            foreach ((string paramKey, ParameterDefinition parameterDefinition) in spDefinition.Parameters)
+            {
+                operation.Parameters.Add(
+                    GetOpenApiQueryParameter(
+                        name: paramKey,
+                        description: "Input parameter for stored procedure parameter",
+                        required: !parameterDefinition.HasConfigDefault,
+                        type: TypeHelper.GetJsonDataTypeFromSystemType(parameterDefinition.SystemType).ToString().ToLower()
+                    )
+                );
+            }
+        }
+
+        /// <summary>
+        /// Creates a list of OpenAPI parameters for querying tables and views.
+        /// The query parameters include $select, $filter, $orderby, $first, and $after, which allow the user to specify which fields to return,
+        /// filter the results based on a predicate expression, sort the results, and paginate the results.
+        /// </summary>
+        /// <returns>A list of OpenAPI parameters.</returns>
+        private static List<OpenApiParameter> CreateTableAndViewQueryParameters()
+        {
+            List<OpenApiParameter> parameters = new()
+            {
+                // Add $select query parameter
+                GetOpenApiQueryParameter(
+                    name: "$select",
+                    description: "A comma separated list of fields to return in the response.",
+                    required: false,
+                    type: "string"
+                ),
+
+                // Add $filter query parameter
+                GetOpenApiQueryParameter(
+                    name: "$filter",
+                    description: "A predicate expression (an expression that returns a boolean value) using entity's fields.",
+                    required: false,
+                    type: "string"
+                ),
+
+                // Add $orderby query parameter
+                GetOpenApiQueryParameter(
+                    name: "$orderby",
+                    description: "A comma-separated list of expressions used to sort the items.",
+                    required: false,
+                    type: "string"
+                ),
+
+                // Add $first query parameter
+                GetOpenApiQueryParameter(
+                    name: "$first",
+                    description: "An integer value that specifies the number of items to return.",
+                    required: false,
+                    type: "integer"
+                ),
+
+                // Add $after query parameter
+                GetOpenApiQueryParameter(
+                    name: "$after",
+                    description: "A base64 encoded string that specifies the cursor position after which items should be returned.",
+                    required: false,
+                    type: "string"
+                )
+            };
+
+            return parameters;
+        }
+
+        /// <summary>
+        /// Creates a new OpenAPI query parameter with the specified name, description, required flag, and data type.
+        /// </summary>
+        /// <param name="name">The name of the query parameter.</param>
+        /// <param name="description">The description of the query parameter.</param>
+        /// <param name="required">A flag indicating whether the query parameter is required.</param>
+        /// <param name="type">The data type of the query parameter.</param>
+        /// <returns>A new OpenAPI query parameter.</returns>
+        private static OpenApiParameter GetOpenApiQueryParameter(string name, string description, bool required, string type)
+        {
+            return new OpenApiParameter
+            {
+                Name = name,
+                In = ParameterLocation.Query,
+                Description = description,
+                Required = required,
+                Schema = new OpenApiSchema
+                {
+                    Type = type
+                }
+            };
         }
 
         /// <summary>

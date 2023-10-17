@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string path = UriHelper.GetEncodedUrl(httpContext!.Request).Split('?')[0];
 
             // If the base route is not empty, we need to insert it into the URI before the rest path.
-            string? baseRoute = runtimeConfig.Runtime.BaseRoute;
+            string? baseRoute = runtimeConfig.Runtime?.BaseRoute;
             if (!string.IsNullOrWhiteSpace(baseRoute))
             {
                 HttpRequest request = httpContext!.Request;

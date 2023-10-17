@@ -92,12 +92,6 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
-                return loggerFactory.CreateLogger<ConfigFileWatcher>();
-            });
-
-            services.AddSingleton(implementationFactory: (serviceProvider) =>
-            {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<RuntimeConfigValidator>();
             });
             services.AddSingleton<RuntimeConfigValidator>();

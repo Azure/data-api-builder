@@ -36,8 +36,6 @@ public class RuntimeConfigProvider
     /// <remarks>This is most commonly used when DAB's config is provided via the <c>ConfigurationController</c>, such as when it's a hosted service.</remarks>
     public bool IsLateConfigured { get; set; }
 
-    private ILogger<ConfigFileWatcher> _logger;
-
     /// <summary>
     /// The access tokens representing a Managed Identity to connect to the database.
     /// The key is the unique datasource name and the value is the access token.
@@ -50,10 +48,9 @@ public class RuntimeConfigProvider
 
     private RuntimeConfig? _runtimeConfig;
 
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader, ILogger<ConfigFileWatcher> logger)
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
         ConfigLoader = runtimeConfigLoader;
-        _logger = logger;
     }
 
     /// <summary>
@@ -88,6 +85,12 @@ public class RuntimeConfigProvider
         return _runtimeConfig;
     }
 
+    /// <summary>
+    /// Checks if we are in a local development scenario, and if so, instantiate
+    /// the config file watcher with a reference to this RuntimeConfigProvider. Otherwise
+    /// we will call the no argument constructor, which means no file will actually be
+    /// watched.
+    /// </summary>
     private void CheckForAndSetupConfigFileWatcher()
     {
         if (ConfigFileWatcher is null)

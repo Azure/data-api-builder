@@ -209,16 +209,25 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Dispatch execution of a request context to the query engine
         /// The two overloads to ExecuteAsync take FindRequestContext and StoredProcedureRequestContext
         /// </summary>
-        private Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
+        private async Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
         {
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
             string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
-            return context switch
+
+            if (context is FindRequestContext findRequestContext)
             {
-                FindRequestContext => queryEngine.ExecuteAsync((FindRequestContext)context),
-                StoredProcedureRequestContext => queryEngine.ExecuteAsync((StoredProcedureRequestContext)context, defaultDataSourceName),
-                _ => throw new NotSupportedException("This operation is not yet supported."),
-            };
+                using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
+                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
+                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
+            }
+            else if (context is StoredProcedureRequestContext storedProcedureRequestContext)
+            {
+                return await queryEngine.ExecuteAsync(storedProcedureRequestContext, defaultDataSourceName);
+            }
+            else
+            {
+                throw new NotSupportedException("This operation is not yet supported.");
+            }
         }
 
         /// <summary>

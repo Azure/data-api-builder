@@ -133,8 +133,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// are nullable, don't contain defaults on serialization
         /// but have the effect of default values when deserialized.
         /// It starts with a minimal config and incrementally
-        /// adds the optional subproperties. At each step, tests for valid deserialization and
-        /// serialization back to the original config string.
+        /// adds the optional subproperties. At each step, tests for valid deserialization.
         [TestMethod]
         public void TestNullableOptionalProps()
         {

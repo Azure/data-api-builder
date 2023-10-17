@@ -1824,8 +1824,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "The request is invalid since the primary keys: spores requested were not found in the entity definition.",
-                expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: "EntityNotFound"
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
         }
 

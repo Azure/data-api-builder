@@ -270,6 +270,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         AND publisher_id = 1234
                     ) AS subq
                 "
+            },
+            {
+                "PutOne_Update_WithExcludeFields_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Update_WithNoReadAction_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "PutInsert_NoReadTest",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "Put_Insert_WithExcludeFieldsTest",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'piecesAvailable',piecesAvailable,
+                                        'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND categoryName ='SciFi' AND piecesAvailable = 4
+                        AND piecesRequired = 4
+                    ) AS subq
+                "
             }
         };
 

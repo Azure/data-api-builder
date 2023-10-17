@@ -165,13 +165,20 @@ GET https://localhost:<port>/api/Entity/id/?$filter=1 ne id
 ```
 - The `rest-request-strict` configuration property doesn't affect caching because the property only affects requests with a request body. GET requests validated by DAB to not have request bodies. Additionally, any extraneous properties provided in a PUT, PATCH, or POST request are ignored by DAB.
 
-#### `cache-control` HTTP header behavior -- SEE NOTE about applicability
+#### `cache-control` HTTP header behavior
 
-**NOTE:** This section describes the expected behavior of HTTP caching mechanisms. HTTP caching compatibility may need to be considered in a different workstream because this server specific implementation of caching is specific to how DAB decides whether to connect with a connected database and not how caches upstream from the DAB engine react to `cache-control` HTTP headers. Upstream caches consist of upstream server response caching middleware, CDN/gateway caches, and browser caches.
+##### Disclaimer about applicability to this design doc
+
+**NOTE:** This section describes the expected behavior of HTTP caching mechanisms. HTTP caching compatibility may need to be considered in a different workstream because this document's server specific cache design describes how DAB decides when to send requests to a connected database. This doc's caching design does not describe how caches upstream from the DAB engine react to `cache-control` HTTP headers. Upstream caches consist of upstream server response caching middleware, CDN/gateway caches, and browser caches. HTTP cache-control compatibility would align with the implementation of ETag usage for the REST endpoint which allows clients to specify the freshness of the records they are expecting and directing how a cache should or shouldn't operate. 
 
 For additional context see this document by Mark Nottingham titled "Caching Tutorial for Web Authors and Webmasters"
 > https://www.mnot.net/cache_docs/. 
 This document aims to explain web caching and usage of (HTTP) control caches. 
+
+Additionally, HTTP cache-control is not applicable to GraphQL due to (described later) the fact that most GraphQL requests would come via HTTP POST (not GET). More context can be found in article titled "GraphQL & Caching: The Elephant in the Room" by Marc-André Giroux.
+> https://www.apollographql.com/blog/backend/caching/graphql-caching-the-elephant-in-the-room/ 
+
+##### Overview
 
 The `cache-control`` header is defined as: 
 

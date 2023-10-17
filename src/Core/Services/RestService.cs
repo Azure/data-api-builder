@@ -423,20 +423,6 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to extract the configured base route
-        /// </summary>
-        public string GetBaseRouteFromConfig()
-        {
-            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
-                && config.Runtime?.BaseRoute is not null)
-            {
-                return config.Runtime.BaseRoute;
-            }
-
-            return string.Empty;
-        }
-
-        /// <summary>
         /// Tries to get the Entity name and primary key route from the provided string
         /// returns the entity name via a lookup using the string which includes
         /// characters up until the first '/', and then resolves the primary key

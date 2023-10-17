@@ -83,8 +83,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     throw new DataApiBuilderException(
                     message: $"Primary key column: {pk} not found in the entity definition.",
-                    statusCode: HttpStatusCode.NotFound,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField);
                 }
 
                 primaryKeysInRequest.Add(backingColumn!);
@@ -99,8 +99,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     message: $"The request is invalid since the primary keys: " +
                              string.Join(", ", missingKeys) +
                              " requested were not found in the entity definition.",
-                    statusCode: HttpStatusCode.NotFound,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField);
             }
         }
 

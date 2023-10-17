@@ -205,14 +205,25 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Dispatch execution of a request context to the query engine
         /// The two overloads to ExecuteAsync take FindRequestContext and StoredProcedureRequestContext
         /// </summary>
-        private Task<IActionResult> DispatchQuery(RestRequestContext context)
+        private async Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
         {
-            return context switch
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+
+            if (context is FindRequestContext findRequestContext)
             {
-                FindRequestContext => _queryEngine.ExecuteAsync((FindRequestContext)context),
-                StoredProcedureRequestContext => _queryEngine.ExecuteAsync((StoredProcedureRequestContext)context),
-                _ => throw new NotSupportedException("This operation is not yet supported."),
-            };
+                using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
+                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
+                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
+            }
+            else if (context is StoredProcedureRequestContext storedProcedureRequestContext)
+            {
+                return await queryEngine.ExecuteAsync(storedProcedureRequestContext, defaultDataSourceName);
+            }
+            else
+            {
+                throw new NotSupportedException("This operation is not yet supported.");
+            }
         }
 
         /// <summary>
@@ -403,20 +414,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
             configuredRestRoute = null;
             return false;
-        }
-
-        /// <summary>
-        /// Helper method to extract the configured base route
-        /// </summary>
-        public string GetBaseRouteFromConfig()
-        {
-            if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? config)
-                && config.Runtime.BaseRoute is not null)
-            {
-                return config.Runtime.BaseRoute;
-            }
-
-            return string.Empty;
         }
 
         /// <summary>

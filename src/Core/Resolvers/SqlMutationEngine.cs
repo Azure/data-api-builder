@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -36,6 +37,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
 
@@ -53,7 +55,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IHttpContextAccessor httpContextAccessor)
+            IHttpContextAccessor httpContextAccessor,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
             _queryEngine = queryEngine;
             _queryExecutor = queryExecutor;
@@ -62,6 +65,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _authorizationResolver = authorizationResolver;
             _httpContextAccessor = httpContextAccessor;
             _gQLFilterParser = gQLFilterParser;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -390,12 +394,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         try
                         {
                             // Creating an implicit transaction
-                            using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
+                            using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                             {
                                 upsertOperationResult = await PerformUpsertOperation(
                                                                     parameters: parameters,
-                                                                    context: context,
-                                                                    sqlMetadataProvider: sqlMetadataProvider);
+                                                                    context: context);
 
                                 if (upsertOperationResult is null)
                                 {
@@ -421,9 +424,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 // In such a case, to get the results back, a select query which honors the database policy is executed.
                                 if (isDatabasePolicyDefinedForReadAction)
                                 {
-                                    FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName, sqlMetadataProvider);
-                                    IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-                                    selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
+                                    FindRequestContext findRequestContext = ConstructFindRequestContext(context, upsertOperationResultSetRow, roleName, _sqlMetadataProvider);
+                                    selectOperationResponse = await _queryEngine.ExecuteAsync(findRequestContext);
                                 }
 
                                 transactionScope.Complete();
@@ -446,7 +448,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // For PostgreSQL, the result set dictionary will always contain the entry <IsUpdateResultSet,true> irrespective of the upsert resulting in an insert/update operation.
                         // PostgreSQL result sets will contain a field "___upsert_op___" that indicates whether the resultant operation was an update or an insert. So, the value present in this field
                         // is used to determine whether the upsert resulted in an update/insert.
-                        if (sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
+                        if (_sqlMetadataProvider.GetDatabaseType() is DatabaseType.PostgreSQL)
                         {
                             hasPerformedUpdate = !PostgresQueryBuilder.IsInsert(resultRow);
                         }
@@ -487,14 +489,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         try
                         {
                             // Creating an implicit transaction
-                            using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType(sqlMetadataProvider))
+                            using (TransactionScope transactionScope = ConstructTransactionScopeBasedOnDbType())
                             {
                                 mutationResultRow =
                                         await PerformMutationOperation(
                                             entityName: context.EntityName,
                                             operationType: context.OperationType,
-                                            parameters: parameters,
-                                            sqlMetadataProvider: sqlMetadataProvider);
+                                            parameters: parameters);
 
                                 if (mutationResultRow is null || mutationResultRow.Columns.Count == 0)
                                 {
@@ -549,9 +550,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 // is executed to fetch the results.
                                 if (isDatabasePolicyDefinedForReadAction)
                                 {
-                                    FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow, roleName, sqlMetadataProvider);
-                                    IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
-                                    selectOperationResponse = await queryEngine.ExecuteAsync(findRequestContext);
+                                    FindRequestContext findRequestContext = ConstructFindRequestContext(context, mutationResultRow, roleName, _sqlMetadataProvider);
+                                    selectOperationResponse = await _queryEngine.ExecuteAsync(findRequestContext);
                                 }
 
                                 transactionScope.Complete();
@@ -582,7 +582,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             }
                         }
 
-                        string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, sqlMetadataProvider)
+                        string primaryKeyRouteForLocationHeader = isReadPermissionConfiguredForRole ? SqlResponseHelpers.ConstructPrimaryKeyRoute(context, mutationResultRow!.Columns, _sqlMetadataProvider)
                                                                                                     : string.Empty;
 
                         if (context.OperationType is EntityActionOperation.Insert)

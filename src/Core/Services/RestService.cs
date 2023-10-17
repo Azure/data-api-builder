@@ -205,20 +205,19 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Dispatch execution of a request context to the query engine
         /// The two overloads to ExecuteAsync take FindRequestContext and StoredProcedureRequestContext
         /// </summary>
-        private async Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
+        private async Task<IActionResult> DispatchQuery(RestRequestContext context)
         {
-            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
             string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
 
             if (context is FindRequestContext findRequestContext)
             {
-                using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
-                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
+                using JsonDocument? restApiResponse = await _queryEngine.ExecuteAsync(findRequestContext);
+                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProvider, _runtimeConfigProvider.GetConfig(), GetHttpContext())
+                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProvider, _runtimeConfigProvider.GetConfig(), GetHttpContext());
             }
             else if (context is StoredProcedureRequestContext storedProcedureRequestContext)
             {
-                return await queryEngine.ExecuteAsync(storedProcedureRequestContext, defaultDataSourceName);
+                return await _queryEngine.ExecuteAsync(storedProcedureRequestContext, defaultDataSourceName);
             }
             else
             {

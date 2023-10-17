@@ -4,11 +4,9 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -22,8 +20,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     //</summary>
     public class SqlQueryEngine : IQueryEngine
     {
-        private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
-        private readonly IAbstractQueryManagerFactory _queryFactory;
+        private readonly ISqlMetadataProvider _sqlMetadataProvider;
+        private readonly IQueryExecutor _queryExecutor;
+        private readonly IQueryBuilder _queryBuilder;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly ILogger<IQueryEngine> _logger;
@@ -147,7 +146,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _runtimeConfigProvider,
                 _gQLFilterParser,
                 _httpContextAccessor.HttpContext!);
-            return await ExecuteAsync(structure, dataSourceName);
+            return await ExecuteAsync(structure, datasourceName);
         }
 
         /// <summary>

@@ -170,7 +170,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 sqlMetadataProvider.Object,
                 authorizationResolver,
                 gQLFilterParser,
-                httpContextAccessor.Object);
+                httpContextAccessor.Object,
+                provider);
 
             // Setup REST Service
             _restService = new RestService(

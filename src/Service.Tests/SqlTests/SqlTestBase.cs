@@ -154,7 +154,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                     _sqlMetadataProvider,
                                     _authorizationResolver,
                                     _gQLFilterParser,
-                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider));
+                                    ActivatorUtilities.GetServiceOrCreateInstance<IHttpContextAccessor>(serviceProvider),
+                                    runtimeConfigProvider);
                         });
                         services.AddSingleton(_sqlMetadataProvider);
                         services.AddSingleton(_authorizationResolver);

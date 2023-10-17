@@ -4,9 +4,12 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
@@ -110,6 +113,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             Mock<IQueryBuilder> _queryBuilder = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             Mock<ILogger<SqlMutationEngine>> _mutationEngineLogger = new();
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(string.Empty));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
             DefaultHttpContext context = new();
             Mock<GQLFilterParser> _gQLFilterParser = new(_sqlMetadataProvider.Object);
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
@@ -130,8 +137,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 _sqlMetadataProvider.Object,
                 _authorizationResolver.Object,
                 _gQLFilterParser.Object,
-                httpContextAccessor.Object
-                );
+                httpContextAccessor.Object,
+                provider);
         }
     }
 }

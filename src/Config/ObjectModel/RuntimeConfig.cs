@@ -315,7 +315,9 @@ public record RuntimeConfig
         return JsonSerializer.Serialize(this, jsonSerializerOptions);
     }
 
-    public bool IsDevelopmentMode() => Runtime is null || Runtime.Host is null || Runtime.Host.Mode is HostMode.Development;
+    public bool IsDevelopmentMode() =>
+        Runtime is not null && Runtime.Host is not null
+        && Runtime.Host.Mode is HostMode.Development;
 
     private void CheckDataSourceNamePresent(string dataSourceName)
     {

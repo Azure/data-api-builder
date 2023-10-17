@@ -20,9 +20,11 @@ The validation process will be implemented as a method that takes a file path as
 
 1. The validation can be initiated using the CLI command `dab validate`.
 2. This command will have an optional flag `-c` or `--config` to provide the config file. If not used it will pick the default config file `dab-config.{DAB_ENVIRONMENT}.json`, or `dab-config.json` if `DAB_ENVIRONMENT` is not set.
+> [!NOTE]
+> If the provided file is multi-data-source file, then all the files mentioned in `data-source-files` will be validated sequentially.
 3. Check that the file exists and is readable.
 4. Read the contents of the file into memory.
-5. Validate it against the schema file.
+5. Validate it against the schema file. We will use `NschemaJson.Net` nuget package.
 6. Deserialize the contents of the file into a configuration object.
 7. Check that the configuration object contains all the required information.
 8. SetUp Metadata and check for any errors.

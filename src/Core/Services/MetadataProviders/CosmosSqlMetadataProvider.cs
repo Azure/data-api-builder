@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public bool TryGetExposedColumnName(string entityName, string field, out string? name)
+        public bool TryGetExposedColumnName(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
             name = field;
             return true;

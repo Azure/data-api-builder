@@ -2557,7 +2557,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
                 Runtime: new(restOptions, graphqlOptions,
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Production)),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
                 Entities: new(entityMap)
             );
         }

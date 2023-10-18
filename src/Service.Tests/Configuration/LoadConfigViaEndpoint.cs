@@ -25,9 +25,7 @@ public class LoadConfigViaEndpointTests
         TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
         HttpClient httpClient = server.CreateClient();
 
-        RuntimeConfig config = ReadCosmosConfigurationFromFile() with {
-            Schema = "@env('schema')"
-        };
+        RuntimeConfig config = ReadCosmosConfigurationFromFile() with { Schema = "@env('schema')" };
 
         ConfigurationPostParametersV2 @params = new(
             Configuration: config.ToJson(),

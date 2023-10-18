@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Controllers;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -18,7 +19,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 [TestClass]
 public class LoadConfigViaEndpointTests
 {
-    [TestMethod("Testing that environment variables can be replaced at runtime not only when config is loaded."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+    [TestMethod("Testing that missing environment variables won't cause runtime failure."), TestCategory(TestCategory.COSMOSDBNOSQL)]
     [DataRow(CONFIGURATION_ENDPOINT_V2)]
     public async Task CanLoadConfigWithMissingEnvironmentVariables(string configurationEndpoint)
     {
@@ -44,5 +45,51 @@ public class LoadConfigViaEndpointTests
         HttpResponseMessage postResult =
             await httpClient.PostAsync(configurationEndpoint, content);
         Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+
+        RuntimeConfigProvider configProvider = server.Services.GetService(typeof(RuntimeConfigProvider)) as RuntimeConfigProvider;
+        RuntimeConfig loadedConfig = configProvider.GetConfig();
+
+        Assert.AreEqual(config.Schema, loadedConfig.Schema);
+    }
+
+    [TestMethod("Testing that environment variables can be replaced at runtime not only when config is loaded."), TestCategory(TestCategory.COSMOSDBNOSQL)]
+    [DataRow(CONFIGURATION_ENDPOINT_V2)]
+    public async Task CanLoadConfigWithEnvironmentVariables(string configurationEndpoint)
+    {
+        Environment.SetEnvironmentVariable("schema", "schema.graphql");
+        TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
+        HttpClient httpClient = server.CreateClient();
+
+        RuntimeConfig config = ReadCosmosConfigurationFromFile() with { Schema = "@env('schema')" };
+
+        ConfigurationPostParametersV2 @params = new(
+            Configuration: config.ToJson(),
+            ConfigurationOverrides: "{}",
+            Schema: @"
+            type Entity {
+                id: ID!
+                name: String!
+            }
+            ",
+            AccessToken: null
+        );
+
+        JsonContent content = JsonContent.Create(@params);
+
+        HttpResponseMessage postResult =
+            await httpClient.PostAsync(configurationEndpoint, content);
+        Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
+
+        RuntimeConfigProvider configProvider = server.Services.GetService(typeof(RuntimeConfigProvider)) as RuntimeConfigProvider;
+        RuntimeConfig loadedConfig = configProvider.GetConfig();
+
+        Assert.AreNotEqual(config.Schema, loadedConfig.Schema);
+        Assert.AreEqual(Environment.GetEnvironmentVariable("schema"), loadedConfig.Schema);
+    }
+
+    [TestCleanup]
+    public void Cleanup()
+    {
+        Environment.SetEnvironmentVariable("schema", null);
     }
 }

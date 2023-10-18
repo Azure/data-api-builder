@@ -22,9 +22,11 @@ public class ConfigFileWatcher
         FileSystem fileSystem = (FileSystem)loader._fileSystem;
         string? currentDirectoryPath = fileSystem.Directory.GetCurrentDirectory();
         string configFilePath = Path.Combine(currentDirectoryPath!, configFileName);
+        string path = Path.GetDirectoryName(configFilePath)!;
         _fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(configFilePath)!)
         {
-            Filter = Path.GetFileName(configFilePath)
+            Filter = Path.GetFileName(configFilePath),
+            EnableRaisingEvents = true
         };
 
         _configProvider = configProvider;

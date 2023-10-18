@@ -127,7 +127,7 @@ internal static class ConfigurationJsonBuilder
             AccessToken: null);
     }
 
-    private static RuntimeConfig ReadCosmosConfigurationFromFile()
+    public static RuntimeConfig ReadCosmosConfigurationFromFile()
     {
         string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
 

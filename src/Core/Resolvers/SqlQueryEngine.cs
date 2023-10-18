@@ -424,14 +424,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
 
             JsonElement result = await _cache.GetOrSetAsync<JsonElement>(
-                key: queryMetadata.GetHashCode().ToString(),
+                key: queryMetadata.CreateCacheKey(),
                 async _ => await queryExecutor.ExecuteQueryAsync(
                     sqltext: queryString,
                     parameters: structure.Parameters,
                     dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonElement>,
                     httpContext: _httpContextAccessor.HttpContext!,
                     args: null,
-                    dataSourceName: dataSourceName));
+                    dataSourceName: dataSourceName),
+                options: null);
 
             byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
             JsonDocument doc = JsonDocument.Parse(jsonBytes);

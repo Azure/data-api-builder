@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
@@ -10,6 +11,8 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,12 +36,13 @@ using HotChocolate;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
-using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationJsonBuilder;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -46,12 +50,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
     public class ConfigurationTests
     : VerifyBase
     {
+        private const string COSMOS_ENVIRONMENT = TestCategory.COSMOSDBNOSQL;
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
         private const string MYSQL_ENVIRONMENT = TestCategory.MYSQL;
         private const string POSTGRESQL_ENVIRONMENT = TestCategory.POSTGRESQL;
         private const string POST_STARTUP_CONFIG_ENTITY = "Book";
         private const string POST_STARTUP_CONFIG_ENTITY_SOURCE = "books";
         private const string POST_STARTUP_CONFIG_ROLE = "PostStartupConfigRole";
+        private const string COSMOS_DATABASE_NAME = "config_db";
         private const string CUSTOM_CONFIG_FILENAME = "custom-config.json";
         private const string OPENAPI_SWAGGER_ENDPOINT = "swagger";
         private const string OPENAPI_DOCUMENT_ENDPOINT = "openapi";
@@ -2246,6 +2252,108 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 // exists in the GraphQL JSON response.
                 Assert.Fail(message: "No schema metadata in GraphQL response." + ex.Message);
             }
+        }
+
+        private static JsonContent GetJsonContentForCosmosConfigRequest(string endpoint, string config = null, bool useAccessToken = false)
+        {
+            if (CONFIGURATION_ENDPOINT == endpoint)
+            {
+                ConfigurationPostParameters configParams = GetCosmosConfigurationParameters();
+                if (config is not null)
+                {
+                    configParams = configParams with { Configuration = config };
+                }
+
+                if (useAccessToken)
+                {
+                    configParams = configParams with
+                    {
+                        ConnectionString = "AccountEndpoint=https://localhost:8081/;",
+                        AccessToken = GenerateMockJwtToken()
+                    };
+                }
+
+                return JsonContent.Create(configParams);
+            }
+            else if (CONFIGURATION_ENDPOINT_V2 == endpoint)
+            {
+                ConfigurationPostParametersV2 configParams = GetCosmosConfigurationParametersV2();
+                if (config != null)
+                {
+                    configParams = configParams with { Configuration = config };
+                }
+
+                if (useAccessToken)
+                {
+                    // With an invalid access token, when a new instance of CosmosClient is created with that token, it
+                    // won't throw an exception.  But when a graphql request is coming in, that's when it throws a 401
+                    // exception. To prevent this, CosmosClientProvider parses the token and retrieves the "exp" property
+                    // from the token, if it's not valid, then we will throw an exception from our code before it
+                    // initiating a client. Uses a valid fake JWT access token for testing purposes.
+                    RuntimeConfig overrides = new(
+                        Schema: null,
+                        DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, "AccountEndpoint=https://localhost:8081/;", new()),
+                        Runtime: null,
+                        Entities: new(new Dictionary<string, Entity>()));
+
+                    configParams = configParams with
+                    {
+                        ConfigurationOverrides = overrides.ToJson(),
+                        AccessToken = GenerateMockJwtToken()
+                    };
+                }
+
+                return JsonContent.Create(configParams);
+            }
+            else
+            {
+                throw new ArgumentException($"Unexpected configuration endpoint. {endpoint}");
+            }
+        }
+
+        private static string GenerateMockJwtToken()
+        {
+            string mySecret = "PlaceholderPlaceholder";
+            SymmetricSecurityKey mySecurityKey = new(Encoding.ASCII.GetBytes(mySecret));
+
+            JwtSecurityTokenHandler tokenHandler = new();
+            SecurityTokenDescriptor tokenDescriptor = new()
+            {
+                Subject = new ClaimsIdentity(new Claim[] { }),
+                Expires = DateTime.UtcNow.AddMinutes(5),
+                Issuer = "http://mysite.com",
+                Audience = "http://myaudience.com",
+                SigningCredentials = new SigningCredentials(mySecurityKey, SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            SecurityToken token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
+        }
+
+        private static ConfigurationPostParameters GetCosmosConfigurationParameters()
+        {
+            RuntimeConfig configuration = ReadCosmosConfigurationFromFile();
+            return new(
+                configuration.ToJson(),
+                File.ReadAllText("schema.gql"),
+                $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}",
+                AccessToken: null);
+        }
+
+        private static ConfigurationPostParametersV2 GetCosmosConfigurationParametersV2()
+        {
+            RuntimeConfig configuration = ReadCosmosConfigurationFromFile();
+            RuntimeConfig overrides = new(
+                Schema: null,
+                DataSource: new DataSource(DatabaseType.CosmosDB_NoSQL, $"AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==;Database={COSMOS_DATABASE_NAME}", new()),
+                Runtime: null,
+                Entities: new(new Dictionary<string, Entity>()));
+
+            return new(
+                configuration.ToJson(),
+                overrides.ToJson(),
+                File.ReadAllText("schema.gql"),
+                AccessToken: null);
         }
 
         /// <summary>

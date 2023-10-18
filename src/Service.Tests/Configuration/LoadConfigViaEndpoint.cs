@@ -11,7 +11,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
-using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationJsonBuilder;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 

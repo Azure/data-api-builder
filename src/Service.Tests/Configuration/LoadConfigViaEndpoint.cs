@@ -27,21 +27,7 @@ public class LoadConfigViaEndpointTests
         TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
         HttpClient httpClient = server.CreateClient();
 
-        RuntimeConfig config = ReadCosmosConfigurationFromFile() with { Schema = "@env('schema')" };
-
-        ConfigurationPostParametersV2 @params = new(
-            Configuration: config.ToJson(),
-            ConfigurationOverrides: "{}",
-            Schema: @"
-            type Entity {
-                id: ID!
-                name: String!
-            }
-            ",
-            AccessToken: null
-        );
-
-        JsonContent content = JsonContent.Create(@params);
+        (RuntimeConfig config, JsonContent content) = GetParameterContent(configurationEndpoint);
 
         HttpResponseMessage postResult =
             await httpClient.PostAsync(configurationEndpoint, content);
@@ -63,21 +49,7 @@ public class LoadConfigViaEndpointTests
         TestServer server = new(Program.CreateWebHostFromInMemoryUpdateableConfBuilder(Array.Empty<string>()));
         HttpClient httpClient = server.CreateClient();
 
-        RuntimeConfig config = ReadCosmosConfigurationFromFile() with { Schema = "@env('schema')" };
-
-        ConfigurationPostParametersV2 @params = new(
-            Configuration: config.ToJson(),
-            ConfigurationOverrides: "{}",
-            Schema: @"
-            type Entity {
-                id: ID!
-                name: String!
-            }
-            ",
-            AccessToken: null
-        );
-
-        JsonContent content = JsonContent.Create(@params);
+        (RuntimeConfig config, JsonContent content) = GetParameterContent(configurationEndpoint);
 
         HttpResponseMessage postResult =
             await httpClient.PostAsync(configurationEndpoint, content);
@@ -94,5 +66,45 @@ public class LoadConfigViaEndpointTests
     public void Cleanup()
     {
         Environment.SetEnvironmentVariable("schema", null);
+    }
+
+    private static (RuntimeConfig, JsonContent) GetParameterContent(string endpoint)
+    {
+        RuntimeConfig config = ReadCosmosConfigurationFromFile() with { Schema = "@env('schema')" };
+
+        if (endpoint == CONFIGURATION_ENDPOINT)
+        {
+            ConfigurationPostParameters @params = new(
+                Configuration: config.ToJson(),
+                Schema: @"
+                type Entity {
+                    id: ID!
+                    name: String!
+                }
+                ",
+                ConnectionString: "AccountEndpoint=https://localhost:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",
+                AccessToken: null
+            );
+
+            return (config, JsonContent.Create(@params));
+        }
+        else if (endpoint == CONFIGURATION_ENDPOINT_V2)
+        {
+            ConfigurationPostParametersV2 @params = new(
+                Configuration: config.ToJson(),
+                ConfigurationOverrides: "{}",
+                Schema: @"
+                type Entity {
+                    id: ID!
+                    name: String!
+                }
+                ",
+                AccessToken: null
+            );
+
+            return (config, JsonContent.Create(@params));
+        }
+
+        throw new ArgumentException($"Unknown endpoint: {endpoint}");
     }
 }

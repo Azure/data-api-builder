@@ -190,13 +190,13 @@ namespace Azure.DataApiBuilder.Core.Authorization
             return GetPolicyWithClaimValues(dBpolicyWithClaimTypes, GetAllUserClaims(httpContext));
         }
 
-    /// <inheritdoc />
-    public string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
-    {
-        if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
+        /// <inheritdoc />
+        public string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
         {
-            return string.Empty;
-        }
+            if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
+            {
+                return string.Empty;
+            }
 
             if (!roleMetadata.OperationToColumnMap.TryGetValue(operation, out OperationMetadata? operationMetadata))
             {

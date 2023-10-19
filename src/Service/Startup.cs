@@ -659,7 +659,7 @@ namespace Azure.DataApiBuilder.Service
         }
 
         /// <summary>
-        /// Indicates whether to provide UI visualtion of REST(via Swagger) or GraphQL (via Banana CakePop).
+        /// Indicates whether to provide UI visualization of REST(via Swagger) or GraphQL (via Banana CakePop).
         /// </summary>
         private static bool IsUIEnabled(RuntimeConfig? runtimeConfig, IWebHostEnvironment env)
         {

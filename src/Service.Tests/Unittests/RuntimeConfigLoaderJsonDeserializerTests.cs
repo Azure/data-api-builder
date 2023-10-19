@@ -390,6 +390,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(parsedConfig.AllowIntrospection);
             Assert.IsFalse(parsedConfig.IsDevelopmentMode());
             Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);
+            Assert.IsTrue(parsedConfig.IsRequestBodyStrict);
             return true;
         }
 

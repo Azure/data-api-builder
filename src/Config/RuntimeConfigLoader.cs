@@ -157,7 +157,6 @@ public abstract class RuntimeConfigLoader
             ReadCommentHandling = JsonCommentHandling.Skip,
             WriteIndented = true,
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-            IncludeFields = true,
             Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         options.Converters.Add(new EnumMemberJsonEnumConverterFactory());

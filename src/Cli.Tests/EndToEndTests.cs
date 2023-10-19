@@ -126,10 +126,10 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
-        Assert.AreEqual("/rest-api", runtimeConfig.Runtime!.Rest?.Path);
-        Assert.IsFalse(runtimeConfig.Runtime!.Rest?.Enabled);
-        Assert.AreEqual("/graphql-api", runtimeConfig.Runtime!.GraphQL?.Path);
-        Assert.IsTrue(runtimeConfig.Runtime!.GraphQL?.Enabled);
+        Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest?.Path);
+        Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
+        Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
+        Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
     }
 
     /// <summary>
@@ -147,7 +147,7 @@ public class EndToEndTests
         // Perform assertions on various properties.
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
-        Assert.IsTrue(runtimeConfig.IsDevelopmentMode());
+        Assert.AreEqual(HostMode.Development, runtimeConfig.Runtime?.Host?.Mode);
 
         string[] addArgs = {"add", "todo", "-c", TEST_RUNTIME_CONFIG_FILE, "--source", "s001.todo",
                             "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"};
@@ -210,7 +210,7 @@ public class EndToEndTests
         if (expectSuccess)
         {
             Assert.IsNotNull(runtimeConfig);
-            Assert.AreEqual(hostModeEnumType, runtimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production);
+            Assert.AreEqual(hostModeEnumType, runtimeConfig.Runtime?.Host?.Mode);
         }
         else
         {
@@ -231,7 +231,7 @@ public class EndToEndTests
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
-        Assert.IsFalse(runtimeConfig.IsDevelopmentMode());
+        Assert.AreEqual(HostMode.Production, runtimeConfig.Runtime?.Host?.Mode);
 
         string[] addArgs = { "add", "book", "-c", TEST_RUNTIME_CONFIG_FILE, "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Execute(addArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);

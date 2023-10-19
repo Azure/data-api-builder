@@ -140,9 +140,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: EntityActionOperation.Delete,
                     requestBody: string.Empty,
                     exceptionExpected: true,
-                    expectedErrorMessage: "Not Found",
+                    expectedErrorMessage: "Could not find item with <id: 1000>",
                     expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound.ToString()
                 );
         }
 
@@ -165,8 +165,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     requestBody: string.Empty,
                     exceptionExpected: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
         }
 

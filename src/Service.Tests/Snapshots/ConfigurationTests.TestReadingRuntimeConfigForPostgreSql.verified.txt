@@ -306,6 +306,70 @@
               },
               {
                 Action: Create
+              },
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
+            Role: test_role_with_noread,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: test_role_with_excluded_fields,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    categoryName
+                  ]
+                }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: test_role_with_policy_excluded_fields,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    categoryName
+                  ]
+                },
+                Policy: {
+                  Database: @item.piecesAvailable ne 0
+                }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
               }
             ]
           },
@@ -635,6 +699,67 @@
               },
               {
                 Action: Create
+              }
+            ]
+          },
+          {
+            Role: test_role_with_noread,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: test_role_with_excluded_fields,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: test_role_with_policy_excluded_fields,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    publisher_id
+                  ]
+                },
+                Policy: {
+                  Database: @item.title ne 'Test'
+                }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
               }
             ]
           }

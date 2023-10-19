@@ -56,6 +56,7 @@ public class LoadConfigViaEndpointTests
     [TestMethod("Testing that environment variables can be replaced at runtime not only when config is loaded."), TestCategory(TestCategory.COSMOSDBNOSQL)]
     [DataRow(CONFIGURATION_ENDPOINT)]
     [DataRow(CONFIGURATION_ENDPOINT_V2)]
+    [Ignore("We don't want to environment variable substitution in Phoenix, but test is left in for if this changes.")]
     public async Task CanLoadConfigWithEnvironmentVariables(string configurationEndpoint)
     {
         Environment.SetEnvironmentVariable("schema", "schema.graphql");

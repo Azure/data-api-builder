@@ -137,7 +137,7 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
-                replaceEnvVar: true,
+                replaceEnvVar: false,
                 replacementFailureMode: EnvironmentVariableReplacementFailureMode.Ignore))
         {
             _runtimeConfig = runtimeConfig;

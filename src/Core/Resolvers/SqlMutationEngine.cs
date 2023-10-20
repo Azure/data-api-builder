@@ -942,6 +942,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Helper method to extract the configured base route in the runtime config.
+        /// </summary>
+        private static string GetBaseRouteFromConfig(RuntimeConfig? config)
+        {
+            if (config?.Runtime?.BaseRoute is not null)
+            {
+                return config.Runtime.BaseRoute;
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
         /// For MySql database type, the isolation level is set at Repeatable Read as it is the default isolation level. Likewise, for MsSql and PostgreSql
         /// database types, the isolation level is set at Read Committed as it is the default.
         /// </summary>

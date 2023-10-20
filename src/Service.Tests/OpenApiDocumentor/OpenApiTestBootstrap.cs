@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             {
                 Runtime = config.Runtime with
                 {
-                    Host = config.Runtime.Host with { Mode = HostMode.Production }
+                    Host = config.Runtime?.Host with { Mode = HostMode.Production }
                 },
                 Entities = runtimeEntities
             };

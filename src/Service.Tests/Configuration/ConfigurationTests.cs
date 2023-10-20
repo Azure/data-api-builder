@@ -1545,7 +1545,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             HostOptions staticWebAppsHostOptions = new(null, AuthenticationOptions);
 
             RuntimeOptions runtimeOptions = configuration.Runtime;
-            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions.Rest, runtimeOptions.GraphQL, staticWebAppsHostOptions, "/data-api");
+            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions?.Rest, runtimeOptions?.GraphQL, staticWebAppsHostOptions, "/data-api");
             RuntimeConfig baseRouteEnabledConfig = configuration with { Runtime = baseRouteEnabledRuntimeOptions };
             File.WriteAllText(CUSTOM_CONFIG, baseRouteEnabledConfig.ToJson());
 
@@ -1953,14 +1953,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string swaggerEndpoint = "/swagger";
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource: dataSource, new(), new(Path: customRestPath));
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(
+                dataSource: dataSource,
+                graphqlOptions: new(),
+                restOptions: new(Path: customRestPath));
+
             configuration = configuration
                 with
             {
                 Runtime = configuration.Runtime
                 with
                 {
-                    Host = configuration.Runtime.Host
+                    Host = configuration.Runtime?.Host
                 with
                     { Mode = hostModeType }
                 }
@@ -2370,8 +2374,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 RuntimeConfig overrides = new(
                     Schema: null,
                     DataSource: new DataSource(DatabaseType.MSSQL, connectionString, new()),
-                    Runtime: null,
-                    Entities: new(new Dictionary<string, Entity>()));
+                    Entities: new(new Dictionary<string, Entity>()),
+                    Runtime: null);
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,
@@ -2523,7 +2527,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
-                Runtime: new(restOptions, graphqlOptions, new(null, null)),
+                Runtime: new(restOptions, graphqlOptions,
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
                 Entities: new(entityMap)
             );
         }

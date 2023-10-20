@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Config;
@@ -51,13 +52,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
   },
   ""runtime"": {
     ""rest"": {
-      ""enabled"": " + initialRestEnabled + @",
-      ""path"": " + initialRestPath + @"
+      ""enabled"": " + initialRestEnabled.ToString().ToLower() + @",
+      ""path"": """ + initialRestPath + @"""
     },
     ""graphql"": {
-      ""enabled"": " + initialGQLEnabled + @",
-      ""path"": " + initialGQLPath + @",
-      ""allow-introspection"": " + initialGQLIntrospection + @"
+      ""enabled"": " + initialGQLEnabled.ToString().ToLower() + @",
+      ""path"": """ + initialGQLPath + @""",
+      ""allow-introspection"": " + initialGQLIntrospection.ToString().ToLower() + @"
     },
     ""host"": {
       ""cors"": {
@@ -69,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
       ""authentication"": {
         ""provider"": ""StaticWebApps""
       },
-      ""mode"": " + initialMode + @"
+      ""mode"": """ + initialMode + @"""
     }
   },
   ""entities"": {}
@@ -86,13 +87,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
   },
   ""runtime"": {
     ""rest"": {
-      ""enabled"": " + updatedRestEnabled + @",
-      ""path"": " + updatedRestPath + @"
+      ""enabled"": " + updatedRestEnabled.ToString().ToLower() + @",
+      ""path"": """ + updatedRestPath + @"""
     },
     ""graphql"": {
-      ""enabled"": " + updatedGQLEnabled + @",
-      ""path"": " + updatedGQLPath + @",
-      ""allow-introspection"": " + updatedGQLIntrospection + @"
+      ""enabled"": " + updatedGQLEnabled.ToString().ToLower() + @",
+      ""path"": """ + updatedGQLPath + @""",
+      ""allow-introspection"": " + updatedGQLIntrospection.ToString().ToLower() + @"
     },
     ""host"": {
       ""cors"": {
@@ -104,16 +105,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
       ""authentication"": {
         ""provider"": ""StaticWebApps""
       },
-      ""mode"": " + updatedMode + @"
+      ""mode"": """ + updatedMode + @"""
     }
   },
   ""entities"": {}
 }";
             string configName = "config.json";
-            // Use mock file system to avoid issues with writing local files
-            MockFileSystem fileSystem = new();
+            if (File.Exists(configName))
+            {
+                File.Delete(configName);
+            }
+
+            FileSystem fileSystem = new();
             fileSystem.File.WriteAllText(configName, initialConfig);
-            FileSystemRuntimeConfigLoader configLoader = new(new FileSystem(), configName, string.Empty);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configName, string.Empty);
             RuntimeConfigProvider configProvider = new(configLoader);
             // Must GetConfig() to start file watching
             RuntimeConfig runtimeConfig = configProvider.GetConfig();
@@ -130,6 +135,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.AreEqual(updatedGQLPath, runtimeConfig.Runtime.GraphQL.Path);
             Assert.AreEqual(updatedGQLIntrospection, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
             Assert.AreEqual(updatedMode, runtimeConfig.Runtime.Host.Mode);
+            if (File.Exists(configName))
+            {
+                File.Delete(configName);
+            }
         }
     }
 }

@@ -29,7 +29,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     // or user provided config file which could be a relative file path, absolute file path or simply the file name assumed to be in current directory.
     private string _baseConfigFilePath;
 
-    private readonly IFileSystem _fileSystem;
+    public readonly IFileSystem _fileSystem;
 
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";

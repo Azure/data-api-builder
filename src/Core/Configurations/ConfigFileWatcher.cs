@@ -42,11 +42,11 @@ public class ConfigFileWatcher
                 _configProvider!.HotReloadConfig();
             }
         }
-        catch (Exception ex) // improve exception handling based on errors that come back in tests
+        catch (Exception ex)
         {
-            // replace with logger
-            // use dependancy injection when first constructing ConfigFileWatcher to get logger
-            Console.WriteLine("Unable to Hot Reload configuration file due to " + ex.Message); // add better messaging
+            // Need to remove the dependency configuring authentication has on the RuntimeConfigProvider
+            // before we can have an ILogger here.
+            Console.WriteLine("Unable to Hot Reload configuration file due to " + ex.Message);
         }
     }
 }

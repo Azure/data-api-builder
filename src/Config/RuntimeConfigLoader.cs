@@ -60,9 +60,10 @@ public abstract class RuntimeConfigLoader
         string? connectionString = null,
         bool replaceEnvVar = false,
         string dataSourceName = "",
-        Dictionary<string, string>? datasourceNameToConnectionString = null)
+        Dictionary<string, string>? datasourceNameToConnectionString = null,
+        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
-        JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar);
+        JsonSerializerOptions options = GetSerializationOptions(replaceEnvVar, replacementFailureMode);
 
         try
         {
@@ -171,7 +172,9 @@ public abstract class RuntimeConfigLoader
     /// </summary>
     /// <param name="replaceEnvVar">Whether to replace environment variable with value or not while deserializing.
     /// By default, no replacement happens.</param>
-    public static JsonSerializerOptions GetSerializationOptions(bool replaceEnvVar = false)
+    public static JsonSerializerOptions GetSerializationOptions(
+        bool replaceEnvVar = false,
+        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
 
         JsonSerializerOptions options = new()
@@ -193,7 +196,7 @@ public abstract class RuntimeConfigLoader
 
         if (replaceEnvVar)
         {
-            options.Converters.Add(new StringJsonConverterFactory());
+            options.Converters.Add(new StringJsonConverterFactory(replacementFailureMode));
         }
 
         return options;

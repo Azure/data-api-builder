@@ -41,6 +41,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -64,10 +66,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
-
-        // TODO: Remove the old endpoint once we've updated all callers to use the new one.
-        private const string CONFIGURATION_ENDPOINT = "/configuration";
-        private const string CONFIGURATION_ENDPOINT_V2 = "/configuration/v2";
 
         /// <summary>
         /// A valid REST API request body with correct parameter types for all the fields.
@@ -2261,7 +2259,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             if (CONFIGURATION_ENDPOINT == endpoint)
             {
                 ConfigurationPostParameters configParams = GetCosmosConfigurationParameters();
-                if (config != null)
+                if (config is not null)
                 {
                     configParams = configParams with { Configuration = config };
                 }
@@ -2356,21 +2354,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 overrides.ToJson(),
                 File.ReadAllText("schema.gql"),
                 AccessToken: null);
-        }
-
-        private static RuntimeConfig ReadCosmosConfigurationFromFile()
-        {
-            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
-
-            string configurationFileContents = File.ReadAllText(cosmosFile);
-            if (!RuntimeConfigLoader.TryParseConfig(configurationFileContents, out RuntimeConfig config))
-            {
-                throw new Exception("Failed to parse configuration file.");
-            }
-
-            // The Schema file isn't provided in the configuration file when going through the configuration endpoint so we're removing it.
-            config.DataSource.Options.Remove("Schema");
-            return config;
         }
 
         /// <summary>

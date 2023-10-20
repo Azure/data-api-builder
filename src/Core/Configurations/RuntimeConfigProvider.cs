@@ -9,7 +9,6 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -138,6 +137,10 @@ public class RuntimeConfigProvider
         return _runtimeConfig is not null;
     }
 
+    /// <summary>
+    /// Hot Reloads the runtime config when the file watcher
+    /// is active and detects a change to the underlying config file.
+    /// </summary>
     public void HotReloadConfig()
     {
         ConfigLoader.TryLoadKnownConfig(out _runtimeConfig);

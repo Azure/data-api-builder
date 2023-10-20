@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
         public IEnumerator<UrlDescriptor> GetEnumerator()
         {
             RuntimeConfig? config = _runtimeConfigProvider?.GetConfig();
-            string configuredRestPath = config?.Runtime.Rest.Path ?? RestRuntimeOptions.DEFAULT_PATH;
+            string configuredRestPath = config?.RestPath ?? RestRuntimeOptions.DEFAULT_PATH;
             yield return new UrlDescriptor { Name = "DataApibuilder-OpenAPI-PREVIEW", Url = $"{configuredRestPath}/{OpenApiDocumentor.OPENAPI_ROUTE}" };
         }
 

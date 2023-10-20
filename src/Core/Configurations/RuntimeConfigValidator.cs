@@ -77,11 +77,11 @@ public class RuntimeConfigValidator : IConfigValidator
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
-        if (runtimeConfig.Runtime.Host.Mode is HostMode.Development)
+        if (runtimeConfig.IsDevelopmentMode())
         {
             ValidateEntityConfiguration(runtimeConfig);
 
-            if (runtimeConfig.Runtime.GraphQL.Enabled)
+            if (runtimeConfig.IsGraphQLEnabled)
             {
                 ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
             }
@@ -254,7 +254,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
         {
-            if (runtimeConfig.Runtime.Rest.Enabled && entity.Rest is not null && entity.Rest.Enabled)
+            if (runtimeConfig.IsRestEnabled && entity.Rest is not null && entity.Rest.Enabled)
             {
                 // If no custom rest path is defined for the entity, we default it to the entityName.
                 string pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
@@ -273,7 +273,7 @@ public class RuntimeConfigValidator : IConfigValidator
             }
 
             // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
-            if (runtimeConfig.Runtime.GraphQL.Enabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
+            if (runtimeConfig.IsGraphQLEnabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
             {
                 ValidateNameRequirements(entity.GraphQL.Singular);
                 ValidateNameRequirements(entity.GraphQL.Plural);
@@ -345,7 +345,7 @@ public class RuntimeConfigValidator : IConfigValidator
     public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
     {
         // Both REST and GraphQL endpoints cannot be disabled at the same time.
-        if (!runtimeConfig.Runtime.Rest.Enabled && !runtimeConfig.Runtime.GraphQL.Enabled)
+        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
         {
             throw new DataApiBuilderException(
                 message: $"Both GraphQL and REST endpoints are disabled.",
@@ -353,12 +353,12 @@ public class RuntimeConfigValidator : IConfigValidator
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
+        string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
 
         // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
         if (runtimeBaseRoute is not null)
         {
-            if (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider())
+            if (!runtimeConfig.IsStaticWebAppsIdentityProvider)
             {
                 throw new DataApiBuilderException(
                     message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
@@ -378,14 +378,14 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateRestURI(runtimeConfig);
         ValidateGraphQLURI(runtimeConfig);
         // Do not check for conflicts if GraphQL or REST endpoints are disabled.
-        if (!runtimeConfig.Runtime.Rest.Enabled || !runtimeConfig.Runtime.GraphQL.Enabled)
+        if (!runtimeConfig.IsRestEnabled || !runtimeConfig.IsGraphQLEnabled)
         {
             return;
         }
 
         if (string.Equals(
-            a: runtimeConfig.Runtime.Rest.Path,
-            b: runtimeConfig.Runtime.GraphQL.Path,
+            a: runtimeConfig.RestPath,
+            b: runtimeConfig.GraphQLPath,
             comparisonType: StringComparison.OrdinalIgnoreCase))
         {
             throw new DataApiBuilderException(
@@ -409,7 +409,7 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         // validate the rest path.
-        string restPath = runtimeConfig.Runtime.Rest.Path;
+        string restPath = runtimeConfig.RestPath;
         if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
         {
             throw new DataApiBuilderException(
@@ -426,7 +426,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="runtimeConfig"></param>
     public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
     {
-        string graphqlPath = runtimeConfig.Runtime.GraphQL.Path;
+        string graphqlPath = runtimeConfig.GraphQLPath;
         if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
         {
             throw new DataApiBuilderException(
@@ -481,7 +481,7 @@ public class RuntimeConfigValidator : IConfigValidator
     private static void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
     {
         // Bypass validation of auth if there is no auth provided
-        if (runtimeConfig.Runtime.Host.Authentication is null)
+        if (runtimeConfig.Runtime?.Host?.Authentication is null)
         {
             return;
         }
@@ -838,8 +838,7 @@ public class RuntimeConfigValidator : IConfigValidator
     {
         // Find all the claimTypes from the policy
         MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
-        bool isStaticWebAppsAuthConfigured = Enum.TryParse(runtimeConfig.Runtime.Host.Authentication?.Provider, ignoreCase: true, out EasyAuthType easyAuthMode) ?
-            easyAuthMode is EasyAuthType.StaticWebApps : false;
+        bool isStaticWebAppsAuthConfigured = runtimeConfig.IsStaticWebAppsIdentityProvider;
 
         foreach (Match claimType in claimTypes)
         {

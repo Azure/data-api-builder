@@ -566,7 +566,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (_runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
-                return runtimeConfig.Runtime.Rest.RequestBodyStrict;
+                return runtimeConfig.IsRequestBodyStrict;
             }
 
             return true;

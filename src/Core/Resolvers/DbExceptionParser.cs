@@ -3,7 +3,6 @@
 
 using System.Data.Common;
 using System.Net;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 
@@ -28,7 +27,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public DbExceptionParser(RuntimeConfigProvider configProvider)
         {
-            _developerMode = configProvider.GetConfig().Runtime.Host.Mode is HostMode.Development;
+            _developerMode = configProvider.GetConfig().IsDevelopmentMode();
             BadRequestExceptionCodes = new();
             TransientExceptionCodes = new();
             ConflictExceptionCodes = new();

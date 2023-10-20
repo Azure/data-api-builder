@@ -16,25 +16,26 @@ We very much welcome issues to help us improve the project. When submitting an i
 
 ## Working with the code
 
-Data API builder (DAB) is a .NET application written in C#, consisting of several core projects, Auth, CLI, Config, Service and GraphQLBuilder. There are also test projects for the CLI and Service.
+Data API builder (DAB) is a .NET application written in C#, consisting of several projects Core, Auth, CLI, Config, Service and GraphQLBuilder. There are also test projects for the CLI and Service.
 
 ### Running locally
 
 Before running the code, ensure you have the correct version of .NET installed (refer to the [global.json](global.json) file) and open the solution from `src/Azure.DataApiBuilder.Service.sln` in Visual Studio (or other editor of choice).
 
-The next step is to ensure you have a config file for DAB defined. If you want to use the sample one [you can use the generator tool](#an-alternative-way-to-generate-config-files), otherwise, ensure that the `dab-config.<engine>.json` file is in the `src/Service` directory (and if the database is CosmosDb_NoSql the GraphQL schema file too).
+The next step is to ensure you have a config file for DAB defined. You can pick a sample one from the `src/Service.Tests` project and copy the `dab-config.<engine>.json` file to the `src/Service` directory (and if the database is CosmosDb_NoSql the GraphQL schema file too). You can also use the [generator tool](#an-alternative-way-to-generate-config-files) described below. Note these sample configuration files expect the backend database schema to be created from the respective `src/Service.Tests/DatabaseSchema-<engine>.sql` schema file in the `src/Service.Tests` project.
 
 Make sure the config has a valid connection string, or you use the [`@env` syntax to reference an environment variable](https://learn.microsoft.com/azure/data-api-builder/configuration-file#accessing-environment-variables).
 
 #### Visual Studio
 
-Before running the code in Visual Studio you must be sure to have your config file correctly populated with a valid connection string to your configured back end. Once you have the back end running and your configuration file set correctly you may do the following to run the code in Visual Studio without using the CLI.
+Before running the sample code in Visual Studio, you must be sure to have your config file correctly populated with a valid connection string for your configured back end. Once you have the back end running and your configuration file set correctly, you may do the following to run the code in Visual Studio without using the CLI.
 
-1. Select the **Startup Project** `Azure.DataApiBuilder.Service`.
-2. Select a **debug profile** for database type: `MsSql`, `PostgreSql`,`CosmosDb_NoSql`, or `MySql`.
-3. Select **Clean Solution**
-4. Select **Build Solution** (Do not select rebuild, as any changes to configuration files may not be reflected in the build folder.)
-5. Start runtime
+1. Open the solution `src/Azure.DataApiBuilder.Service.sln`
+2. Select the **Startup Project** `Azure.DataApiBuilder.Service`.
+3. Select a **debug profile** for database type: `MsSql`, `PostgreSql`,`CosmosDb_NoSql`, or `MySql`.
+4. Select **Clean Solution**
+5. Select **Build Solution**
+6. Start runtime
 
 #### An alternative way to generate config files
 
@@ -53,8 +54,8 @@ Primarily DAB uses integration tests to verify the engine operates correctly in 
 To run the SQL tests locally you will need to:
 
 1. Setup a database using the server(s) that you want to test against.
-1. Create the database schema using the `DatabaseSchema-<engine>.sql` file.
-1. Set the connection string in `dab-config.<engine>.json` or use the [`@env` syntax to reference an environment variable](https://learn.microsoft.com/azure/data-api-builder/configuration-file#accessing-environment-variables).
+1. Create the database schema using the `src/Service.Tests/DatabaseSchema-<engine>.sql` file.
+1. Set the connection string in `src/Service.Tests/dab-config.<engine>.json` or use the [`@env` syntax to reference an environment variable](https://learn.microsoft.com/azure/data-api-builder/configuration-file#accessing-environment-variables).
    - Note - do not commit the connection string to the repo.
 
 Tests can then be run using the following commands:

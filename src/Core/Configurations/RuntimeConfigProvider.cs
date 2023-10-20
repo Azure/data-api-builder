@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -170,7 +171,8 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
-                replaceEnvVar: true))
+                replaceEnvVar: false,
+                replacementFailureMode: EnvironmentVariableReplacementFailureMode.Ignore))
         {
             _runtimeConfig = runtimeConfig;
 
@@ -232,7 +234,13 @@ public class RuntimeConfigProvider
     /// <param name="connectionString">The connection string to the database.</param>
     /// <param name="accessToken">The string representation of a managed identity access token</param>
     /// <returns>true if the initialization succeeded, false otherwise.</returns>
-    public async Task<bool> Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
+    public async Task<bool> Initialize(
+        string jsonConfig,
+        string? graphQLSchema,
+        string connectionString,
+        string? accessToken,
+        bool replaceEnvVar = true,
+        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
         if (string.IsNullOrEmpty(connectionString))
         {
@@ -246,7 +254,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: replaceEnvVar, replacementFailureMode: replacementFailureMode))
         {
             _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

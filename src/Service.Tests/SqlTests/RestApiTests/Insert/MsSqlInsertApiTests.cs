@@ -200,6 +200,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"SELECT * FROM { _nonAutogenPKTableWithTrigger } " +
                 $"WHERE [id] = 3 AND [months] = 2 AND [name] = 'Tommy' AND [salary] = 30 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneWithExcludeFieldsTest",
+                $"SELECT [id], [title] FROM { _integrationTableName } " +
+                $"WHERE [id] = {STARTING_ID_FOR_TEST_INSERTS} " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneWithNoReadPermissionsTest",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE [id] = {STARTING_ID_FOR_TEST_INSERTS} AND 0 = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 

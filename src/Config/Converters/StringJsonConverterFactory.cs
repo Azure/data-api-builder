@@ -14,6 +14,13 @@ namespace Azure.DataApiBuilder.Config.Converters;
 /// </summary>
 public class StringJsonConverterFactory : JsonConverterFactory
 {
+    private EnvironmentVariableReplacementFailureMode _replacementFailureMode;
+
+    public StringJsonConverterFactory(EnvironmentVariableReplacementFailureMode replacementFailureMode)
+    {
+        _replacementFailureMode = replacementFailureMode;
+    }
+
     public override bool CanConvert(Type typeToConvert)
     {
         return typeToConvert.IsAssignableTo(typeof(string));
@@ -21,7 +28,7 @@ public class StringJsonConverterFactory : JsonConverterFactory
 
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new StringJsonConverter();
+        return new StringJsonConverter(_replacementFailureMode);
     }
 
     class StringJsonConverter : JsonConverter<string>
@@ -42,6 +49,12 @@ public class StringJsonConverterFactory : JsonConverterFactory
         // within the name of the environment variable, but that ') is not
         // a valid environment variable name in certain shells.
         const string ENV_PATTERN = @"@env\('.*?(?='\))'\)";
+        private EnvironmentVariableReplacementFailureMode _replacementFailureMode;
+
+        public StringJsonConverter(EnvironmentVariableReplacementFailureMode replacementFailureMode)
+        {
+            _replacementFailureMode = replacementFailureMode;
+        }
 
         public override string? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
@@ -64,7 +77,7 @@ public class StringJsonConverterFactory : JsonConverterFactory
             writer.WriteStringValue(value);
         }
 
-        private static string ReplaceMatchWithEnvVariable(Match match)
+        private string ReplaceMatchWithEnvVariable(Match match)
         {
             // [^@env\(]   :  any substring that is not @env(
             // .*          :  any char except newline any number of times
@@ -76,10 +89,17 @@ public class StringJsonConverterFactory : JsonConverterFactory
             // strips first and last characters, ie: '''hello'' --> ''hello'
             string envName = Regex.Match(match.Value, innerPattern).Value[1..^1];
             string? envValue = Environment.GetEnvironmentVariable(envName);
-            return envValue is not null ? envValue :
-                throw new DataApiBuilderException(message: $"Environmental Variable, {envName}, not found.",
-                                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                                               subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            if (_replacementFailureMode == EnvironmentVariableReplacementFailureMode.Throw)
+            {
+                return envValue is not null ? envValue :
+                    throw new DataApiBuilderException(message: $"Environmental Variable, {envName}, not found.",
+                                                   statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+            else
+            {
+                return envValue ?? match.Value;
+            }
         }
     }
 }

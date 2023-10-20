@@ -200,6 +200,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 $"SELECT * FROM { _nonAutogenPKTableWithTrigger } " +
                 $"WHERE [id] = 3 AND [months] = 2 AND [salary] = 30 AND [name] = 'Paris' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchOne_Update_NoReadTest",
+                $"SELECT * FROM { _integrationTableName } " +
+                $"WHERE 0 = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "Patch_Update_WithExcludeFieldsTest",
+                $"SELECT [id], [title] FROM { _integrationTableName } " +
+                $"WHERE id = 8 AND [title] = 'Heart of Darkness' " +
+                $"AND [publisher_id] = 2324 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "PatchInsert_NoReadTest",
+                $"SELECT [categoryid], [pieceid], [categoryName],[piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE 0 = 1 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "Patch_Insert_WithExcludeFieldsTest",
+                $"SELECT [categoryid], [pieceid], [piecesAvailable]," +
+                $"[piecesRequired] FROM { _Composite_NonAutoGenPK_TableName } " +
+                $"WHERE [categoryid] = 0 AND [pieceid] = 7 AND [categoryName] = 'SciFi' " +
+                $"AND [piecesAvailable]= 4 AND [piecesRequired] = 4 " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
         #region Test Fixture Setup
@@ -272,17 +300,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 ""last_sold_on"": null
             }";
 
-            expectedLocationHeader = $"id/2";
-
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/2",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneInsertWithRowversionFieldMissingFromRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedLocationHeader: string.Empty
                 );
         }
 
@@ -396,16 +422,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 ""salary"": 100
             }";
 
-            string primaryKeyRoute = "id/3/months/2";
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: primaryKeyRoute,
+                primaryKeyRoute: "id/3/months/2",
                 queryString: null,
                 entityNameOrPath: _nonAutogenPKEntityWithTrigger,
                 sqlQuery: GetQuery("PatchOneInsertInTableWithNonAutoGenPKAndTrigger"),
                 operationType: EntityActionOperation.UpsertIncremental,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
-                expectedLocationHeader: primaryKeyRoute
+                expectedLocationHeader: string.Empty
             );
         }
 

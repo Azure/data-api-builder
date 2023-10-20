@@ -135,40 +135,40 @@ namespace Azure.DataApiBuilder.Core.Authorization
                 return false;
             }
 
-        // Short circuit when OperationMetadata lookup fails. When lookup succeeds, operationToColumnMap will be populated
-        // to enable include/excluded column permissions lookups.
-        if (roleMetadata.OperationToColumnMap.TryGetValue(operation, out OperationMetadata? operationToColumnMap) && operationToColumnMap is not null)
-        {
-            _runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
-            // Each column present in the request is an "exposedColumn".
-            // Authorization permissions reference "backingColumns"
-            // Resolve backingColumn name to check authorization.
-            // Failure indicates that request contain invalid exposedColumn for entity.
-            foreach (string exposedColumn in columns)
+            // Short circuit when OperationMetadata lookup fails. When lookup succeeds, operationToColumnMap will be populated
+            // to enable include/excluded column permissions lookups.
+            if (roleMetadata.OperationToColumnMap.TryGetValue(operation, out OperationMetadata? operationToColumnMap) && operationToColumnMap is not null)
             {
-                if (metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
+                _runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+                // Each column present in the request is an "exposedColumn".
+                // Authorization permissions reference "backingColumns"
+                // Resolve backingColumn name to check authorization.
+                // Failure indicates that request contain invalid exposedColumn for entity.
+                foreach (string exposedColumn in columns)
                 {
-                    // backingColumn will not be null when TryGetBackingColumn() is true.
-                    if (operationToColumnMap.Excluded.Contains(backingColumn!) ||
-                        !operationToColumnMap.Included.Contains(backingColumn!))
+                    if (metadataProvider.TryGetBackingColumn(entityName, field: exposedColumn, out string? backingColumn))
                     {
-                        // If column is present in excluded OR excluded='*'
-                        // If column is absent from included and included!=*
-                        // return false
-                        return false;
+                        // backingColumn will not be null when TryGetBackingColumn() is true.
+                        if (operationToColumnMap.Excluded.Contains(backingColumn!) ||
+                            !operationToColumnMap.Included.Contains(backingColumn!))
+                        {
+                            // If column is present in excluded OR excluded='*'
+                            // If column is absent from included and included!=*
+                            // return false
+                            return false;
+                        }
+                    }
+                    else if (runtimeConfig is not null && runtimeConfig.IsRequestBodyStrict)
+                    {
+                        // Throw exception when we are not allowed extraneous fields in the rest request body,
+                        // and no mapping exists for the given exposed field to a backing column.
+                        throw new DataApiBuilderException(
+                            message: "Invalid field name provided.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ExposedColumnNameMappingError
+                            );
                     }
                 }
-                else if (runtimeConfig is not null && runtimeConfig.IsRequestBodyStrict)
-                {
-                    // Throw exception when we are not allowed extraneous fields in the rest request body,
-                    // and no mapping exists for the given exposed field to a backing column.
-                    throw new DataApiBuilderException(
-                        message: "Invalid field name provided.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ExposedColumnNameMappingError
-                        );
-                }
-            }
 
                 return true;
             }

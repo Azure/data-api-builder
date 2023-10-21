@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc />
-        public bool TryGetExposedColumnName(string entityName, string backingFieldName, out string? name)
+        public bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name)
         {
             return EntityBackingColumnsToExposedNames[entityName].TryGetValue(backingFieldName, out name);
         }

@@ -74,18 +74,18 @@ namespace Azure.DataApiBuilder.Core.Configurations
             ValidateAuthenticationOptions(runtimeConfig);
             ValidateGlobalEndpointRouteConfig(runtimeConfig);
 
-        // Running these graphQL validations only in development mode to ensure
-        // fast startup of engine in production mode.
-        if (runtimeConfig.IsDevelopmentMode())
-        {
-            ValidateEntityConfiguration(runtimeConfig);
-
-            if (runtimeConfig.IsGraphQLEnabled)
+            // Running these graphQL validations only in development mode to ensure
+            // fast startup of engine in production mode.
+            if (runtimeConfig.IsDevelopmentMode())
             {
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
+                ValidateEntityConfiguration(runtimeConfig);
+
+                if (runtimeConfig.IsGraphQLEnabled)
+                {
+                    ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
+                }
             }
         }
-    }
 
         /// <summary>
         /// Throws exception if Invalid connection-string or database type
@@ -251,34 +251,34 @@ namespace Azure.DataApiBuilder.Core.Configurations
             // Stores the unique rest paths configured for different entities present in the config.
             HashSet<string> restPathsForEntities = new();
 
-        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
-        {
-            if (runtimeConfig.IsRestEnabled && entity.Rest is not null && entity.Rest.Enabled)
+            foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
             {
-                // If no custom rest path is defined for the entity, we default it to the entityName.
-                string pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
-                ValidateRestPathSettingsForEntity(entityName, pathForEntity);
-                if (!restPathsForEntities.Add(pathForEntity))
+                if (runtimeConfig.IsRestEnabled && entity.Rest is not null && entity.Rest.Enabled)
                 {
-                    // Presence of multiple entities having the same rest path configured causes conflict.
-                    throw new DataApiBuilderException(
-                        message: $"The rest path: {pathForEntity} specified for entity: {entityName} is already used by another entity.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                        );
-                }
+                    // If no custom rest path is defined for the entity, we default it to the entityName.
+                    string pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
+                    ValidateRestPathSettingsForEntity(entityName, pathForEntity);
+                    if (!restPathsForEntities.Add(pathForEntity))
+                    {
+                        // Presence of multiple entities having the same rest path configured causes conflict.
+                        throw new DataApiBuilderException(
+                            message: $"The rest path: {pathForEntity} specified for entity: {entityName} is already used by another entity.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                            );
+                    }
 
                     ValidateRestMethods(entity, entityName);
                 }
 
-            // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
-            if (runtimeConfig.IsGraphQLEnabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
-            {
-                ValidateNameRequirements(entity.GraphQL.Singular);
-                ValidateNameRequirements(entity.GraphQL.Plural);
+                // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
+                if (runtimeConfig.IsGraphQLEnabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
+                {
+                    ValidateNameRequirements(entity.GraphQL.Singular);
+                    ValidateNameRequirements(entity.GraphQL.Plural);
+                }
             }
         }
-    }
 
         /// <summary>
         /// Helper method to validate and let users know whether insignificant properties are present in the REST field.
@@ -336,34 +336,34 @@ namespace Azure.DataApiBuilder.Core.Configurations
             }
         }
 
-    /// <summary>
-    /// Ensure the global REST and GraphQL endpoints do not conflict if both
-    /// are enabled.
-    /// </summary>
-    /// <param name="runtimeConfig">The config that will be validated.</param>
-    public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
-    {
-        // Both REST and GraphQL endpoints cannot be disabled at the same time.
-        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
+        /// <summary>
+        /// Ensure the global REST and GraphQL endpoints do not conflict if both
+        /// are enabled.
+        /// </summary>
+        /// <param name="runtimeConfig">The config that will be validated.</param>
+        public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
         {
-            throw new DataApiBuilderException(
-                message: $"Both GraphQL and REST endpoints are disabled.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-        }
-
-        string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
-
-        // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
-        if (runtimeBaseRoute is not null)
-        {
-            if (!runtimeConfig.IsStaticWebAppsIdentityProvider)
+            // Both REST and GraphQL endpoints cannot be disabled at the same time.
+            if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
             {
                 throw new DataApiBuilderException(
-                    message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
+                    message: $"Both GraphQL and REST endpoints are disabled.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
+
+            string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
+
+            // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
+            if (runtimeBaseRoute is not null)
+            {
+                if (!runtimeConfig.IsStaticWebAppsIdentityProvider)
+                {
+                    throw new DataApiBuilderException(
+                        message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
 
                 if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
                 {
@@ -374,25 +374,25 @@ namespace Azure.DataApiBuilder.Core.Configurations
                 }
             }
 
-        ValidateRestURI(runtimeConfig);
-        ValidateGraphQLURI(runtimeConfig);
-        // Do not check for conflicts if GraphQL or REST endpoints are disabled.
-        if (!runtimeConfig.IsRestEnabled || !runtimeConfig.IsGraphQLEnabled)
-        {
-            return;
-        }
+            ValidateRestURI(runtimeConfig);
+            ValidateGraphQLURI(runtimeConfig);
+            // Do not check for conflicts if GraphQL or REST endpoints are disabled.
+            if (!runtimeConfig.IsRestEnabled || !runtimeConfig.IsGraphQLEnabled)
+            {
+                return;
+            }
 
-        if (string.Equals(
-            a: runtimeConfig.RestPath,
-            b: runtimeConfig.GraphQLPath,
-            comparisonType: StringComparison.OrdinalIgnoreCase))
-        {
-            throw new DataApiBuilderException(
-                message: $"Conflicting GraphQL and REST path configuration.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            if (string.Equals(
+                a: runtimeConfig.RestPath,
+                b: runtimeConfig.GraphQLPath,
+                comparisonType: StringComparison.OrdinalIgnoreCase))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Conflicting GraphQL and REST path configuration.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
         }
-    }
 
         /// <summary>
         /// Method to validate that the REST URI (REST path prefix, REST base route).
@@ -407,33 +407,33 @@ namespace Azure.DataApiBuilder.Core.Configurations
                 return;
             }
 
-        // validate the rest path.
-        string restPath = runtimeConfig.RestPath;
-        if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
-        {
-            throw new DataApiBuilderException(
-                message: $"{ApiType.REST} path {exceptionMsgSuffix}",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-        }
+            // validate the rest path.
+            string restPath = runtimeConfig.RestPath;
+            if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
+            {
+                throw new DataApiBuilderException(
+                    message: $"{ApiType.REST} path {exceptionMsgSuffix}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
 
         }
 
-    /// <summary>
-    /// Method to validate that the GraphQL URI (GraphQL path prefix).
-    /// </summary>
-    /// <param name="runtimeConfig"></param>
-    public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
-    {
-        string graphqlPath = runtimeConfig.GraphQLPath;
-        if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
+        /// <summary>
+        /// Method to validate that the GraphQL URI (GraphQL path prefix).
+        /// </summary>
+        /// <param name="runtimeConfig"></param>
+        public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
         {
-            throw new DataApiBuilderException(
-                message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            string graphqlPath = runtimeConfig.GraphQLPath;
+            if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
+            {
+                throw new DataApiBuilderException(
+                    message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+            }
         }
-    }
 
         /// <summary>
         /// Method to validate that the REST/GraphQL URI component is well formed and does not contain
@@ -477,13 +477,13 @@ namespace Azure.DataApiBuilder.Core.Configurations
             return _reservedUriCharsRgx.IsMatch(uriComponent);
         }
 
-    private static void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
-    {
-        // Bypass validation of auth if there is no auth provided
-        if (runtimeConfig.Runtime?.Host?.Authentication is null)
+        private static void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
         {
-            return;
-        }
+            // Bypass validation of auth if there is no auth provided
+            if (runtimeConfig.Runtime?.Host?.Authentication is null)
+            {
+                return;
+            }
 
             bool isAudienceSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Audience);
             bool isIssuerSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Issuer);
@@ -822,17 +822,17 @@ namespace Azure.DataApiBuilder.Core.Configurations
             }
         }
 
-    /// <summary>
-    /// Method to do different validations on claims in the policy.
-    /// </summary>
-    /// <param name="policy">The policy to be validated and processed.</param>
-    /// <returns>Processed policy</returns>
-    /// <exception cref="DataApiBuilderException">Throws exception when one or the other validations fail.</exception>
-    private static void ValidateClaimsInPolicy(string policy, RuntimeConfig runtimeConfig)
-    {
-        // Find all the claimTypes from the policy
-        MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
-        bool isStaticWebAppsAuthConfigured = runtimeConfig.IsStaticWebAppsIdentityProvider;
+        /// <summary>
+        /// Method to do different validations on claims in the policy.
+        /// </summary>
+        /// <param name="policy">The policy to be validated and processed.</param>
+        /// <returns>Processed policy</returns>
+        /// <exception cref="DataApiBuilderException">Throws exception when one or the other validations fail.</exception>
+        private static void ValidateClaimsInPolicy(string policy, RuntimeConfig runtimeConfig)
+        {
+            // Find all the claimTypes from the policy
+            MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
+            bool isStaticWebAppsAuthConfigured = runtimeConfig.IsStaticWebAppsIdentityProvider;
 
             foreach (Match claimType in claimTypes)
             {

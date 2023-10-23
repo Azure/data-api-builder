@@ -90,7 +90,9 @@ namespace Azure.DataApiBuilder.Service.Controllers
                     configuration.Configuration,
                     configuration.Schema,
                     configuration.ConnectionString,
-                    configuration.AccessToken);
+                    configuration.AccessToken,
+                    replaceEnvVar: false,
+                    replacementFailureMode: Config.Converters.EnvironmentVariableReplacementFailureMode.Ignore);
 
                 if (initResult && _configurationProvider.TryGetConfig(out _))
                 {

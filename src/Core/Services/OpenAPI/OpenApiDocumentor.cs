@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.OpenApiDocumentAlreadyExists);
             }
 
-            if (!_runtimeConfig.Runtime.Rest.Enabled)
+            if (!_runtimeConfig.IsRestEnabled)
             {
                 throw new DataApiBuilderException(
                     message: DOCUMENT_CREATION_UNSUPPORTED_ERROR,
@@ -113,8 +113,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
             try
             {
-                string restEndpointPath = _runtimeConfig.Runtime.Rest.Path;
-                string? runtimeBaseRoute = _runtimeConfig.Runtime.BaseRoute;
+                string restEndpointPath = _runtimeConfig.RestPath;
+                string? runtimeBaseRoute = _runtimeConfig.Runtime?.BaseRoute;
                 string url = string.IsNullOrEmpty(runtimeBaseRoute) ? restEndpointPath : runtimeBaseRoute + "/" + restEndpointPath;
                 OpenApiComponents components = new()
                 {

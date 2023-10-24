@@ -355,7 +355,7 @@ namespace Azure.DataApiBuilder.Service
             // SwaggerUI visualization of the OpenAPI description document is only available
             // in developer mode in alignment with the restriction placed on ChilliCream's BananaCakePop IDE.
             // Consequently, SwaggerUI is not presented in a StaticWebApps (late-bound config) environment.
-            if (runtimeConfig?.Runtime.Host.Mode is HostMode.Development || env.IsDevelopment())
+            if (IsUIEnabled(runtimeConfig, env))
             {
                 app.UseSwaggerUI(c =>
                 {
@@ -366,7 +366,7 @@ namespace Azure.DataApiBuilder.Service
             app.UseRouting();
 
             // Adding CORS Middleware
-            if (runtimeConfig is not null && runtimeConfig.Runtime.Host.Cors is not null)
+            if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Cors is not null)
             {
                 app.UseCors(CORSPolicyBuilder =>
                 {
@@ -426,7 +426,7 @@ namespace Azure.DataApiBuilder.Service
                     Tool = {
                         // Determines if accessing the endpoint from a browser
                         // will load the GraphQL Banana Cake Pop IDE.
-                        Enable = runtimeConfig?.Runtime.Host.Mode == HostMode.Development || env.IsDevelopment()
+                        Enable = IsUIEnabled(runtimeConfig, env)
                     }
                 });
 
@@ -449,7 +449,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
+            if (runtimeConfig.IsDevelopmentMode())
             {
                 return LogLevel.Debug;
             }
@@ -493,7 +493,8 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) && runtimeConfig.Runtime.Host.Authentication is not null)
+            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) &&
+                runtimeConfig.Runtime?.Host?.Authentication is not null)
             {
                 AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;
@@ -567,7 +568,7 @@ namespace Azure.DataApiBuilder.Service
         /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
         private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig.Runtime.Telemetry is not null
+            if (runtimeConfig?.Runtime?.Telemetry is not null
                 && runtimeConfig.Runtime.Telemetry.ApplicationInsights is not null)
             {
                 AppInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
@@ -637,7 +638,7 @@ namespace Azure.DataApiBuilder.Service
 
                 runtimeConfigValidator.ValidateConfig();
 
-                if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
+                if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
@@ -668,7 +669,7 @@ namespace Azure.DataApiBuilder.Service
                     _logger.LogError("Endpoint service initialization failed.");
                 }
 
-                if (runtimeConfig.Runtime.Host.Mode == HostMode.Development)
+                if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
@@ -729,6 +730,14 @@ namespace Azure.DataApiBuilder.Service
                     .SetIsOriginAllowedToAllowWildcardSubdomains()
                     .Build();
             }
+        }
+
+        /// <summary>
+        /// Indicates whether to provide UI visualization of REST(via Swagger) or GraphQL (via Banana CakePop).
+        /// </summary>
+        private static bool IsUIEnabled(RuntimeConfig? runtimeConfig, IWebHostEnvironment env)
+        {
+            return (runtimeConfig is not null && runtimeConfig.IsDevelopmentMode()) || env.IsDevelopment();
         }
     }
 }

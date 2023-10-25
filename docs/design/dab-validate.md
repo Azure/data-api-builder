@@ -34,6 +34,9 @@ The validation process will be implemented as a method that takes a file path as
 The config file will be validated against the schema file mentioned in the config file property `$Schema`. If the config file is created by DAB CLI, it will contain the schema file link based on the DAB version.
 
 
+## Example
+![Invalid DAB config](../media/invalid-config.png)
+![Validate output](../media/validate-output.png)
 
 ## Testing
 

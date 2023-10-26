@@ -258,26 +258,16 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        object? additionalProperties;
-        if (!jsonDictionary.TryGetValue("additionalProperties", out additionalProperties))
+        object? id;
+        if (!jsonDictionary.TryGetValue("$id", out id))
         {
             throw new DataApiBuilderException(
-                message: "The schema file doesn't have the required field : additionalProperties",
+                message: "The schema file doesn't have the required field : $id",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        // properties cannot be null since the property additionalProperties exist in the schema file.
-        Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(additionalProperties.ToString()!)!;
-
-        if (!properties.TryGetValue("version", out string? versionNum))
-        {
-            throw new DataApiBuilderException(message: "Missing required property 'version' in additionalProperties section.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-        }
-
-        return versionNum;
+        return id.ToString()!;
     }
 
     public static string GetMergedFileNameForEnvironment(string fileName, string environmentValue)

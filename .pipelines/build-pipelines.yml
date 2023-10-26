@@ -56,7 +56,7 @@ steps:
     schemaId="https://github.com/Azure/data-api-builder/releases/download/v$dabVersion/dab.draft.schema.json"
     echo schemaId = $schemaId
     echo "##vso[task.setvariable variable=\$id]$schemaId"
-    echo id = $(\$id)
+    echo "id = $(\$id)"
   displayName: Set dab version
 
 - task: UseDotNet@2

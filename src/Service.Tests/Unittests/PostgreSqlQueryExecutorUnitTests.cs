@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
 
             using NpgsqlConnection conn = new(connectionString);
-            await postgreSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await postgreSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, string.Empty);
             NpgsqlConnectionStringBuilder connStringBuilder = new(conn.ConnectionString);
 
             if (expectManagedIdentityAccessToken)

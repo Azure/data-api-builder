@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -37,24 +38,30 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             // which are needed because parameter and column names can differ.
             StoredProcedureDefinition spdef = (StoredProcedureDefinition)dbObject.SourceDefinition;
 
-            // Create input value definitions from parameters defined in runtime config.
-            if (entity.Source.Parameters is not null)
+            // Create input value definitions from parameters defined in stored proc.
+            if (spdef is not null)
             {
-                foreach (string param in entity.Source.Parameters.Keys)
+                foreach ((string param, ParameterDefinition definition) in spdef.Parameters)
                 {
                     // Input parameters defined in the runtime config may denote values that may not cast
                     // to the exact value type defined in the database schema.
                     // e.g. Runtime config parameter value set as 1, while database schema denotes value type decimal.
                     // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
-                    string defaultValueFromConfig = entity.Source.Parameters[param].ToString()!;
-                    Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(defaultValueFromConfig, parameterDefinition: spdef.Parameters[param]);
+
+                    IValueNode? valueNode = null;
+                    if (entity.Source.Parameters is not null && entity.Source.Parameters.TryGetValue(param, out object? value))
+                    {
+                        Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(value.ToString()!, parameterDefinition: spdef.Parameters[param]);
+                        valueNode = defaultGraphQLValue.Item2;
+                    }
+
                     inputValues.Add(
                         new(
                             location: null,
                             name: new(param),
                             description: new StringValueNode($"parameters for {name.Value} stored-procedure"),
-                            type: new NamedTypeNode(defaultGraphQLValue.Item1),
-                            defaultValue: defaultGraphQLValue.Item2,
+                            type: new NamedTypeNode(SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType)),
+                            defaultValue: valueNode,
                             directives: new List<DirectiveNode>())
                         );
                 }

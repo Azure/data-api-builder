@@ -25,12 +25,12 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
     {
         public override GraphQLRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.True)
+            if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
             {
                 return new GraphQLRuntimeOptions();
             }
 
-            if (reader.TokenType == JsonTokenType.Null || reader.TokenType == JsonTokenType.False)
+            if (reader.TokenType == JsonTokenType.False)
             {
                 return new GraphQLRuntimeOptions(Enabled: false);
             }

@@ -5,7 +5,6 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
@@ -343,7 +342,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // keys of afterDeserialized do not correspond to the primary key
                 // values given for the primary keys are of incorrect format
                 // duplicate column names in the after token and / or the orderby columns
-                string errorMessage = runtimeConfigProvider.GetConfig().Runtime.Host.Mode is HostMode.Development ? $"{e.Message}\n{e.StackTrace}" :
+                string errorMessage = runtimeConfigProvider.GetConfig().IsDevelopmentMode() ? $"{e.Message}\n{e.StackTrace}" :
                     $"{afterJsonString} is not a valid pagination token.";
                 throw new DataApiBuilderException(
                     message: errorMessage,

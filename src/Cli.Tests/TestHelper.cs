@@ -870,7 +870,7 @@ namespace Cli.Tests
           ""graphql"": {
             ""path"": ""/graphql"",
             ""enabled"": true,
-            ""allow-introspection"": true
+            ""allow-introspection"": false
           },
           ""host"": {
             ""mode"": ""production"",
@@ -917,11 +917,6 @@ namespace Cli.Tests
           ""connection-string"": ""localhost:5000;User ID={USER_NAME};Password={USER_PASSWORD};MultipleActiveResultSets=False;""
         },
         ""runtime"": {
-          ""graphql"": {
-            ""path"": ""/graphql"",
-            ""enabled"": true,
-            ""allow-introspection"": true
-          },
           ""host"": {
             ""mode"": ""production"",
             ""cors"": {
@@ -990,7 +985,7 @@ namespace Cli.Tests
           ""graphql"": {
             ""path"": ""/graphql"",
             ""enabled"": true,
-            ""allow-introspection"": true
+            ""allow-introspection"": false
           },
           ""host"": {
             ""mode"": ""production"",

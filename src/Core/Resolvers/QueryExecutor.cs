@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
             };
 
-            await SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
             return await _retryPolicy.ExecuteAsync(async () =>
             {

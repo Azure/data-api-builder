@@ -206,6 +206,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                     ) AS subq
                 "
             },
+            {
+                "InsertOneWithExcludeFieldsTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title 
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                    ) AS subq
+                "
+            },
+            {
+                "InsertOneWithNoReadPermissionsTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title 
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND 0 = 1
+                    ) AS subq
+                "
+            }
         };
 
         [TestMethod]

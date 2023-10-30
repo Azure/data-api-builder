@@ -363,7 +363,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         message: $"Cannot perform INSERT and could not find {entityName} " +
                             $"with primary key {prettyPrintPk} to perform UPDATE on.",
                             statusCode: HttpStatusCode.NotFound,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
                 }
             }
 

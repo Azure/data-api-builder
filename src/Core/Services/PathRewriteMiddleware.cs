@@ -98,9 +98,9 @@ namespace Azure.DataApiBuilder.Core.Services
         private bool TryGetGraphQLRouteFromConfig([NotNullWhen(true)] out string? graphQLRoute)
         {
             if (_runtimeConfigurationProvider.TryGetLoadedConfig(out RuntimeConfig? config) &&
-                config.Runtime.GraphQL.Enabled)
+                config.IsGraphQLEnabled)
             {
-                graphQLRoute = config.Runtime.GraphQL.Path;
+                graphQLRoute = config.GraphQLPath;
                 return true;
             }
 
@@ -120,13 +120,13 @@ namespace Azure.DataApiBuilder.Core.Services
             PathString requestPath = httpContext.Request.Path;
             if (_runtimeConfigurationProvider.TryGetLoadedConfig(out RuntimeConfig? config))
             {
-                string restPath = config.Runtime.Rest.Path;
-                string graphQLPath = config.Runtime.GraphQL.Path;
+                string restPath = config.RestPath;
+                string graphQLPath = config.GraphQLPath;
                 bool isRestRequest = requestPath.StartsWithSegments(restPath, comparisonType: StringComparison.OrdinalIgnoreCase);
                 bool isGraphQLRequest = requestPath.StartsWithSegments(graphQLPath, comparisonType: StringComparison.OrdinalIgnoreCase);
 
-                if ((isRestRequest && !config.Runtime.Rest.Enabled)
-                    || (isGraphQLRequest && !config.Runtime.GraphQL.Enabled))
+                if ((isRestRequest && !config.IsRestEnabled)
+                    || (isGraphQLRequest && !config.IsGraphQLEnabled))
                 {
                     httpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                     return true;

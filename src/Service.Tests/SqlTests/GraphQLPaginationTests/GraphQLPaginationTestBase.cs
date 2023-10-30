@@ -664,8 +664,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode(
-                  $"[{{\"EntityName\":\"Stock\",\"FieldName\":\"pieceid\",\"Value\":1,\"Direction\":0}}," +
-                  $"{{\"EntityName\":\"Stock\",\"FieldName\":\"categoryid\",\"Value\":1,\"Direction\":0}}]") + @""",
+                  $"[{{\"EntityName\":\"Stock\",\"FieldName\":\"pieceid\",\"Value\":1,\"Direction\":1}}," +
+                  $"{{\"EntityName\":\"Stock\",\"FieldName\":\"categoryid\",\"Value\":0,\"Direction\":0}}]") + @""",
               ""hasNextPage"": true
             }";
 
@@ -819,7 +819,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual2 = await ExecuteGraphQLRequestAsync(graphQLQuery2, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
-                $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":2323,\"Direction\":0}}," +
+                $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":2323,\"Direction\":1}}," +
                 $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":5,\"Direction\":0}}]");
             string expected2 = @"{
               ""items"": [

@@ -116,6 +116,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Holds the information safe to expose in the response's pagination cursor,
+        /// the NextLink. These can then be used to form the pagination columns that
+        /// will be needed for the actual query.
+        /// </summary>
+        protected class NextLinkColumn
+        {
+            public string EntityName { get; set; }
+            public string FieldName { get; set; }
+            public object? Value { get; }
+            public string? ParamName { get; set; }
+            public OrderBy Direction { get; set; }
+
+            public NextLinkColumn(
+                string entityName,
+                string fieldName,
+                object? value,
+                string? paramName = null,
+                OrderBy direction = OrderBy.ASC)
+            {
+                EntityName = entityName;
+                FieldName = fieldName;
+                Value = value;
+                ParamName = paramName;
+                Direction = direction;
+            }
+        }
+
+        /// <summary>
         /// Extracts the columns from the JsonElement needed for pagination, represents them as a string in json format and base64 encodes.
         /// The JSON is encoded in base64 for opaqueness. The cursor should function as a token that the user copies and pastes
         /// without needing to understand how it works.
@@ -129,7 +157,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string tableName = "",
             ISqlMetadataProvider? sqlMetadataProvider = null)
         {
-            List<PaginationColumn> cursorJson = new();
+            // change to Exposable type
+            List<NextLinkColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
             // Hash set is used here to maintain linear runtime
             // in the worst case for this function. If list is used
@@ -149,12 +178,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string? exposedColumnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
                     if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
-                        cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
-                                                        tableName: tableName,
-                                                        exposedColumnName,
-                                                        value,
-                                                        tableAlias: null,
-                                                        direction: column.Direction));
+                        // only add exposable data to the exposable type
+                        cursorJson.Add(new NextLinkColumn(
+                            entityName: entityName,
+                            fieldName: exposedColumnName,
+                            value: value,
+                            direction: column.Direction));
                     }
                     else
                     {
@@ -182,11 +211,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string? exposedColumnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
                     if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
-                        cursorJson.Add(new PaginationColumn(tableSchema: schemaName,
-                                                        tableName: tableName,
-                                                        exposedColumnName,
-                                                        value,
-                                                        direction: OrderBy.ASC));
+                        // only add the exposable data to the new exposable type
+                        cursorJson.Add(new NextLinkColumn(
+                            entityName: entityName,
+                            fieldName: exposedColumnName,
+                            value: value));
                     }
                     else
                     {
@@ -234,26 +263,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Validate the value associated with $after, and return list of orderby columns
         /// it represents.
         /// </summary>
-        public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(string afterJsonString,
-                                                                             PaginationMetadata paginationMetadata,
-                                                                             ISqlMetadataProvider sqlMetadataProvider,
-                                                                             string entityName,
-                                                                             RuntimeConfigProvider runtimeConfigProvider
-                                                                             )
+        public static IEnumerable<PaginationColumn> ParseAfterFromJsonString(
+            string afterJsonString,
+            PaginationMetadata paginationMetadata,
+            ISqlMetadataProvider sqlMetadataProvider,
+            string entityName,
+            RuntimeConfigProvider runtimeConfigProvider
+            )
         {
-            IEnumerable<PaginationColumn>? after;
+            List<PaginationColumn>? after = new();
+            // add collection of exposable which get translated into pagination
+            IEnumerable<NextLinkColumn>? requestAfter;
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                after = JsonSerializer.Deserialize<IEnumerable<PaginationColumn>>(afterJsonString);
+                // deserialize into exposable, then create pagination columns
+                // after = JsonSerializer.Deserialize<IEnumerable<PaginationColumn>>(afterJsonString);
+                requestAfter = JsonSerializer.Deserialize<IEnumerable<NextLinkColumn>>(afterJsonString);
 
-                if (after is null)
+                if (requestAfter is null)
                 {
                     throw new ArgumentException("Failed to parse the pagination information from the provided token");
                 }
 
                 Dictionary<string, PaginationColumn> afterDict = new();
-                foreach (PaginationColumn column in after)
+                foreach (NextLinkColumn column in requestAfter)
                 {
                     // REST calls this function with a non null sqlMetadataProvider
                     // which will get the exposed name for safe messaging in the response.
@@ -261,18 +295,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // param, we expect this column to exist as the $after query param
                     // was formed from a previous response with a nextLink. If the nextLink
                     // has been modified and backingColumn is null we throw exception.
-                    string backingColumnName = GetBackingColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    string backingColumnName = GetBackingColumnName(entityName, column.FieldName, sqlMetadataProvider);
                     if (backingColumnName is null)
                     {
-                        throw new DataApiBuilderException(message: $"Cursor for Pagination Predicates is not well formed, {column.ColumnName} is not valid.",
-                                                       statusCode: HttpStatusCode.BadRequest,
-                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        throw new DataApiBuilderException(
+                            message: $"Cursor for Pagination Predicates is not well formed, {column.FieldName} is not valid.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
+                    PaginationColumn pageColumn = new(
+                        tableName: "",
+                        tableSchema: "",
+                        columnName: column.FieldName,
+                        value: column.Value,
+                        paramName: column.ParamName,
+                        direction: column.Direction);
+                    after.Add(pageColumn);
                     // holds exposed name mapped to exposed pagination column
-                    afterDict.Add(column.ColumnName, column);
+                    afterDict.Add(column.FieldName, pageColumn);
                     // overwrite with backing column's name for query generation
-                    column.ColumnName = backingColumnName;
+                    column.FieldName = backingColumnName;
                 }
 
                 // verify that primary keys is a sub set of after's column names
@@ -288,9 +331,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string safePK = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
                     if (!afterDict.ContainsKey(safePK))
                     {
-                        throw new DataApiBuilderException(message: $"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}",
-                                                       statusCode: HttpStatusCode.BadRequest,
-                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        throw new DataApiBuilderException(
+                            message: $"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
                 }
 
@@ -311,9 +355,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // these columns to exist.
                         string safeColumnName = GetExposedColumnName(entityName, columnName, sqlMetadataProvider);
                         throw new DataApiBuilderException(
-                                    message: $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.",
-                                    statusCode: HttpStatusCode.BadRequest,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                            message: $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
                     orderByColumnCount++;

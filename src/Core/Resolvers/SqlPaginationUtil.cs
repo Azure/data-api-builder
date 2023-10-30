@@ -178,7 +178,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string? exposedColumnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
                     if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
-                        // only add exposable data to the exposable type
                         cursorJson.Add(new NextLinkColumn(
                             entityName: entityName,
                             fieldName: exposedColumnName,
@@ -211,7 +210,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string? exposedColumnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
                     if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
-                        // only add the exposable data to the new exposable type
                         cursorJson.Add(new NextLinkColumn(
                             entityName: entityName,
                             fieldName: exposedColumnName,
@@ -272,13 +270,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             )
         {
             List<PaginationColumn>? after = new();
-            // add collection of exposable which get translated into pagination
             IEnumerable<NextLinkColumn>? requestAfter;
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                // deserialize into exposable, then create pagination columns
-                // after = JsonSerializer.Deserialize<IEnumerable<PaginationColumn>>(afterJsonString);
                 requestAfter = JsonSerializer.Deserialize<IEnumerable<NextLinkColumn>>(afterJsonString);
 
                 if (requestAfter is null)
@@ -307,7 +302,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     PaginationColumn pageColumn = new(
                         tableName: "",
                         tableSchema: "",
-                        columnName: column.FieldName,
+                        columnName: backingColumnName,
                         value: column.Value,
                         paramName: column.ParamName,
                         direction: column.Direction);

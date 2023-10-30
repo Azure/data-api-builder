@@ -4,27 +4,26 @@
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
-namespace Azure.DataApiBuilder.Core.Models
+namespace Azure.DataApiBuilder.Core.Models;
+
+/// <summary>
+/// FindRequestContext provides the major components of a REST query
+/// corresponding to the FindById or FindMany operations.
+/// </summary>
+public class FindRequestContext : RestRequestContext
 {
     /// <summary>
-    /// FindRequestContext provides the major components of a REST query
-    /// corresponding to the FindById or FindMany operations.
+    /// Constructor.
     /// </summary>
-    public class FindRequestContext : RestRequestContext
+
+    public FindRequestContext(string entityName, DatabaseObject dbo, bool isList)
+        : base(entityName, dbo)
     {
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-
-        public FindRequestContext(string entityName, DatabaseObject dbo, bool isList)
-            : base(entityName, dbo)
-        {
-            FieldsToBeReturned = new();
-            PrimaryKeyValuePairs = new();
-            FieldValuePairsInBody = new();
-            IsMany = isList;
-            OperationType = EntityActionOperation.Read;
-        }
-
+        FieldsToBeReturned = new();
+        PrimaryKeyValuePairs = new();
+        FieldValuePairsInBody = new();
+        IsMany = isList;
+        OperationType = EntityActionOperation.Read;
     }
+
 }

@@ -84,11 +84,11 @@ public class ParameterValidationTests
                     Assert.IsTrue(operation.Parameters.Count is 5);
 
                     // Assert that it contains all the query parameters with appropriate type
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$select" && param.Schema.Type is "string"));
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$filter" && param.Schema.Type is "string"));
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$orderby" && param.Schema.Type is "string"));
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$first" && param.Schema.Type is "integer"));
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$after" && param.Schema.Type is "string"));
+                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$select") && param.Schema.Type.Equals("string")));
+                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$filter") && param.Schema.Type.Equals("string")));
+                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$orderby") && param.Schema.Type.Equals("string")));
+                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$first") && param.Schema.Type.Equals("integer")));
+                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$after") && param.Schema.Type.Equals("string")));
                 }
                 else
                 {
@@ -113,7 +113,7 @@ public class ParameterValidationTests
     public async Task ValidateInputParametersForStoredProcedures(string entityName, string objectName)
     {
         Dictionary<string, object> parameterDefaults = null;
-        if (entityName is "UpdateBookTitle")
+        if (entityName.Equals("UpdateBookTitle"))
         {
             // Adding a parameter default value.
             parameterDefaults = new Dictionary<string, object> { { "title", "Test Title" } };
@@ -131,16 +131,16 @@ public class ParameterValidationTests
                 {
                     Assert.IsTrue(operation.Parameters.Any(param =>
                     param.In is ParameterLocation.Query
-                    && param.Name is "id"
-                    && param.Schema.Type is "number"
+                    && param.Name.Equals("id")
+                    && param.Schema.Type.Equals("number")
                     && param.Required is true
                     ));
 
                     // Parameter with default value will be an optional query parameter.
                     Assert.IsTrue(operation.Parameters.Any(param =>
                         param.In is ParameterLocation.Query
-                        && param.Name is "title"
-                        && param.Schema.Type is "string"
+                        && param.Name.Equals("title")
+                        && param.Schema.Type.Equals("string")
                         && param.Required is false));
                 }
                 else

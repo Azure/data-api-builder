@@ -778,7 +778,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual1 = await ExecuteGraphQLRequestAsync(graphQLQuery1, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
-                  $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":2324,\"Direction\":0}}," +
+                  $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":2324,\"Direction\":1}}," +
                   $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":7,\"Direction\":0}}]");
             string expected1 = @"{
               ""items"": [

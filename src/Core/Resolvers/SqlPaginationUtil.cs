@@ -157,7 +157,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string tableName = "",
             ISqlMetadataProvider? sqlMetadataProvider = null)
         {
-            // change to Exposable type
             List<NextLinkColumn> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
             // Hash set is used here to maintain linear runtime

@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.VarChar] = typeof(string)
         };
 
-        public static Dictionary<SqlDbType, DbType> _sqlDbTypeToDbType = new()
+        private static Dictionary<SqlDbType, DbType> _sqlDbDateTimeTypeToDbType = new()
         {
             [SqlDbType.Date] = DbType.Date,
             [SqlDbType.DateTime] = DbType.DateTime,
@@ -245,7 +245,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         public static DbType? GetDbTypeFromSqlDbType(SqlDbType sqlDbType)
         {
-            if (_sqlDbTypeToDbType.TryGetValue(sqlDbType, out DbType dbType))
+            if (_sqlDbDateTimeTypeToDbType.TryGetValue(sqlDbType, out DbType dbType))
             {
                 return dbType;
             }

@@ -32,8 +32,6 @@ namespace Azure.DataApiBuilder.Core.Services
         {
         }
 
-        public static readonly HashSet<string> DateTimeTypes = new() { "date", "smalldatetime", "datetime", "datetime2", "datetimeoffset" };
-
         public override string GetDefaultSchemaName()
         {
             return "dbo";
@@ -83,7 +81,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public override DbType? SqlDbTypeToDbType(string sqlDbTypeName)
+        public override DbType? SqlDbDateTimeTypeToDbType(string sqlDbTypeName)
         {
             if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
             {

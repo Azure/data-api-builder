@@ -695,7 +695,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual1 = await ExecuteGraphQLRequestAsync(graphQLQuery1, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
-                $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"Value\":\"Time to Eat 2\",\"Direction\":0}}," +
+                $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"Value\":\"Time to Eat 2\",\"Direction\":1}}," +
                 $"{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":1941,\"Direction\":0}}," +
                 $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":12,\"Direction\":1}}]");
 
@@ -733,9 +733,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual2 = await ExecuteGraphQLRequestAsync(graphQLQuery2, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
-                  $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"Value\":\"The Palace Door\",\"Direction\":0}}," +
+                  $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"Value\":\"The Palace Door\",\"Direction\":1}}," +
                   $"{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":2324,\"Direction\":0}}," +
-                  $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":6,\"Direction\":0}}]");
+                  $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":6,\"Direction\":1}}]");
             string expected2 = @"{
               ""items"": [
                 {

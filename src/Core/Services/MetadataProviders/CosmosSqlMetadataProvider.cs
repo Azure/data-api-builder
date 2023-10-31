@@ -254,6 +254,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
+        /// <inheritdoc />
+        public IDictionary<string, string> GetExposedColumnNames(string entityName)
+        {
+            throw new NotImplementedException();
+        }
+
         public bool TryGetExposedColumnName(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
             name = field;

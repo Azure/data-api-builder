@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -184,6 +185,12 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return ((DatabaseStoredProcedure)databaseObject).StoredProcedureDefinition;
+        }
+
+        /// <inheritdoc />
+        public IDictionary<string, string> GetExposedColumnNames(string entityName)
+        {
+            return EntityBackingColumnsToExposedNames[entityName];
         }
 
         /// <inheritdoc />
@@ -934,8 +941,16 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
                     {
-                        EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
-                        EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
+                        string exposedName = columnName;
+
+                        // If the column name is an invalid GraphQL name then sanitiize it
+                        if (!NameUtils.IsValidGraphQLName(exposedName))
+                        {
+                            exposedName = FormatNameForField(columnName);
+                        }
+
+                        EntityBackingColumnsToExposedNames[entityName].Add(columnName, exposedName);
+                        EntityExposedNamesToBackingColumnNames[entityName].Add(exposedName, columnName);
                     }
                 }
             }

@@ -76,6 +76,14 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// For the entity that is provided as an argument,
+        /// get the mapping of exposed names associated with the columns.
+        /// </summary>
+        /// <param name="entityName">The entity whose mapping we lookup.</param>
+        /// <returns>Dictionary mapping column names to field names.</returns>
+        IDictionary<string, string> GetExposedColumnNames(string entityName);
+
+        /// <summary>
+        /// For the entity that is provided as an argument,
         /// try to get the exposed name associated
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.

@@ -207,7 +207,8 @@ namespace Azure.DataApiBuilder.Core.Services
                             entity,
                             entities,
                             rolesAllowedForEntity,
-                            rolesAllowedForFields
+                            rolesAllowedForFields,
+                            sqlMetadataProvider.GetExposedColumnNames(entityName)
                         );
 
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)

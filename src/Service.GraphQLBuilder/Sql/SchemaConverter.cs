@@ -38,7 +38,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             [NotNull] Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            IDictionary<string, string> exposedColumnNames)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new();
@@ -92,8 +93,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             directives.Add(authZDirective!);
                         }
 
+                        // ensure field name is valid
                         string exposedColumnName = columnName;
-                        if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: columnName, out string? columnAlias))
+                        if (exposedColumnNames is not null && exposedColumnNames.TryGetValue(key: columnName, out string? columnAlias))
                         {
                             exposedColumnName = columnAlias;
                         }

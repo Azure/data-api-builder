@@ -6,11 +6,11 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services.Cache.Interfaces;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
-            IFusionCache cache)
+            IDabCacheService cache)
         {
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
 

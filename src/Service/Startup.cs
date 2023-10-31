@@ -19,6 +19,8 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.Cache.Interfaces;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
@@ -168,17 +170,30 @@ namespace Azure.DataApiBuilder.Service
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<IAuthorizationResolver>();
             });
+
+            services.AddSingleton<ILogger<FusionCache>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<FusionCache>();
+            });
+
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQLService(services);
             services.AddFusionCache()
+                .WithOptions(options =>
+                {
+                    options.FactoryErrorsLogLevel = LogLevel.Debug;
+                })
                 .WithDefaultEntryOptions(new FusionCacheEntryOptions
                 {
                     Duration = TimeSpan.FromMinutes(1)
                 });
 
+            services.AddSingleton<IDabCacheKeyProvider, DabCacheKeyProvider>();
+            services.AddSingleton<IDabCacheService, DabCacheService>();
             services.AddControllers();
         }
 

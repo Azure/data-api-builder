@@ -201,7 +201,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 configEntity: spEntity,
                 entities: new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: SchemaConverterTests.GetRolesAllowedForEntity(),
-                rolesAllowedForFields: SchemaConverterTests.GetFieldToRolesMap()
+                rolesAllowedForFields: SchemaConverterTests.GetFieldToRolesMap(),
+                exposedColumnNames: new Dictionary<string, string>()
                 );
 
             return objectTypeDefinitionNode;

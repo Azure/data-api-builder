@@ -212,6 +212,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn2, dataSourceName2);
             Assert.AreEqual(expected: db2AccessToken, actual: conn2.AccessToken, "Data source connection failed to be set with correct access token");
 
+            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, string.Empty);
+            Assert.AreEqual(expected: db1AccessToken, actual: conn.AccessToken, "Data source connection failed to be set with default access token when source name provided is empty.");
         }
     }
 }

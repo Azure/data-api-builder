@@ -195,7 +195,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if null</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
         /// <seealso cref="https://learn.microsoft.com/en-us/sql/relational-databases/system-stored-procedures/sp-set-session-context-transact-sql?view=sql-server-ver16"/>
-        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName = "")
+        public override string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName)
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {

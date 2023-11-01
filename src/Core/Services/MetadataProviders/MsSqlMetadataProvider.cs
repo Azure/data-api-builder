@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public override DbType? SqlDbDateTimeTypeToDbType(string sqlDbTypeName)
+        public override DbType? ResolveDbType(string sqlDbTypeName)
         {
             if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
             {

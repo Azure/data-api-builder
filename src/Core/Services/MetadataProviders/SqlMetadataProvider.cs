@@ -337,7 +337,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // MsSql types like date,smalldatetime,datetime,datetime2 are mapped to the same .NET type of DateTime.
                     // Thus to determine the actual dbtype, we use the underlying MsSql type instead of the .NET type.
-                    paramDefinition.DbType = SqlDbDateTimeTypeToDbType((string)row["DATA_TYPE"]);
+                    paramDefinition.DbType = ResolveDbType((string)row["DATA_TYPE"]);
                 }
 
                 // Add to parameters dictionary without the leading @ sign
@@ -394,7 +394,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Returns null when the provided sql type is not a date/time type.
         /// </summary>
         /// <param name="sqlDbTypeName">Name of the SqlDb type.</param>
-        public virtual DbType? SqlDbDateTimeTypeToDbType(string sqlDbTypeName) => throw new NotImplementedException();
+        public virtual DbType? ResolveDbType(string sqlDbTypeName) => throw new NotImplementedException();
 
         /// <summary>
         /// Generates the map used to find a given entity based
@@ -1337,7 +1337,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         // MsSql types like date,smalldatetime,datetime,datetime2 are mapped to the same .NET type of DateTime.
                         // Thus to determine the actual dbtype, we use the underlying MsSql type instead of the .NET type.
-                        columnDefinition.DbType = SqlDbDateTimeTypeToDbType((string)columnInfo["DATA_TYPE"]);
+                        columnDefinition.DbType = ResolveDbType((string)columnInfo["DATA_TYPE"]);
                     }
                 }
             }

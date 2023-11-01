@@ -342,15 +342,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(TIME_TYPE, "null")]
         [DataRow(DATETIME_TYPE, "\"1753-01-01 00:00:00.000\"")]
         [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.997\"")]
+        [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.997Z\"")]
         [DataRow(DATETIME_TYPE, "null")]
         [DataRow(SMALLDATETIME_TYPE, "\"1900-01-01\"")]
         [DataRow(SMALLDATETIME_TYPE, "\"2079-06-06\"")]
         [DataRow(DATETIME2_TYPE, "\"0001-01-01 00:00:00.0000000\"")]
         [DataRow(DATETIME2_TYPE, "\"9999-12-31 23:59:59.9999999\"")]
+        [DataRow(DATETIME2_TYPE, "\"9999-12-31 23:59:59.999Z\"")]
         [DataRow(DATE_TYPE, "\"0001-01-01\"")]
         [DataRow(DATE_TYPE, "\"9999-12-31\"")]
         [DataRow(DATETIMEOFFSET_TYPE, "\"0001-01-01 00:00:00.0000000\"")]
         [DataRow(DATETIMEOFFSET_TYPE, "\"9999-12-31 23:59:59.9999999\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"9999-12-31 23:59:59.9999999Z\"")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
             if (!IsSupportedType(type))

@@ -202,13 +202,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             string after;
             if ("typeid".Equals(exposedFieldName))
             {
-                after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":" + afterValue + ",\"Direction\":0}}]");
+                after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":{afterValue},\"Direction\":0}}]");
             }
             else
             {
                 after = SqlPaginationUtil.Base64Encode(
-                $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":" + exposedFieldName + ",\"Value\":" + afterValue + ",\"Direction\":0}}," +
-                $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":" + afterIdValue + ",\"Direction\":0}}]");
+                $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":{exposedFieldName},\"Value\":{ afterValue},\"Direction\":0}}," +
+                $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":{afterIdValue},\"Direction\":0}}]");
             }
 
             string graphQLQuery = @"{
@@ -223,12 +223,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             string expected;
             if ("typeid".Equals(exposedFieldName))
             {
-                expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":" + endCursorValue + ",\"Direction\":0}}]";
+                expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":{endCursorValue},\"Direction\":0}}]";
             }
             else
             {
-                expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":" + exposedFieldName + ",\"Value\":" + endCursorValue + ",\"Direction\":0}}," +
-                    $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":" + endCursorIdValue + ",\"Direction\":0}}]";
+                expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":{exposedFieldName},\"Value\":{endCursorValue},\"Direction\":0}}," +
+                    $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":{endCursorIdValue},\"Direction\":0}}]";
             }
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());

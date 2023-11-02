@@ -207,7 +207,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             else
             {
                 after = SqlPaginationUtil.Base64Encode(
-                $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":{exposedFieldName},\"Value\":{ afterValue},\"Direction\":0}}," +
+                $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":{exposedFieldName},\"Value\":{afterValue},\"Direction\":0}}," +
                 $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":{afterIdValue},\"Direction\":0}}]");
             }
 

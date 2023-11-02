@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             RuntimeConfig mockConfig = new(
                Schema: "",
-               DataSource: new(DatabaseType.MSSQL, defaultSourceConnectionString, new()),
+               DataSource: new(DatabaseType.MSSQL, defaultSourceConnectionString, Options: new()),
                Runtime: new(
                    Rest: new(),
                    GraphQL: new(),

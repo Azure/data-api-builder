@@ -10,6 +10,8 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -29,6 +31,9 @@ public class RuntimeConfigValidator : IConfigValidator
 
     // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
     private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
+
+    private static bool _isValidateOnly;
+    public static HashSet<Exception> SqlMetadataProviderExceptions {get; } = new();
 
     // Regex to check occurrence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
     // The claimType is invalid if there is a match found.
@@ -60,10 +65,20 @@ public class RuntimeConfigValidator : IConfigValidator
         _logger = logger;
     }
 
+    public static void TurnOnValidationOnlyMode()
+    {
+        _isValidateOnly = true;
+    }
+
+    public static void TurnOffValidationOnlyMode()
+    {
+        _isValidateOnly = false;
+    }
+
     /// <summary>
     /// The driver for validation of the runtime configuration file.
     /// </summary>
-    public void ValidateConfig()
+    public void ValidateConfigProperties()
     {
         RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
@@ -102,14 +117,57 @@ public class RuntimeConfigValidator : IConfigValidator
             // Connection string can't be null or empty
             if (string.IsNullOrWhiteSpace(dataSource.ConnectionString))
             {
-                throw new DataApiBuilderException(
-                    message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                HandleOrRecordException(
+                    new DataApiBuilderException(
+                        message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization)
+                );
             }
         }
 
         ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+    }
+
+    public async void ValidateConfig(string configFilePath)
+    {
+        _isValidateOnly = true;
+        await ValidateConfigSchema(configFilePath);
+        ValidateConfigProperties();
+        ValidatePermissionsInConfig(_runtimeConfigProvider.GetConfig());
+        await ValidateEntitiesMetadata();
+        _isValidateOnly = false;
+    }
+
+    public async Task ValidateConfigSchema(string configFilePath)
+    {
+        string jsonData = _fileSystem.File.ReadAllText(configFilePath);
+        await JsonConfigSchemaValidator.ValidateJsonConfig(jsonData);
+    }
+
+    public async Task ValidateEntitiesMetadata()
+    {
+        LoggerFactory loggerFactory = new();
+        QueryManagerFactory queryManagerFactory = new(
+            runtimeConfigProvider: _runtimeConfigProvider,
+            logger: loggerFactory.CreateLogger<IQueryExecutor>(),
+            contextAccessor: null!);
+        
+        MetadataProviderFactory metadataProviderFactory = new(
+            runtimeConfigProvider: _runtimeConfigProvider,
+            queryManagerFactory: queryManagerFactory,
+            logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
+            fileSystem: _fileSystem);
+        
+        await metadataProviderFactory.InitializeAsync();
+        
+        ValidateRelationshipsInConfig(_runtimeConfigProvider.GetConfig(), metadataProviderFactory);
+        ValidateStoredProceduresInConfig(_runtimeConfigProvider.GetConfig(), metadataProviderFactory);
+
+        foreach (Exception exception in SqlMetadataProviderExceptions)
+        {
+            _logger.LogError(exception.Message);
+        }
     }
 
     /// <summary>
@@ -127,31 +185,50 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
             {
-                CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
-                    dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
-                    throw new DataApiBuilderException(
-                        "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
-                        HttpStatusCode.ServiceUnavailable,
-                        DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-
-                // The schema is provided through GraphQLSchema and not the Schema file when the configuration
-                // is received after startup.
-                if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
+                try
                 {
-                    if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
-                    {
+                    CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
+                        dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
                         throw new DataApiBuilderException(
-                            "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
+                            "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
                             HttpStatusCode.ServiceUnavailable,
                             DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
 
-                    if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
+                    // The schema is provided through GraphQLSchema and not the Schema file when the configuration
+                    // is received after startup.
+                    if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
                     {
-                        throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                        if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
+                        {
+                            throw new DataApiBuilderException(
+                                "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
+                                HttpStatusCode.ServiceUnavailable,
+                                DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
+
+                        if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
+                        {
+                            throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
+                        }
                     }
                 }
+                catch (Exception e)
+                {
+                    HandleOrRecordException(e);
+                }
             }
+        }
+    }
+
+    public static void HandleOrRecordException(Exception exception)
+    {
+        if (_isValidateOnly)
+        {
+            SqlMetadataProviderExceptions.Add(exception);
+        }
+        else
+        {
+            throw exception;
         }
     }
 
@@ -231,10 +308,10 @@ public class RuntimeConfigValidator : IConfigValidator
 
             if (containsDuplicateOperationNames)
             {
-                throw new DataApiBuilderException(
+                HandleOrRecordException(new DataApiBuilderException(
                     message: $"Entity {entityName} generates queries/mutation that already exist",
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
     }
@@ -258,15 +335,22 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 // If no custom rest path is defined for the entity, we default it to the entityName.
                 string pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
-                ValidateRestPathSettingsForEntity(entityName, pathForEntity);
-                if (!restPathsForEntities.Add(pathForEntity))
+                try
                 {
-                    // Presence of multiple entities having the same rest path configured causes conflict.
-                    throw new DataApiBuilderException(
-                        message: $"The rest path: {pathForEntity} specified for entity: {entityName} is already used by another entity.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                        );
+                    ValidateRestPathSettingsForEntity(entityName, pathForEntity);
+                    if (!restPathsForEntities.Add(pathForEntity))
+                    {
+                        // Presence of multiple entities having the same rest path configured causes conflict.
+                        throw new DataApiBuilderException(
+                            message: $"The rest path: {pathForEntity} specified for entity: {entityName} is already used by another entity.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                            );
+                    }
+                }
+                catch (DataApiBuilderException e)
+                {
+                    HandleOrRecordException(e);
                 }
 
                 ValidateRestMethods(entity, entityName);
@@ -330,10 +414,11 @@ public class RuntimeConfigValidator : IConfigValidator
         if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
             GraphQLNaming.ViolatesNameRequirements(entityName))
         {
-            throw new DataApiBuilderException(
+            HandleOrRecordException(new DataApiBuilderException(
                 message: $"Entity {entityName} contains characters disallowed by GraphQL.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError)
+            );
         }
     }
 
@@ -347,10 +432,10 @@ public class RuntimeConfigValidator : IConfigValidator
         // Both REST and GraphQL endpoints cannot be disabled at the same time.
         if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
         {
-            throw new DataApiBuilderException(
+            HandleOrRecordException(new DataApiBuilderException(
                 message: $"Both GraphQL and REST endpoints are disabled.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
 
         string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
@@ -360,18 +445,18 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             if (!runtimeConfig.IsStaticWebAppsIdentityProvider)
             {
-                throw new DataApiBuilderException(
+                HandleOrRecordException(new DataApiBuilderException(
                     message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
             if (!TryValidateUriComponent(runtimeBaseRoute, out string exceptionMsgSuffix))
             {
-                throw new DataApiBuilderException(
+                HandleOrRecordException(new DataApiBuilderException(
                     message: $"Runtime base-route {exceptionMsgSuffix}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
 
@@ -388,10 +473,10 @@ public class RuntimeConfigValidator : IConfigValidator
             b: runtimeConfig.GraphQLPath,
             comparisonType: StringComparison.OrdinalIgnoreCase))
         {
-            throw new DataApiBuilderException(
+            HandleOrRecordException(new DataApiBuilderException(
                 message: $"Conflicting GraphQL and REST path configuration.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
     }
 
@@ -412,10 +497,10 @@ public class RuntimeConfigValidator : IConfigValidator
         string restPath = runtimeConfig.RestPath;
         if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
         {
-            throw new DataApiBuilderException(
+            HandleOrRecordException(new DataApiBuilderException(
                 message: $"{ApiType.REST} path {exceptionMsgSuffix}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
 
     }
@@ -429,10 +514,10 @@ public class RuntimeConfigValidator : IConfigValidator
         string graphqlPath = runtimeConfig.GraphQLPath;
         if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
         {
-            throw new DataApiBuilderException(
+            HandleOrRecordException(new DataApiBuilderException(
                 message: $"{ApiType.GraphQL} path {exceptionMsgSuffix}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }
     }
 
@@ -489,16 +574,23 @@ public class RuntimeConfigValidator : IConfigValidator
         bool isAudienceSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Audience);
         bool isIssuerSet = !string.IsNullOrEmpty(runtimeConfig.Runtime.Host.Authentication.Jwt?.Issuer);
 
-        if (runtimeConfig.Runtime.Host.Authentication.IsJwtConfiguredIdentityProvider() &&
-            (!isAudienceSet || !isIssuerSet))
+        try
         {
-            throw new NotSupportedException("Audience and Issuer must be set when using a JWT identity Provider.");
-        }
+            if (runtimeConfig.Runtime.Host.Authentication.IsJwtConfiguredIdentityProvider() &&
+                (!isAudienceSet || !isIssuerSet))
+            {
+                throw new NotSupportedException("Audience and Issuer must be set when using a JWT identity Provider.");
+            }
 
-        if ((!runtimeConfig.Runtime.Host.Authentication.IsJwtConfiguredIdentityProvider()) &&
-            (isAudienceSet || isIssuerSet))
+            if ((!runtimeConfig.Runtime.Host.Authentication.IsJwtConfiguredIdentityProvider()) &&
+                (isAudienceSet || isIssuerSet))
+            {
+                throw new NotSupportedException("Audience and Issuer can not be set when a JWT identity provider is not configured.");
+            }
+        }
+        catch (NotSupportedException e)
         {
-            throw new NotSupportedException("Audience and Issuer can not be set when a JWT identity provider is not configured.");
+            HandleOrRecordException(e);
         }
     }
 
@@ -518,66 +610,73 @@ public class RuntimeConfigValidator : IConfigValidator
                 List<EntityActionOperation> operationsList = new();
                 foreach (EntityAction action in actions)
                 {
-                    if (action is null)
+                    try
                     {
-                        throw GetInvalidActionException(entityName, roleName, actionName: "null");
-                    }
-
-                    // Evaluate actionOp as the current operation to be validated.
-                    EntityActionOperation actionOp = action.Action;
-
-                    // If we have reached this point, it means that we don't have any invalid
-                    // data type in actions. However we need to ensure that the actionOp is valid.
-                    if (!IsValidPermissionAction(actionOp, entity, entityName))
-                    {
-                        throw GetInvalidActionException(entityName, roleName, actionOp.ToString());
-                    }
-
-                    if (action.Fields is not null)
-                    {
-                        // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
-                        // don't contain any other field. If they do, we throw an appropriate exception.
-                        if (action.Fields.Include is not null && action.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
-                            && action.Fields.Include.Count > 1 ||
-                            action.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && action.Fields.Exclude.Count > 1)
+                        if (action is null)
                         {
-                            // See if included or excluded columns contain wildcard and another field.
-                            // If that's the case with both of them, we specify 'included' in error.
-                            string misconfiguredColumnSet = action.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD)
-                                && action.Fields.Exclude.Count > 1 ? "excluded" : "included";
-                            string actionName = actionOp is EntityActionOperation.All ? "*" : actionOp.ToString();
+                            throw GetInvalidActionException(entityName, roleName, actionName: "null");
+                        }
 
+                        // Evaluate actionOp as the current operation to be validated.
+                        EntityActionOperation actionOp = action.Action;
+
+                        // If we have reached this point, it means that we don't have any invalid
+                        // data type in actions. However we need to ensure that the actionOp is valid.
+                        if (!IsValidPermissionAction(actionOp, entity, entityName))
+                        {
+                            throw GetInvalidActionException(entityName, roleName, actionOp.ToString());
+                        }
+
+                        if (action.Fields is not null)
+                        {
+                            // Check if the IncludeSet/ExcludeSet contain wildcard. If they contain wildcard, we make sure that they
+                            // don't contain any other field. If they do, we HandleOrRecordException(an appropriate exception.
+                            if (action.Fields.Include is not null && action.Fields.Include.Contains(AuthorizationResolver.WILDCARD)
+                                && action.Fields.Include.Count > 1 ||
+                                action.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD) && action.Fields.Exclude.Count > 1)
+                            {
+                                // See if included or excluded columns contain wildcard and another field.
+                                // If that's the case with both of them, we specify 'included' in error.
+                                string misconfiguredColumnSet = action.Fields.Exclude.Contains(AuthorizationResolver.WILDCARD)
+                                    && action.Fields.Exclude.Count > 1 ? "excluded" : "included";
+                                string actionName = actionOp is EntityActionOperation.All ? "*" : actionOp.ToString();
+
+                                HandleOrRecordException(new DataApiBuilderException(
+                                        message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
+                                        $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
+                                        statusCode: HttpStatusCode.ServiceUnavailable,
+                                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                            }
+
+                            if (action.Policy is not null && action.Policy.Database is not null)
+                            {
+                                // validate that all the fields mentioned in database policy are accessible to user.
+                                AreFieldsAccessible(action.Policy.Database,
+                                    action.Fields.Include, action.Fields.Exclude);
+
+                                // validate that all the claimTypes in the policy are well formed.
+                                ValidateClaimsInPolicy(action.Policy.Database, runtimeConfig);
+                            }
+                        }
+
+                        DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
+
+                        if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                        {
                             throw new DataApiBuilderException(
-                                    message: $"No other field can be present with wildcard in the {misconfiguredColumnSet} set for:" +
-                                    $" entity:{entityName}, role:{permissionSetting.Role}, action:{actionName}",
-                                    statusCode: HttpStatusCode.ServiceUnavailable,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                                message: $"The Create action does not support defining a database policy." +
+                                $" entity:{entityName}, role:{permissionSetting.Role}, action:{action.Action}",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
 
-                        if (action.Policy is not null && action.Policy.Database is not null)
-                        {
-                            // validate that all the fields mentioned in database policy are accessible to user.
-                            AreFieldsAccessible(action.Policy.Database,
-                                action.Fields.Include, action.Fields.Exclude);
-
-                            // validate that all the claimTypes in the policy are well formed.
-                            ValidateClaimsInPolicy(action.Policy.Database, runtimeConfig);
-                        }
+                        operationsList.Add(actionOp);
+                        totalSupportedOperationsFromAllRoles.Add(actionOp);
                     }
-
-                    DataSource entityDataSource = runtimeConfig.GetDataSourceFromEntityName(entityName);
-
-                    if (entityDataSource.DatabaseType is not DatabaseType.MSSQL && !IsValidDatabasePolicyForAction(action))
+                    catch(Exception e)
                     {
-                        throw new DataApiBuilderException(
-                            message: $"The Create action does not support defining a database policy." +
-                            $" entity:{entityName}, role:{permissionSetting.Role}, action:{action.Action}",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        HandleOrRecordException(e);
                     }
-
-                    operationsList.Add(actionOp);
-                    totalSupportedOperationsFromAllRoles.Add(actionOp);
                 }
 
                 // Stored procedures only support the "execute" operation.
@@ -586,11 +685,11 @@ public class RuntimeConfigValidator : IConfigValidator
                     if ((operationsList.Count > 1)
                         || (operationsList.Count is 1 && !IsValidPermissionAction(operationsList[0], entity, entityName)))
                     {
-                        throw new DataApiBuilderException(
+                        HandleOrRecordException(new DataApiBuilderException(
                             message: $"Invalid Operations for Entity: {entityName}. " +
                                 $"Stored procedures can only be configured with the 'execute' operation.",
                             statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                     }
                 }
             }
@@ -645,34 +744,34 @@ public class RuntimeConfigValidator : IConfigValidator
             if (entity.Source.Type is not EntitySourceType.Table && entity.Relationships is not null
                 && entity.Relationships.Count > 0)
             {
-                throw new DataApiBuilderException(
+                HandleOrRecordException(new DataApiBuilderException(
                         message: $"Cannot define relationship for entity: {entity}",
                         statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
             string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
             ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(databaseName);
 
-            foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
+            foreach (EntityRelationship relationship in entity.Relationships!.Values)
             {
                 // Validate if entity referenced in relationship is defined in the config.
                 if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
                 {
-                    throw new DataApiBuilderException(
+                    HandleOrRecordException(new DataApiBuilderException(
                         message: $"entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
                 // Validation to ensure that an entity with graphQL disabled cannot be referenced in a relationship by other entities
                 EntityGraphQLOptions targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
                 if (!targetEntityGraphQLDetails.Enabled)
                 {
-                    throw new DataApiBuilderException(
+                    HandleOrRecordException(new DataApiBuilderException(
                         message: $"entity: {relationship.TargetEntity} is disabled for GraphQL.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
                 DatabaseTable sourceDatabaseObject = (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName];
@@ -686,11 +785,11 @@ public class RuntimeConfigValidator : IConfigValidator
                     {
                         if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject, sourceDatabaseObject))
                         {
-                            throw new DataApiBuilderException(
+                            HandleOrRecordException(new DataApiBuilderException(
                             message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
                                 $" and entity: {entityName}.",
                             statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                         }
                     }
 
@@ -698,11 +797,11 @@ public class RuntimeConfigValidator : IConfigValidator
                     {
                         if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(linkingDatabaseObject, targetDatabaseObject))
                         {
-                            throw new DataApiBuilderException(
+                            HandleOrRecordException(new DataApiBuilderException(
                             message: $"Could not find relationship between Linking Object: {relationship.LinkingObject}" +
                                 $" and entity: {relationship.TargetEntity}.",
                             statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                         }
                     }
 
@@ -749,10 +848,10 @@ public class RuntimeConfigValidator : IConfigValidator
                 {
                     if (!sqlMetadataProvider.VerifyForeignKeyExistsInDB(sourceDatabaseObject, targetDatabaseObject))
                     {
-                        throw new DataApiBuilderException(
+                        HandleOrRecordException(new DataApiBuilderException(
                             message: $"Could not find relationship between entities: {entityName} and {relationship.TargetEntity}.",
                             statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                     }
                 }
 
@@ -819,10 +918,10 @@ public class RuntimeConfigValidator : IConfigValidator
                 }
                 catch (DataApiBuilderException e)
                 {
-                    throw new DataApiBuilderException(
+                    HandleOrRecordException(new DataApiBuilderException(
                         message: e.Message,
                         statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
             }
         }
@@ -842,39 +941,46 @@ public class RuntimeConfigValidator : IConfigValidator
 
         foreach (Match claimType in claimTypes)
         {
-            // Remove the prefix @claims. from the claimType
-            string typeOfClaim = claimType.Value.Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
-
-            if (string.IsNullOrWhiteSpace(typeOfClaim))
+            try
             {
-                // Empty claimType is not allowed
-                throw new DataApiBuilderException(
-                    message: $"ClaimType cannot be empty.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
+                // Remove the prefix @claims. from the claimType
+                string typeOfClaim = claimType.Value.Substring(AuthorizationResolver.CLAIM_PREFIX.Length);
+
+                if (string.IsNullOrWhiteSpace(typeOfClaim))
+                {
+                    // Empty claimType is not allowed
+                    throw new DataApiBuilderException(
+                        message: $"ClaimType cannot be empty.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                        );
+                }
+
+                if (_invalidClaimCharsRgx.IsMatch(typeOfClaim))
+                {
+                    // Not a valid claimType containing allowed characters
+                    throw new DataApiBuilderException(
+                        message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                        );
+                }
+
+                if (isStaticWebAppsAuthConfigured &&
+                    !(typeOfClaim.Equals(StaticWebAppsAuthentication.USER_ID_CLAIM) ||
+                    typeOfClaim.Equals(StaticWebAppsAuthentication.USER_DETAILS_CLAIM)))
+                {
+                    // Not a valid claimType containing allowed characters
+                    throw new DataApiBuilderException(
+                        message: INVALID_CLAIMS_IN_POLICY_ERR_MSG,
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
+                        );
+                }
             }
-
-            if (_invalidClaimCharsRgx.IsMatch(typeOfClaim))
+            catch (Exception e)
             {
-                // Not a valid claimType containing allowed characters
-                throw new DataApiBuilderException(
-                    message: $"Invalid format for claim type {typeOfClaim} supplied in policy.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
-            }
-
-            if (isStaticWebAppsAuthConfigured &&
-                !(typeOfClaim.Equals(StaticWebAppsAuthentication.USER_ID_CLAIM) ||
-                typeOfClaim.Equals(StaticWebAppsAuthentication.USER_DETAILS_CLAIM)))
-            {
-                // Not a valid claimType containing allowed characters
-                throw new DataApiBuilderException(
-                    message: INVALID_CLAIMS_IN_POLICY_ERR_MSG,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError
-                    );
+                HandleOrRecordException(e);
             }
         } // MatchType claimType
     }
@@ -896,10 +1002,10 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             if (!IsFieldAccessible(fieldNameMatch, includedFields, excludedFields))
             {
-                throw new DataApiBuilderException(
+                HandleOrRecordException(new DataApiBuilderException(
                 message: $"Not all the columns required by policy are accessible.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
     }
@@ -972,10 +1078,10 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             if (action is not EntityActionOperation.All && !EntityAction.ValidStoredProcedurePermissionOperations.Contains(action))
             {
-                throw new DataApiBuilderException(
+                HandleOrRecordException(new DataApiBuilderException(
                     message: $"Invalid operation for Entity: {entityName}. Stored procedures can only be configured with the 'execute' operation.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
             return true;
@@ -984,10 +1090,10 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             if (action is EntityActionOperation.Execute)
             {
-                throw new DataApiBuilderException(
+                HandleOrRecordException(new DataApiBuilderException(
                     message: $"Invalid operation for Entity: {entityName}. The 'execute' operation can only be configured for entities backed by stored procedures.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);

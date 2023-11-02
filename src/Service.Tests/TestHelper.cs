@@ -26,6 +26,8 @@ namespace Azure.DataApiBuilder.Service.Tests
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
+            RuntimeConfigValidator.TurnOffValidationOnlyMode();
+            RuntimeConfigValidator.SqlMetadataProviderExceptions.Clear();
         }
 
         /// <summary>

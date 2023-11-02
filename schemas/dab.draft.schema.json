@@ -1,16 +1,20 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema",
-  "$id": "#/additionalProperties/version",
+  "$id": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "title": "Data API builder",
   "description": "Schema for Data API builder engine",
-  "additionalProperties": {
-    "version": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"
-  },
+  "additionalProperties": false,
   "type": "object",
   "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Location of the schema file used for building Data API builder configuration file.",
+      "default": null
+    },
     "data-source": {
       "description": "Data source information",
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "database-type": {
           "description": "Database used in the backend",
@@ -26,6 +30,10 @@
         "connection-string": {
           "description": "Connection string for the selected database type",
           "type": "string"
+        },
+        "options": {
+          "description": "Database specific properties for the backend database",
+          "type": "object"
         }
       },
       "allOf": [
@@ -42,6 +50,7 @@
               "options": {
                 "description": "Database specific properties for the backend database",
                 "type": "object",
+                "additionalProperties": false,
                 "properties": {
                   "database": {
                     "type": "string",
@@ -79,6 +88,7 @@
             "properties": {
               "options": {
                 "type": "object",
+                "additionalProperties": false,
                 "properties": {
                   "set-session-context": {
                     "type": "boolean",
@@ -106,6 +116,7 @@
             "properties": {
               "options": {
                 "type": "object",
+                "additionalProperties": false,
                 "properties": {},
                 "required": []
               }
@@ -126,10 +137,12 @@
     "runtime": {
       "type": "object",
       "description": "Runtime configuration settings",
+      "additionalProperties": false,
       "properties": {
         "rest": {
           "type": "object",
           "description": "Global REST endpoint configuration",
+          "additionalProperties": false,
           "properties": {
             "path": {
               "default": "/api",
@@ -149,6 +162,7 @@
         "graphql": {
           "type": "object",
           "description": "Global GraphQL endpoint configuration",
+          "additionalProperties": false,
           "properties": {
             "allow-introspection": {
               "type": "boolean",
@@ -167,6 +181,7 @@
         "host": {
           "type": "object",
           "description": "Global hosting configuration",
+          "additionalProperties": false,
           "properties": {
             "mode": {
               "description": "Set if running in Development or Production mode",
@@ -180,6 +195,7 @@
             "cors": {
               "type": "object",
               "description": "Configure CORS",
+              "additionalProperties": false,
               "properties": {
                 "origins": {
                   "type": "array",
@@ -198,6 +214,7 @@
             },
             "authentication": {
               "type": "object",
+              "additionalProperties": false,
               "properties": {
                 "provider": {
                   "type": "string",
@@ -206,6 +223,7 @@
                 },
                 "jwt": {
                   "type": "object",
+                  "additionalProperties": false,
                   "properties": {
                     "audience": {
                       "type": "string"
@@ -227,6 +245,7 @@
       "patternProperties": {
         "^.*$": {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "source": {
               "oneOf": [
@@ -237,6 +256,7 @@
                 {
                   "type": "object",
                   "description": "The object in the backend database that is mapped to the entity",
+                  "additionalProperties": false,
                   "properties": {
                     "type": {
                       "type": "string",
@@ -292,6 +312,7 @@
                 },
                 {
                   "type": "object",
+                  "additionalProperties": false,
                   "properties": {
                     "path": {
                       "type": "string"
@@ -342,6 +363,7 @@
                 },
                 {
                   "type": "object",
+                  "additionalProperties": false,
                   "properties": {
                     "type": {
                       "$ref": "#/$defs/singular-plural"
@@ -379,6 +401,10 @@
                 }
               ]
             },
+            "permissions": {
+              "type": "array",
+              "description": "Permissions assigned to this object"
+            },
             "mappings": {
               "type": "object",
               "description": "Define mappings between database fields and GraphQL and REST fields",
@@ -392,6 +418,7 @@
               "type": "object",
               "patternProperties": {
                 "^.*$": {
+                  "additionalProperties": false,
                   "properties": {
                     "cardinality": {
                       "type": "string",
@@ -465,6 +492,7 @@
                 "description": "Permissions assigned to this object",
                 "items": {
                   "type": "object",
+                  "additionalProperties": false,
                   "properties": {
                     "role": {
                       "type": "string"
@@ -484,12 +512,14 @@
                               },
                               {
                                 "type": "object",
+                                "additionalProperties": false,
                                 "properties": {
                                   "action": {
                                     "$ref": "#/$defs/action"
                                   },
                                   "fields": {
                                     "type": "object",
+                                    "additionalProperties": false,
                                     "properties": {
                                       "include": {
                                         "type": "array",
@@ -508,6 +538,7 @@
                                   "policy": {
                                     "type": "object",
                                     "description": "Define item-level security policy",
+                                    "additionalProperties": false,
                                     "properties": {
                                       "database": {
                                         "type": "string"
@@ -538,6 +569,7 @@
                 "description": "Permissions assigned to this object",
                 "items": {
                   "type": "object",
+                  "additionalProperties": false,
                   "properties": {
                     "role": {
                       "type": "string"
@@ -561,6 +593,7 @@
                               },
                               {
                                 "type": "object",
+                                "additionalProperties": false,
                                 "properties": {
                                   "action": {
                                     "type": "string",
@@ -571,6 +604,7 @@
                                   },
                                   "fields": {
                                     "type": "object",
+                                    "additionalProperties": false,
                                     "properties": {
                                       "include": {
                                         "type": "array",
@@ -589,6 +623,7 @@
                                   "policy": {
                                     "type": "object",
                                     "description": "Define item-level security policy",
+                                    "additionalProperties": false,
                                     "properties": {
                                       "database": {
                                         "type": "string"
@@ -632,6 +667,7 @@
         },
         {
           "type": "object",
+          "additionalProperties": false,
           "properties": {
             "singular": {
               "type": "string"

@@ -39,10 +39,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using NJsonSchema.Validation;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
+using static Azure.DataApiBuilder.Core.Configurations.JsonConfigSchemaValidator;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -297,17 +299,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     },
                     ""permissions"": [
                         {
-                        ""role"": ""anonymous"",
-                        ""actions"": [
-                            {
-                            ""action"": ""execute"",
-                            ""fields"": null,
-                            ""policy"": {
-                                ""request"": null,
-                                ""database"": null
-                            }
-                            }
-                        ]
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                                {
+                                ""action"": ""create""
+                                }
+                            ]
                         }
                     ],
                     ""mappings"": null,
@@ -315,6 +312,73 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     }
                 }
             }";
+
+        /// <summary>
+        /// Invalid properties:
+        /// `data-source-file` instead of `data-source-files`
+        /// `GraphQL` instead of `graphql` in the global runtime section.
+        /// `rst` instead of `rest` in the entity section.
+        /// </summary>
+        public const string CONFIG_WITH_INVALID_SCHEMA = @"
+        {
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""test-connection-string""
+            },
+            ""data-source-file"": [],
+            ""runtime"": {
+                ""rest"": {
+                    ""enabled"": true,
+                    ""path"": ""/api""
+                },
+                ""Graphql"": {
+                    ""enabled"": true,
+                    ""path"": ""/graphql"",
+                    ""allow-introspection"": true
+                },
+                ""host"": {
+                ""cors"": {
+                    ""origins"": [
+                    ""http://localhost:5000""
+                    ],
+                    ""allow-credentials"": false
+                },
+                ""authentication"": {
+                    ""provider"": ""StaticWebApps""
+                },
+                ""mode"": ""development""
+                }
+            },
+            ""entities"": {
+                ""Publisher"": {
+                    ""source"": {
+                        ""object"": ""publishers"",
+                        ""type"": ""table""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""type"": {
+                            ""singular"": ""Publisher"",
+                            ""plural"": ""Publishers""
+                        }
+                    },
+                    ""rst"": {
+                        ""enabled"": true
+                    },
+                    ""permissions"": [
+                        {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                                {
+                                    ""action"": ""create""
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }";
+        
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -977,21 +1041,182 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates the runtime configuration file."), TestCategory(TestCategory.MSSQL)]
-        public void TestConfigIsValid()
+        /// <summary>
+        /// This method tests the config properties like data-source, runtime settings and entities.
+        /// </summary>
+        [TestMethod("Validates the runtime configuration file properties."), TestCategory(TestCategory.MSSQL)]
+        public void TestConfigPropertiesAreValid()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
-            IConfigValidator configValidator =
-                new RuntimeConfigValidator(
+            RuntimeConfigValidator configValidator =
+                new (
                     configProvider,
                     new MockFileSystem(),
                     configValidatorLogger.Object);
 
-            configValidator.ValidateConfig();
+            configValidator.ValidateConfigProperties();
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary> 
+        /// This test method checks a valid config entities against 
+        /// the database and ensures they are valid. 
+        /// </summary> 
+        [TestMethod("Validates config entites against database is valid."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestSqlMetadataForValidConfigEntities()
+        {
+            RuntimeConfigValidator.TurnOnValidationOnlyMode();
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new (
+                    configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object);
+
+            await configValidator.ValidateEntitiesMetadata();
+            Assert.IsTrue(RuntimeConfigValidator.SqlMetadataProviderExceptions.IsNullOrEmpty());
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary> 
+        /// This test method checks a valid config entities against 
+        /// the database and ensures they are valid. 
+        /// The config contains an entity source object not present in the database.
+        /// It also contains an entity whose source is incorrectly specified as a stored procedure.
+        /// </summary> 
+        [TestMethod("Validates config entites agains database is invalid."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestSqlMetadataForInvalidConfigEntities()
+        {
+            RuntimeConfigValidator.TurnOnValidationOnlyMode();
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+
+            // creating an entity with invalid table name
+            Entity entityWithInvalidSourceName = new(
+                Source: new("bokos", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "book", Plural: "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+                );
+            
+            Entity entityWithInvalidSourceType = new(
+                Source: new("publishers", EntitySourceType.StoredProcedure, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
+                Relationships: null,
+                Mappings: null
+                );
+
+            configuration = configuration with { 
+                    Entities = new RuntimeEntities( new Dictionary<string,Entity>()
+                    {
+                        { "Book", entityWithInvalidSourceName },
+                        { "Publisher", entityWithInvalidSourceType}
+                    })
+                };
+            
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new (
+                    configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object);
+
+            await configValidator.ValidateEntitiesMetadata();
+
+            Assert.IsTrue(RuntimeConfigValidator.SqlMetadataProviderExceptions.Any());
+            Assert.AreEqual(2, RuntimeConfigValidator.SqlMetadataProviderExceptions.Count);
+            List<Exception> exceptionsList = RuntimeConfigValidator.SqlMetadataProviderExceptions.ToList();
+            Assert.AreEqual("Cannot obtain Schema for entity Book with underlying database "
+                + "object source: dbo.bokos due to: Invalid object name 'master.dbo.bokos'.", exceptionsList[0].Message);
+            Assert.AreEqual("No stored procedure definition found for the given database object publishers", exceptionsList[1].Message);
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// This test method validates the configuration file against the schema.
+        /// It asserts that the validation is successful and there are no validation failures. 
+        /// It also verifies that the expected log message is logged.
+        /// </summary>
+        [TestMethod("Validates the config file schema."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestConfigSchemaIsValid()
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
+
+            Mock<ILogger<JsonSchemaValidator>> schemaValidatorLogger = new();
+
+            SetLoggerAndFileSystemForJsonConfigSchemaValidator(
+                schemaValidatorLogger.Object, new MockFileSystem());
+
+            
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+            string jsonData = File.ReadAllText(configLoader.ConfigFilePath);
+
+            (bool isValid, ICollection<ValidationError> validationFailures) = await ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            Assert.IsTrue(isValid);
+            Assert.IsTrue(validationFailures.IsNullOrEmpty());
+            schemaValidatorLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Once);
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// This test tries to validate an config file which is not complaint with the schema.
+        /// It validates no additional properties are defined in the config file.
+        /// The config file used here contains `data-source-file` instead of `data-source-files`,
+        /// and `graphql` property in runtime is written as `GraphQL` in the Global runtime section.
+        /// It also contains an entity where `rest` property is written as `rst`.
+        /// </summary>
+        [TestMethod("Validates the invalid config file schema."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestConfigSchemaIsInvalid()
+        {
+            Mock<ILogger<JsonSchemaValidator>> schemaValidatorLogger = new();
+
+            SetLoggerAndFileSystemForJsonConfigSchemaValidator(
+                schemaValidatorLogger.Object, new MockFileSystem());
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+            (bool isValid, ICollection<ValidationError> validationFailures) = await ValidateJsonConfigWithSchemaAsync(jsonSchema, CONFIG_WITH_INVALID_SCHEMA);
+            Assert.IsFalse(isValid);
+            Assert.AreEqual(3, validationFailures.Count);
+
+            string errorMessage = FormatSchemaValidationErrorMessage(validationFailures);
+            Assert.IsTrue(errorMessage.Contains("Total schema validation errors: 3"));
+            Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/data-source-file at 7:31"));
+            Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/runtime.Graphql at 13:26"));
+            Assert.IsTrue(errorMessage.Contains("AdditionalPropertiesNotValid: #/entities.Publisher\n"
+                    +"{\n  NoAdditionalPropertiesAllowed: #/entities.Publisher.rst\n}\n at 32:30"));
+
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 

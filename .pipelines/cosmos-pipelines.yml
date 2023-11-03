@@ -136,9 +136,10 @@ jobs:
 
   - bash: |
       sudo apt update && sudo apt upgrade -y
-      docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-      docker run -d --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+      sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+      sudo docker run -d --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       echo "performing cert installation"
+      sudo curl https://localhost:8081/_explorer/index.html
       sudo curl -k https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
       sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
       sudo su

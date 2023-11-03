@@ -101,4 +101,97 @@ jobs:
       codeCoverageTool: Cobertura
       summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
 
+- job:  linux
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+      solution: '**/*.sln'
+      buildPlatform: 'Any CPU'
+      buildConfiguration: 'Release'
+
+  steps:
+  - task: NuGetAuthenticate@0
+    displayName: 'NuGet Authenticate'
+
+  - task: UseDotNet@2
+    displayName: Setup .NET SDK v6.0.x
+    inputs:
+      packageType: sdk
+      version: 6.0.x  
+  
+  - task: NuGetToolInstaller@1
+
+  - task: NuGetCommand@2
+    displayName: Restore NuGet packages
+    inputs:
+      restoreSolution: '$(solution)'
+      feedsToUse: config
+      nugetConfigPath: Nuget.config
+
+  - task: DockerInstaller@0
+    displayName: Docker Installer
+    inputs:
+      dockerVersion: 17.09.0-ce
+      releaseType: stable    
+
+  - bash: |
+      docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+      docker run -d --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+      curl -k https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
+      cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
+    condition: eq( variables['Agent.OS'], 'Linux' )
+    displayName: Start CosmosDB Emulator
+
+  - task: DotNetCoreCLI@2
+    displayName: Build
+    inputs:
+      command: build
+      projects: '**/*.csproj'
+      arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need
+
+  - task: FileTransform@1.206.0
+    displayName: 'Generate dab-config.CosmosDb_NoSql.json'
+    inputs:
+      folderPath: '$(System.DefaultWorkingDirectory)'
+      fileType: 'json'
+      targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
+
+  - task: DotNetCoreCLI@2
+    displayName: 'Run CosmosDb_NoSql Integration Tests'
+    inputs:
+      command: test
+      arguments: '--filter "TestCategory=CosmosDb_NoSql" --no-build --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+      projects: '**/*Tests/*.csproj'
+
+  - task: CmdLine@2
+    displayName: 'Set flag to publish Verify *.received files when tests fail'
+    condition: failed()
+    inputs:
+      script: 'echo ##vso[task.setvariable variable=publishverify]Yes'
+
+  - task: CopyFiles@2
+    condition: eq(variables['publishverify'], 'Yes')
+    displayName: 'Copy received files to Artifact Staging'
+    inputs:
+      contents: '**\*.received.*' 
+      targetFolder: '$(Build.ArtifactStagingDirectory)\Verify'
+      cleanTargetFolder: true
+      overWrite: true
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish received files as Artifacts'
+    name: 'verifypublish'
+    condition: eq(variables['publishverify'], 'Yes')
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)\Verify'
+      ArtifactName: 'Verify'
+      publishLocation: 'Container'
+
+  # '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'
+  - task: PublishCodeCoverageResults@1
+    displayName: 'Publish code coverage'
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'
+
 

@@ -135,7 +135,6 @@ jobs:
       releaseType: stable    
 
   - bash: |
-      sudo apt update && sudo apt upgrade -y
       sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       sudo docker run -d --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       echo "performing cert installation"

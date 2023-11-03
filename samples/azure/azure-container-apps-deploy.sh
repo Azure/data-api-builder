@@ -7,7 +7,7 @@ set -euo pipefail
 FILE=".env"
 if [[ -f $FILE ]]; then
 	echo "loading from .env"
-    export $(egrep . $FILE | xargs -n1)
+  eval $(egrep "^[^#;]" $FILE | tr '\n' '\0' | xargs -0 -n1 | sed 's/^/export /')
 else
 	cat << EOF > .env
 RESOURCE_GROUP=""
@@ -17,6 +17,7 @@ LOG_ANALYTICS_WORKSPACE=""
 CONTAINERAPPS_ENVIRONMENT="dm-dab-aca-env"
 CONTAINERAPPS_APP_NAME="dm-dab-aca-app"
 DAB_CONFIG_FILE="./dab-config.json"
+DATABASE_CONNECTION_STRING=''
 EOF
 	echo "Enviroment file (.env) not detected."
 	echo "Please configure values for your environment in the created .env file and run the script again."
@@ -99,12 +100,11 @@ RES=$(az containerapp env storage set --name $CONTAINERAPPS_ENVIRONMENT \
   --azure-file-share-name $FILE_SHARE \
   --access-mode ReadWrite)
 
-
 echo "creating container app : '$CONTAINERAPPS_APP_NAME' on the environment : '$CONTAINERAPPS_ENVIRONMENT'" | tee -a log.txt
 az deployment group create \
   -g $RESOURCE_GROUP \
   -f ./bicep/dab-on-aca.bicep \
-  -p appName=$CONTAINERAPPS_APP_NAME dabConfigFileName=$DAB_CONFIG_FILE_NAME mountedStorageName=$FILE_SHARE environmentId=$CONTAINERAPPS_ENVIRONMENTID \
+  -p appName=$CONTAINERAPPS_APP_NAME dabConfigFileName=$DAB_CONFIG_FILE_NAME mountedStorageName=$FILE_SHARE environmentId=$CONTAINERAPPS_ENVIRONMENTID connectionString="$DATABASE_CONNECTION_STRING" \
   -o json >> log.txt
 
 echo "get the azure container app FQDN" | tee -a log.txt

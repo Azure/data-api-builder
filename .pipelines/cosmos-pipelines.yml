@@ -138,7 +138,7 @@ jobs:
       docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       docker run -d --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       curl -k https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
-      cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
+      sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Start CosmosDB Emulator
 

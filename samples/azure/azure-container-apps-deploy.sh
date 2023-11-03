@@ -37,7 +37,7 @@ az group create --name $RESOURCE_GROUP --location $LOCATION \
     -o json >> log.txt
 
 echo "creating storage account: '$STORAGE_ACCOUNT'" | tee -a log.txt
-az storage account create --name $STORAGE_ACCOUNT --resource-group $RESOURCE_GROUP --location $LOCATION --sku Standard_LRS \
+az storage account create --name $STORAGE_ACCOUNT --resource-group $RESOURCE_GROUP --location $LOCATION --sku Standard_LRS --allow-blob-public-acces false \
     -o json >> log.txt
 
 echo "retrieving storage connection string" | tee -a log.txt
@@ -55,7 +55,8 @@ echo "create log analytics workspace '$LOG_ANALYTICS_WORKSPACE'" | tee -a log.tx
 az monitor log-analytics workspace create \
   --resource-group $RESOURCE_GROUP \
   --location $LOCATION \
-  --workspace-name $LOG_ANALYTICS_WORKSPACE
+  --workspace-name $LOG_ANALYTICS_WORKSPACE \
+  -o json >> log.txt
 
 echo "retrieving log analytics client id" | tee -a log.txt
 LOG_ANALYTICS_WORKSPACE_CLIENT_ID=$(az monitor log-analytics workspace show  \
@@ -80,7 +81,8 @@ az containerapp env create \
   --location $LOCATION \
   --name "$CONTAINERAPPS_ENVIRONMENT" \
   --logs-workspace-id "$LOG_ANALYTICS_WORKSPACE_CLIENT_ID" \
-  --logs-workspace-key "$LOG_ANALYTICS_WORKSPACE_CLIENT_SECRET"
+  --logs-workspace-key "$LOG_ANALYTICS_WORKSPACE_CLIENT_SECRET" \
+  -o json >> log.txt
 
 echo "waiting to finalize the ACA environment" | tee -a log.txt
 while [ "$(az containerapp env show -n $CONTAINERAPPS_ENVIRONMENT -g $RESOURCE_GROUP --query properties.provisioningState -o tsv | tr -d '[:space:]')" != "Succeeded" ]; do sleep 10; done
@@ -102,7 +104,8 @@ echo "creating container app : '$CONTAINERAPPS_APP_NAME' on the environment : '$
 az deployment group create \
   -g $RESOURCE_GROUP \
   -f ./bicep/dab-on-aca.bicep \
-  -p appName=$CONTAINERAPPS_APP_NAME dabConfigFileName=$DAB_CONFIG_FILE_NAME mountedStorageName=$FILE_SHARE environmentId=$CONTAINERAPPS_ENVIRONMENTID
+  -p appName=$CONTAINERAPPS_APP_NAME dabConfigFileName=$DAB_CONFIG_FILE_NAME mountedStorageName=$FILE_SHARE environmentId=$CONTAINERAPPS_ENVIRONMENTID \
+  -o json >> log.txt
 
 echo "get the azure container app FQDN" | tee -a log.txt
 ACA_FQDN=$(az containerapp show -n $CONTAINERAPPS_APP_NAME -g $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')

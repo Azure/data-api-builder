@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestFullConnection()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":1,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
               ],
               ""endCursor"": """ +
-              SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":3,\"Direction\":0}}]") + @""",
+              SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":3,\"Direction\":0}}]") + @""",
               ""hasNextPage"": true
             }";
 
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                   ""title"": ""Before Sunset""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":14,\"Direction\":0}}]") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":14,\"Direction\":0}}]") + @""",
               ""hasNextPage"": false
             }";
 
@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestItemsOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"Value\":1,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -202,13 +202,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             string after;
             if ("typeid".Equals(exposedFieldName))
             {
-                after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":\"{afterValue}\",\"Direction\":0}}]");
+                after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"FieldValue\":\"{afterValue}\",\"Direction\":0}}]");
             }
             else
             {
                 after = SqlPaginationUtil.Base64Encode(
-                $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"{exposedFieldName}\",\"Value\":{afterValue},\"Direction\":0}}," +
-                $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":{afterIdValue},\"Direction\":0}}]");
+                $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"{exposedFieldName}\",\"FieldValue\":{afterValue},\"Direction\":0}}," +
+                $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"FieldValue\":{afterIdValue},\"Direction\":0}}]");
             }
 
             string graphQLQuery = @"{
@@ -223,12 +223,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             string expected;
             if ("typeid".Equals(exposedFieldName))
             {
-                expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":{endCursorValue},\"Direction\":0}}]";
+                expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"FieldValue\":{endCursorValue},\"Direction\":0}}]";
             }
             else
             {
-                expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"{exposedFieldName}\",\"Value\":{endCursorValue},\"Direction\":0}}," +
-                    $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"Value\":{endCursorIdValue},\"Direction\":0}}]";
+                expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"{exposedFieldName}\",\"FieldValue\":{endCursorValue},\"Direction\":0}}," +
+                    $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"FieldValue\":{endCursorIdValue},\"Direction\":0}}]";
             }
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -245,7 +245,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestHasNextPageOnly()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"Value\":1,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             string graphQLQuery = @"{
                 books(first: 2," + $"after: \"{after}\")" + @"{
                     hasNextPage
@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestEmptyPage()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"Value\":1000000,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":1000000,\"Direction\":0}}]");
             string graphQLQuery = @"{
                  books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestNestedPaginationQueries()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":1,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             string graphQLQuery = @"{
                  books(first: 2," + $"after: \"{after}\")" + @"{
                     items {
@@ -330,7 +330,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                           ""title"": ""Before Sunrise""
                         }
                       ],
-                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":13,\"Direction\":0}}]") + @""",
+                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":13,\"Direction\":0}}]") + @""",
                       ""hasNextPage"": true
                     }
                   }
@@ -350,13 +350,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                           ""title"": ""US history in a nutshell""
                         }
                       ],
-                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":4,\"Direction\":0}}]") + @""",
+                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":4,\"Direction\":0}}]") + @""",
                       ""hasNextPage"": false
                     }
                   }
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":3,\"Direction\":0}}]") + @""",
+              ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":3,\"Direction\":0}}]") + @""",
               ""hasNextPage"": true
             }";
 
@@ -370,7 +370,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestPaginatedQueryFromMutationResult()
         {
             string graphQLMutationName = "createbook";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":1,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             string graphQLMutation = @"
                 mutation {
                     createbook(item: { title: ""Books, Pages, and Pagination. The Book"", publisher_id: 1234 }) {
@@ -401,7 +401,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                       ""title"": ""Before Sunrise""
                     }
                   ],
-                  ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":13,\"Direction\":0}}]") + @""",
+                  ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":13,\"Direction\":0}}]") + @""",
                   ""hasNextPage"": true
                 }
               }
@@ -454,8 +454,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"Value\":1,\"Direction\":0}}," +
-                $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"Value\":568,\"Direction\":0}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":568,\"Direction\":0}}]";
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"
 {
@@ -504,7 +504,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
               ],
               ""hasNextPage"": true,
               ""endCursor"": """ +
-              SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":3,\"Direction\":0}}]") + @"""
+              SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":3,\"Direction\":0}}]") + @"""
             }
           }
         ]
@@ -539,7 +539,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
               ],
               ""hasNextPage"": true,
               ""endCursor"": """
-                + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":3,\"Direction\":0}}]") + @"""
+                + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":3,\"Direction\":0}}]") + @"""
             }
           }
         ]
@@ -547,7 +547,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
     }
   ],
   ""hasNextPage"": true,
-  ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":2,\"Direction\":0}}]") + @"""
+  ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":2,\"Direction\":0}}]") + @"""
 }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -560,8 +560,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task PaginateCompositePkTable()
         {
             string graphQLQueryName = "reviews";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Reviews\",\"FieldName\":\"book_id\",\"Value\":1,\"Direction\":0}}," +
-                $"{{\"EntityName\":\"Reviews\",\"FieldName\":\"id\",\"Value\":567,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Reviews\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                $"{{\"EntityName\":\"Reviews\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]");
             string graphQLQuery = @"{
                 reviews(first: 2, after: """ + after + @""") {
                     items {
@@ -573,8 +573,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"Value\":1,\"Direction\":0}}," +
-                $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"Value\":569,\"Direction\":0}}]");
+            after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":569,\"Direction\":0}}]");
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
@@ -601,7 +601,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task PaginationWithFilterArgument()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"Value\":1,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             string graphQLQuery = @"{
                 books(first: 2, after: """ + after + @""", " + QueryBuilder.FILTER_FIELD_NAME + @" : {publisher_id: {eq: 2345}}) {
                     items {
@@ -626,7 +626,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
               ],
               ""endCursor"": """ +
-                SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":4,\"Direction\":0}}]") + @""",
+                SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":4,\"Direction\":0}}]") + @""",
               ""hasNextPage"": false
             }";
 
@@ -664,8 +664,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
               ],
               ""endCursor"": """ + SqlPaginationUtil.Base64Encode(
-                  $"[{{\"EntityName\":\"Stock\",\"FieldName\":\"pieceid\",\"Value\":1,\"Direction\":1}}," +
-                  $"{{\"EntityName\":\"Stock\",\"FieldName\":\"categoryid\",\"Value\":0,\"Direction\":0}}]") + @""",
+                  $"[{{\"EntityName\":\"Stock\",\"FieldName\":\"pieceid\",\"FieldValue\":1,\"Direction\":1}}," +
+                  $"{{\"EntityName\":\"Stock\",\"FieldName\":\"categoryid\",\"FieldValue\":0,\"Direction\":0}}]") + @""",
               ""hasNextPage"": true
             }";
 
@@ -695,9 +695,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual1 = await ExecuteGraphQLRequestAsync(graphQLQuery1, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
-                $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"Value\":\"Time to Eat 2\",\"Direction\":1}}," +
-                $"{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":1941,\"Direction\":0}}," +
-                $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":12,\"Direction\":1}}]");
+                $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"Time to Eat 2\",\"Direction\":1}}," +
+                $"{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"FieldValue\":1941,\"Direction\":0}}," +
+                $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":12,\"Direction\":1}}]");
 
             string expected1 = @"{
               ""items"": [
@@ -733,9 +733,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual2 = await ExecuteGraphQLRequestAsync(graphQLQuery2, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
-                  $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"Value\":\"The Palace Door\",\"Direction\":1}}," +
-                  $"{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":2324,\"Direction\":0}}," +
-                  $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":6,\"Direction\":1}}]");
+                  $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"The Palace Door\",\"Direction\":1}}," +
+                  $"{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"FieldValue\":2324,\"Direction\":0}}," +
+                  $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":6,\"Direction\":1}}]");
             string expected2 = @"{
               ""items"": [
                 {
@@ -778,8 +778,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual1 = await ExecuteGraphQLRequestAsync(graphQLQuery1, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter1 = SqlPaginationUtil.Base64Encode(
-                  $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":2324,\"Direction\":1}}," +
-                  $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":7,\"Direction\":0}}]");
+                  $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"FieldValue\":2324,\"Direction\":1}}," +
+                  $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":7,\"Direction\":0}}]");
             string expected1 = @"{
               ""items"": [
                 {
@@ -819,8 +819,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             JsonElement actual2 = await ExecuteGraphQLRequestAsync(graphQLQuery2, graphQLQueryName, isAuthenticated: false);
 
             string expectedAfter2 = SqlPaginationUtil.Base64Encode(
-                $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"Value\":2323,\"Direction\":1}}," +
-                $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"Value\":5,\"Direction\":0}}]");
+                $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"FieldValue\":2323,\"Direction\":1}}," +
+                $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":5,\"Direction\":0}}]");
             string expected2 = @"{
               ""items"": [
                 {
@@ -926,7 +926,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestInvalidAfterWithIncorrectKeys()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"title\",\"Value\":\"Great Book\",\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"title\",\"FieldValue\":\"Great Book\",\"Direction\":0}}]");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
                     items {
@@ -948,7 +948,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             string graphQLQueryName = "books";
             // note that the current implementation will accept "2" as
             // a valid value for id since it can be parsed to an int
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"Value\":\"two\",\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":\"two\",\"Direction\":0}}]");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\")" + @"{
                     items {
@@ -968,7 +968,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestInvalidAfterWithUnmatchingOrderByColumns1()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"Value\":2,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":2,\"Direction\":0}}]");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\"" + @" orderBy: {id: ASC title: DESC}) {
                     items {
@@ -990,8 +990,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         {
             string graphQLQueryName = "books";
             string after = SqlPaginationUtil.Base64Encode(
-                $"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"Value\":2,\"Direction\":0}}," +
-                $"{{\"EntityName\":\"Books\",\"FieldName\":\"publisher_id\",\"Value\":1234,\"Direction\":1}}]");
+                $"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":2,\"Direction\":0}}," +
+                $"{{\"EntityName\":\"Books\",\"FieldName\":\"publisher_id\",\"FieldValue\":1234,\"Direction\":1}}]");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\"" + @" orderBy: {id: ASC title: DESC}) {
                     items {
@@ -1013,7 +1013,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         public async Task RequestInvalidAfterWithUnmatchingOrderByColumns3()
         {
             string graphQLQueryName = "books";
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"Value\":2,\"Direction\":0}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":2,\"Direction\":0}}]");
             string graphQLQuery = @"{
                  books(" + $"after: \"{after}\"" + @" orderBy: {id: DESC}) {
                     items {

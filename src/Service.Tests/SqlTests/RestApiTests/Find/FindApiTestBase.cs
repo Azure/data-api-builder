@@ -723,8 +723,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// </summary>
         [TestMethod]
         public async Task FindTest_OrderByNotFirstQueryParam_PaginationNextLink()
-        { // [{"EntityName":"Book","FieldName":"id","Value":9,"Direction":0}]
-
+        {
             string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"Value\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,

@@ -138,8 +138,13 @@ jobs:
       sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       sudo docker run -d --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       sudo docker ps
-      sudo sleep 20
-      sudo openssl s_client -connect localhost:8081 
+      curl https://localhost:8081/_explorer/index.html
+      curl https://localhost:8081/_explorer/index.html
+      curl https://localhost:8081/_explorer/index.html
+      curl https://localhost:8081/_explorer/index.html
+      curl https://localhost:8081/_explorer/index.html
+      curl https://localhost:8081/_explorer/index.html
+      curl https://localhost:8081/_explorer/index.html
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Start CosmosDB Emulator
 

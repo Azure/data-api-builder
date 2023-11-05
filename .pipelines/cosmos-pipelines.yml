@@ -138,7 +138,7 @@ jobs:
       sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       sudo docker run -d --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       echo "performing cert installation"
-      sudo curl -V
+      sudo docker ps
       sudo openssl s_client -connect localhost:8081
       sudo curl -kv https://localhost:8081/_explorer/index.html
       sudo curl -k https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt

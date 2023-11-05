@@ -110,6 +110,19 @@ jobs:
       buildConfiguration: 'Release'
 
   steps:
+
+  - task: DockerInstaller@0
+    displayName: Docker Installer
+    inputs:
+      dockerVersion: 17.09.0-ce
+      releaseType: stable  
+
+  - bash: |
+      sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+      docker run --name test -d  --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+    condition: eq( variables['Agent.OS'], 'Linux' )
+    displayName: Start CosmosDB Emulator
+
   - task: NuGetAuthenticate@0
     displayName: 'NuGet Authenticate'
 
@@ -128,21 +141,6 @@ jobs:
       feedsToUse: config
       nugetConfigPath: Nuget.config
 
-  - task: DockerInstaller@0
-    displayName: Docker Installer
-    inputs:
-      dockerVersion: 17.09.0-ce
-      releaseType: stable    
-
-  - bash: |
-      sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-      docker run --name test -d  --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-      sudo docker ps
-      sudo sleep 120 && sudo docker logs test
-      sudo curl -k https://localhost:8081/_explorer/index.html
-    condition: eq( variables['Agent.OS'], 'Linux' )
-    displayName: Start CosmosDB Emulator
-
   - task: DotNetCoreCLI@2
     displayName: Build
     inputs:
@@ -156,6 +154,12 @@ jobs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
       targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
+
+  - bash: |
+      sudo docker logs test
+      sudo curl -k https://localhost:8081/_explorer/index.html
+    condition: eq( variables['Agent.OS'], 'Linux' )
+    displayName: Configure Emulator Certificates
 
   - task: DotNetCoreCLI@2
     displayName: 'Run CosmosDb_NoSql Integration Tests'

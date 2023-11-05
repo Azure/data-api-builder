@@ -136,7 +136,7 @@ jobs:
 
   - bash: |
       sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
-      docker run --publish 8081:8081  --publish 10250-10255:10250-10255  --interactive  --tty  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+      docker run --publish 8081:8081  --publish 10250-10255:10250-10255   mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       sudo docker ps
       sudo netstat -tlpen | grep 8081
       sudo sleep 10 && curl -kv https://localhost:8081/_explorer/index.html

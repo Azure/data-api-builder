@@ -143,6 +143,7 @@ jobs:
       sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
       sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
       sudo docker run -d --publish 8081:8081  --publish 10250-10255:10250-10255  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
+      sudo sleep 60 
       echo "performing cert installation"
       sudo docker ps
       sudo openssl s_client -connect localhost:8081 -servername localhost

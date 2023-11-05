@@ -156,12 +156,9 @@ jobs:
       targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
 
   - bash: |
+      sudo sleep 120 && sudo docker logs --since=1h test
       sudo curl -k https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
-      sudo cp ~/emulatorcert.crt /usr/local/share/ca-certificates/
-      sudo su
-      echo 'emulatorcert.crt' >> /etc/ca-certificates.conf
-      update-ca-certificates
-      exit
+      sudo ls
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Configure Emulator Certificates
 

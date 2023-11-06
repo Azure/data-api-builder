@@ -101,7 +101,6 @@ public class ParameterValidationTests
 
     /// <summary>
     /// Validates that Input parameters are generated for Stored Procedures with GET operation.
-    /// Input parameters for stored procedures will be generated for GET operation.
     /// If a parameter default value is not provided in the config, it will marked as required.
     /// It also validates parameter metadatas like type, name, location, required, etc.
     /// </summary>

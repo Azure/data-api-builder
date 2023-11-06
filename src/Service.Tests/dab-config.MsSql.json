@@ -2144,7 +2144,7 @@
       },
       "graphql": {
         "enabled": false,
-        "operation": "query",
+        "operation": "mutation",
         "type": {
           "singular": "GetBook",
           "plural": "GetBooks"

@@ -1199,7 +1199,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
             string graphQLQueryName = "executeGetPublisher";
-            string graphQLQuery = @"mutation {
+            string graphQLQuery = @"query {
                 executeGetPublisher(id: 1234) {
                     id
                     name

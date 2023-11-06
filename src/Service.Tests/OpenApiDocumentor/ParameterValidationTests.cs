@@ -102,7 +102,7 @@ public class ParameterValidationTests
     /// <summary>
     /// Validates that Input parameters are generated for Stored Procedures with GET operation.
     /// If a parameter default value is not provided in the config, it will marked as required.
-    /// It also validates parameter metadatas like type, name, location, required, etc.
+    /// It also validates parameter metadata like type, name, location, required, etc.
     /// </summary>
     /// <param name="entityName">The name of the entity.</param>
     /// <param name="objectName">The name of the database object.</param>

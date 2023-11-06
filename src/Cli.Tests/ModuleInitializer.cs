@@ -25,6 +25,10 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CosmosDataSourceUsed);
         // Ignore the SqlDataSourceUsed as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.SqlDataSourceUsed);
+        // Ignore the global IsCachingEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsCachingEnabled);
+        // Ignore the entity IsCachingEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.IsCachingEnabled);
         // Ignore the IsRequestBodyStrict as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRequestBodyStrict);
         // Ignore the IsGraphQLEnabled as that's unimportant from a test standpoint.

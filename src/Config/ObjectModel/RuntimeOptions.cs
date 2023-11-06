@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json.Serialization;
+
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 public record RuntimeOptions(
@@ -8,4 +10,5 @@ public record RuntimeOptions(
     GraphQLRuntimeOptions? GraphQL,
     HostOptions? Host,
     string? BaseRoute = null,
-    TelemetryOptions? Telemetry = null);
+    TelemetryOptions? Telemetry = null,
+    [property: JsonPropertyName("cache")] bool? CacheEnabled = null);

@@ -31,6 +31,17 @@ public record RuntimeConfig
     public bool SqlDataSourceUsed { get; private set; }
 
     /// <summary>
+    /// Retrieves the value of runtime.CacheEnabled property if present, default is false.
+    /// Caching is enabled only when explicitly set to true.
+    /// </summary>
+    /// <returns>Whether caching is globally enabled.</returns>
+    [JsonIgnore]
+    public bool IsCachingEnabled =>
+        Runtime is not null &&
+        Runtime.CacheEnabled is not null &&
+        Runtime.CacheEnabled is true;
+
+    /// <summary>
     /// Retrieves the value of runtime.rest.request-body-strict property if present, default is true.
     /// </summary>
     [JsonIgnore]

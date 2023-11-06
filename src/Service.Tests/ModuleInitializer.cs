@@ -47,6 +47,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
+        // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
+        VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedTtlOptions);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

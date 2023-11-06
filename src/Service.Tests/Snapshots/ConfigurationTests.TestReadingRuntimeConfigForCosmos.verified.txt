@@ -89,7 +89,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 60
+        }
       }
     },
     {
@@ -123,7 +127,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 60
+        }
       }
     },
     {
@@ -174,7 +182,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 60
+        }
       }
     },
     {
@@ -208,7 +220,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 60
+        }
       }
     },
     {
@@ -259,7 +275,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 60
+        }
       }
     },
     {
@@ -332,7 +352,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 60
+        }
       }
     },
     {
@@ -374,7 +398,11 @@
               }
             ]
           }
-        ]
+        ],
+        Cache: {
+          Enabled: false,
+          TtlSeconds: 60
+        }
       }
     }
   ]

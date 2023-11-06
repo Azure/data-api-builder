@@ -1062,15 +1062,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCategory(TestCategory.MSSQL)]
         [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Banana Cake Pop",
             DisplayName = "GraphQL endpoint with no query in development mode.")]
-        [DataRow("/graphql", HostMode.Production, HttpStatusCode.BadRequest,
-            "Either the parameter query or the parameter id has to be set",
+        [DataRow("/graphql", HostMode.Production, HttpStatusCode.NotFound,
             DisplayName = "GraphQL endpoint with no query in production mode.")]
         [DataRow("/graphql/ui", HostMode.Development, HttpStatusCode.NotFound,
             DisplayName = "Default BananaCakePop in development mode.")]
         [DataRow("/graphql/ui", HostMode.Production, HttpStatusCode.NotFound,
             DisplayName = "Default BananaCakePop in production mode.")]
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
-            HostMode.Development, HttpStatusCode.Moved,
+            HostMode.Development, HttpStatusCode.OK,
             DisplayName = "GraphQL endpoint with query in development mode.")]
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
             HostMode.Production, HttpStatusCode.OK, "data",

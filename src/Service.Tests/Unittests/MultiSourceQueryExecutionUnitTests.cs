@@ -16,11 +16,15 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
+using Azure.Identity;
 using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Processing;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -151,6 +155,65 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // validate that the data returend for the queries we did matches the moq data we set up for the respective query engines.
             Assert.AreEqual("db1", queryMap1[0].Value, $"Data returned for {queryName1} is incorrect for multi-source query");
             Assert.AreEqual("db2", queryMap2[0].Value, $"Data returned for {queryName2} is incorrect for multi-source query");
+        }
+
+        /// <summary>
+        /// Test to ensure that the correct access token is being set when multiple data sources are used.
+        /// </summary>
+        [TestMethod]
+        public async Task TestMultiSourceTokenSet()
+        {
+            string defaultSourceConnectionString = "Server =<>;Database=<>;";
+            string childConnectionString = "Server =child;Database=child;";
+
+            string dataSourceName1 = "db1";
+            string db1AccessToken = "AccessToken1";
+            string dataSourceName2 = "db2";
+            string db2AccessToken = "AccessToken2";
+
+            Dictionary<string, DataSource> dataSourceNameToDataSource = new()
+            {
+                { dataSourceName1, new(DatabaseType.MSSQL, defaultSourceConnectionString, new())},
+                { dataSourceName2, new(DatabaseType.MSSQL, childConnectionString, new()) }
+            };
+
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, defaultSourceConnectionString, Options: new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               DefaultDataSourceName: dataSourceName1,
+               DataSourceNameToDataSource: dataSourceNameToDataSource,
+               EntityNameToDataSourceName: new(),
+               Entities: new(new Dictionary<string, Entity>())
+               );
+
+            Mock<RuntimeConfigLoader> mockLoader = new(null);
+            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig, It.IsAny<bool>())).Returns(true);
+
+            RuntimeConfigProvider provider = new(mockLoader.Object);
+            provider.TryGetConfig(out RuntimeConfig _);
+            provider.TrySetAccesstoken(db1AccessToken, dataSourceName1);
+            provider.TrySetAccesstoken(db2AccessToken, dataSourceName2);
+
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
+            Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+
+            using SqlConnection conn = new(defaultSourceConnectionString);
+            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName1);
+            Assert.AreEqual(expected: db1AccessToken, actual: conn.AccessToken, "Data source connection failed to be set with correct access token");
+
+            using SqlConnection conn2 = new(childConnectionString);
+            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn2, dataSourceName2);
+            Assert.AreEqual(expected: db2AccessToken, actual: conn2.AccessToken, "Data source connection failed to be set with correct access token");
+
+            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, string.Empty);
+            Assert.AreEqual(expected: db1AccessToken, actual: conn.AccessToken, "Data source connection failed to be set with default access token when source name provided is empty.");
         }
     }
 }

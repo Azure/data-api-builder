@@ -1017,10 +1017,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             catch (Exception e)
             {
-                Assert.AreEqual(typeof(ApplicationException), e.GetType());
+                Assert.AreEqual(typeof(ArgumentException), e.GetType());
                 Assert.AreEqual(
-                    $"Could not initialize the engine with the runtime config file: " +
-                    $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}",
+                    $"Format of the initialization string does not conform to specification starting at index 0.",
                     e.Message);
             }
         }

@@ -484,7 +484,7 @@ namespace Azure.DataApiBuilder.Core.Services
             parameters.Add(
                 GetOpenApiQueryParameter(
                     name: "$filter",
-                    description: "A predicate expression (an expression that returns a boolean value) using entity's fields.",
+                    description: "A predicate expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
                     required: false,
                     type: "string"
                 )

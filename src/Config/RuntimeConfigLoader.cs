@@ -195,7 +195,9 @@ public abstract class RuntimeConfigLoader
         }
 
         // Get the application name using ProductInfo.GetDataApiBuilderUserAgent().
-        string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
+        string dabVersion = ProductInfo.GetDataApiBuilderUserAgent();
+        int hashStartPosition = dabVersion.LastIndexOf('+');
+        string applicationName = hashStartPosition != -1 ? dabVersion[..hashStartPosition] : dabVersion;
 
         // Create a StringBuilder from the connection string.
         SqlConnectionStringBuilder connectionStringBuilder;

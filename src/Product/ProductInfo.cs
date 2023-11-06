@@ -8,7 +8,7 @@ namespace Azure.DataApiBuilder.Product;
 
 public static class ProductInfo
 {
-    public const string DEFAULT_VERSION = "1.0.0";
+    public const string DEFAULT_VERSION = "0.0.0";
     public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
     public static readonly string DEFAULT_APP_NAME = $"dab_oss_{ProductInfo.GetProductVersion()}";
     public static readonly string ROLE_NAME = "DataApiBuilder";
@@ -16,7 +16,7 @@ public static class ProductInfo
     /// <summary>
     /// Reads the product version from the executing assembly's file version information.
     /// </summary>
-    /// <returns>Product version if not null, default version 1.0.0 otherwise.</returns>
+    /// <returns>Product version if not null, default version 0.0.0 otherwise.</returns>
     public static string GetProductVersion()
     {
         Assembly assembly = Assembly.GetExecutingAssembly();

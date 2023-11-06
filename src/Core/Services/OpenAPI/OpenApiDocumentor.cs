@@ -494,7 +494,7 @@ namespace Azure.DataApiBuilder.Core.Services
             parameters.Add(
                 GetOpenApiQueryParameter(
                     name: "$orderby",
-                    description: "A comma-separated list of expressions used to sort the items.",
+                    description: "A comma-separated list of expressions used to sort items in the response.",
                     required: false,
                     type: "string"
                 )

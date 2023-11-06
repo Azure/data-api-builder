@@ -258,8 +258,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        object? id;
-        if (!jsonDictionary.TryGetValue("$id", out id))
+        if (!jsonDictionary.TryGetValue("$id", out object? id))
         {
             throw new DataApiBuilderException(
                 message: "The schema file doesn't have the required field : $id",

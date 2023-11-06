@@ -101,7 +101,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Modified the properties of the supplied connection to support managed identity access.
         /// </summary>
-        public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName = "");
+        public Task SetManagedIdentityAccessTokenIfAnyAsync(DbConnection conn, string dataSourceName);
 
         /// <summary>
         /// Method to generate the query to send user data to the underlying database which might be used
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">Dictionary of parameters/value required to execute the query.</param>
         /// <param name="dataSourceName"> Db for which to generate query.</param>
         /// <returns>empty string / query to set session parameters for the connection.</returns>
-        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName = "");
+        public string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName);
 
         /// <summary>
         /// Helper method to populate DbType for parameter. Currently DbTypes for parameters are only populated for MsSql.

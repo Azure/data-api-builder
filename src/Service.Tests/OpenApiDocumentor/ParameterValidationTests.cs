@@ -61,7 +61,7 @@ public class ParameterValidationTests
     }
 
     /// <summary>
-    /// Validates that Query parameters are generated for GET methods in Table/Views.
+    /// Validates that the default set of query parameters are generated for GET methods in Table/Views.
     /// $select, $filter, $orderby, $first, $after are the query parameters.
     /// </summary>
     /// <param name="entityName">The name of the entity.</param>

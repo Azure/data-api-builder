@@ -46,8 +46,8 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string OPENAPI_ROUTE = "openapi";
 
         // OpenApi query parameters
+        private static readonly OpenApiParameter _tableAndViewSelectQueryParameter = CreateSelectQueryParameterForTableAndView();
         private static readonly List<OpenApiParameter> _tableAndViewQueryParameters = CreateTableAndViewQueryParameters();
-
         // Error messages
         public const string DOCUMENT_ALREADY_GENERATED_ERROR = "OpenAPI description document already generated.";
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
@@ -287,8 +287,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 // The OpenApiResponses dictionary key represents the integer value of the HttpStatusCode,
                 // which is returned when using Enum.ToString("D").
                 // The "D" format specified "displays the enumeration entry as an integer value in the shortest representation possible."
+                // It will only contain $select query parameter to allow the user to specify which fields to return.
                 OpenApiOperation getOperation = CreateBaseOperation(description: GETONE_DESCRIPTION, tags: tags);
-                getOperation.Parameters = _tableAndViewQueryParameters;
+                getOperation.Parameters = new List<OpenApiParameter>() { _tableAndViewSelectQueryParameter };
                 getOperation.Responses.Add(HttpStatusCode.OK.ToString("D"), CreateOpenApiResponse(description: nameof(HttpStatusCode.OK), responseObjectSchemaName: entityName));
                 openApiPathItemOperations.Add(OperationType.Get, getOperation);
 
@@ -461,6 +462,20 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Create an OpenApiParameter object for the input parameter to select
+        /// fields in a table or view to be returned in the response.
+        /// </summary>
+        private static OpenApiParameter CreateSelectQueryParameterForTableAndView()
+        {
+            return GetOpenApiQueryParameter(
+                name: "$select",
+                description: "A comma separated list of fields to return in the response.",
+                required: false,
+                type: "string"
+            );
+        }
+
+        /// <summary>
         /// Creates a list of OpenAPI parameters for querying tables and views.
         /// The query parameters include $select, $filter, $orderby, $first, and $after, which allow the user to specify which fields to return,
         /// filter the results based on a predicate expression, sort the results, and paginate the results.
@@ -472,12 +487,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Add $select query parameter
             parameters.Add(
-                GetOpenApiQueryParameter(
-                    name: "$select",
-                    description: "A comma separated list of fields to return in the response.",
-                    required: false,
-                    type: "string"
-                )
+                _tableAndViewSelectQueryParameter
             );
 
             // Add $filter query parameter

@@ -403,7 +403,7 @@
             },
             "permissions": {
               "type": "array",
-              "description": "Permissions assigned to this object"
+              "description": "Permissions assigned to this entity"
             },
             "mappings": {
               "type": "object",

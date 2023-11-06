@@ -48,11 +48,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     // e.g. Runtime config parameter value set as 1, while database schema denotes value type decimal.
                     // Without database metadata, there is no way to know to cast 1 to a decimal versus an integer.
 
-                    IValueNode? valueNode = null;
+                    IValueNode? defaultValueNode = null;
                     if (entity.Source.Parameters is not null && entity.Source.Parameters.TryGetValue(param, out object? value))
                     {
                         Tuple<string, IValueNode> defaultGraphQLValue = ConvertValueToGraphQLType(value.ToString()!, parameterDefinition: spdef.Parameters[param]);
-                        valueNode = defaultGraphQLValue.Item2;
+                        defaultValueNode = defaultGraphQLValue.Item2;
                     }
 
                     inputValues.Add(
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                             name: new(param),
                             description: new StringValueNode($"parameters for {name.Value} stored-procedure"),
                             type: new NamedTypeNode(SchemaConverter.GetGraphQLTypeFromSystemType(type: definition.SystemType)),
-                            defaultValue: valueNode,
+                            defaultValue: defaultValueNode,
                             directives: new List<DirectiveNode>())
                         );
                 }

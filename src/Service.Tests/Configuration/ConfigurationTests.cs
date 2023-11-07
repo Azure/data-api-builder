@@ -1191,7 +1191,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This test tries to validate an config file which is not complaint with the schema.
+        /// This test tries to validate a runtime config file that is not compliant with the runtime config JSON schema.
         /// It validates no additional properties are defined in the config file.
         /// The config file used here contains `data-source-file` instead of `data-source-files`,
         /// and `graphql` property in runtime is written as `GraphQL` in the Global runtime section.

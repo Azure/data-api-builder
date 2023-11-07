@@ -12,8 +12,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
     public class MySqlGraphQLMutationTests : GraphQLMutationTestBase
     {
         private static string _invalidForeignKeyError =
-            "Cannot add or update a child row: a foreign key constraint fails " +
-            "(`datagateway`.`books`";
+            "Cannot add or update a child row: a foreign key constraint fails";
 
         #region Test Fixture Setup
 

@@ -29,6 +29,12 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DataSourceFiles);
         // Ignore the SqlDataSourceUsed as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.SqlDataSourceUsed);
+        // Ignore the global IsCachingEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsCachingEnabled);
+        // Ignore the entity IsCachingEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.IsCachingEnabled);
+        // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
+        VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedTtlOptions);
         // Ignore the CosmosDataSourceUsed as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CosmosDataSourceUsed);
         // Ignore the IsRequestBodyStrict as that's unimportant from a test standpoint.
@@ -47,8 +53,6 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
-        // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
-        VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedTtlOptions);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

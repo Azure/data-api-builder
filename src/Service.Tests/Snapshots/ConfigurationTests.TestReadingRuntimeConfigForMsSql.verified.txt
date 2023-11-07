@@ -250,10 +250,6 @@
             Cardinality: Many,
             TargetEntity: Book
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -409,10 +405,6 @@
           stocks_price: {
             TargetEntity: stocks_price
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -809,10 +801,6 @@
           websiteplacement: {
             TargetEntity: BookWebsitePlacement
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -866,10 +854,6 @@
           books: {
             TargetEntity: Book
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -920,10 +904,6 @@
             TargetEntity: Book,
             LinkingObject: book_author_link
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -961,11 +941,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1019,10 +995,6 @@
           books: {
             TargetEntity: Book
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -1120,10 +1092,6 @@
           myseries: {
             TargetEntity: series
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -1167,11 +1135,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1223,11 +1187,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1282,10 +1242,6 @@
         ],
         Mappings: {
           id: typeid
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -1342,11 +1298,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1402,10 +1354,6 @@
         Mappings: {
           region: United State's Region,
           species: Scientific Name
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -1462,10 +1410,6 @@
         ],
         Mappings: {
           species: fancyName
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -1537,10 +1481,6 @@
         ],
         Mappings: {
           spores: hazards
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -1587,11 +1527,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1623,10 +1559,6 @@
         ],
         Mappings: {
           id: book_id
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -1674,11 +1606,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1725,11 +1653,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1759,11 +1683,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1806,11 +1726,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1853,11 +1769,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1951,11 +1863,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -1995,10 +1903,6 @@
           NoteNum: ┬─┬ノ( º _ ºノ),
           StrategicAttack: 謀攻,
           WagingWar: 作戰
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -2074,10 +1978,6 @@
             Cardinality: Many,
             TargetEntity: Comic
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -2112,11 +2012,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2154,11 +2050,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2196,11 +2088,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2241,11 +2129,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2287,11 +2171,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2329,11 +2209,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2371,11 +2247,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2417,11 +2289,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2462,11 +2330,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2508,11 +2372,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2550,10 +2410,6 @@
         Mappings: {
           __column1: column1,
           __column2: column2
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -2588,11 +2444,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2630,10 +2482,6 @@
         Mappings: {
           bkname: name,
           id: bkid
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -2660,11 +2508,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2690,11 +2534,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2720,11 +2560,7 @@
               }
             ]
           }
-        ],
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
-        }
+        ]
       }
     },
     {
@@ -2802,10 +2638,6 @@
             Cardinality: Many,
             TargetEntity: BookNF
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -2900,10 +2732,6 @@
           websiteplacement: {
             TargetEntity: BookWebsitePlacement
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     },
@@ -2988,10 +2816,6 @@
             TargetEntity: BookNF,
             LinkingObject: book_author_link
           }
-        },
-        Cache: {
-          Enabled: false,
-          TtlSeconds: 60
         }
       }
     }

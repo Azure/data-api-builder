@@ -1340,6 +1340,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// To do: add summary
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestRuntimeBaseRouteInAfterHotReload()
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            //TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Development, TestCategory.MSSQL);
+            RuntimeConfigProvider configProvider = new(TestHelper.GetRuntimeConfigLoader());
+            FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)configProvider.ConfigLoader;
+            string configFileName = loader.ConfigFilePath;
+            IFileSystem fileSystem = (IFileSystem)loader._fileSystem;
+            string currentDirectoryPath = fileSystem.Directory.GetCurrentDirectory();
+            string configFilePath = System.IO.Path.Combine(currentDirectoryPath!, configFileName);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string requestPath = "/api/MappedBookmarks";
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Get);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+                HttpResponseMessage response = await client.SendAsync(request);
+                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
+                requestPath = "/hotreloaded";
+                RuntimeConfig config = configProvider.GetConfig();
+                RuntimeConfig hotReloadConfig =
+                    config
+                    with
+                    {
+                    Runtime = config.Runtime
+                        with
+                        {
+                        Rest = config.Runtime.Rest
+                            with
+                            {
+                            Path = requestPath
+                        }
+                    }
+                };
+
+                fileSystem.File.WriteAllText(configFilePath, hotReloadConfig.ToJson());
+                Thread.Sleep(1000);
+                Thread.Sleep(1000);
+                requestPath += "/MappedBookmarks";
+                Thread.Sleep(1000);
+                Thread.Sleep(1000);
+                request = new(httpMethod, requestPath);
+                response = await client.SendAsync(request);
+                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
+            }
+        }
+
+        /// <summary>
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.
         /// </summary>

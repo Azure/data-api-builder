@@ -33,6 +33,13 @@ public class ConfigFileWatcher
 
     public ConfigFileWatcher() { }
 
+    /// <summary>
+    /// When a change is detected in the Config file being watched this trigger
+    /// function is called and handles the hot reload logic when appropriate,
+    /// ie: in a local development scenario.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private void OnConfigFileChange(object sender, FileSystemEventArgs e)
     {
         try

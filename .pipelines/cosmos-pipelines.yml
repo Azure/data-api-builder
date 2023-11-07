@@ -44,7 +44,7 @@ steps:
 - task: NuGetToolInstaller@1
 
 - bash: |
-    systemctl start docker
+    sudo systemctl start docker
     sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
     sudo docker run --name test -d  --publish 8081:8081  --publish 10250-10255:10250-10255 -e AZURE_COSMOS_EMULATOR_PARTITION_COUNT=3 -e AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=false  mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest
 

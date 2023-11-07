@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
     {
         private static string _invalidForeignKeyError =
             "Cannot add or update a child row: a foreign key constraint fails " +
-            "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
+            "(`datagateway`.`books`";
 
         #region Test Fixture Setup
 

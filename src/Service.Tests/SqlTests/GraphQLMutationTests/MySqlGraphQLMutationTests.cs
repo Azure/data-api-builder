@@ -664,11 +664,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// placement
         /// </summary>
         [TestMethod]
-        public async Task TestViolatingOneToOneRelashionShip()
+        public async Task TestViolatingOneToOneRelationship()
         {
-            string errorMessage = "Duplicate entry \\u00271\\u0027 for key " +
-                                  "\\u0027book_website_placements.book_id\\u0027\"";
-            await TestViolatingOneToOneRelashionShip(errorMessage);
+            string errorMessage = "Duplicate entry '1' for key " +
+                                  "'book_website_placements.book_id'";
+            await TestViolatingOneToOneRelationship(errorMessage);
         }
 
         [TestMethod]

@@ -12,8 +12,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
     public class PostgreSqlGraphQLMutationTests : GraphQLMutationTestBase
     {
         private static string _invalidForeignKeyError =
-            "23503: insert or update on table \"books\" " +
-            "violates foreign key constraint \"book_publisher_fk\"";
+            "23503: insert or update on table \\\"books\\\" " +
+            "violates foreign key constraint \\\"book_publisher_fk\\\"";
 
         #region Test Fixture Setup
         /// <summary>
@@ -650,11 +650,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// placement
         /// </summary>
         [TestMethod]
-        public async Task TestViolatingOneToOneRelashionShip()
+        public async Task TestViolatingOneToOneRelationship()
         {
             string errorMessage = "23505: duplicate key value violates unique constraint " +
-                                  "\"book_website_placements_book_id_key\"";
-            await TestViolatingOneToOneRelashionShip(errorMessage);
+                                  "\\\"book_website_placements_book_id_key\\\"";
+            await TestViolatingOneToOneRelationship(errorMessage);
         }
 
         [TestMethod]

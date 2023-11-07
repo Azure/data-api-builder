@@ -1157,7 +1157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This test method validates the configuration file against the schema.
+        /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures. 
         /// It also verifies that the expected log message is logged.
         /// </summary>

@@ -1087,7 +1087,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary> 
-        /// This test method checks a valid config entities against 
+        /// This test method checks a valid config's entities against 
         /// the database and ensures they are valid. 
         /// The config contains an entity source object not present in the database.
         /// It also contains an entity whose source is incorrectly specified as a stored procedure.

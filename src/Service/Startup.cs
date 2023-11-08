@@ -79,7 +79,6 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
-            OpenApiDocumentor documentor = new();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
             RuntimeConfigProvider configProvider = new(configLoader);
             services.AddSingleton(configProvider);
@@ -611,6 +610,7 @@ namespace Azure.DataApiBuilder.Service
                 try
                 {
                     IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
+                    runtimeConfigProvider.Documentor = openApiDocumentor;
                     openApiDocumentor.CreateDocument();
                 }
                 catch (DataApiBuilderException dabException)

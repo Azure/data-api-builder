@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
@@ -45,6 +46,8 @@ public class RuntimeConfigProvider
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
     private ConfigFileWatcher? ConfigFileWatcher { get; set; }
+
+    public IOpenApiDocumentor? Documentor { get; set; }
 
     private RuntimeConfig? _runtimeConfig;
 
@@ -97,7 +100,7 @@ public class RuntimeConfigProvider
         {
             if (!IsLateConfigured && _runtimeConfig!.Runtime!.Host!.Mode is HostMode.Development)
             {
-                ConfigFileWatcher = new(this);
+                ConfigFileWatcher = new(this, Documentor!);
             }
             else
             {

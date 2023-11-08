@@ -127,9 +127,9 @@ jobs:
         "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
         "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
         sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-      echo "*********************Step 6*********************************"
-      sudo apt-get update
       echo "*********************Step 7*********************************"
+      sudo apt-get update
+      echo "*********************Step 8*********************************"
       sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
   - bash: |
@@ -174,8 +174,13 @@ jobs:
       targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
 
   - bash: |
-      sudo docker run hello-world
       sudo docker logs --since=1h test
+      echo "Waiting for CosmosDB at $cosmosHost:$cosmosPort..."
+      until [ "$(curl -k -s --connect-timeout 5 -o /dev/null -w "%{http_code}" https://localhost:8081/_explorer/emulator.pem)" == "200" ]; do
+          sleep 5;
+          echo "Waiting for CosmosDB at $cosmosHost:$cosmosPort..."
+      done;
+      echo "CosmosDB is available."
       sudo curl -k https://localhost:8081/_explorer/emulator.pem > ~/emulatorcert.crt
       sudo ls
     condition: eq( variables['Agent.OS'], 'Linux' )

@@ -25,7 +25,7 @@ public class AppInsightsTelemetryInitializer : ITelemetryInitializer
 
         foreach (KeyValuePair<string, string> property in GlobalProperties)
         {
-            telemetry.Context.GlobalProperties.TryAdd(property.Key, property.Value);
+            telemetry.Context.GlobalProperties.Add(property.Key, property.Value);
         }
     }
 }

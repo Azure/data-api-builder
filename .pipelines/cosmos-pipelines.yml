@@ -118,6 +118,7 @@ jobs:
       releaseType: stable  
 
   - bash: |
+      sudo uname -a
       sudo lscpu
       sudo  free -h
       sudo docker pull mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:latest

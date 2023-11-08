@@ -67,7 +67,7 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        _defaultDataSourceName = Guid.NewGuid().ToString();
+        _defaultDataSourceName = "DEFAULT_DATASOURCE_NAME";
 
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>

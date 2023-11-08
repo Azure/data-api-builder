@@ -1340,6 +1340,67 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Test to validate a hot reload scenario. Make a rest request to
+        /// an endpoint at /api/MappedBookmarks, then hotreload the rest path
+        /// to /hotreloaded/MappedBookmarks and validate the request still
+        /// returns OK status code.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestRuntimeBaseRouteInAfterHotReload()
+        {
+            // use the mssql test config file to start test server
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            // setup loader to handle file operations
+            FileSystemRuntimeConfigLoader loader = TestHelper.GetRuntimeConfigLoader();
+            string configFileName = loader.ConfigFilePath;
+            IFileSystem fileSystem = (IFileSystem)loader._fileSystem;
+            string currentDirectoryPath = fileSystem.Directory.GetCurrentDirectory();
+            string configFilePath = System.IO.Path.Combine(currentDirectoryPath!, configFileName);
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string requestPath = "/api/MappedBookmarks";
+                HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Get);
+                HttpRequestMessage request = new(httpMethod, requestPath);
+                HttpResponseMessage response = await client.SendAsync(request);
+                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
+                // this will overwrite the rest path in the mssql test config file 
+                requestPath = "/hotreloaded";
+                loader.TryLoadKnownConfig(out RuntimeConfig config);
+                RuntimeConfig hotReloadConfig =
+                    config
+                    with
+                    {
+                        Runtime = config.Runtime
+                        with
+                        {
+                            Rest = config.Runtime.Rest
+                            with
+                            {
+                                Path = requestPath
+                            }
+                        }
+                    };
+
+                // we write to the config which is being monitored and sleep to allow hot reload to occur
+                fileSystem.File.WriteAllText(configFilePath, hotReloadConfig.ToJson());
+                Thread.Sleep(1000);
+                requestPath += "/MappedBookmarks";
+                request = new(httpMethod, requestPath);
+                response = await client.SendAsync(request);
+                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
+                // overwrites the changes we made when hot reloading
+                fileSystem.File.WriteAllText(configFilePath, config.ToJson());
+            }
+        }
+
+        /// <summary>
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.
         /// </summary>

@@ -939,7 +939,7 @@ namespace Cli
             }
 
             // Add/Update of relationship is not allowed when GraphQL is disabled in Global Runtime Settings
-            if (!runtimeConfig.Runtime.GraphQL.Enabled)
+            if (!runtimeConfig.IsGraphQLEnabled)
             {
                 _logger.LogError("Cannot add/update relationship as GraphQL is disabled in the global runtime settings of the config.");
                 return false;
@@ -1073,7 +1073,7 @@ namespace Cli
             else
             {
                 minimumLogLevel = Startup.GetLogLevelBasedOnMode(deserializedRuntimeConfig);
-                HostMode hostModeType = deserializedRuntimeConfig.Runtime.Host.Mode;
+                HostMode hostModeType = deserializedRuntimeConfig.IsDevelopmentMode() ? HostMode.Development : HostMode.Production;
 
                 _logger.LogInformation("Setting default minimum LogLevel: {minimumLogLevel} for {hostMode} mode.", minimumLogLevel, hostModeType);
             }

@@ -31,6 +31,20 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.SqlDataSourceUsed);
         // Ignore the CosmosDataSourceUsed as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.CosmosDataSourceUsed);
+        // Ignore the IsRequestBodyStrict as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRequestBodyStrict);
+        // Ignore the IsGraphQLEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsGraphQLEnabled);
+        // Ignore the IsRestEnabled as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsRestEnabled);
+        // Ignore the IsStaticWebAppsIdentityProvider as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.IsStaticWebAppsIdentityProvider);
+        // Ignore the RestPath as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.RestPath);
+        // Ignore the GraphQLPath as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.GraphQLPath);
+        // Ignore the AllowIntrospection as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.AllowIntrospection);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.

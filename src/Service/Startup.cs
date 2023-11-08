@@ -79,6 +79,8 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
+            OpenApiDocumentor documentor = new();
+            services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
             RuntimeConfigProvider configProvider = new(configLoader);
             services.AddSingleton(configProvider);
             services.AddSingleton(fileSystem);
@@ -167,7 +169,6 @@ namespace Azure.DataApiBuilder.Service
             });
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
-            services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQLService(services);
 

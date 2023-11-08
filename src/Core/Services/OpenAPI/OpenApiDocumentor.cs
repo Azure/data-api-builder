@@ -531,7 +531,7 @@ namespace Azure.DataApiBuilder.Core.Services
             parameters.Add(
                 GetOpenApiQueryParameter(
                     name: AFTER_QUERY_PARAMETER_NAME,
-                    description: "A base64 encoded string that specifies the cursor position after which items should be returned.",
+                    description: "An opaque string that specifies the cursor position after which results should be returned.",
                     required: false,
                     type: "string"
                 )

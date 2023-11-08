@@ -90,10 +90,10 @@ namespace Azure.DataApiBuilder.Core.Services
             _logger = logger;
             foreach ((string entityName, Entity entityMetatdata) in _entities)
             {
-                if (runtimeConfig.Runtime.Rest.Enabled)
+                if (runtimeConfig.IsRestEnabled)
                 {
                     string restPath = entityMetatdata.Rest?.Path ?? entityName;
-                    _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.Runtime.Rest.Path, restPath);
+                    _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
                 }
                 else
                 {
@@ -388,7 +388,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private void GenerateRestPathToEntityMap()
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            string graphQLGlobalPath = runtimeConfig.Runtime.GraphQL.Path;
+            string graphQLGlobalPath = runtimeConfig.GraphQLPath;
 
             foreach ((string entityName, Entity entity) in _entities)
             {
@@ -1010,9 +1010,9 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 string columnName = columnInfoFromAdapter["ColumnName"].ToString()!;
 
-                if (runtimeConfig.Runtime.GraphQL.Enabled
+                if (runtimeConfig.IsGraphQLEnabled
                     && entity is not null
-                    && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.Runtime.GraphQL.Enabled))
+                    && IsGraphQLReservedName(entity, columnName, graphQLEnabledGlobally: runtimeConfig.IsGraphQLEnabled))
                 {
                     throw new DataApiBuilderException(
                        message: $"The column '{columnName}' violates GraphQL name restrictions.",
@@ -1608,7 +1608,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public bool IsDevelopmentMode()
         {
-            return _runtimeConfigProvider.GetConfig().Runtime.Host.Mode is HostMode.Development;
+            return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
         }
     }
 }

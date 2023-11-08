@@ -6,6 +6,7 @@ using System.Data;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
@@ -16,8 +17,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
     /// <summary>
-    /// Unit tests for the environment variable
-    /// parser for the runtime configuration. These
+    /// Unit tests for deserializing the runtime configuration. These
     /// tests verify that we parse the config correctly
     /// when replacing environment variables. Also verify
     /// we throw the right exception when environment
@@ -126,6 +126,51 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                                     ""entities"":{ }
                                 }";
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(actualJson, out RuntimeConfig _), "Should not fail to parse with comments");
+        }
+
+        /// <summary>
+        /// Test to validate that optional properties
+        /// are nullable, don't contain defaults on serialization
+        /// but have the effect of default values when deserialized.
+        /// It starts with a minimal config and incrementally
+        /// adds the optional subproperties. At each step, tests for valid deserialization.
+        [TestMethod]
+        public void TestNullableOptionalProps()
+        {
+            // Test with no runtime property
+            StringBuilder minJson = new(@"
+                                ""data-source"": {
+                                    ""database-type"": ""mssql"",
+                                    ""connection-string"": ""@env('test-connection-string')""
+                                    },
+                                ""entities"": { }");
+
+            TryParseAndAssertOnDefaults("{" + minJson + "}", out _);
+
+            // Test with an empty runtime property
+            minJson.Append(@", ""runtime"": ");
+            string emptyRuntime = minJson + "{ }}";
+            TryParseAndAssertOnDefaults("{" + emptyRuntime, out _);
+
+            // Test with empty sub properties of runtime
+            minJson.Append(@"{ ""rest"": { }, ""graphql"": { },
+                            ""base-route"" : """",");
+            StringBuilder minJsonWithHostSubProps = new(minJson + @"""telemetry"" : { }, ""host"" : ");
+            StringBuilder minJsonWithTelemetrySubProps = new(minJson + @"""host"" : { }, ""telemetry"" : ");
+
+            string emptyRuntimeSubProps = minJsonWithHostSubProps + "{ } } }";
+            TryParseAndAssertOnDefaults("{" + emptyRuntimeSubProps, out _);
+
+            // Test with empty host sub-properties
+            minJsonWithHostSubProps.Append(@"{ ""cors"": { }, ""authentication"": { } } }");
+            string emptyHostSubProps = minJsonWithHostSubProps + "}";
+            TryParseAndAssertOnDefaults("{" + emptyHostSubProps, out _);
+
+            // Test with empty telemetry sub-properties
+            minJsonWithTelemetrySubProps.Append(@"{ ""application-insights"": { } } }");
+
+            string emptyTelemetrySubProps = minJsonWithTelemetrySubProps + "}";
+            TryParseAndAssertOnDefaults("{" + emptyTelemetrySubProps, out _);
         }
 
         #endregion Positive Tests
@@ -332,6 +377,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
   }
 }
 ";
+        }
+
+        private static bool TryParseAndAssertOnDefaults(string json, out RuntimeConfig parsedConfig)
+        {
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(json, out parsedConfig));
+            Assert.AreEqual(RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK, parsedConfig.Schema);
+            Assert.IsTrue(parsedConfig.IsRestEnabled);
+            Assert.AreEqual(RestRuntimeOptions.DEFAULT_PATH, parsedConfig.RestPath);
+            Assert.IsTrue(parsedConfig.IsGraphQLEnabled);
+            Assert.AreEqual(GraphQLRuntimeOptions.DEFAULT_PATH, parsedConfig.GraphQLPath);
+            Assert.IsTrue(parsedConfig.AllowIntrospection);
+            Assert.IsFalse(parsedConfig.IsDevelopmentMode());
+            Assert.IsTrue(parsedConfig.IsStaticWebAppsIdentityProvider);
+            Assert.IsTrue(parsedConfig.IsRequestBodyStrict);
+            Assert.IsTrue(parsedConfig.Runtime?.Telemetry?.ApplicationInsights is null
+                || !parsedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
+            return true;
         }
 
         #endregion Helper Functions

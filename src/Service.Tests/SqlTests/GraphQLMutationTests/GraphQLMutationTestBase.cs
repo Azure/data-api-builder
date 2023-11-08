@@ -1188,7 +1188,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// Test adding a website placement to a book which already has a website
         /// placement
         /// </summary>
-        public async Task TestViolatingOneToOneRelashionShip(string errorMessage)
+        public async Task TestViolatingOneToOneRelationship(string errorMessage)
         {
             string graphQLMutationName = "createBookWebsitePlacement";
             string graphQLMutation = @"

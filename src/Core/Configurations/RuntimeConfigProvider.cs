@@ -95,7 +95,7 @@ public class RuntimeConfigProvider
     {
         if (ConfigFileWatcher is null)
         {
-            if (!IsLateConfigured && _runtimeConfig!.Runtime.Host.Mode is HostMode.Development)
+            if (!IsLateConfigured && _runtimeConfig!.Runtime!.Host!.Mode is HostMode.Development)
             {
                 ConfigFileWatcher = new(this);
             }

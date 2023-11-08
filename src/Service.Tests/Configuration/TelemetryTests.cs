@@ -8,7 +8,6 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Configurations;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
 using Microsoft.ApplicationInsights.DataContracts;
@@ -17,7 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests;
-using static HotChocolate.ErrorCodes;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration;
 

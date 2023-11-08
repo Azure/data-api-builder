@@ -103,7 +103,7 @@ jobs:
 
 - job:  linux
   pool:
-    vmImage: 'ubuntu-latest'
+    vmImage: 'ubuntu latest'
   variables:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'

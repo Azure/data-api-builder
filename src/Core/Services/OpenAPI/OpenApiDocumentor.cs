@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
+using Azure.DataApiBuilder.Core.Parsers;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -41,13 +42,6 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string SP_RESPONSE_SUFFIX = "_sp_response";
         public const string SCHEMA_OBJECT_TYPE = "object";
         public const string RESPONSE_ARRAY_PROPERTY = "array";
-
-        // Query parameters name
-        public const string SELECT_QUERY_PARAMETER_NAME = "$select";
-        public const string FILTER_QUERY_PARAMETER_NAME = "$filter";
-        public const string ORDERBY_QUERY_PARAMETER_NAME = "$orderby";
-        public const string FIRST_QUERY_PARAMETER_NAME = "$first";
-        public const string AFTER_QUERY_PARAMETER_NAME = "$after";
 
         // Routing constant
         public const string OPENAPI_ROUTE = "openapi";
@@ -475,7 +469,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private static OpenApiParameter CreateSelectQueryParameterForTableAndView()
         {
             return GetOpenApiQueryParameter(
-                name: SELECT_QUERY_PARAMETER_NAME,
+                name: RequestParser.FIELDS_URL,
                 description: "A comma separated list of fields to return in the response.",
                 required: false,
                 type: "string"
@@ -500,8 +494,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // Add $filter query parameter
             parameters.Add(
                 GetOpenApiQueryParameter(
-                    name: FILTER_QUERY_PARAMETER_NAME,
-                    description: "A OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
+                    name: RequestParser.FILTER_URL,
+                    description: "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
                     required: false,
                     type: "string"
                 )
@@ -510,7 +504,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Add $orderby query parameter
             parameters.Add(
                 GetOpenApiQueryParameter(
-                    name: ORDERBY_QUERY_PARAMETER_NAME,
+                    name: RequestParser.SORT_URL,
                     description: "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
                     required: false,
                     type: "string"
@@ -520,7 +514,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Add $first query parameter
             parameters.Add(
                 GetOpenApiQueryParameter(
-                    name: FIRST_QUERY_PARAMETER_NAME,
+                    name: RequestParser.FIRST_URL,
                     description: "An integer value that specifies the number of items to return. Default is 100.",
                     required: false,
                     type: "integer"
@@ -530,7 +524,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Add $after query parameter
             parameters.Add(
                 GetOpenApiQueryParameter(
-                    name: AFTER_QUERY_PARAMETER_NAME,
+                    name: RequestParser.AFTER_URL,
                     description: "A base64 encoded string that specifies the cursor position after which items should be returned.",
                     required: false,
                     type: "string"

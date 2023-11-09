@@ -3,7 +3,6 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Path = System.IO.Path;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
@@ -16,12 +15,14 @@ public class ConfigFileWatcher
     public ConfigFileWatcher(RuntimeConfigProvider configProvider)
     {
         FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)configProvider.ConfigLoader;
-        string configFileName = loader.ConfigFilePath;
+        string configFilePath = loader.ConfigFilePath;
         IFileSystem fileSystem = (IFileSystem)loader.FileSystem;
-        string? currentDirectoryPath = fileSystem.Directory.GetCurrentDirectory();
-        string configFilePath = Path.Combine(currentDirectoryPath!, configFileName);
-        string path = Path.GetDirectoryName(configFilePath)!;
-        _fileWatcher = new FileSystemWatcher(Path.GetDirectoryName(configFilePath)!)
+        string? directoryName = Path.GetDirectoryName(configFilePath);
+        directoryName = string.IsNullOrWhiteSpace(directoryName) ?
+            fileSystem.Directory.GetCurrentDirectory() :
+            directoryName;
+
+        _fileWatcher = new FileSystemWatcher(directoryName)
         {
             Filter = Path.GetFileName(configFilePath),
             EnableRaisingEvents = true
@@ -49,7 +50,7 @@ public class ConfigFileWatcher
                 throw new ArgumentNullException("_configProvider can not be null.");
             }
 
-            if (!_configProvider!.IsLateConfigured && _configProvider!.GetConfig().Runtime!.Host!.Mode is HostMode.Development)
+            if (!_configProvider!.IsLateConfigured && _configProvider!.GetConfig().IsDevelopmentMode())
             {
                 _configProvider!.HotReloadConfig();
             }
@@ -62,4 +63,3 @@ public class ConfigFileWatcher
         }
     }
 }
-

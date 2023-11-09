@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
   },
   ""entities"": {}
 }";
-            string configName = "config.json";
+            string configName = "hotreload-config.json";
             if (File.Exists(configName))
             {
                 File.Delete(configName);

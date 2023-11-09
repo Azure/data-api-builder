@@ -1337,7 +1337,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        
         /// <summary>
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.

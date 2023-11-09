@@ -11,13 +11,13 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 public class ConfigFileWatcher
 {
     private FileSystemWatcher? _fileWatcher;
-    RuntimeConfigProvider? _configProvider;
+    private readonly RuntimeConfigProvider? _configProvider;
 
     public ConfigFileWatcher(RuntimeConfigProvider configProvider)
     {
         FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)configProvider.ConfigLoader;
         string configFileName = loader.ConfigFilePath;
-        IFileSystem fileSystem = (IFileSystem)loader._fileSystem;
+        IFileSystem fileSystem = (IFileSystem)loader.FileSystem;
         string? currentDirectoryPath = fileSystem.Directory.GetCurrentDirectory();
         string configFilePath = Path.Combine(currentDirectoryPath!, configFileName);
         string path = Path.GetDirectoryName(configFilePath)!;

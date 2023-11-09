@@ -80,8 +80,9 @@ namespace Azure.DataApiBuilder.Service
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
-            services.AddSingleton(configProvider);
+
             services.AddSingleton(fileSystem);
+            services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
 
             // Add ApplicationTelemetry service and register custom ITelemetryInitializer implementation with the dependency injection

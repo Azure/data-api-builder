@@ -44,7 +44,7 @@ public class RuntimeConfigProvider
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
-    private ConfigFileWatcher? ConfigFileWatcher { get; set; }
+    private ConfigFileWatcher? _configFileWatcher;
 
     private RuntimeConfig? _runtimeConfig;
 
@@ -93,15 +93,15 @@ public class RuntimeConfigProvider
     /// </summary>
     private void CheckForAndSetupConfigFileWatcher()
     {
-        if (ConfigFileWatcher is null)
+        if (_configFileWatcher is null)
         {
-            if (!IsLateConfigured && _runtimeConfig!.Runtime!.Host!.Mode is HostMode.Development)
+            if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
             {
-                ConfigFileWatcher = new(this);
+                _configFileWatcher = new(this);
             }
             else
             {
-                ConfigFileWatcher = new();
+                _configFileWatcher = new();
             }
         }
     }
@@ -144,7 +144,7 @@ public class RuntimeConfigProvider
     /// </summary>
     public void HotReloadConfig()
     {
-        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig);
+        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true);
     }
 
     /// <summary>

@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
   ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
   ""data-source"": {
     ""database-type"": ""mssql"",
-    ""connection-string"": ""Server=test;Database=test;User ID=test;Password=test;"",
+    ""connection-string"": ""Server=test;Database=test;User ID=test;"",
     ""options"": {
       ""set-session-context"": true
     }
@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
   ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
   ""data-source"": {
     ""database-type"": ""mssql"",
-    ""connection-string"": ""Server=test;Database=test;User ID=test;Password=test;"",
+    ""connection-string"": ""Server=test;Database=test;User ID=test"",
     ""options"": {
       ""set-session-context"": true
     }
@@ -114,14 +114,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             {
                 File.Delete(configName);
             }
-
+            
             FileSystem fileSystem = new();
             fileSystem.File.WriteAllText(configName, initialConfig);
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configName, string.Empty);
             RuntimeConfigProvider configProvider = new(configLoader);
             // Must GetConfig() to start file watching
             RuntimeConfig runtimeConfig = configProvider.GetConfig();
+            // assert we have a valid config
             Assert.IsNotNull(runtimeConfig);
+            Assert.AreEqual(initialRestEnabled, runtimeConfig.Runtime.Rest.Enabled);
+            Assert.AreEqual(initialRestPath, runtimeConfig.Runtime.Rest.Path);
+            Assert.AreEqual(initialGQLEnabled, runtimeConfig.Runtime.GraphQL.Enabled);
+            Assert.AreEqual(initialGQLPath, runtimeConfig.Runtime.GraphQL.Path);
+            Assert.AreEqual(initialGQLIntrospection, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
+            Assert.AreEqual(initialMode, runtimeConfig.Runtime.Host.Mode);
             // Simulate change to the config file
             fileSystem.File.WriteAllText(configName, updatedConfig);
             // Give file watcher enough time to see the change

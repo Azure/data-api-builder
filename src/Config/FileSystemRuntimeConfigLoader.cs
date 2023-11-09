@@ -29,7 +29,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     // or user provided config file which could be a relative file path, absolute file path or simply the file name assumed to be in current directory.
     private string _baseConfigFilePath;
 
-    public readonly IFileSystem _fileSystem;
+    public readonly IFileSystem FileSystem;
 
     public const string CONFIGFILE_NAME = "dab-config";
     public const string CONFIG_EXTENSION = ".json";
@@ -56,7 +56,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
         : base(connectionString)
     {
-        _fileSystem = fileSystem;
+        FileSystem = fileSystem;
         _baseConfigFilePath = baseConfigFilePath;
         ConfigFilePath = GetFinalConfigFilePath();
     }
@@ -74,10 +74,10 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         [NotNullWhen(true)] out RuntimeConfig? config,
         bool replaceEnvVar = false)
     {
-        if (_fileSystem.File.Exists(path))
+        if (FileSystem.File.Exists(path))
         {
             Console.WriteLine($"Loading config file from {path}.");
-            string json = _fileSystem.File.ReadAllText(path);
+            string json = FileSystem.File.ReadAllText(path);
             return TryParseConfig(json, out config, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
         }
         else
@@ -182,8 +182,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         // If the baseConfigFilePath contains directory info, we need to ensure that it is not lost. for example: baseConfigFilePath = "config/dab-config.json"
         // in this case, we need to get the directory name and the file name without extension and then combine them back. Else, we will lose the path
         // and the file will be searched in the current directory.
-        string filePathWithoutExtension = _fileSystem.Path.Combine(_fileSystem.Path.GetDirectoryName(_baseConfigFilePath) ?? string.Empty, _fileSystem.Path.GetFileNameWithoutExtension(_baseConfigFilePath));
-        string fileExtension = _fileSystem.Path.GetExtension(_baseConfigFilePath);
+        string filePathWithoutExtension = FileSystem.Path.Combine(FileSystem.Path.GetDirectoryName(_baseConfigFilePath) ?? string.Empty, FileSystem.Path.GetFileNameWithoutExtension(_baseConfigFilePath));
+        string fileExtension = FileSystem.Path.GetExtension(_baseConfigFilePath);
         string configFilePath =
             !string.IsNullOrEmpty(environmentValue)
             ? $"{filePathWithoutExtension}.{environmentValue}"
@@ -226,8 +226,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns>True if file is found, else false.</returns>
     public bool DoesFileExistInDirectory(string filePath)
     {
-        string currentDir = _fileSystem.Directory.GetCurrentDirectory();
-        return _fileSystem.File.Exists(_fileSystem.Path.Combine(currentDir, filePath));
+        string currentDir = FileSystem.Directory.GetCurrentDirectory();
+        return FileSystem.File.Exists(FileSystem.Path.Combine(currentDir, filePath));
     }
 
     /// <summary>
@@ -236,7 +236,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public override string GetPublishedDraftSchemaLink()
     {
-        string? assemblyDirectory = _fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        string? assemblyDirectory = FileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
 
         if (assemblyDirectory is null)
         {
@@ -246,8 +246,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        string? schemaPath = _fileSystem.Path.Combine(assemblyDirectory, "dab.draft.schema.json");
-        string schemaFileContent = _fileSystem.File.ReadAllText(schemaPath);
+        string? schemaPath = FileSystem.Path.Combine(assemblyDirectory, "dab.draft.schema.json");
+        string schemaFileContent = FileSystem.File.ReadAllText(schemaPath);
         Dictionary<string, object>? jsonDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(schemaFileContent, GetSerializationOptions());
 
         if (jsonDictionary is null)

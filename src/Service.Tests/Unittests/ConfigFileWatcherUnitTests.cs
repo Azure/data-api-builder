@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             {
                 File.Delete(configName);
             }
-            
+
             FileSystem fileSystem = new();
             fileSystem.File.WriteAllText(configName, initialConfig);
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configName, string.Empty);

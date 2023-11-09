@@ -11,7 +11,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// <summary>
     /// Class for building MsSql queries.
     /// </summary>
-    public class DWQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
+    public class DWSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
 
         private static DbCommandBuilder _builder = new SqlCommandBuilder();

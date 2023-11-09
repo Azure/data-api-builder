@@ -79,10 +79,10 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
+            services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
             RuntimeConfigProvider configProvider = new(configLoader);
-
-            services.AddSingleton(fileSystem);
             services.AddSingleton(configProvider);
+            services.AddSingleton(fileSystem);
             services.AddSingleton(configLoader);
 
             if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
@@ -158,7 +158,6 @@ namespace Azure.DataApiBuilder.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
-
             ConfigureAuthentication(services, configProvider);
 
             services.AddAuthorization();
@@ -174,7 +173,6 @@ namespace Azure.DataApiBuilder.Service
             });
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
-            services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQLService(services);
 
@@ -617,6 +615,7 @@ namespace Azure.DataApiBuilder.Service
                 try
                 {
                     IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
+                    runtimeConfigProvider.Documentor = openApiDocumentor;
                     openApiDocumentor.CreateDocument();
                 }
                 catch (DataApiBuilderException dabException)

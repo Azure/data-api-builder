@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
@@ -43,6 +44,10 @@ public class RuntimeConfigProvider
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
+
+    private ConfigFileWatcher? ConfigFileWatcher { get; set; }
+
+    public IOpenApiDocumentor? Documentor { get; set; }
 
     private RuntimeConfig? _runtimeConfig;
 
@@ -79,7 +84,29 @@ public class RuntimeConfigProvider
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
+        CheckForAndSetupConfigFileWatcher();
         return _runtimeConfig;
+    }
+
+    /// <summary>
+    /// Checks if we are in a local development scenario, and if so, instantiate
+    /// the config file watcher with a reference to this RuntimeConfigProvider. Otherwise
+    /// we will call the no argument constructor, which means no file will actually be
+    /// watched.
+    /// </summary>
+    private void CheckForAndSetupConfigFileWatcher()
+    {
+        if (ConfigFileWatcher is null)
+        {
+            if (!IsLateConfigured && _runtimeConfig!.Runtime!.Host!.Mode is HostMode.Development)
+            {
+                ConfigFileWatcher = new(this, Documentor!);
+            }
+            else
+            {
+                ConfigFileWatcher = new();
+            }
+        }
     }
 
     /// <summary>
@@ -94,6 +121,7 @@ public class RuntimeConfigProvider
             if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
             {
                 _runtimeConfig = config;
+                CheckForAndSetupConfigFileWatcher();
             }
         }
 
@@ -111,6 +139,15 @@ public class RuntimeConfigProvider
     {
         runtimeConfig = _runtimeConfig;
         return _runtimeConfig is not null;
+    }
+
+    /// <summary>
+    /// Hot Reloads the runtime config when the file watcher
+    /// is active and detects a change to the underlying config file.
+    /// </summary>
+    public void HotReloadConfig()
+    {
+        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig);
     }
 
     /// <summary>

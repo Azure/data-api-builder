@@ -153,6 +153,7 @@ namespace Azure.DataApiBuilder.Service
 
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
+
             ConfigureAuthentication(services, configProvider);
 
             services.AddAuthorization();

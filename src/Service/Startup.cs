@@ -85,10 +85,15 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
 
-            // Add ApplicationTelemetry service and register custom ITelemetryInitializer implementation with the dependency injection
-            services.AddApplicationInsightsTelemetry();
-
-            services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
+                && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
+            {
+                // Add ApplicationTelemetry service and register
+                // custom ITelemetryInitializer implementation with the dependency injection
+                services.AddApplicationInsightsTelemetry();
+                services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            }
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
@@ -229,7 +234,7 @@ namespace Azure.DataApiBuilder.Service
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
             FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
@@ -247,10 +252,12 @@ namespace Azure.DataApiBuilder.Service
                     // Exiting if config provided is Invalid.
                     if (_logger is not null)
                     {
-                        _logger.LogError("Exiting the runtime engine...");
+                        _logger.LogError(
+                            message: "Could not initialize the engine with the runtime config file: {configFilePath}",
+                            fileSystemRuntimeConfigLoader.ConfigFilePath);
                     }
 
-                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {fileSystemRuntimeConfigLoader.ConfigFilePath}");
+                    hostLifetime.StopApplication();
                 }
             }
             else

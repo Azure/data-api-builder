@@ -101,6 +101,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
 
+            string roleName = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+
+            // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
+            // READ permission is inherited by other roles from Anonymous role when present.
+            bool isReadPermissionConfigured = _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, roleName, EntityActionOperation.Read)
+                                              || _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, AuthorizationType.Anonymous.ToString(), EntityActionOperation.Read);
+
             try
             {
                 // Creating an implicit transaction
@@ -108,12 +115,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     if (mutationOperation is EntityActionOperation.Delete)
                     {
-                        // compute the mutation result before removing the element,
-                        // since typical GraphQL delete mutations return the metadata of the deleted item.
-                        result = await queryEngine.ExecuteAsync(
-                            context,
-                            GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
-                            dataSourceName);
+                        // When read permission is not configured, an error response is returned. So, the mutation result needs to
+                        // be computed only when the read permission is configured.
+                        if (isReadPermissionConfigured)
+                        {
+                            // compute the mutation result before removing the element,
+                            // since typical GraphQL delete mutations return the metadata of the deleted item.
+                            result = await queryEngine.ExecuteAsync(
+                                        context,
+                                        GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
+                                        dataSourceName);
+                        }
 
                         Dictionary<string, object>? resultProperties =
                             await PerformDeleteOperation(
@@ -144,7 +156,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 sqlMetadataProvider,
                                 context);
 
-                        if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
+                        // When read permission is not configured, an error response is returned. So, the mutation result needs to
+                        // be computed only when the read permission is configured.
+                        if (isReadPermissionConfigured && mutationResultRow is not null && mutationResultRow.Columns.Count > 0
                             && !context.Selection.Type.IsScalarType())
                         {
                             // Because the GraphQL mutation result set columns were exposed (mapped) column names,
@@ -168,6 +182,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             catch (TransactionException)
             {
                 throw _dabExceptionWithTransactionErrorMessage;
+            }
+
+            if (!isReadPermissionConfigured)
+            {
+                throw new DataApiBuilderException(message: "The database operation was successful but the current user is unable to view the response due to lack of read permissions",
+                                                  statusCode: HttpStatusCode.Unauthorized,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }
 
             if (result is null)

@@ -295,7 +295,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (backingColumnName is null)
                     {
                         throw new DataApiBuilderException(
-                            message: $"Cursor for Pagination Predicates is not well formed, {column.FieldName} is not valid.",
+                            message: $"Pagination token is not well formed because {column.FieldName} is not valid.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
@@ -328,7 +328,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (!exposedFieldNameToBackingColumn.ContainsKey(safePK))
                     {
                         throw new DataApiBuilderException(
-                            message: $"Cursor for Pagination Predicates is not well formed, missing primary key column: {safePK}",
+                            message: $"Pagination token is not well formed because it is missing an expected field: {safePK}",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }

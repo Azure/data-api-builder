@@ -377,6 +377,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
         /// <summary>
         /// Checks failure on providing arguments with no default in runtimeconfig.
+        /// In this test, there is no default value for the argument 'id' in runtimeconfig, nor is it specified in the query.
+        /// Stored procedure expects id argument to be provided.
         /// </summary>
         [TestMethod]
         public async Task TestStoredProcedureQueryWithNoDefaultInConfig()

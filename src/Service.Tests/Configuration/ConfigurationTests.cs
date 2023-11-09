@@ -1297,26 +1297,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Test to validate a hot reload scenario. Make a rest request to
-        /// an endpoint at /api/MappedBookmarks, then hotreload the rest path
-        /// to /hotreloaded/MappedBookmarks and validate the request still
-        /// returns OK status code.
+        /// Test to validate that when an entity which will return a paginated response is queried, and a custom runtime base route is configured in the runtime configuration,
+        /// then the generated nextLink in the response would contain the rest base-route just before the rest path. For the subsequent query, the rest base-route will be trimmed
+        /// by the upstream before the request lands at DAB.
         /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task TestRuntimeBaseRouteInAfterHotReload()
+        public async Task TestRuntimeBaseRouteInNextLinkForPaginatedRestResponse()
         {
-            // use the mssql test config file to start test server
-            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
-            // setup loader to handle file operations
-            FileSystemRuntimeConfigLoader loader = TestHelper.GetRuntimeConfigLoader();
-            string configFileName = loader.ConfigFilePath;
-            IFileSystem fileSystem = (IFileSystem)loader._fileSystem;
-            string currentDirectoryPath = fileSystem.Directory.GetCurrentDirectory();
-            string configFilePath = System.IO.Path.Combine(currentDirectoryPath!, configFileName);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            string runtimeBaseRoute = "/base-route";
+            TestHelper.ConstructNewConfigWithSpecifiedHostMode(CUSTOM_CONFIG, HostMode.Production, TestCategory.MSSQL, runtimeBaseRoute: runtimeBaseRoute);
             string[] args = new[]
             {
-                    $"--ConfigFileName={configFileName}"
+                    $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
@@ -1325,38 +1319,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 string requestPath = "/api/MappedBookmarks";
                 HttpMethod httpMethod = SqlTestHelper.ConvertRestMethodToHttpMethod(SupportedHttpVerb.Get);
                 HttpRequestMessage request = new(httpMethod, requestPath);
-                HttpResponseMessage response = await client.SendAsync(request);
-                Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
-                // this will overwrite the rest path in the mssql test config file 
-                requestPath = "/hotreloaded";
-                loader.TryLoadKnownConfig(out RuntimeConfig config);
-                RuntimeConfig hotReloadConfig =
-                    config
-                    with
-                    {
-                        Runtime = config.Runtime
-                        with
-                        {
-                            Rest = config.Runtime.Rest
-                            with
-                            {
-                                Path = requestPath
-                            }
-                        }
-                    };
 
-                // we write to the config which is being monitored and sleep to allow hot reload to occur
-                fileSystem.File.WriteAllText(configFilePath, hotReloadConfig.ToJson());
-                Thread.Sleep(1000);
-                requestPath += "/MappedBookmarks";
-                request = new(httpMethod, requestPath);
-                response = await client.SendAsync(request);
+                HttpResponseMessage response = await client.SendAsync(request);
+                string responseBody = await response.Content.ReadAsStringAsync();
                 Assert.IsTrue(response.StatusCode is HttpStatusCode.OK);
-                // overwrites the changes we made when hot reloading
-                fileSystem.File.WriteAllText(configFilePath, config.ToJson());
+
+                JsonElement responseElement = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                JsonElement responseValue = responseElement.GetProperty(SqlTestHelper.jsonResultTopLevelKey);
+                string nextLink = responseElement.GetProperty("nextLink").ToString();
+
+                // Assert that we got an array response with length equal to the maximum allowed records in a paginated response.
+                Assert.AreEqual(JsonValueKind.Array, responseValue.ValueKind);
+                Assert.AreEqual(100, responseValue.GetArrayLength());
+
+                // Assert that the nextLink contains the rest base-route just before the request path.
+                StringAssert.Contains(nextLink, runtimeBaseRoute + requestPath);
             }
         }
 
+        
         /// <summary>
         /// Tests that the when Rest or GraphQL is disabled Globally,
         /// any requests made will get a 404 response.

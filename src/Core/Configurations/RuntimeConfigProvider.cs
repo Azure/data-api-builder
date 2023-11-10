@@ -106,13 +106,13 @@ public class RuntimeConfigProvider
                     loader.GetCurrentDirectoryFromFileSystem() :
                     directoryName;
                 _configFileWatcher = new(this, directoryName, configFileName);
-                return true;
             }
             else
             {
                 _configFileWatcher = new();
-                return true;
             }
+            
+            return true;
         }
 
         return false;

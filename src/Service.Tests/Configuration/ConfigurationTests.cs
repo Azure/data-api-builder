@@ -502,7 +502,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
 
-            Assert.IsTrue(actualUpdatedConnectionString == expectedUpdatedConnectionString);
+            Assert.AreEqual(actualUpdatedConnectionString, expectedUpdatedConnectionString);
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]

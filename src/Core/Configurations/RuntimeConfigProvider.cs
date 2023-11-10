@@ -103,9 +103,8 @@ public class RuntimeConfigProvider
                 string configFilePath = loader.ConfigFilePath;
                 string configFileName = Path.GetFileName(configFilePath);
                 string? directoryName = Path.GetDirectoryName(configFilePath);
-                IFileSystem fileSystem = (IFileSystem)loader.FileSystem;
                 directoryName = string.IsNullOrWhiteSpace(directoryName) ?
-                    fileSystem.Directory.GetCurrentDirectory() :
+                    loader.GetCurrentDirectoryFromFileSystem() :
                     directoryName;
                 _configFileWatcher = new(this, directoryName, configFileName);
                 return true;

@@ -3,7 +3,6 @@
 
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
-using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;

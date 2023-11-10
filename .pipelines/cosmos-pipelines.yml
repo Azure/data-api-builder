@@ -18,11 +18,8 @@ strategy:
     linux:
       imageName: "ubuntu-latest"
       ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'
-    mac:
-      imageName: "macOS-latest"
-      ADDITIONAL_TEST_ARGS: ''
     windows:
-      imageName: "windows-2022"
+      imageName: "windows-latest"
       ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'
   maxParallel: 3
 pool:
@@ -32,6 +29,15 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 steps:
+- task: PowerShell@2
+  displayName: Start CosmosDB Emulator
+  condition: eq( variables['Agent.OS'], 'Windows_NT' )
+  inputs:
+    targetType: 'inline'
+    script: |
+      Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+      Start-CosmosDbEmulator
+
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
 
@@ -57,7 +63,18 @@ steps:
     projects: '**/*.csproj'
     arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need
 
+- bash: |
+    echo "Waiting for CosmosDB Emulator to Start"
+    until [ "$(curl -k -s --connect-timeout 5 -o /dev/null -w "%{http_code}" https://localhost:8081/_explorer/index.html)" == "200" ]; do
+        sleep 5;
+        echo "Waiting for CosmosDB Emulator to Start"
+    done;
+    echo "CosmosDB Emulator is available"
+  condition: eq( variables['Agent.OS'], 'Windows_NT' )
+  displayName: Check CosmosDB Emulator is running
+
 - task: FileTransform@1.206.0
+  condition: eq( variables['Agent.OS'], 'Linux' )
   displayName: 'Generate dab-config.CosmosDb_NoSql.json'
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'

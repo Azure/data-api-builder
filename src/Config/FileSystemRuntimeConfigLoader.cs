@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
 
@@ -62,14 +63,30 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
-    /// Gets the current directory of the file system and returns
-    /// it as a string.
+    /// Get the directory name of the config file and
+    /// return as a string.
     /// </summary>
     /// <returns></returns>
-    public string GetCurrentDirectoryFromFileSystem()
+    public string GetConfigDirectoryName()
     {
-        return _fileSystem.Directory.GetCurrentDirectory();
+        string? directoryName = Path.GetDirectoryName(ConfigFilePath);
+        directoryName = string.IsNullOrWhiteSpace(directoryName) ?
+                    _fileSystem.Directory.GetCurrentDirectory() :
+                    directoryName;
+        return directoryName;
     }
+
+    /// <summary>
+    /// Get the config file name and return it
+    /// as a string.
+    /// </summary>
+    /// <returns></returns>
+    public string GetConfigFileName()
+    {
+        string configFileName = Path.GetFileName(ConfigFilePath);
+        return configFileName;
+    }
+
     /// <summary>
     /// Load the runtime config from the specified path.
     /// </summary>

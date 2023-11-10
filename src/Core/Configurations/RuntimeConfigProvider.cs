@@ -10,7 +10,6 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Path = System.IO.Path;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -36,6 +35,11 @@ public class RuntimeConfigProvider
     /// </summary>
     /// <remarks>This is most commonly used when DAB's config is provided via the <c>ConfigurationController</c>, such as when it's a hosted service.</remarks>
     public bool IsLateConfigured { get; set; }
+
+    /// <summary>
+    /// Indicates if we have already attempted to configure the file watcher.
+    /// </summary>
+    private bool _hasAttemptedFileWatcherConfiguration;
 
     /// <summary>
     /// The access tokens representing a Managed Identity to connect to the database.
@@ -87,26 +91,24 @@ public class RuntimeConfigProvider
     }
 
     /// <summary>
-    /// Checks if we are in a local development scenario, and if so, instantiate
-    /// the config file watcher with a reference to this RuntimeConfigProvider. Otherwise
-    /// we will call the no argument constructor, which means no file will actually be
-    /// watched. Returns true when creating a new config file watcher, and false otherwise.
+    /// Checks if we have already attempted to configure the file watcher, if not
+    /// instantiate the file watcher if we are in the correct scenario. If we
+    /// are not in the correct scenario, do not setup a file watcher but remember
+    /// that we have attempted to do so to avoid repeat checks in future calls.
+    /// Returns true if we instantiate a file watcher.
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
-        if (_configFileWatcher is null)
+        if (!_hasAttemptedFileWatcherConfiguration)
         {
             if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
             {
                 FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
                 _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
-                return true;
             }
-            else
-            {
-                _configFileWatcher = new();
-                return true;
-            }
+
+            _hasAttemptedFileWatcherConfiguration = true;
+            return true;
         }
 
         return false;

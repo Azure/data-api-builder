@@ -1195,11 +1195,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
         /// <summary>
         /// Simple Stored Procedure to check SELECT query returning single row
+        /// This test ensures if a value is specified in the query, it is used
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
             string graphQLQueryName = "executeGetPublisher";
-            string graphQLQuery = @"mutation {
+            string graphQLQuery = @"query {
                 executeGetPublisher(id: 1234) {
                     id
                     name

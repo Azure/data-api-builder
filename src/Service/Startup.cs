@@ -85,10 +85,15 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
 
-            // Add ApplicationTelemetry service and register custom ITelemetryInitializer implementation with the dependency injection
-            services.AddApplicationInsightsTelemetry();
-
-            services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
+                && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
+            {
+                // Add ApplicationTelemetry service and register
+                // custom ITelemetryInitializer implementation with the dependency injection
+                services.AddApplicationInsightsTelemetry();
+                services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            }
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
@@ -605,18 +610,21 @@ namespace Azure.DataApiBuilder.Service
 
                 runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProviderFactory!);
 
-                // Attempt to create OpenAPI document.
-                // Errors must not crash nor halt the intialization of the engine
-                // because OpenAPI document creation is not required for the engine to operate.
-                // Errors will be logged.
-                try
+                if (runtimeConfig.IsRestEnabled)
                 {
-                    IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
-                    openApiDocumentor.CreateDocument();
-                }
-                catch (DataApiBuilderException dabException)
-                {
-                    _logger.LogError(exception: dabException, message: "OpenAPI Documentor initialization failed.");
+                    // Attempt to create OpenAPI document.
+                    // Errors must not crash nor halt the intialization of the engine
+                    // because OpenAPI document creation is not required for the engine to operate.
+                    // Errors will be logged.
+                    try
+                    {
+                        IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
+                        openApiDocumentor.CreateDocument();
+                    }
+                    catch (DataApiBuilderException dabException)
+                    {
+                        _logger.LogWarning(exception: dabException, message: "OpenAPI Documentor initialization failed.");
+                    }
                 }
 
                 _logger.LogInformation("Successfully completed runtime initialization.");

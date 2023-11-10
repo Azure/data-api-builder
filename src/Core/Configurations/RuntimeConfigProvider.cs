@@ -90,7 +90,7 @@ public class RuntimeConfigProvider
     /// Checks if we are in a local development scenario, and if so, instantiate
     /// the config file watcher with a reference to this RuntimeConfigProvider. Otherwise
     /// we will call the no argument constructor, which means no file will actually be
-    /// watched. Returns true when setting up a non null config file watcher and false otherwise.
+    /// watched. Returns true when creating a new config file watcher, and false otherwise.
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
@@ -111,6 +111,7 @@ public class RuntimeConfigProvider
             else
             {
                 _configFileWatcher = new();
+                return true;
             }
         }
 

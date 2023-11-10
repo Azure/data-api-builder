@@ -71,7 +71,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     (string? accountEndPoint, string? accountKey) = ParseCosmosConnectionString(dataSource.ConnectionString);
 
-                    if (!string.IsNullOrEmpty(accountKey))
+                    if (accountEndPoint?.Contains("127.0.0.1") ==true)
+                    {
+                        client = new CosmosClient(accountEndPoint, accountKey, new CosmosClientOptions
+                        {
+                            SerializerOptions = new CosmosSerializationOptions
+                            {
+                                PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+                            },
+                            HttpClientFactory = () =>
+                            {
+                                /*                               *** WARNING ***
+                                    * This code is for demo purposes only. In production, you should use the default behavior,
+                                    * which relies on the operating system's certificate store to validate the certificates.
+                                */
+                                HttpMessageHandler httpMessageHandler = new HttpClientHandler
+                                {
+                                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+                                };
+                                return new HttpClient(httpMessageHandler);
+                            },
+                            ConnectionMode = ConnectionMode.Direct
+                        });
+                    }
+
+                    else if (!string.IsNullOrEmpty(accountKey))
                     {
                         client = new CosmosClientBuilder(dataSource.ConnectionString).WithContentResponseOnWrite(true)
                             .WithApplicationName(userAgent)

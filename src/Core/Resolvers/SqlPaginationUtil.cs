@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// continue to the next page. These can then be used to form the pagination
         /// columns that will be needed for the actual query.
         /// </summary>
-        protected class NextLinkColumn
+        protected class NextLinkField
         {
             public string EntityName { get; set; }
             public string FieldName { get; set; }
@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             public string? ParamName { get; set; }
             public OrderBy Direction { get; set; }
 
-            public NextLinkColumn(
+            public NextLinkField(
                 string entityName,
                 string fieldName,
                 object? fieldValue,
@@ -159,7 +159,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string tableName = "",
             ISqlMetadataProvider? sqlMetadataProvider = null)
         {
-            List<NextLinkColumn> cursorJson = new();
+            List<NextLinkField> cursorJson = new();
             JsonSerializerOptions options = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
             // Hash set is used here to maintain linear runtime
             // in the worst case for this function. If list is used
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string? exposedColumnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
                     if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
-                        cursorJson.Add(new NextLinkColumn(
+                        cursorJson.Add(new NextLinkField(
                             entityName: entityName,
                             fieldName: exposedColumnName,
                             fieldValue: value,
@@ -211,7 +211,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string? exposedColumnName = GetExposedColumnName(entityName, column, sqlMetadataProvider);
                     if (TryResolveJsonElementToScalarVariable(element.GetProperty(exposedColumnName), out object? value))
                     {
-                        cursorJson.Add(new NextLinkColumn(
+                        cursorJson.Add(new NextLinkField(
                             entityName: entityName,
                             fieldName: exposedColumnName,
                             fieldValue: value));
@@ -271,19 +271,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             )
         {
             List<PaginationColumn>? paginationCursorColumnsForQuery = new();
-            IEnumerable<NextLinkColumn>? paginationCursorColumnsFromRequest;
+            IEnumerable<NextLinkField>? paginationCursorFieldsFromRequest;
             try
             {
                 afterJsonString = Base64Decode(afterJsonString);
-                paginationCursorColumnsFromRequest = JsonSerializer.Deserialize<IEnumerable<NextLinkColumn>>(afterJsonString);
+                paginationCursorFieldsFromRequest = JsonSerializer.Deserialize<IEnumerable<NextLinkField>>(afterJsonString);
 
-                if (paginationCursorColumnsFromRequest is null)
+                if (paginationCursorFieldsFromRequest is null)
                 {
                     throw new ArgumentException("Failed to parse the pagination information from the provided token");
                 }
 
                 Dictionary<string, PaginationColumn> exposedFieldNameToBackingColumn = new();
-                foreach (NextLinkColumn column in paginationCursorColumnsFromRequest)
+                foreach (NextLinkField field in paginationCursorFieldsFromRequest)
                 {
                     // REST calls this function with a non null sqlMetadataProvider
                     // which will get the exposed name for safe messaging in the response.
@@ -304,12 +304,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         tableName: "",
                         tableSchema: "",
                         columnName: backingColumnName,
-                        value: column.FieldValue,
-                        paramName: column.ParamName,
-                        direction: column.Direction);
+                        value: field.FieldValue,
+                        paramName: field.ParamName,
+                        direction: field.Direction);
                     paginationCursorColumnsForQuery.Add(pageColumn);
                     // holds exposed name mapped to exposed pagination column
-                    exposedFieldNameToBackingColumn.Add(column.FieldName, pageColumn);
+                    exposedFieldNameToBackingColumn.Add(field.FieldName, pageColumn);
                 }
 
                 // verify that primary keys is a sub set of after's column names

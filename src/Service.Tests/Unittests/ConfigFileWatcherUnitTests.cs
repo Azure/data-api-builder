@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.AreEqual(initialMode, runtimeConfig.Runtime.Host.Mode);
             // Simulate change to the config file
             fileSystem.File.WriteAllText(configName, updatedConfig);
-            // Give file watcher enough time to see the change
+            // Give ConfigFileWatcher enough time to hot reload the change
             System.Threading.Thread.Sleep(1000);
             // Hot Reloaded config
             runtimeConfig = configProvider.GetConfig();

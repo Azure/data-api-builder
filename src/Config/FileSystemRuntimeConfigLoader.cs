@@ -66,7 +66,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Get the directory name of the config file and
     /// return as a string.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>String representing the full file path
+    /// of the config up to but not including the filename.</returns>
     public string GetConfigDirectoryName()
     {
         string? directoryName = Path.GetDirectoryName(ConfigFilePath);
@@ -80,7 +81,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// Get the config file name and return it
     /// as a string.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>String representing the file name and extension.</returns>
     public string GetConfigFileName()
     {
         string configFileName = Path.GetFileName(ConfigFilePath);

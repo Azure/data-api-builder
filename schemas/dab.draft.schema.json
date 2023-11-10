@@ -8,7 +8,7 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "URI of the JSON schema that can validates the structure, constraints, and data types of this Data API builder runtime configuration file.",
+      "description": "URI of the JSON schema with which the structure, constraints, and data types of this Data API builder runtime configuration file should conform.",
       "default": null
     },
     "data-source": {

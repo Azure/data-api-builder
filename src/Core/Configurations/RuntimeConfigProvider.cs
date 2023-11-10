@@ -107,15 +107,14 @@ public class RuntimeConfigProvider
                 {
                     FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
                     _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
+                    _hasAttemptedFileWatcherConfiguration = true;
+                    return true;
                 }
                 catch (Exception)
                 {
                     return false;
                 }
             }
-
-            _hasAttemptedFileWatcherConfiguration = true;
-            return true;
         }
 
         return false;

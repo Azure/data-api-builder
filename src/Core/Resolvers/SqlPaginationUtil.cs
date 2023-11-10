@@ -310,8 +310,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     paginationCursorColumnsForQuery.Add(pageColumn);
                     // holds exposed name mapped to exposed pagination column
                     exposedFieldNameToBackingColumn.Add(column.FieldName, pageColumn);
-                    // overwrite with backing column's name for query generation
-                    column.FieldName = backingColumnName;
                 }
 
                 // verify that primary keys is a sub set of after's column names
@@ -324,11 +322,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // which will get the exposed name for safe messaging in the response.
                     // Since we are looking for primary keys we expect these columns to
                     // exist.
-                    string safePK = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
-                    if (!exposedFieldNameToBackingColumn.ContainsKey(safePK))
+                    string exposedFieldName = GetExposedColumnName(entityName, pk, sqlMetadataProvider);
+                    if (!exposedFieldNameToBackingColumn.ContainsKey(exposedFieldName))
                     {
                         throw new DataApiBuilderException(
-                            message: $"Pagination token is not well formed because it is missing an expected field: {safePK}",
+                            message: $"Pagination token is not well formed because it is missing an expected field: {exposedFieldName}",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
@@ -340,18 +338,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 SqlQueryStructure structure = paginationMetadata.Structure!;
                 foreach (OrderByColumn column in structure.OrderByColumns)
                 {
-                    string columnName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
+                    string exposedFieldName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
 
-                    if (!exposedFieldNameToBackingColumn.ContainsKey(columnName) ||
-                        exposedFieldNameToBackingColumn[columnName].Direction != column.Direction)
+                    if (!exposedFieldNameToBackingColumn.ContainsKey(exposedFieldName) ||
+                        exposedFieldNameToBackingColumn[exposedFieldName].Direction != column.Direction)
                     {
                         // REST calls this function with a non null sqlMetadataProvider
                         // which will get the exposed name for safe messaging in the response.
                         // Since we are looking for valid orderby columns we expect
                         // these columns to exist.
-                        string safeColumnName = GetExposedColumnName(entityName, columnName, sqlMetadataProvider);
+                        string exposedOrderByFieldName = GetExposedColumnName(entityName, column.ColumnName, sqlMetadataProvider);
                         throw new DataApiBuilderException(
-                            message: $"Could not match order by column {safeColumnName} with a column in the pagination token with the same name and direction.",
+                            message: $"Could not match order by column {exposedOrderByFieldName} with a column in the pagination token with the same name and direction.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }

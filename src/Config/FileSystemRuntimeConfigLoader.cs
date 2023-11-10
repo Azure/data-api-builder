@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
 

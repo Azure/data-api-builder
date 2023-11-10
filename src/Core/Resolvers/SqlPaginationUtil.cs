@@ -291,11 +291,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // param, we expect this column to exist as the $after query param
                     // was formed from a previous response with a nextLink. If the nextLink
                     // has been modified and backingColumn is null we throw exception.
-                    string backingColumnName = GetBackingColumnName(entityName, column.FieldName, sqlMetadataProvider);
+                    string backingColumnName = GetBackingColumnName(entityName, field.FieldName, sqlMetadataProvider);
                     if (backingColumnName is null)
                     {
                         throw new DataApiBuilderException(
-                            message: $"Pagination token is not well formed because {column.FieldName} is not valid.",
+                            message: $"Pagination token is not well formed because {field.FieldName} is not valid.",
                             statusCode: HttpStatusCode.BadRequest,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }

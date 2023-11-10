@@ -7,6 +7,9 @@ set -euo pipefail
 FILE=".env"
 if [[ -f $FILE ]]; then
 	echo "loading from .env"
+  # load all the variables defined in the .env file and exports them
+  # so that they can be seen by other processes
+  # improved to handle comments and white spaces
   eval $(egrep "^[^#;]" $FILE | tr '\n' '\0' | xargs -0 -n1 | sed 's/^/export /')
 else
 	cat << EOF > .env

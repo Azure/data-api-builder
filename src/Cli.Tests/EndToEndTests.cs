@@ -121,7 +121,7 @@ public class EndToEndTests
             replaceEnvVar: true));
 
         SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
-        Assert.AreEqual(DEFAULT_APP_NAME, builder.ApplicationName);
+        Assert.AreEqual(ProductInfo.GetDataApiBuilderApplicationName(), builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
@@ -668,7 +668,12 @@ public class EndToEndTests
         Assert.IsNotNull(output);
 
         // Version Info logged by dab irrespective of commands being parsed correctly.
-        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        StringAssert.Contains(ProductInfo.GetProductVersion(), $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+
+        // Check that build hash is returned as part of  version number
+        string[] versionParts = output.Split('+');
+        Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
+        Assert.AreEqual(41, versionParts[1].Length, "Build hash is not of expected length.");
 
         if (isParsableDabCommandName)
         {

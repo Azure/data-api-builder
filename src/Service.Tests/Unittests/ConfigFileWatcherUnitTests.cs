@@ -14,11 +14,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
     public class ConfigFileWatcherUnitTests
     {
         /// <summary>
-        /// Use the file system to add a file that matches the format of our config file.
-        /// Use that to create the needed config loader and provider, and then get the
-        /// actual config object from the provider, instantiating our config file watcher
-        /// in the process. Modify that file we created originally and verify we reload
-        /// the config correctly for the desired RuntimeOptions.
+        /// Use the file system (not mocked) to create a hot reload
+        /// scenario of the REST runtime options and verify that we
+        /// correctly hot reload those options.
         /// </summary>
         [TestMethod]
         public void HotReloadConfigRestRuntimeOptions()

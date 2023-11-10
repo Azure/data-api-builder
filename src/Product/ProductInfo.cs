@@ -36,5 +36,12 @@ public static class ProductInfo
     {
         return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DEFAULT_APP_NAME;
     }
+
+    public static string GetDataApiBuilderApplicationName()
+    {
+        string dabVersion = ProductInfo.GetDataApiBuilderUserAgent();
+        int hashStartPosition = dabVersion.LastIndexOf('+');
+        return hashStartPosition != -1 ? dabVersion[..hashStartPosition] : dabVersion;
+    }
 }
 

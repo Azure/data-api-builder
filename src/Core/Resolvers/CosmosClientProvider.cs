@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     (string? accountEndPoint, string? accountKey) = ParseCosmosConnectionString(dataSource.ConnectionString);
 
-                    if (accountEndPoint?.Contains("127.0.0.1") ==true)
+                    if (accountEndPoint?.Contains("localhost") ==true)
                     {
                         client = new CosmosClient(accountEndPoint, accountKey, new CosmosClientOptions
                         {

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -374,6 +375,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await QueryAgainstSPWithOnlyTypenameInSelectionSet(dbQuery);
         }
 
+        /// <summary>
+        /// Checks failure on providing arguments with no default in runtimeconfig.
+        /// In this test, there is no default value for the argument 'id' in runtimeconfig, nor is it specified in the query.
+        /// Stored procedure expects id argument to be provided.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryWithNoDefaultInConfig()
+        {
+            string graphQLQueryName = "executeGetPublisher";
+            string graphQLQuery = @"{
+                executeGetPublisher {
+                    name
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "Did not provide all procedure params");
+        }
         #endregion
     }
 }

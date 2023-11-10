@@ -608,8 +608,6 @@ namespace Azure.DataApiBuilder.Service
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProviderFactory!);
                 }
 
-                runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProviderFactory!);
-
                 // Attempt to create OpenAPI document.
                 // Errors must not crash nor halt the intialization of the engine
                 // because OpenAPI document creation is not required for the engine to operate.

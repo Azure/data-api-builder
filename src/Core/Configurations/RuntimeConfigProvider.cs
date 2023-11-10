@@ -3,6 +3,7 @@
 
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
+using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
@@ -10,6 +11,7 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Path = System.IO.Path;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -81,7 +83,7 @@ public class RuntimeConfigProvider
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        CheckForAndSetupConfigFileWatcher();
+        TrySetupConfigFileWatcher();
         return _runtimeConfig;
     }
 
@@ -89,21 +91,32 @@ public class RuntimeConfigProvider
     /// Checks if we are in a local development scenario, and if so, instantiate
     /// the config file watcher with a reference to this RuntimeConfigProvider. Otherwise
     /// we will call the no argument constructor, which means no file will actually be
-    /// watched.
+    /// watched. Returns true when setting up a non null config file watcher and false otherwise.
     /// </summary>
-    private void CheckForAndSetupConfigFileWatcher()
+    private bool TrySetupConfigFileWatcher()
     {
         if (_configFileWatcher is null)
         {
             if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
             {
-                _configFileWatcher = new(this);
+                FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
+                string configFilePath = loader.ConfigFilePath;
+                string configFileName = Path.GetFileName(configFilePath);
+                string? directoryName = Path.GetDirectoryName(configFilePath);
+                IFileSystem fileSystem = (IFileSystem)loader.FileSystem;
+                directoryName = string.IsNullOrWhiteSpace(directoryName) ?
+                    fileSystem.Directory.GetCurrentDirectory() :
+                    directoryName;
+                _configFileWatcher = new(this, directoryName, configFileName);
+                return true;
             }
             else
             {
                 _configFileWatcher = new();
             }
         }
+
+        return false;
     }
 
     /// <summary>
@@ -118,7 +131,7 @@ public class RuntimeConfigProvider
             if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
             {
                 _runtimeConfig = config;
-                CheckForAndSetupConfigFileWatcher();
+                TrySetupConfigFileWatcher();
             }
         }
 

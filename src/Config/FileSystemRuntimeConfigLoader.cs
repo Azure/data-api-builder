@@ -62,6 +62,15 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
+    /// Gets the current directory of the file system and returns
+    /// it as a string.
+    /// </summary>
+    /// <returns></returns>
+    public string GetCurrentDirectoryFromFileSystem()
+    {
+        return FileSystem.Directory.GetCurrentDirectory();
+    }
+    /// <summary>
     /// Load the runtime config from the specified path.
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>

@@ -1,10 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IO.Abstractions;
-using Azure.DataApiBuilder.Config;
-using Path = System.IO.Path;
-
 namespace Azure.DataApiBuilder.Core.Configurations;
 
 public class ConfigFileWatcher
@@ -12,19 +8,11 @@ public class ConfigFileWatcher
     private FileSystemWatcher? _fileWatcher;
     private readonly RuntimeConfigProvider? _configProvider;
 
-    public ConfigFileWatcher(RuntimeConfigProvider configProvider)
+    public ConfigFileWatcher(RuntimeConfigProvider configProvider, string directoryName, string configFileName)
     {
-        FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)configProvider.ConfigLoader;
-        string configFilePath = loader.ConfigFilePath;
-        IFileSystem fileSystem = (IFileSystem)loader.FileSystem;
-        string? directoryName = Path.GetDirectoryName(configFilePath);
-        directoryName = string.IsNullOrWhiteSpace(directoryName) ?
-            fileSystem.Directory.GetCurrentDirectory() :
-            directoryName;
-
         _fileWatcher = new FileSystemWatcher(directoryName)
         {
-            Filter = Path.GetFileName(configFilePath),
+            Filter = configFileName,
             EnableRaisingEvents = true
         };
 

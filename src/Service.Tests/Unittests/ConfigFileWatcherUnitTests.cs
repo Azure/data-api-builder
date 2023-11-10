@@ -115,6 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 File.Delete(configName);
             }
 
+            // Not using mocked filesystem so we pick up real file changes for hot reload
             FileSystem fileSystem = new();
             fileSystem.File.WriteAllText(configName, initialConfig);
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configName, string.Empty);

@@ -76,6 +76,7 @@ public class RuntimeConfigProvider
         if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
         {
             _runtimeConfig = config;
+            TrySetupConfigFileWatcher();
         }
 
         if (_runtimeConfig is null)
@@ -86,7 +87,6 @@ public class RuntimeConfigProvider
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        TrySetupConfigFileWatcher();
         return _runtimeConfig;
     }
 
@@ -103,8 +103,15 @@ public class RuntimeConfigProvider
         {
             if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
             {
-                FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
-                _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
+                try
+                {
+                    FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
+                    _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
+                }
+                catch (Exception)
+                {
+                    return false;
+                }
             }
 
             _hasAttemptedFileWatcherConfiguration = true;

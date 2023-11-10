@@ -38,16 +38,16 @@ public class ConfigFileWatcher
                 throw new ArgumentNullException("_configProvider can not be null.");
             }
 
-            if (!_configProvider!.IsLateConfigured && _configProvider!.GetConfig().IsDevelopmentMode())
+            if (!_configProvider!.IsLateConfigured && _configProvider.GetConfig().IsDevelopmentMode())
             {
-                _configProvider!.HotReloadConfig();
+                _configProvider.HotReloadConfig();
             }
         }
         catch (Exception ex)
         {
             // Need to remove the dependency configuring authentication has on the RuntimeConfigProvider
             // before we can have an ILogger here.
-            Console.WriteLine("Unable to Hot Reload configuration file due to " + ex.Message);
+            Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
         }
     }
 }

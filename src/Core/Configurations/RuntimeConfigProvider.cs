@@ -99,13 +99,7 @@ public class RuntimeConfigProvider
             if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
             {
                 FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
-                string configFilePath = loader.ConfigFilePath;
-                string configFileName = Path.GetFileName(configFilePath);
-                string? directoryName = Path.GetDirectoryName(configFilePath);
-                directoryName = string.IsNullOrWhiteSpace(directoryName) ?
-                    loader.GetCurrentDirectoryFromFileSystem() :
-                    directoryName;
-                _configFileWatcher = new(this, directoryName, configFileName);
+                _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
                 return true;
             }
             else

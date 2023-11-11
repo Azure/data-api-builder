@@ -3,17 +3,14 @@
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Services.Cache.Interfaces;
 
 namespace Azure.DataApiBuilder.Core.Services.Cache;
 
-public class DabCacheKeyProvider : IDabCacheKeyProvider
+public class DabCacheKeyProvider
 {
     private const char KEY_DELIMITER = ':';
 
-    public DabCacheKeyProvider() { }
-
-    public string CreateKey(DatabaseQueryMetadata queryMetadata)
+    public static string CreateKey(DatabaseQueryMetadata queryMetadata)
     {
         StringBuilder cacheKeyBuilder = new();
         cacheKeyBuilder.Append(queryMetadata.DataSource);
@@ -21,7 +18,6 @@ public class DabCacheKeyProvider : IDabCacheKeyProvider
         cacheKeyBuilder.Append(queryMetadata.QueryText);
         cacheKeyBuilder.Append(KEY_DELIMITER);
         cacheKeyBuilder.Append(JsonSerializer.Serialize(queryMetadata.QueryParameters));
-
         return cacheKeyBuilder.ToString();
     }
 }

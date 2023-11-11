@@ -171,12 +171,6 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<IAuthorizationResolver>();
             });
 
-            services.AddSingleton<ILogger<FusionCache>>(implementationFactory: (serviceProvider) =>
-            {
-                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
-                return loggerFactory.CreateLogger<FusionCache>();
-            });
-
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
@@ -186,14 +180,15 @@ namespace Azure.DataApiBuilder.Service
                 .WithOptions(options =>
                 {
                     options.FactoryErrorsLogLevel = LogLevel.Debug;
+                    options.EventHandlingErrorsLogLevel = LogLevel.Debug;
                 })
                 .WithDefaultEntryOptions(new FusionCacheEntryOptions
                 {
                     Duration = TimeSpan.FromMinutes(1)
                 });
 
-            services.AddSingleton<IDabCacheKeyProvider, DabCacheKeyProvider>();
-            services.AddSingleton<IDabCacheService, DabCacheService>();
+            services.AddSingleton<DabCacheKeyProvider>();
+            services.AddSingleton<DabCacheService>();
             services.AddControllers();
         }
 

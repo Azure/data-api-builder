@@ -3,21 +3,20 @@
 
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
-using Azure.DataApiBuilder.Core.Services.Cache.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Core.Services.Cache;
 
-public class DabCacheService : IDabCacheService
+public class DabCacheService
 {
-    private IDabCacheKeyProvider _cacheKeyProvider;
-    private IFusionCache _cache;
-    private ILogger _logger;
-    private IHttpContextAccessor _httpContextAccessor;
+    //private readonly DabCacheKeyProvider _cacheKeyProvider;
+    private readonly IFusionCache _cache;
+    private readonly ILogger _logger;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public DabCacheService(IDabCacheKeyProvider cacheKeyProvider, IFusionCache cache, ILogger<DabCacheService> logger, IHttpContextAccessor httpContextAccessor)
+    public DabCacheService(DabCacheKeyProvider cacheKeyProvider, IFusionCache cache, ILogger<DabCacheService> logger, IHttpContextAccessor httpContextAccessor)
     {
         _cacheKeyProvider = cacheKeyProvider;
         _cache = cache;
@@ -25,9 +24,11 @@ public class DabCacheService : IDabCacheService
         _httpContextAccessor = httpContextAccessor;
     }
 
+    //what happens when an exception is thrown inside the execution of the facotry?
+
     public async ValueTask<JsonElement?> GetOrSetAsync<JsonElement>(IQueryExecutor queryExecutor, DatabaseQueryMetadata queryMetadata)
     {
-        string cacheKey = _cacheKeyProvider.CreateKey(queryMetadata);
+        string cacheKey = DabCacheKeyProvider.CreateKey(queryMetadata);
         JsonElement? result = await _cache.GetOrSetAsync(
                key: cacheKey,
                async (FusionCacheFactoryExecutionContext<JsonElement> ctx, CancellationToken ct ) =>
@@ -41,7 +42,7 @@ public class DabCacheService : IDabCacheService
                        args: null,
                        dataSourceName: queryMetadata.DataSource);
 
-                   ctx.Options.SetSize(CacheEntryHelpers.EstimateCachedResponseSize(cacheKey: cacheKey, cacheValue: result?.ToString()));
+                   ctx.Options.SetSize(CacheEntrySizeCalculator.EstimateCachedResponseSize(cacheKey: cacheKey, cacheValue: result?.ToString()));
 
                    return result;
                });

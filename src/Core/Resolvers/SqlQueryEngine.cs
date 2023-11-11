@@ -212,9 +212,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
             //JsonElement result = await dabCache.GetOrSetAsync(DatabaseQueryMetadata queryMetadata); // abstracts key generation and cache entry size estimation
             // but how do we get the executeQueryAsync function in?
-            // if (runtimeConfig.GlobalCachingEnabled)
+            // bool sessionContextEnabled = runtimeConfigProvider.GetRuntimeConfig().runtime.options.setsessionContext;
+            // if (featureManager.EnableInMemoryServerCache && runtimeConfig.GlobalCachingEnabled && !sessionContextEnabled && runtimeConfig.Entity.Caching.Enabled )
             // {
-            //      JsonElement result = IDabCacheService.GetorSetAsync(IqueryExecutor, 
+            //      DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
+            //      CacheEntryOptions opts = runtimeConfig.Entity.Caching.TTL;
+            //      JsonElement result = IDabCacheService.GetorSetAsync(IqueryExecutor, queryMetadata, cacheEntryOptions);
+            //      JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata);
+            //      byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+            //      JsonDocument doc = JsonDocument.Parse(jsonBytes);
+            //      return doc;
+            // }
+            // else
+            // {
+            //      JsonDocument doc = queryExecutor.Execute();
+            //      return doc;
+            // }
             JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata);
 
             byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);

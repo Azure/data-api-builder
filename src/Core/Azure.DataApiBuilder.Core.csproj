@@ -19,6 +19,8 @@
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
+    <PackageReference Include="Microsoft.FeatureManagement" />
+    <PackageReference Include="Microsoft.FeatureManagement.AspNetCore" />
     <PackageReference Include="Microsoft.OData.Core" />
     <PackageReference Include="Microsoft.OData.Edm" />
     <PackageReference Include="Microsoft.OpenApi" />

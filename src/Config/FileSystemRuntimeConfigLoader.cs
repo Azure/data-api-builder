@@ -62,6 +62,32 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
+    /// Get the directory name of the config file and
+    /// return as a string.
+    /// </summary>
+    /// <returns>String representing the full file path
+    /// of the config up to but not including the filename.</returns>
+    public string GetConfigDirectoryName()
+    {
+        string? directoryName = Path.GetDirectoryName(ConfigFilePath);
+        directoryName = string.IsNullOrWhiteSpace(directoryName) ?
+                    _fileSystem.Directory.GetCurrentDirectory() :
+                    directoryName;
+        return directoryName;
+    }
+
+    /// <summary>
+    /// Get the config file name and return it
+    /// as a string.
+    /// </summary>
+    /// <returns>String representing the file name and extension.</returns>
+    public string GetConfigFileName()
+    {
+        string configFileName = Path.GetFileName(ConfigFilePath);
+        return configFileName;
+    }
+
+    /// <summary>
     /// Load the runtime config from the specified path.
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>

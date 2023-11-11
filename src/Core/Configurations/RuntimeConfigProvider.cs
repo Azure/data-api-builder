@@ -37,11 +37,6 @@ public class RuntimeConfigProvider
     public bool IsLateConfigured { get; set; }
 
     /// <summary>
-    /// Indicates if we have already attempted to configure the file watcher.
-    /// </summary>
-    private bool _hasAttemptedFileWatcherConfiguration;
-
-    /// <summary>
     /// The access tokens representing a Managed Identity to connect to the database.
     /// The key is the unique datasource name and the value is the access token.
     /// </summary>
@@ -99,29 +94,23 @@ public class RuntimeConfigProvider
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
-        if (!_hasAttemptedFileWatcherConfiguration)
+        if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
         {
-            if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
+            try
             {
-                try
-                {
-                    FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
-                    _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
-                    _hasAttemptedFileWatcherConfiguration = true;
-                }
-                catch (Exception)
-                {
-                    // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                    // before we can have an ILogger here.
-                    Console.WriteLine("Attempt to configure ");
-                }
-
-                return _configFileWatcher is not null;
+                FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
+                _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
+            }
+            catch (Exception ex)
+            {
+                // Need to remove the dependencies in startup on the RuntimeConfigProvider
+                // before we can have an ILogger here.
+                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
             }
 
+            return _configFileWatcher is not null;
         }
 
-        _hasAttemptedFileWatcherConfiguration = true;
         return false;
     }
 

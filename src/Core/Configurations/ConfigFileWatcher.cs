@@ -38,7 +38,7 @@ public class ConfigFileWatcher
                 throw new ArgumentNullException("_configProvider can not be null.");
             }
 
-            if (!_configProvider!.IsLateConfigured && _configProvider.GetConfig().IsDevelopmentMode())
+            if (!_configProvider.IsLateConfigured && _configProvider.GetConfig().IsDevelopmentMode())
             {
                 _configProvider.HotReloadConfig();
             }

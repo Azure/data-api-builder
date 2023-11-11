@@ -20,8 +20,6 @@ public class ConfigFileWatcher
         _fileWatcher.Changed += OnConfigFileChange;
     }
 
-    public ConfigFileWatcher() { }
-
     /// <summary>
     /// When a change is detected in the Config file being watched this trigger
     /// function is called and handles the hot reload logic when appropriate,
@@ -45,7 +43,7 @@ public class ConfigFileWatcher
         }
         catch (Exception ex)
         {
-            // Need to remove the dependency configuring authentication has on the RuntimeConfigProvider
+            // Need to remove the dependencies in startup on the RuntimeConfigProvider
             // before we can have an ILogger here.
             Console.WriteLine("Unable to hot reload configuration file due to " + ex.Message);
         }

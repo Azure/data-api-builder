@@ -108,15 +108,20 @@ public class RuntimeConfigProvider
                     FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
                     _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
                     _hasAttemptedFileWatcherConfiguration = true;
-                    return true;
                 }
                 catch (Exception)
                 {
-                    return false;
+                    // Need to remove the dependencies in startup on the RuntimeConfigProvider
+                    // before we can have an ILogger here.
+                    Console.WriteLine("Attempt to configure ");
                 }
+
+                return _configFileWatcher is not null;
             }
+
         }
 
+        _hasAttemptedFileWatcherConfiguration = true;
         return false;
     }
 

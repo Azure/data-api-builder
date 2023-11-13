@@ -453,7 +453,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     GetOpenApiQueryParameter(
                         name: paramKey,
                         description: "Input parameter for stored procedure arguments",
-                        required: !parameterDefinition.HasConfigDefault,
+                        required: false,
                         type: TypeHelper.GetJsonDataTypeFromSystemType(parameterDefinition.SystemType).ToString().ToLower()
                     )
                 );

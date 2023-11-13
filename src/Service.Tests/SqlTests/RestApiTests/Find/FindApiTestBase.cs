@@ -682,7 +682,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
@@ -702,7 +702,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTest_NoQueryParams_PaginationNextLink()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":100,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"bookmarks\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -724,7 +724,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTest_OrderByNotFirstQueryParam_PaginationNextLink()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":100,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"bookmarks\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=id",
@@ -743,8 +743,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPagination()
         {
-            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
@@ -762,7 +762,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithAfterSingleKeyPagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":7,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":7,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$after={Uri.EscapeDataString(after)}",
@@ -778,8 +778,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithAfterMultiKeyPagination()
         {
-            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Reviews\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Reviews\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -797,7 +797,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithPaginationVerifSinglePrimaryKeyInAfter()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=1",
@@ -816,8 +816,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithPaginationVerifMultiplePrimaryKeysInAfter()
         {
-            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=1",
@@ -852,7 +852,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindMany_MappedColumn_NoOrderByQueryParameter()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":100,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"mappedbookmarks\",\"ColumnName\":\"bkid\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"MappedBookmarks\",\"FieldName\":\"bkid\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
@@ -918,8 +918,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstAndSpacedColumnOrderBy()
         {
-            string after = $"[{{\"Value\":\"Belfort\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"brokers\",\"ColumnName\":\"Last Name\"}}," +
-                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"brokers\",\"ColumnName\":\"ID Number\"}}]";
+            string after = $"[{{\"EntityName\":\"Broker\",\"FieldName\":\"Last Name\",\"FieldValue\":\"Belfort\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Broker\",\"FieldName\":\"ID Number\",\"FieldValue\":2,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby='Last Name'",
@@ -954,8 +954,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"Value\":\"Also Awesome book\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"title\"}}," +
-                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"Also Awesome book\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":2,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=title",
@@ -974,7 +974,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyIncludedInOrderByAndPagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=id",
@@ -993,7 +993,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstTwoOrderByAndPagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":2,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=2&$orderby=id",
@@ -1012,9 +1012,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy()
         {
-            string after = $"[{{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"birthdate\"}}," +
-                            $"{{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"name\"}}," +
-                            $"{{\"Value\":125,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Author\",\"FieldName\":\"birthdate\",\"FieldValue\":\"2001-01-01\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Author\",\"FieldName\":\"name\",\"FieldValue\":\"Aniruddh\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Author\",\"FieldName\":\"id\",\"FieldValue\":125,\"Direction\":1}}]";
             after = $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -1035,9 +1035,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy()
         {
-            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"ColumnName\":\"birthdate\"}," +
-                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"ColumnName\":\"name\"}," +
-                            "{\"Value\":125,\"Direction\":0,\"ColumnName\":\"id\"}]";
+            string after = $"[{{\"EntityName\":\"Authors\",\"FieldName\":\"birthdate\",\"FieldValue\":\"2001-01-01\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Authors\",\"FieldName\":\"name\",\"FieldValue\":\"Aniruddh\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Authors\",\"FieldName\":\"id\",\"FieldValue\":125,\"Direction\":0}}]";
             after = $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -1057,8 +1057,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination()
         {
-            string after = $"[{{\"Value\":569,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}," +
-                            $"{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":569,\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=id desc, book_id",
@@ -1078,8 +1078,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination()
         {
-            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=book_id",
@@ -1100,9 +1100,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstAndMultiColumnOrderBy()
         {
-            string after = $"[{{\"Value\":2345,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"publisher_id\"}}," +
-                            $"{{\"Value\":\"US history in a nutshell\",\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"title\"}}," +
-                            $"{{\"Value\":4,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"FieldValue\":2345,\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"US history in a nutshell\",\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":4,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=publisher_id desc, title desc",
@@ -1122,8 +1122,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstAndTiedColumnOrderBy()
         {
-            string after = $"[{{\"Value\":2345,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"publisher_id\"}}," +
-                            $"{{\"Value\":3,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"FieldValue\":2345,\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":3,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=publisher_id desc",
@@ -1165,9 +1165,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"Value\":\"Indeed a great book\",\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"content\"}}," +
-                            $"{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"content\",\"FieldValue\":\"Indeed a great book\",\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=content desc",
@@ -1277,8 +1277,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
-                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            string after = $"[{{\"EntityName\":\"Shrub\",\"FieldName\":\"fancyName\",\"FieldValue\":\"Pseudotsuga menziesii\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Shrub\",\"FieldName\":\"treeId\",\"FieldValue\":2,\"Direction\":0}}]";
             string queryStringBase = "?$first=1&$orderby=fancyName";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
@@ -1300,8 +1300,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
-                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            string after = $"[{{\"EntityName\":\"Trees\",\"FieldName\":\"fancyName\",\"FieldValue\":\"Pseudotsuga menziesii\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Trees\",\"FieldName\":\"treeId\",\"FieldValue\":2,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$orderby=fancyName,treeId&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
@@ -1824,8 +1824,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "The request is invalid since the primary keys: spores requested were not found in the entity definition.",
-                expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: "EntityNotFound"
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
         }
 

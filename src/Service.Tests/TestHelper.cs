@@ -217,7 +217,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                     Runtime = config.Runtime
                 with
                     {
-                        Host = config.Runtime.Host
+                        Host = config.Runtime?.Host
                 with
                         { Mode = hostModeType },
                         BaseRoute = runtimeBaseRoute

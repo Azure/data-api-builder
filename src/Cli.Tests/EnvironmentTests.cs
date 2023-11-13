@@ -19,7 +19,7 @@ public class EnvironmentTests
     [TestInitialize]
     public void TestInitialize()
     {
-        StringJsonConverterFactory converterFactory = new();
+        StringJsonConverterFactory converterFactory = new(EnvironmentVariableReplacementFailureMode.Throw);
         _options = new()
         {
             PropertyNameCaseInsensitive = true

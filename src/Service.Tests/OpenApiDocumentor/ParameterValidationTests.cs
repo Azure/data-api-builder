@@ -82,28 +82,15 @@ public class ParameterValidationTests
         Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}"));
         Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}/id/{{id}}"));
 
-        // Assert that path without id has all the query parameters.
+        // Asserting on all the parameters for Get All operation.
         Assert.IsTrue(openApiDocument.Paths[$"/{entityName}"].Operations.ContainsKey(OperationType.Get));
-        Assert.AreEqual(5, openApiDocument.Paths[$"/{entityName}"].Operations[OperationType.Get].Parameters.Count);
+        OpenApiOperation openApiOperationForGetAll = openApiDocument.Paths[$"/{entityName}"].Operations[OperationType.Get];
+        AssertOnAllDefaultQueryParameters(openApiOperationForGetAll.Parameters.ToList());
 
-        // Asserting on all the parameters
-        List<OpenApiParameter> openApiParameters = openApiDocument.Paths[$"/{entityName}"].Operations[OperationType.Get].Parameters.ToList();
-        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$select") && param.Schema.Type.Equals("string")));
-        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$filter") && param.Schema.Type.Equals("string")));
-        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$orderby") && param.Schema.Type.Equals("string")));
-        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$first") && param.Schema.Type.Equals("integer")));
-        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$after") && param.Schema.Type.Equals("string")));
-
-        // Assert that path with id has only one parameter.
+        // Assert that path with id has all the query parameters.
         Assert.IsTrue(openApiDocument.Paths[$"/{entityName}/id/{{id}}"].Operations.ContainsKey(OperationType.Get));
-        OpenApiOperation openApiOperation = openApiDocument.Paths[$"/{entityName}/id/{{id}}"].Operations[OperationType.Get];
-        Assert.AreEqual(1, openApiOperation.Parameters.Count);
-
-        //Assert that it is $select
-        OpenApiParameter openApiParameter = openApiOperation.Parameters.First();
-        Assert.AreEqual("$select", openApiParameter.Name);
-        Assert.AreEqual(ParameterLocation.Query, openApiParameter.In);
-        Assert.AreEqual("string", openApiParameter.Schema.Type);
+        OpenApiOperation openApiOperationForGetById = openApiDocument.Paths[$"/{entityName}/id/{{id}}"].Operations[OperationType.Get];
+        AssertOnAllDefaultQueryParameters(openApiOperationForGetById.Parameters.ToList());
     }
 
     /// <summary>
@@ -146,7 +133,6 @@ public class ParameterValidationTests
 
     /// <summary>
     /// Validates that Input parameters are generated for Stored Procedures with GET operation.
-    /// If a parameter default value is not provided in the config, it will be marked as required.
     /// It also validates parameter metadata like type, name, location, required, etc.
     /// </summary>
     /// <param name="entityName">The name of the entity.</param>
@@ -178,7 +164,7 @@ public class ParameterValidationTests
             param.In is ParameterLocation.Query
             && param.Name.Equals("id")
             && param.Schema.Type.Equals("number")
-            && param.Required is true));
+            && param.Required is false));
 
         // Parameter with default value will be an optional query parameter.
         Assert.IsTrue(operation.Parameters.Any(param =>
@@ -205,6 +191,19 @@ public class ParameterValidationTests
         Assert.AreEqual(1, pathItem.Operations.Count);
         Assert.AreEqual(supportedHttpVerbs.First().ToString(), pathItem.Operations.Keys.First().ToString());
         Assert.IsTrue(pathItem.Operations.Values.First().Parameters.IsNullOrEmpty());
+    }
+
+    /// <summary>
+    /// validate that $select, $filter, $orderby, $first, $after query parameters are present in the openAPI document.
+    /// </summary>
+    private static void AssertOnAllDefaultQueryParameters(List<OpenApiParameter> openApiParameters)
+    {
+        Assert.AreEqual(5, openApiParameters.Count);
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$select") && param.Schema.Type.Equals("string")));
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$filter") && param.Schema.Type.Equals("string")));
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$orderby") && param.Schema.Type.Equals("string")));
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$first") && param.Schema.Type.Equals("integer")));
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$after") && param.Schema.Type.Equals("string")));
     }
 
     /// <summary>

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Security.Claims;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,36 +22,32 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 {
     /// <summary>
     /// Validates direct execution of DabCacheService.GetOrSetAsync(...)
+    /// Indirectly validates that the DabCacheService.CreateKey(...) method
+    /// creates consistent key values given the same input. The tests would fail
+    /// if key creation was invalid.
     /// </summary>
     [TestClass]
     public class DabCacheServiceIntegrationTests
     {
+        private const string ERROR_UNEXPECTED_INVOCATIONS = "Unexpected number of queryExecutor invocations.";
+        private const string ERROR_UNEXPECTED_RESULT = "Unexpected result returned by cache service.";
+        private const string ERROR_FAILED_ARG_PASSTHROUGH = "arg was not passed through to the executor as expected.";
+
         /// <summary>
         /// Validates that the first invocation of the cache service results in a cache miss because
         /// the cache is expected to be empty.
         /// After a cache miss, a call to the the factory method is expected. The factory method
         /// is responsible for calling the database.
+        /// Validates that the cache service passes the expected metadata values through to the query executor
+        /// which indicates that the cache service does not modify request metadata.
         /// </summary>
         [TestMethod]
         public async Task FirstCacheServiceInvocationCallsFactory()
         {
             // Arrange
-            MemoryCache memoryCache = new(new MemoryCacheOptions()
-            {
-                SizeLimit = 1000,
-                ExpirationScanFrequency = TimeSpan.FromMilliseconds(100)
-            });
-
-            TimeSpan duration = TimeSpan.FromSeconds(1);
-            FusionCacheOptions cacheOptions = new()
-            {                
-                DefaultEntryOptions = new FusionCacheEntryOptions()
-                {
-                    Duration = duration
-                }
-            };
-
-            using FusionCache cache = new(cacheOptions, memoryCache);
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
+            string expectedDatabaseResponseJson = @"{""key"": ""value""}";
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson);
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -58,59 +55,32 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             };
 
             DatabaseQueryMetadata queryMetadata = new(queryText: "select * from MyTable", dataSource: "dataSource1", queryParameters: parameters);
-            int cacheEntryTtl = 1;
-            using JsonDocument executorJsonResponse = JsonDocument.Parse(@"{""key"": ""value""}");
-
-            Mock<IQueryExecutor> queryExecutor = new();
-            List<string>? args = null;
-            queryExecutor.Setup(x => x.ExecuteQueryAsync(
-                It.IsAny<string>(),
-                It.IsAny<IDictionary<string, DbConnectionParam>>(),
-                It.IsAny<Func<DbDataReader, List<string>?, Task<object>>>(),
-                It.IsAny<HttpContext>(),
-                args,
-                It.IsAny<string>()).Result).Returns(executorJsonResponse);
-
-            //queryExecutor.Setup(x => x.GetJsonResultAsync<JsonDocument>(It.IsAny<DbDataReader>(), null).Result).Returns(executorJsonResponse);
-            Mock<IHttpContextAccessor> httpContextAccessor = new();
-            DabCacheService dabCache = new(cache: cache, logger: null, httpContextAccessor: httpContextAccessor.Object);
+            DabCacheService dabCache = CreateDabCacheService(cache);
 
             // Act
-            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: queryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+            int cacheEntryTtl = 1;
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
 
             // Assert
-            Assert.AreEqual(expected: true, actual: queryExecutor.Invocations.Count is 1);
+            Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
 
-            IReadOnlyList<object> actualExecuteQueryAsyncArguments = queryExecutor.Invocations[0].Arguments;
-            Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText was not passed through to the executor as expected.");
-            Assert.AreEqual(expected: queryMetadata.QueryParameters, actual: actualExecuteQueryAsyncArguments[1], message: "Query parameters were not passed through to the executor as expected.");
-            Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[5], message: "Data source was not passed through to the executor as expected.");
+            IReadOnlyList<object> actualExecuteQueryAsyncArguments = mockQueryExecutor.Invocations[0].Arguments;
+            Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText "+ ERROR_FAILED_ARG_PASSTHROUGH);
+            Assert.AreEqual(expected: queryMetadata.QueryParameters, actual: actualExecuteQueryAsyncArguments[1], message: "Query parameters " + ERROR_FAILED_ARG_PASSTHROUGH);
+            Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[5], message: "Data source " + ERROR_FAILED_ARG_PASSTHROUGH);
         }
 
-        // in order to test behavior and not granular literal units of code chunks, think about what it is you are looking for
-        // for testing whether the cache entry calculator is working, create the FusionCache instance with options that will illicit failure: cachesize == 1000. and provide cache entry of size 1002.
-
-        // test - second call to getOrSetAsync results in no additional factory calls. -> same data in == same key generated == cache hit
+        /// <summary>
+        /// Validates that a cache hit occurs when the same request is submitted before the cache entry expires.
+        /// Validates that DabCacheService.CreateCacheKey(..) outputs the same key given constant input.
+        /// </summary>
         [TestMethod]
         public async Task SecondCacheServiceInvocation_CacheHit_NoSecondFactoryCall()
         {
             // Arrange
-            MemoryCache memoryCache = new(new MemoryCacheOptions()
-            {
-                SizeLimit = 1000,
-                ExpirationScanFrequency = TimeSpan.FromMilliseconds(100)
-            });
-
-            TimeSpan duration = TimeSpan.FromSeconds(1);
-            FusionCacheOptions cacheOptions = new()
-            {
-                DefaultEntryOptions = new FusionCacheEntryOptions()
-                {
-                    Duration = duration
-                }
-            };
-
-            using FusionCache cache = new(cacheOptions, memoryCache);
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
+            string expectedDatabaseResponseJson = @"{""key"": ""value""}";
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson);
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -118,51 +88,110 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             };
 
             DatabaseQueryMetadata queryMetadata = new(queryText: "select * from MyTable", dataSource: "dataSource1", queryParameters: parameters);
-            int cacheEntryTtl = 1;
-            using JsonDocument executorJsonResponse = JsonDocument.Parse(@"{""key"": ""value""}");
+            DabCacheService dabCache = CreateDabCacheService(cache);
 
-            Mock<IQueryExecutor> mockQueryExecutor = new();
-            List<string>? args = null;
-            HttpContext? httpContext = null;
-            mockQueryExecutor.Setup(x => x.ExecuteQueryAsync(
-                It.IsAny<string>(),
-                It.IsAny<IDictionary<string, DbConnectionParam>>(),
-                It.IsAny<Func<DbDataReader?, List<string>?, Task<JsonElement?>>>(),
-                httpContext,
-                args,
-                It.IsAny<string>()).Result).Returns(executorJsonResponse.RootElement.Clone());
-
-            Mock<Func<DbDataReader, List<string>?, Task<JsonElement?>>> dataReaderHandler = new();
-
-            Mock<DbDataReader> mockReader = new();
-            mockQueryExecutor.Setup(x => x.GetJsonResultAsync<JsonElement?>(mockReader.Object, null)).Returns(dataReaderHandler.Object);
-
-            Mock<IHttpContextAccessor> httpContextAccessor = new();
-            httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
-            DabCacheService dabCache = new(cache: cache, logger: null, httpContextAccessor: httpContextAccessor.Object);
             // Prime the cache with a single entry
+            int cacheEntryTtl = 1;
             _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
 
             // Act
             JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
 
             // Assert
-            Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1);
-            Assert.AreEqual(expected: executorJsonResponse.RootElement.Clone().ToString(), actual: result.ToString(), message: "Unexpected result returned by cache service.");
+            Assert.IsFalse(mockQueryExecutor.Invocations.Count is 2, message: "Expected a cache hit, but observed two cache misses.");
+            Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
+            Assert.AreEqual(expected: expectedDatabaseResponseJson, actual: result.ToString(), message: ERROR_UNEXPECTED_RESULT);
         }
 
-        // test - two calls to getorsetasync results in 1 factory call, sleep 2 seconds -> another getorsetasync call results in a factory execution: cacheEntryOptions honored where cache eviction is handled.
+        // Validates that the provided cacheEntryOptions are honored by checking the number of factory method invocations within.
+        // CacheService.GetOrSetAsync(...)
+        // 1st Invocation: Call factory and save result to cache
+        // 2nd Invocation: Return result from cache.
+        // (1 second pause)
+        // 3rd Invocation: Call factory since cache entry evicted.
         [TestMethod]
         public async Task ThirdCacheServiceInvocation_CacheHit_NoSecondFactoryCall()
         {
             // Arrange
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
+            string expectedDatabaseResponseJson = @"{""key"": ""value""}";
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson);
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                {"param1", new DbConnectionParam(value: "param1Value") }
+            };
+
+            DatabaseQueryMetadata queryMetadata = new(queryText: "select * from MyTable", dataSource: "dataSource1", queryParameters: parameters);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+
+            // Prime the cache with a single entry
+            int cacheEntryTtl = 1;
+            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+
+            // Sleep for the amount of time the cache entry is valid to trigger eviction.
+            Thread.Sleep(millisecondsTimeout: cacheEntryTtl * 1000);
+
+            // Act
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+
+            // Assert
+            Assert.IsFalse(mockQueryExecutor.Invocations.Count is 1, message: "QueryExecutor invocation count too low. A cache hit shouldn't have occurred since the entry should have expired.");
+            Assert.IsFalse(mockQueryExecutor.Invocations.Count is 3, message: "Unexpected cache misses. The cache entry was never used as the factory method was called on every cache access attempt.");
+            Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 2, message: ERROR_UNEXPECTED_INVOCATIONS);
+            Assert.AreEqual(expected: expectedDatabaseResponseJson, actual: result.ToString(), message: ERROR_UNEXPECTED_RESULT);
+        }
+
+        /// <summary>
+        /// This test validates the behavior of the DabCacheService when a cache entry is larger than the cache capacity.
+        /// </summary>
+        [TestMethod]
+        public async Task LargeCacheKey_BadBehavior()
+        {
+            // Arrange
+            using FusionCache cache = CreateFusionCache(sizeLimit: 2, defaultEntryTtlSeconds: 1);
+            string expectedDatabaseResponseJson = @"{""key"": ""value""}";
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson);
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                {"param1", new DbConnectionParam(value: "param1Value") }
+            };
+
+            DatabaseQueryMetadata queryMetadata = new(queryText: "select * from MyTable", dataSource: "dataSource1", queryParameters: parameters);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+
+            // Prime the cache.
+            int cacheEntryTtl = 1;
+            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+
+            // Act
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+
+            // Assert
+            Assert.IsFalse(mockQueryExecutor.Invocations.Count is 1, message: "Unexpected cache hit when cache entry size exceeded cache capacity.");
+            Assert.IsTrue(mockQueryExecutor.Invocations.Count is 2, message: ERROR_UNEXPECTED_INVOCATIONS);
+            Assert.AreEqual(expected: expectedDatabaseResponseJson, actual: result.ToString(), message: ERROR_UNEXPECTED_RESULT);
+        }
+
+        /// <summary>
+        /// FusionCache instance which caller is responsible for disposing.
+        /// Creates a memorycache instance with the desired options for use within FusionCache.
+        /// </summary>
+        /// <param name="sizeLimit">Size limit of memory cache in bytes.</param>
+        /// <param name="defaultEntryTtlSeconds">Default seconds a cache entry is valid before eviction.</param>
+        /// <returns>FusionCache instance which caller is responsible for disposing.</returns>
+        /// <seealso cref="https://github.com/ZiggyCreatures/FusionCache/issues/179#issuecomment-1768962446"/>
+        private static FusionCache CreateFusionCache(long sizeLimit = 1000, int defaultEntryTtlSeconds = 1)
+        {
             MemoryCache memoryCache = new(new MemoryCacheOptions()
             {
-                SizeLimit = 1000,
+                SizeLimit = sizeLimit,
                 ExpirationScanFrequency = TimeSpan.FromMilliseconds(100)
             });
 
-            TimeSpan duration = TimeSpan.FromSeconds(1);
+            TimeSpan duration = TimeSpan.FromSeconds(defaultEntryTtlSeconds);
             FusionCacheOptions cacheOptions = new()
             {
                 DefaultEntryOptions = new FusionCacheEntryOptions()
@@ -171,20 +200,31 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 }
             };
 
-            using FusionCache cache = new(cacheOptions, memoryCache);
+            return new(cacheOptions, memoryCache);
+        }
 
-            Dictionary<string, DbConnectionParam> parameters = new()
-            {
-                {"param1", new DbConnectionParam(value: "param1Value") }
-            };
-
-            DatabaseQueryMetadata queryMetadata = new(queryText: "select * from MyTable", dataSource: "dataSource1", queryParameters: parameters);
-            int cacheEntryTtl = 1;
-            using JsonDocument executorJsonResponse = JsonDocument.Parse(@"{""key"": ""value""}");
-
+        /// <summary>
+        /// Creates a mock QueryExecutor that is called by DAB's SqlQueryEngine.
+        /// Results returned by this query executor simulate results returned by the database.
+        /// The QueryExecutor resides at the 'system edge' of DAB code and is the last
+        /// component in the request chain prior to passing of request metadata to the database.
+        /// Mocked interface methods used explicitly in the SqlQueryEngine:
+        /// - ExecuteQueryAsync()
+        /// - GetJsonResultAsync()
+        /// </summary>
+        /// <param name="cache">FusionCache instance</param>
+        /// <param name="rawJsonResponse">JSON expected to be returned by the database/factory method.</param>
+        /// <returns>Mock implementation of IQueryExecutor</returns>
+        private static Mock<IQueryExecutor> CreateMockQueryExecutor(string rawJsonResponse)
+        {
             Mock<IQueryExecutor> mockQueryExecutor = new();
+
+            // The following two arguments are created and initialized to null
+            // because arguments in a mocked method can't include named parameters.
             List<string>? args = null;
             HttpContext? httpContext = null;
+            using JsonDocument executorJsonResponse = JsonDocument.Parse(rawJsonResponse);
+
             mockQueryExecutor.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, DbConnectionParam>>(),
@@ -193,26 +233,29 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                 args,
                 It.IsAny<string>()).Result).Returns(executorJsonResponse.RootElement.Clone());
 
+            // Create a Mock Func<arg1, arg2, arg3> so when the mock ExecuteQueryAsync method
+            // can internally call the dataReaderHandler with the expected arguments.
+            // Required to mock the result returned from a factory method. A factory method
+            // is executed after a cache miss and makes a direct call to the database.
             Mock<Func<DbDataReader, List<string>?, Task<JsonElement?>>> dataReaderHandler = new();
-
             Mock<DbDataReader> mockReader = new();
             mockQueryExecutor.Setup(x => x.GetJsonResultAsync<JsonElement?>(mockReader.Object, null)).Returns(dataReaderHandler.Object);
 
+            return mockQueryExecutor;
+        }
+
+        /// <summary>
+        /// Creates an instance of the DabCacheService.
+        /// </summary>
+        /// <param name="cache">FusionCache instance</param>
+        /// <returns>DabCacheService</returns>
+        private static DabCacheService CreateDabCacheService(FusionCache cache)
+        {
+            HttpContext? httpContext = null;
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             httpContextAccessor.Setup(x => x.HttpContext).Returns(httpContext);
-            DabCacheService dabCache = new(cache: cache, logger: null, httpContextAccessor: httpContextAccessor.Object);
-            // Prime the cache with a single entry
-            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
-            _ = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
-            Thread.Sleep(1000);
 
-            // Act
-            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
-
-            // Assert
-            Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 2);
-            Assert.AreEqual(expected: executorJsonResponse.RootElement.Clone().ToString(), actual: result.ToString(), message: "Unexpected result returned by cache service.");
+            return new(cache: cache, logger: null, httpContextAccessor: httpContextAccessor.Object);
         }
-        // test - size limit 1KB , call getorsetasync where getcacheEntrySize will estimate > 1KB -> failed cache entry either exception or we'll see that second call to getorsetasync will have second factory call not one.
     }
 }

@@ -1535,7 +1535,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
 
-                // Clean-up steps. The record created by the create mutation operation is deleted to rest the database
+                // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
                 // back to its original state.
                 string deleteMutation = @"
                     mutation {
@@ -1640,7 +1640,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     );
                 Assert.IsFalse(mutationResponse.TryGetProperty("errors", out _));
 
-                // Clean-up steps. The record created by the create mutation operation is deleted to rest the database
+                // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
                 // back to its original state.
                 string deleteMutation = @"
                     mutation {

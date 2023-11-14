@@ -40,6 +40,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
+        /// <summary>
+        /// <code>Do: </code> Inserts new row and return all its columns
+        /// <code>Check: </code> A row is inserted in the table that has rows with default values as built_in methods.
+        /// it should insert it correctly with default values correctly handled by database.
+        /// </summary>
         public async Task InsertMutationWithDefaultBuiltInFunctions(string dbQuery)
         {
             string graphQLMutationName = "createDefaultBuiltInFunction";

@@ -6,7 +6,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Services.Cache.Interfaces;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
-            IDabCacheService cache)
+            DabCacheService cache)
         {
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
 

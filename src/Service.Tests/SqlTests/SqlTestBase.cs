@@ -143,8 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 _metadataProviderFactory.Object);
 
             Mock<IFusionCache> cache = new();
-            DabCacheKeyProvider cacheKeyProvider = new();
-            DabCacheService cacheService = new(cacheKeyProvider, cache.Object, null, _httpContextAccessor.Object);
+            DabCacheService cacheService = new(cache.Object, logger: null, _httpContextAccessor.Object);
 
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>

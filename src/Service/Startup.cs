@@ -20,7 +20,6 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
-using Azure.DataApiBuilder.Core.Services.Cache.Interfaces;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
@@ -187,7 +186,6 @@ namespace Azure.DataApiBuilder.Service
                     Duration = TimeSpan.FromMinutes(1)
                 });
 
-            services.AddSingleton<DabCacheKeyProvider>();
             services.AddSingleton<DabCacheService>();
             services.AddControllers();
         }

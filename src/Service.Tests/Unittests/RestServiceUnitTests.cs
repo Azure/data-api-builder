@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Authorization;
@@ -20,6 +21,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 {
@@ -162,6 +164,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
             AuthorizationResolver authorizationResolver = new(provider, metadataProviderFactory.Object);
             GQLFilterParser gQLFilterParser = new(provider, metadataProviderFactory.Object);
+
+            Mock<IFusionCache> cache = new();
+            DabCacheService cacheService = new(cache.Object, logger: null, httpContextAccessor.Object);
+
             SqlQueryEngine queryEngine = new(
                 queryManagerFactory.Object,
                 metadataProviderFactory.Object,
@@ -169,7 +175,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 authorizationResolver,
                 gQLFilterParser,
                 queryEngineLogger.Object,
-                provider);
+                provider,
+                cacheService);
 
             queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(queryEngine);
 

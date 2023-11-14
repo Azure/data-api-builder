@@ -9,7 +9,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Core.Services.Cache.Interfaces;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly ILogger<IQueryEngine> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
-        private readonly IDabCacheService _cache;
+        private readonly DabCacheService _cache;
 
         // <summary>
         // Constructor.
@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider,
-            IDabCacheService cache)
+            DabCacheService cache)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -216,9 +216,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // if (featureManager.EnableInMemoryServerCache && runtimeConfig.GlobalCachingEnabled && !sessionContextEnabled && runtimeConfig.Entity.Caching.Enabled )
             // {
             //      DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-            //      CacheEntryOptions opts = runtimeConfig.Entity.Caching.TTL;
-            //      JsonElement result = IDabCacheService.GetorSetAsync(IqueryExecutor, queryMetadata, cacheEntryOptions);
-            //      JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata);
+            //      int ttl = runtimeConfig.Entity.Caching.TTL;
+            //      JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, ttl);
             //      byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
             //      JsonDocument doc = JsonDocument.Parse(jsonBytes);
             //      return doc;
@@ -228,11 +227,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             //      JsonDocument doc = queryExecutor.Execute();
             //      return doc;
             // }
-            JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata);
+            JsonDocument? jsonDocument =
+    await queryExecutor.ExecuteQueryAsync(
+        sqltext: queryString,
+        parameters: structure.Parameters,
+        dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
+        httpContext: _httpContextAccessor.HttpContext!,
+        args: null,
+        dataSourceName: dataSourceName);
+            return jsonDocument;
 
-            byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+/*            byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
             JsonDocument doc = JsonDocument.Parse(jsonBytes);
-            return doc;
+            return doc;*/
         }
 
         // <summary>

@@ -91,13 +91,4 @@
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Update="dab-config.MySql.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Update="dab-config.PostgreSql.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>

@@ -4,14 +4,14 @@
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using System.Security.Claims;
-using System.Text;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -32,6 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         private const string ERROR_UNEXPECTED_INVOCATIONS = "Unexpected number of queryExecutor invocations.";
         private const string ERROR_UNEXPECTED_RESULT = "Unexpected result returned by cache service.";
         private const string ERROR_FAILED_ARG_PASSTHROUGH = "arg was not passed through to the executor as expected.";
+        private enum ExecutorReturnType { Json, Null, Exception };
 
         /// <summary>
         /// Validates that the first invocation of the cache service results in a cache miss because
@@ -47,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
             string expectedDatabaseResponseJson = @"{""key"": ""value""}";
-            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson);
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Json);
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -65,7 +66,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
 
             IReadOnlyList<object> actualExecuteQueryAsyncArguments = mockQueryExecutor.Invocations[0].Arguments;
-            Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText "+ ERROR_FAILED_ARG_PASSTHROUGH);
+            Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText " + ERROR_FAILED_ARG_PASSTHROUGH);
             Assert.AreEqual(expected: queryMetadata.QueryParameters, actual: actualExecuteQueryAsyncArguments[1], message: "Query parameters " + ERROR_FAILED_ARG_PASSTHROUGH);
             Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[5], message: "Data source " + ERROR_FAILED_ARG_PASSTHROUGH);
         }
@@ -80,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
             string expectedDatabaseResponseJson = @"{""key"": ""value""}";
-            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson);
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Json);
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -115,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
             string expectedDatabaseResponseJson = @"{""key"": ""value""}";
-            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson);
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Json);
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -152,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 2, defaultEntryTtlSeconds: 1);
             string expectedDatabaseResponseJson = @"{""key"": ""value""}";
-            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson);
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Json);
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -173,6 +174,59 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Assert.IsFalse(mockQueryExecutor.Invocations.Count is 1, message: "Unexpected cache hit when cache entry size exceeded cache capacity.");
             Assert.IsTrue(mockQueryExecutor.Invocations.Count is 2, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.AreEqual(expected: expectedDatabaseResponseJson, actual: result.ToString(), message: ERROR_UNEXPECTED_RESULT);
+        }
+
+        [TestMethod]
+        public async Task CacheServiceFactoryInvocationReturnsNull()
+        {
+            // Arrange
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
+            string expectedDatabaseResponseJson = @"{""key"": ""value""}";
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Null);
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                {"param1", new DbConnectionParam(value: "param1Value") }
+            };
+
+            DatabaseQueryMetadata queryMetadata = new(queryText: "select * from MyTable", dataSource: "dataSource1", queryParameters: parameters);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+
+            // Act
+            int cacheEntryTtl = 1;
+            JsonElement? result = await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+
+            // Assert
+            Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
+
+            IReadOnlyList<object> actualExecuteQueryAsyncArguments = mockQueryExecutor.Invocations[0].Arguments;
+            Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText " + ERROR_FAILED_ARG_PASSTHROUGH);
+            Assert.AreEqual(expected: queryMetadata.QueryParameters, actual: actualExecuteQueryAsyncArguments[1], message: "Query parameters " + ERROR_FAILED_ARG_PASSTHROUGH);
+            Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[5], message: "Data source " + ERROR_FAILED_ARG_PASSTHROUGH);
+            Assert.AreEqual(expected: null, actual: result, message: "Expected factory to return a null result.");
+        }
+
+        [TestMethod]
+        public async Task CacheServiceFactoryInvocationThrowsException()
+        {
+            // Arrange
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
+            string expectedDatabaseResponseJson = @"{""key"": ""value""}";
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Exception);
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                {"param1", new DbConnectionParam(value: "param1Value") }
+            };
+
+            DatabaseQueryMetadata queryMetadata = new(queryText: "select * from MyTable", dataSource: "dataSource1", queryParameters: parameters);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+
+            // Act and Assert
+            int cacheEntryTtl = 1;
+            await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
+                async () => await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl),
+                message: "Expected an exception to be thrown.");
         }
 
         /// <summary>
@@ -212,10 +266,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         /// - ExecuteQueryAsync()
         /// - GetJsonResultAsync()
         /// </summary>
-        /// <param name="cache">FusionCache instance</param>
         /// <param name="rawJsonResponse">JSON expected to be returned by the database/factory method.</param>
+        /// <param name="executorReturnType">Return type of ExecuteQueryAsync mock.</param>
         /// <returns>Mock implementation of IQueryExecutor</returns>
-        private static Mock<IQueryExecutor> CreateMockQueryExecutor(string rawJsonResponse)
+        private static Mock<IQueryExecutor> CreateMockQueryExecutor(string rawJsonResponse, ExecutorReturnType executorReturnType)
         {
             Mock<IQueryExecutor> mockQueryExecutor = new();
 
@@ -225,13 +279,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             HttpContext? httpContext = null;
             using JsonDocument executorJsonResponse = JsonDocument.Parse(rawJsonResponse);
 
-            mockQueryExecutor.Setup(x => x.ExecuteQueryAsync(
-                It.IsAny<string>(),
-                It.IsAny<IDictionary<string, DbConnectionParam>>(),
-                It.IsAny<Func<DbDataReader?, List<string>?, Task<JsonElement?>>>(),
-                httpContext,
-                args,
-                It.IsAny<string>()).Result).Returns(executorJsonResponse.RootElement.Clone());
+            switch (executorReturnType)
+            {
+                case ExecutorReturnType.Null:
+                    mockQueryExecutor.Setup(x => x.ExecuteQueryAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                        It.IsAny<Func<DbDataReader?, List<string>?, Task<JsonElement?>>>(),
+                        httpContext,
+                        args,
+                        It.IsAny<string>()).Result)
+                        .Returns((JsonElement?)null);
+                    break;
+                case ExecutorReturnType.Exception:
+                    mockQueryExecutor.Setup(x => x.ExecuteQueryAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                        It.IsAny<Func<DbDataReader?, List<string>?, Task<JsonElement?>>>(),
+                        httpContext,
+                        args,
+                        It.IsAny<string>()).Result)
+                        .Throws(new DataApiBuilderException(
+                            message: "DB ERROR",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed));
+                    break;
+                case ExecutorReturnType.Json:
+                default:
+                    mockQueryExecutor.Setup(x => x.ExecuteQueryAsync(
+                        It.IsAny<string>(),
+                        It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                        It.IsAny<Func<DbDataReader?, List<string>?, Task<JsonElement?>>>(),
+                        httpContext,
+                        args,
+                        It.IsAny<string>()).Result)
+                        .Returns(executorJsonResponse.RootElement.Clone());
+                    break;
+            }
 
             // Create a Mock Func<arg1, arg2, arg3> so when the mock ExecuteQueryAsync method
             // can internally call the dataReaderHandler with the expected arguments.

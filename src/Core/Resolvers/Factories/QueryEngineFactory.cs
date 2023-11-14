@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.FeatureManagement;
 
 namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 {
@@ -31,7 +32,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
-            DabCacheService cache)
+            DabCacheService cache,
+            IFeatureManager featureManager)
         {
             _queryEngines = new Dictionary<DatabaseType, IQueryEngine>();
 
@@ -40,7 +42,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
             if (config.SqlDataSourceUsed)
             {
                 IQueryEngine queryEngine = new SqlQueryEngine(
-                    queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider, cache);
+                    queryManagerFactory, metadataProviderFactory, contextAccessor, authorizationResolver, gQLFilterParser, logger, runtimeConfigProvider, cache, featureManager);
                 _queryEngines.Add(DatabaseType.MSSQL, queryEngine);
                 _queryEngines.Add(DatabaseType.MySQL, queryEngine);
                 _queryEngines.Add(DatabaseType.PostgreSQL, queryEngine);

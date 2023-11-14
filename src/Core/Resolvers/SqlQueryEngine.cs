@@ -15,6 +15,7 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Microsoft.FeatureManagement;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -32,6 +33,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
+        private readonly IFeatureManager _featureManager;
 
         // <summary>
         // Constructor.
@@ -44,7 +46,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider,
-            DabCacheService cache)
+            DabCacheService cache,
+            IFeatureManager featureManager)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -54,6 +57,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
             _cache = cache;
+            _featureManager = featureManager;
         }
 
         /// <summary>
@@ -209,37 +213,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // Open connection and execute query using _queryExecutor
             string queryString = queryBuilder.Build(structure);
-            DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-            //JsonElement result = await dabCache.GetOrSetAsync(DatabaseQueryMetadata queryMetadata); // abstracts key generation and cache entry size estimation
-            // but how do we get the executeQueryAsync function in?
-            // bool sessionContextEnabled = runtimeConfigProvider.GetRuntimeConfig().runtime.options.setsessionContext;
-            // if (featureManager.EnableInMemoryServerCache && runtimeConfig.GlobalCachingEnabled && !sessionContextEnabled && runtimeConfig.Entity.Caching.Enabled )
-            // {
-            //      DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-            //      int ttl = runtimeConfig.Entity.Caching.TTL;
-            //      JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, ttl);
-            //      byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
-            //      JsonDocument doc = JsonDocument.Parse(jsonBytes);
-            //      return doc;
-            // }
-            // else
-            // {
-            //      JsonDocument doc = queryExecutor.Execute();
-            //      return doc;
-            // }
-            JsonDocument? jsonDocument =
-    await queryExecutor.ExecuteQueryAsync(
-        sqltext: queryString,
-        parameters: structure.Parameters,
-        dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
-        httpContext: _httpContextAccessor.HttpContext!,
-        args: null,
-        dataSourceName: dataSourceName);
+
+            if (await _featureManager.IsEnabledAsync("CachingPreview"))
+            {
+                if (_runtimeConfigProvider.GetConfig().SqlDataSourceUsed
+                && (!_runtimeConfigProvider.GetConfig().DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true))
+                {
+                    DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
+                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: 10);
+                    byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+                    JsonDocument doc = JsonDocument.Parse(jsonBytes);
+                    return doc;
+                }
+            }
+
+            JsonDocument? jsonDocument = await queryExecutor.ExecuteQueryAsync(
+                sqltext: queryString,
+                parameters: structure.Parameters,
+                dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
+                httpContext: _httpContextAccessor.HttpContext!,
+                args: null,
+                dataSourceName: dataSourceName);
             return jsonDocument;
 
-/*            byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
-            JsonDocument doc = JsonDocument.Parse(jsonBytes);
-            return doc;*/
         }
 
         // <summary>

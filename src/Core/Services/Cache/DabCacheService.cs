@@ -75,6 +75,8 @@ public class DabCacheService
 
     /// <summary>
     /// Creates a cache key using the request metadata resolved from a built SqlQueryStructure
+    /// Format: DataSourceName:QueryText:JSON_QueryParameters
+    /// Example: 7a07f92a-1aa2-4e2a-81d6-b9af0a25bbb6:select * from MyTable where id = @param1 = :{"@param1":{"Value":"42","DbType":null}}
     /// </summary>
     /// <returns>Cache key string</returns>
     private string CreateCacheKey(DatabaseQueryMetadata queryMetadata)

@@ -40,6 +40,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
+        public async Task InsertMutationWithDefaultBuiltInFunctions(string dbQuery)
+        {
+            string graphQLMutationName = "createDefaultBuiltInFunction";
+            string graphQLMutation = @"
+                mutation {
+                    createDefaultBuiltInFunction(item: { user_value: 1234 }) {
+                        id
+                        user_value
+                        current_date
+                        current_utc_date
+                        random_number
+                        start_of_day
+                        end_of_day
+                        default_string_with_paranthesis
+                        default_function_string_with_paranthesis
+                        default_integer
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
         /// <summary>
         /// <code>Do: </code> Attempt to insert a new publisher with name not allowed by database policy (@item.name ne 'New publisher')
         /// <code>Check: </code> Mutation fails with expected authorization failure.

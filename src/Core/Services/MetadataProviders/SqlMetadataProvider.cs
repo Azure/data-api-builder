@@ -1313,10 +1313,34 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (hasDefault)
                     {
-                        columnDefinition.DefaultValue = columnInfo["COLUMN_DEFAULT"];
+                        // If default value is a built_in function let database handle it.
+                        if (!IsBuiltInFunction(columnInfo["COLUMN_DEFAULT"].ToString()!))
+                        {
+                            columnDefinition.DefaultValue = columnInfo["COLUMN_DEFAULT"];
+                        }
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// This method returns whether the given value is a built_in function or not.
+        /// </summary>
+        /// <param name="value">given value for database column</param>
+        /// <returns>true if given value is a built-in function</returns>
+        private static bool IsBuiltInFunction(string value)
+        {
+            if(value.StartsWith("(") && value.EndsWith(")"))
+            {
+                // remove starting and ending paranthesis
+                value = value.Substring(1, value.Length - 1);
+                if(!value.StartsWith("'") && !value.EndsWith("'"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

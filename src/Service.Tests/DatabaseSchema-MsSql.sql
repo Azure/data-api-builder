@@ -50,6 +50,7 @@ DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS fte_data;
 DROP TABLE IF EXISTS intern_data;
 DROP TABLE IF EXISTS books_sold;
+DROP TABLE IF EXISTS default_with_function_table;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -283,6 +284,20 @@ create table books_sold
     copies_sold int default 0,
     last_sold_on datetime2(7) DEFAULT '1999-01-08 10:23:54',
     last_sold_on_date as last_sold_on,
+)
+
+CREATE TABLE default_with_function_table
+(
+    id INT PRIMARY KEY IDENTITY(1,1),
+    user_value INT,
+    [current_date] DATETIME DEFAULT GETDATE(),
+    current_utc_date DATETIME DEFAULT GETUTCDATE(),
+    random_number INT DEFAULT RAND(),
+    start_of_day DATETIME DEFAULT DATEADD(dd, DATEDIFF(dd, 0, GETDATE()), 0),
+    end_of_day DATETIME DEFAULT DATEADD(ms, -3, DATEADD(dd, DATEDIFF(dd, 0, GETDATE()) + 1, 0)),
+	default_string_with_paranthesis VARCHAR(100) DEFAULT '()',
+	default_function_string_with_paranthesis VARCHAR(100) DEFAULT 'GETDATE()',
+	default_integer INT DEFAULT 100
 )
 
 ALTER TABLE books

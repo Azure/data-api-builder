@@ -2836,6 +2836,32 @@
         }
       }
     },
+    "DefaultBuiltInFunction": {
+      "source": {
+        "object": "default_with_function_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
+    },
     "AuthorNF": {
       "source": {
         "object": "authors",

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -62,8 +63,35 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
-
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+
+            // Assert the values
+            Assert.AreEqual(1234, actual.GetProperty("user_value").GetInt32());
+            Assert.IsNotNull(actual.GetProperty("current_date").GetString());
+            Assert.IsNotNull(actual.GetProperty("current_utc_date").GetString());
+            Assert.IsNotNull(actual.GetProperty("random_number").GetInt32());
+            Assert.IsNotNull(actual.GetProperty("start_of_day").GetString());
+            Assert.IsNotNull(actual.GetProperty("end_of_day").GetString());
+            Assert.AreEqual("()", actual.GetProperty("default_string_with_paranthesis").GetString());
+            Assert.AreEqual("GETDATE()", actual.GetProperty("default_function_string_with_paranthesis").GetString());
+            Assert.AreEqual(100, actual.GetProperty("default_integer").GetInt32());
+
+            DateTime currentDate = DateTime.Parse(actual.GetProperty("current_date").GetString());
+            DateTime currentUtcDate = DateTime.Parse(actual.GetProperty("current_utc_date").GetString());
+            DateTime startOfDay = DateTime.Parse(actual.GetProperty("start_of_day").GetString());
+            DateTime endOfDay = DateTime.Parse(actual.GetProperty("end_of_day").GetString());
+
+            // Get the current date
+            DateTime today = DateTime.Now;
+            DateTime tomorrow = today.AddDays(1);
+
+            // Assert the dates
+            // Note: Due to the time it takes to execute the code, the dates might not be exactly equal.
+            // So, comparing only the date part, or allow for a small difference.
+            Assert.AreEqual(today.Date, currentDate.Date);
+            Assert.AreEqual(today.Date, currentUtcDate.Date);
+            Assert.AreEqual(today.Date, startOfDay.Date);
+            Assert.AreEqual(tomorrow.Date, endOfDay.Date);
         }
 
         /// <summary>

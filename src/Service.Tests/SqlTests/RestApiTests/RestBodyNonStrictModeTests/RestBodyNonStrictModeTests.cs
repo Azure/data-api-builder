@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: "id/2"
+                    expectedLocationHeader: string.Empty
                 );
         }
 
@@ -216,10 +216,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""copies_sold"": 50,
                 ""last_sold_on_date"": ""2023-09-13 17:37:20""
             }";
-            string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneUpdateWithComputedFieldInRequestBody"),
@@ -237,17 +236,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""copies_sold"": 50,
                 ""last_sold_on_date"": ""2023-09-13 17:37:20""
             }";
-            expectedLocationHeader = $"id/3";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/3",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneInsertWithComputedFieldInRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedLocationHeader: string.Empty
                 );
         }
         #endregion Positive tests
@@ -277,8 +275,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
 
             requestBody = @"
@@ -295,8 +293,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
 
             await SetupAndRunRestApiTest(
@@ -308,8 +306,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     requestBody: requestBody,
                     exceptionExpected: true,
                     expectedErrorMessage: "Primary key column: non_existing_field not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
         }
         #endregion Negative tests

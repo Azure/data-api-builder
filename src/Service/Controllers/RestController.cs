@@ -10,7 +10,6 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -220,26 +219,6 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         message: $"Not Found",
                         statusCode: HttpStatusCode.NotFound,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-                }
-
-                if (result is CreatedResult)
-                {
-                    // Location is made up of three parts, the first being constructed
-                    // from the Host property found in the HttpContext.Request. The second part being the
-                    // base route configured in the config file.
-                    // The third part is the primary key route, which has already been saved in the
-                    // Location of the created result. So we form the entire location
-                    // from appending the base route and the primary key route  already stored in the
-                    // created result to the url constructed from the HttpRequest. We
-                    // then update the Location of the created result to this value.
-                    CreatedResult createdResult = (result as CreatedResult)!;
-                    string locationURL = UriHelper.BuildAbsolute(
-                                        scheme: HttpContext.Request.Scheme,
-                                        host: HttpContext.Request.Host,
-                                        pathBase: _restService.GetBaseRouteFromConfig(),
-                                        path: HttpContext.Request.Path);
-                    createdResult.Location = locationURL.EndsWith('/') ? locationURL + createdResult.Location : locationURL + "/" + createdResult.Location;
-                    result = createdResult;
                 }
 
                 return result;

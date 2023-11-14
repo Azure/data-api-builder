@@ -102,6 +102,14 @@ public class DataApiBuilderException : Exception
         /// DataSource not found for multiple db scenario.
         /// </summary>
         DataSourceNotFound,
+        /// <summary>
+        /// Item identified by the PK is not found in the database.
+        /// </summary>
+        ItemNotFound,
+        /// <summary>
+        /// Invalid PK field(s) specified in the request.
+        /// </summary>
+        InvalidIdentifierField
     }
 
     public HttpStatusCode StatusCode { get; }

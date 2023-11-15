@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Service.Tests
             if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig runtimeConfig)
                 && runtimeConfig.DataSource.DatabaseType is DatabaseType.MSSQL)
             {
-                runtimeConfigProvider.IsLateConfigured = false;
+                runtimeConfigProvider.IsLateConfigured = true;
             }
 
             return runtimeConfigProvider;

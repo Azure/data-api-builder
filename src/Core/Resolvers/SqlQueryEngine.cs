@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else
             {
                 //TODO: Try to avoid additional deserialization/serialization here.
-                return ResolverMiddleware.RepresentsNullValue(element) ? null : JsonDocument.Parse(element.ToString());
+                return ResolverMiddleware.RepresentsNullValue(element, fieldSchema.Type) ? null : JsonDocument.Parse(element.ToString());
             }
         }
 

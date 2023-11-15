@@ -1,74 +1,16 @@
 init --config "dab-config.DwSql.json" --database-type dwsq --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
-add Publisher --config "dab-config.DwSql.json" --source publishers --permissions "anonymous:read"
-add Stock --config "dab-config.DwSql.json" --source stocks --permissions "anonymous:create,read,update,delete"
-add Book --config "dab-config.DwSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
-add BookWebsitePlacement --config "dab-config.DwSql.json" --source book_website_placements --permissions "anonymous:read"
-add Author --config "dab-config.DwSql.json" --source authors --permissions "anonymous:read"
-add Revenue --config "dab-config.DwSql.json" --source revenues --permissions "anonymous:*"
-add Review --config "dab-config.DwSql.json" --source reviews --permissions "anonymous:create,read,update" --rest true --graphql "review:reviews"
-add Comic --config "dab-config.DwSql.json" --source comics --permissions "anonymous:create,read,update"
-add Broker --config "dab-config.DwSql.json" --source brokers --permissions "anonymous:read"
-add WebsiteUser --config "dab-config.DwSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
-add SupportedType --config "dab-config.DwSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
-add stocks_price --config "dab-config.DwSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
-update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
-update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"
-add Tree --config "dab-config.DwSql.json" --source trees --permissions "anonymous:create,read,update,delete"
-add Shrub --config "dab-config.DwSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
-add Fungus --config "dab-config.DwSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
+add Book --config "dab-config.DwSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books" --source.key-fields "id"
+add BookWebsitePlacement --config "dab-config.DwSql.json" --source book_website_placements --permissions "anonymous:read" --source.key-fields "id"
+add Review --config "dab-config.DwSql.json" --source reviews --permissions "anonymous:create,read,update" --rest true --graphql "review:reviews" --source.key-fields "id,book_id"
+add Comic --config "dab-config.DwSql.json" --source comics --permissions "anonymous:create,read,update" --source.key-fields "id"
+add WebsiteUser --config "dab-config.DwSql.json" --source website_users --permissions "anonymous:create,read,delete,update" --source.key-fields "id"
 add books_view_all --config "dab-config.DwSql.json" --source books_view_all --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add books_view_with_mapping --config "dab-config.DwSql.json" --source books_view_with_mapping --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
-add stocks_view_selected --config "dab-config.DwSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
-add books_publishers_view_composite --config "dab-config.DwSql.json" --source books_publishers_view_composite --source.type "view" --source.key-fields "id,pub_id" --permissions "anonymous:*" --rest true --graphql true
-add books_publishers_view_composite_insertable --config "dab-config.DwSql.json" --source books_publishers_view_composite_insertable --source.type "view" --source.key-fields "id,publisher_id" --permissions "anonymous:*" --rest true --graphql true
-add Empty --config "dab-config.DwSql.json" --source "empty_table" --permissions "authenticated:create,read,update,delete" --rest true
-add Notebook --config "dab-config.DwSql.json" --source "notebooks" --permissions "anonymous:read" --rest true --graphql true --fields.include "*" --policy-database "@item ne 1"
-add Journal --config "dab-config.DwSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete"
-add ArtOfWar --config "dab-config.DwSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
-add series --config "dab-config.DwSql.json" --source "series" --permissions "anonymous:*"
-add Sales --config "dab-config.DwSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
-add GetBooks --config "dab-config.DwSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
-add GetBook --config "dab-config.DwSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false
-add GetPublisher --config "dab-config.DwSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --source.params "id:1" --permissions "anonymous:execute" --rest true --graphql true
-add InsertBook --config "dab-config.DwSql.json" --source "insert_book" --source.type "stored-procedure" --source.params "title:randomX,publisher_id:1234" --permissions "anonymous:execute" --rest true --graphql true
-add CountBooks --config "dab-config.DwSql.json" --source "count_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
-add DeleteLastInsertedBook --config "dab-config.DwSql.json" --source "delete_last_inserted_book" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
-add UpdateBookTitle --config "dab-config.DwSql.json" --source "update_book_title" --source.type "stored-procedure" --source.params "id:1,title:Testing Tonight" --permissions "anonymous:execute" --rest true --graphql true
-add GetAuthorsHistoryByFirstName --config "dab-config.DwSql.json" --source "get_authors_history_by_first_name" --source.type "stored-procedure" --source.params "firstName:Aaron" --permissions "anonymous:execute" --rest true --graphql SearchAuthorByFirstName
-add InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.DwSql.json" --source "insert_and_display_all_books_for_given_publisher" --source.type "stored-procedure" --source.params "title:MyTitle,publisher_name:MyPublisher" --permissions "anonymous:execute" --rest true --graphql true
-add GQLmappings --config "dab-config.DwSql.json" --source "GQLmappings" --permissions "anonymous:*" --rest true --graphql true
-add Bookmarks --config "dab-config.DwSql.json" --source "bookmarks" --permissions "anonymous:*" --rest true --graphql true
-add MappedBookmarks --config "dab-config.DwSql.json" --source "mappedbookmarks" --permissions "anonymous:*" --rest true --graphql true
-add FteData --config "dab-config.DwSql.json" --source fte_data --permissions "anonymous:*" --graphql "FteData:FteData"
-add InternData --config "dab-config.DwSql.json" --source intern_data --permissions "anonymous:*" --graphql "InternData:InternData"
-add BooksSold --config "dab-config.DwSql.json" --source "books_sold" --rest true --graphql "books_sold:books_sold" --permissions "anonymous:*"
-update GQLmappings --config "dab-config.DwSql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
-update Publisher --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_01:create,delete"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_01:update" --fields.include "*"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_02:create,delete"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_02:update" --fields.include "*"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_02:read" --fields.include "*" --policy-database "@item.id ne 1940"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_03:create,delete"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_03:update" --fields.include "*"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_03:read" --fields.include "*" --policy-database "@item.id ne 1940"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_04:create,delete"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_04:update" --fields.include "*"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_04:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_06:create,delete"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_06:update" --fields.include "*"
-update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
-update Publisher --config "dab-config.DwSql.json" --permissions "database_policy_tester:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
-update Publisher --config "dab-config.DwSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
-update Publisher --config "dab-config.DwSql.json" --permissions "database_policy_tester:create" --policy-database "@item.name ne 'New publisher'"
-update Stock --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"
-update Stock --config "dab-config.DwSql.json" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
+add series --config "dab-config.DwSql.json" --source "series" --permissions "anonymous:*" --source.key-fields "id"
+add Sales --config "dab-config.DwSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true --source.key-fields "id"
+add GQLmappings --config "dab-config.DwSql.json" --source "GQLmappings" --permissions "anonymous:*" --rest true --graphql true --source.key-fields "__column1"
 update Book --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"
-update Book --config "dab-config.DwSql.json" --relationship publishers --target.entity Publisher --cardinality one
-update Book --config "dab-config.DwSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
-update Book --config "dab-config.DwSql.json" --relationship reviews --target.entity Review --cardinality many
-update Book --config "dab-config.DwSql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update Book --config "dab-config.DwSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one --relationship.fields "id:book_id"
 update Book --config "dab-config.DwSql.json" --map "id:id,title:title"
 update Book --config "dab-config.DwSql.json" --permissions "policy_tester_01:create,delete"
 update Book --config "dab-config.DwSql.json" --permissions "policy_tester_01:update" --fields.include "*"
@@ -102,87 +44,21 @@ update Book --config "dab-config.DwSql.json" --permissions "test_role_with_exclu
 update Book --config "dab-config.DwSql.json" --permissions "test_role_with_policy_excluded_fields:create,update,delete"
 update Book --config "dab-config.DwSql.json" --permissions "test_role_with_policy_excluded_fields:read" --fields.exclude "publisher_id" --policy-database "@item.title ne 'Test'"
 update Review --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"
-update Review --config "dab-config.DwSql.json" --relationship books --target.entity Book --cardinality one
+update Review --config "dab-config.DwSql.json" --relationship books --target.entity Book --cardinality one --relationship.fields "book_id:id"
 update BookWebsitePlacement --config "dab-config.DwSql.json" --permissions "authenticated:create,update" --rest true --graphql true
 update BookWebsitePlacement --config "dab-config.DwSql.json" --permissions "authenticated:delete" --fields.include "*" --policy-database "@claims.userId eq @item.id"
-update Author --config "dab-config.DwSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update WebsiteUser --config "dab-config.DwSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
-update Revenue --config "dab-config.DwSql.json" --permissions "database_policy_tester:create" --policy-database "@item.revenue gt 1000"
-update Comic --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
-update series --config "dab-config.DwSql.json" --relationship comics --target.entity Comic --cardinality many
-update Broker --config "dab-config.DwSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
-update Tree --config "dab-config.DwSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
-update Shrub --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
-update Fungus --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
-update Fungus --config "dab-config.DwSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
+update Comic --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one --relationship.fields "series_id:id"
+update series --config "dab-config.DwSql.json" --relationship comics --target.entity Comic --cardinality many --relationship.fields "id:series_id"
 update books_view_all --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
-update stocks_view_selected --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"
 update books_publishers_view_composite --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"
 update books_view_with_mapping --config "dab-config.DwSql.json" --map "id:book_id" 
-update BookWebsitePlacement --config "dab-config.DwSql.json" --relationship books --target.entity Book --cardinality one
-update SupportedType --config "dab-config.DwSql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
-update Author --config "dab-config.DwSql.json" --relationship books --target.entity Book --cardinality many --linking.object book_author_link
-update Notebook --config "dab-config.DwSql.json" --permissions "anonymous:create,update,delete"
-update Empty --config "dab-config.DwSql.json" --permissions "anonymous:read"
-update Journal --config "dab-config.DwSql.json" --permissions "policy_tester_noupdate:update" --fields.include "*" --policy-database "@item.id ne 1"
-update Journal --config "dab-config.DwSql.json" --permissions "policy_tester_noupdate:read" --fields.include "*"
-update Journal --config "dab-config.DwSql.json" --permissions "policy_tester_update_noread:create"
-update Journal --config "dab-config.DwSql.json" --permissions "policy_tester_update_noread:update" --fields.include "*" --policy-database "@item.id eq 1"
-update Journal --config "dab-config.DwSql.json" --permissions "policy_tester_update_noread:read" --fields.exclude "*"
-update Journal --config "dab-config.DwSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
-update Journal --config "dab-config.DwSql.json" --permissions "authorizationHandlerTester:read"
-update ArtOfWar --config "dab-config.DwSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
-update GetBook --config "dab-config.DwSql.json" --permissions "authenticated:execute" --rest.methods "Get"
-update GetPublisher --config "dab-config.DwSql.json" --permissions "authenticated:execute"
-update GetBooks --config "dab-config.DwSql.json" --permissions "authenticated:execute" --graphql.operation "Query" --rest.methods "Get"
-update InsertBook --config "dab-config.DwSql.json" --permissions "authenticated:execute"
-update CountBooks --config "dab-config.DwSql.json" --permissions "authenticated:execute"
-update DeleteLastInsertedBook --config "dab-config.DwSql.json" --permissions "authenticated:execute"
-update UpdateBookTitle --config "dab-config.DwSql.json" --permissions "authenticated:execute"
+update BookWebsitePlacement --config "dab-config.DwSql.json" --relationship books --target.entity Book --cardinality one --relationship.fields "book_id:id"
 update Sales --config "dab-config.DwSql.json" --permissions "authenticated:*"
-update GetAuthorsHistoryByFirstName --config "dab-config.DwSql.json" --permissions "authenticated:execute"
-update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.DwSql.json" --permissions "authenticated:execute"
-update Bookmarks --config "dab-config.DwSql.json" --permissions "authenticated:*"
-update MappedBookmarks --config "dab-config.DwSql.json" --permissions "authenticated:*" --map "id:bkid,bkname:name"
-add PublisherNF --config "dab-config.DwSql.json" --source publishers --permissions "authenticated:create,read,update,delete" --rest true --graphql true
-add BookNF --config "dab-config.DwSql.json" --source books --permissions "authenticated:create,read,update,delete" --rest true --graphql "bookNF:booksNF"
-add AuthorNF --config "dab-config.DwSql.json" --source authors --permissions "authenticated:read" --rest true --graphql true
-update PublisherNF --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"  
-update PublisherNF --config "dab-config.DwSql.json" --relationship books --target.entity BookNF --cardinality many
-update PublisherNF --config "dab-config.DwSql.json" --permissions "TestNestedFilter_EntityReadForbidden:read"
-update PublisherNF --config "dab-config.DwSql.json" --permissions "TestNestedFilter_ColumnForbidden:read"
-update PublisherNF --config "dab-config.DwSql.json" --permissions "TestNestedFilterChained_EntityReadForbidden:create"
-update PublisherNF --config "dab-config.DwSql.json" --permissions "TestNestedFilterChained_ColumnForbidden:read" --fields.exclude "name"
-update AuthorNF --config "dab-config.DwSql.json"  --permissions "authenticated:create,read,update,delete" --rest true --graphql true
-update AuthorNF --config "dab-config.DwSql.json" --relationship books --target.entity BookNF --cardinality many --linking.object book_author_link
-update AuthorNF --config "dab-config.DwSql.json" --permissions "TestNestedFilter_EntityReadForbidden:create" --fields.exclude "name"
-update AuthorNF --config "dab-config.DwSql.json" --permissions "TestNestedFilter_ColumnForbidden:read" --fields.exclude "name"
-update AuthorNF --config "dab-config.DwSql.json" --permissions "TestNestedFilterChained_EntityReadForbidden:read"
-update AuthorNF --config "dab-config.DwSql.json" --permissions "TestNestedFilterChained_ColumnForbidden:read"
-update BookNF --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"
-update BookNF --config "dab-config.DwSql.json" --permissions "TestNestedFilter_EntityReadForbidden:read"
-update BookNF --config "dab-config.DwSql.json" --permissions "TestNestedFilter_ColumnForbidden:read"
-update BookNF --config "dab-config.DwSql.json" --permissions "TestNestedFilterChained_EntityReadForbidden:read"
-update BookNF --config "dab-config.DwSql.json" --permissions "TestNestedFilterChained_ColumnForbidden:read"
-update BookNF --config "dab-config.DwSql.json" --relationship publishers --target.entity PublisherNF --cardinality one
-update BookNF --config "dab-config.DwSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
-update BookNF --config "dab-config.DwSql.json" --relationship reviews --target.entity Review --cardinality many
-update BookNF --config "dab-config.DwSql.json" --relationship authors --target.entity AuthorNF --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
-update BookNF --config "dab-config.DwSql.json" --map "id:id,title:title"
 update Comic --config "dab-config.DwSql.json" --permissions "TestNestedFilterManyOne_ColumnForbidden:read"
 update Comic --config "dab-config.DwSql.json" --permissions "TestNestedFilterManyOne_EntityReadForbidden:read"
 update Comic --config "dab-config.DwSql.json" --permissions "TestNestedFilterOneMany_ColumnForbidden:read" --fields.exclude "categoryName"
 update Comic --config "dab-config.DwSql.json" --permissions "TestNestedFilterOneMany_EntityReadForbidden:create,update,delete"
-update Stock --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read"
-update Stock --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:read"
-update Stock --config "dab-config.DwSql.json" --permissions "database_policy_tester:update" --policy-database "@item.pieceid ne 1"
-update Stock --config "dab-config.DwSql.json" --permissions "database_policy_tester:create" --policy-database "@item.pieceid ne 6 and @item.piecesAvailable gt 0"
-update Stock --config "dab-config.DwSql.json" --permissions "database_policy_tester:read"
-update Stock --config "dab-config.DwSql.json" --permissions "test_role_with_noread:create,update,delete"
-update Stock --config "dab-config.DwSql.json" --permissions "test_role_with_excluded_fields:create,update,delete"
-update Stock --config "dab-config.DwSql.json" --permissions "test_role_with_excluded_fields:read" --fields.exclude "categoryName"
-update Stock --config "dab-config.DwSql.json" --permissions "test_role_with_policy_excluded_fields:create,update,delete"
-update Stock --config "dab-config.DwSql.json" --permissions "test_role_with_policy_excluded_fields:read" --fields.exclude "categoryName" --policy-database "@item.piecesAvailable ne 0"
 update series --config "dab-config.DwSql.json" --permissions "TestNestedFilterManyOne_ColumnForbidden:read" --fields.exclude "name"
 update series --config "dab-config.DwSql.json" --permissions "TestNestedFilterManyOne_EntityReadForbidden:create,update,delete"
 update series --config "dab-config.DwSql.json" --permissions "TestNestedFilterOneMany_ColumnForbidden:read"

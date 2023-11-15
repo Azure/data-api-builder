@@ -9,7 +9,7 @@ using Microsoft.Data.SqlClient;
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     /// <summary>
-    /// Class for building MsSql queries.
+    /// Class for building DwSql queries.
     /// </summary>
     public class DWSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
@@ -32,7 +32,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (LabelledColumn column in structure.Columns)
             {
                 // Generate the col value.
-                string col_value = Build(column as Column);
+                bool subQueryColumn = structure.IsSubqueryColumn(column);
+                string col_value = column.Label;
 
                 // If the column is not a subquery column and is not a string, cast it to string
                 if (!structure.IsSubqueryColumn(column) && structure.GetColumnSystemType(column.ColumnName) != typeof(string))
@@ -41,7 +42,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 // Create json. Example: "book.title": "Title" would be a sample output.
-                stringAgg += $"\"{column.Label}\":\"\' + STRING_ESCAPE({col_value},'json') + \'\"";
+                stringAgg += $"\"{column.Label}\":\"\' + STRING_ESCAPE(ISNULL({col_value},''),'json') + \'\"";
                 i++;
 
                 // Add comma if not last column. example: {"id":"1234","name":"Big Company"}

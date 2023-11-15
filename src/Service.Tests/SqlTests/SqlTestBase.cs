@@ -310,6 +310,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                              _sqlMetadataLogger,
                              dataSourceName);
                     break;
+                case TestCategory.DWSQL:
+                    Mock<ILogger<MsSqlQueryExecutor>> DwSqlQueryExecutorLogger = new();
+                    _queryBuilder = new DWSqlQueryBuilder();
+                    _defaultSchemaName = "dbo";
+                    _dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+                    _queryExecutor = new MsSqlQueryExecutor(
+                        runtimeConfigProvider,
+                        _dbExceptionParser,
+                        DwSqlQueryExecutorLogger.Object,
+                        httpContextAccessor.Object);
+                    _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                    _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
+                    _sqlMetadataProvider =
+                         new MsSqlMetadataProvider(
+                             runtimeConfigProvider,
+                             _queryManagerFactory.Object,
+                             _sqlMetadataLogger,
+                             dataSourceName);
+                    break;
+
             }
         }
 

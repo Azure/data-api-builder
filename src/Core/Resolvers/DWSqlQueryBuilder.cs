@@ -181,7 +181,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="schemaOrDatabaseParamName">Param name of the schema/database.</param>
         /// <param name="tableParamName">Param name of the table.</param>
-        /// <returns></returns>
+        /// <returns>String representing the query needed to get a combined list of read only columns.</returns>
         public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)
         {
             // For 'timestamp' columns sc.is_computed = 0.

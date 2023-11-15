@@ -13,7 +13,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public class DwSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
-
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
 
         /// <inheritdoc />
@@ -174,14 +173,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ));
         }
 
-        /// <summary>
-        /// Builds the query to fetch result set details of stored-procedure.
-        /// result_field_name is the name of the result column.
-        /// result_type contains the sql type, i.e char,int,varchar. Using TYPE_NAME method
-        /// allows us to get the type without size constraints. example: TYPE_NAME for both
-        /// varchar(100) and varchar(max) would be varchar.
-        /// is_nullable is a boolean value to know if the result column is nullable or not.
-        /// </summary>
+        /// <inheritdoc />
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
             throw new NotImplementedException("DataWarehouse sql currently does not support stored procedures");

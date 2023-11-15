@@ -1330,11 +1330,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns>true if given value is a built-in function</returns>
         private static bool IsBuiltInFunction(string value)
         {
-            if(value.StartsWith("(") && value.EndsWith(")"))
+            if (value.StartsWith("(") && value.EndsWith(")"))
             {
                 // remove starting and ending paranthesis
                 value = value.Substring(1, value.Length - 1);
-                if(!value.StartsWith("'") && !value.EndsWith("'"))
+                if (!value.StartsWith("'") && !value.EndsWith("'"))
                 {
                     return true;
                 }

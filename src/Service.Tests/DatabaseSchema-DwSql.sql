@@ -55,10 +55,11 @@ CREATE TABLE book_author_link(
 EXEC('CREATE SCHEMA [foo]');
 
 CREATE TABLE [foo].[magazines](
-    id int,
+    id int NOT NULL,
     title varchar(2048) NOT NULL,
     issue_number int NULL
 );
+ALTER TABLE foo.magazines add CONSTRAINT PK_magazines_id PRIMARY KEY NONCLUSTERED (id) NOT ENFORCED
 
 CREATE TABLE comics(
     id int,
@@ -127,6 +128,7 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 (5, 'Snow White', 'AnotherTales', 3001);
 
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
+
 
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');

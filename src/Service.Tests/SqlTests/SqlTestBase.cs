@@ -312,7 +312,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     break;
                 case TestCategory.DWSQL:
                     Mock<ILogger<MsSqlQueryExecutor>> DwSqlQueryExecutorLogger = new();
-                    _queryBuilder = new DWSqlQueryBuilder();
+                    _queryBuilder = new DwSqlQueryBuilder();
                     _defaultSchemaName = "dbo";
                     _dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
                     _queryExecutor = new MsSqlQueryExecutor(

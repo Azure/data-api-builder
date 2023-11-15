@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                         queryExecutor = new PostgreSqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
                         break;
                     case DatabaseType.DWSQL:
-                        queryBuilder = new DWSqlQueryBuilder();
+                        queryBuilder = new DwSqlQueryBuilder();
                         exceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
                         queryExecutor = new MsSqlQueryExecutor(runtimeConfigProvider, exceptionParser, logger, contextAccessor);
                         break;

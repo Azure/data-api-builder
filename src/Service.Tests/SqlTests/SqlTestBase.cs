@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             runtimeConfig = DatabaseEngine switch
             {
                 TestCategory.MYSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "magazines"),
-                TestCategory.DWSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines", new string[] {"id"}),
+                TestCategory.DWSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines", new string[] { "id" }),
                 _ => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines"),
             };
 

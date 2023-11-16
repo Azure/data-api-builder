@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Build(SqlQueryStructure structure)
         {
             string columns;
-            StringBuilder stringAgg = new ();
+            StringBuilder stringAgg = new();
             int i = 0;
             // Iterate through all the columns and build the string_agg
             foreach (LabelledColumn column in structure.Columns)

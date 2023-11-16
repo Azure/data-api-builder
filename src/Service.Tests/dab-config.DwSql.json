@@ -248,6 +248,140 @@
         }
       }
     },
+    "Stock": {
+      "source": {
+        "object": "stocks",
+        "type": "table",
+        "key-fields": [
+          "categoryid",
+          "pieceid"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Stock",
+          "plural": "Stocks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "path": "/commodities"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_noread",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_policy_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              },
+              "policy": {
+                "database": "@item.piecesAvailable ne 0"
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
     "Book": {
       "source": {
         "object": "books",
@@ -649,8 +783,8 @@
         "authors": {
           "cardinality": "many",
           "target.entity": "Author",
-          "source.fields": ["id"],
-          "target.fields": ["id"],
+          "source.fields": [ "id" ],
+          "target.fields": [ "id" ],
           "linking.object": "book_author_link",
           "linking.source.fields": [
             "book_id"
@@ -672,8 +806,8 @@
         "reviews": {
           "cardinality": "many",
           "target.entity": "Review",
-          "source.fields": ["id"],
-          "target.fields": ["book_id"],
+          "source.fields": [ "id" ],
+          "target.fields": [ "book_id" ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -794,11 +928,11 @@
         "books": {
           "cardinality": "many",
           "target.entity": "Book",
-          "source.fields": ["id"],
-          "target.fields": ["id"],
+          "source.fields": [ "id" ],
+          "target.fields": [ "id" ],
           "linking.object": "book_author_link",
-          "linking.source.fields": ["author_id"],
-          "linking.target.fields": ["book_id"]
+          "linking.source.fields": [ "author_id" ],
+          "linking.target.fields": [ "book_id" ]
         }
       }
     },
@@ -1230,6 +1364,53 @@
         "__column1": "column1",
         "__column2": "column2"
       }
+    },
+    "books_publishers_view_composite": {
+      "source": {
+        "object": "books_publishers_view_composite",
+        "type": "view",
+        "key-fields": [
+          "id",
+          "pub_id"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "books_publishers_view_composite",
+          "plural": "books_publishers_view_composites"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
     }
   }
 }

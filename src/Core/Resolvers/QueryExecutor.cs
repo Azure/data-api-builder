@@ -314,10 +314,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Parse Results into Json and return
             if (dbDataReader.HasRows)
             {
-                // Make sure to get the complete json string in case of large document.
-                jsonResult =
-                    JsonSerializer.Deserialize<TResult>(
-                        await GetJsonStringFromDbReader(dbDataReader));
+                string jsonString = await GetJsonStringFromDbReader(dbDataReader);
+
+                if(!string.IsNullOrEmpty(jsonString))
+                {
+                    // Make sure to get the complete json string in case of large document.
+                    jsonResult = JsonSerializer.Deserialize<TResult>(jsonString);
+                }
             }
             else
             {

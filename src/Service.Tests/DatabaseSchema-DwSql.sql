@@ -4,6 +4,7 @@
 BEGIN TRANSACTION
 DROP VIEW IF EXISTS books_view_all;
 DROP VIEW IF EXISTS books_view_with_mapping;
+DROP VIEW IF EXISTS books_publishers_view_composite;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -11,6 +12,7 @@ DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS [foo].[magazines];
+DROP TABLE IF EXISTS stocks;
 DROP TABLE IF EXISTS comics;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
@@ -92,6 +94,14 @@ CREATE TABLE publishers(
     name varchar(2048) NOT NULL
 );
 
+CREATE TABLE stocks(
+    categoryid int NOT NULL,
+    pieceid int NOT NULL,
+    categoryName varchar(100) NOT NULL,
+    piecesAvailable int ,
+    piecesRequired int NOT NULL
+);
+
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
@@ -117,8 +127,6 @@ VALUES (1, 'Awesome book', 1234),
 
 INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 2, 50), (3, 3, 23), (4, 5, 33);
 
-INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
-
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 
 INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);
@@ -135,7 +143,12 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
+INSERT INTO stocks(categoryid, pieceid, categoryName, piecesAvailable, piecesRequired) VALUES (1,1,'SciFi',0,0),(2,1,'Tales',0,0),(0,1,'',0,0),(100,99,'Historical',0,0);
 
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
+EXEC('CREATE VIEW books_publishers_view_composite as SELECT
+      publishers.name,books.id, books.title, publishers.id as pub_id
+      FROM dbo.books,dbo.publishers
+      where publishers.id = books.publisher_id');

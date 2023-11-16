@@ -1480,79 +1480,84 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
+
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                // A create mutation operation is executed in the context of Anonymous role. The Anonymous role has create action configured but lacks
-                // read action. As a result, a new record should be created in the database but the mutation operation should return an error message.
-                string graphQLMutation = @"
-                    mutation {
-                      createStock(
-                        item: {
-                          categoryid: 5001
-                          pieceid: 5001
-                          categoryName: ""SciFi""
-                          piecesAvailable: 100
-                          piecesRequired: 50
-                        }
-                      ) {
-                        categoryid
-                        pieceid
-                      }
-                    }";
+                try
+                {
+                    // A create mutation operation is executed in the context of Anonymous role. The Anonymous role has create action configured but lacks
+                    // read action. As a result, a new record should be created in the database but the mutation operation should return an error message.
+                    string graphQLMutation = @"
+                            mutation {
+                              createStock(
+                                item: {
+                                  categoryid: 5001
+                                  pieceid: 5001
+                                  categoryName: ""SciFi""
+                                  piecesAvailable: 100
+                                  piecesRequired: 50
+                                }
+                              ) {
+                                categoryid
+                                pieceid
+                              }
+                            }";
 
-                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                    client,
-                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                    query: graphQLMutation,
-                    queryName: "createStock",
-                    variables: null,
-                    clientRoleHeader: null
-                    );
-                Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation was successful but the current user is unauthorized to view the response due to lack of read permissions"));
+                    JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: graphQLMutation,
+                        queryName: "createStock",
+                        variables: null,
+                        clientRoleHeader: null
+                        );
+                    Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation was successful but the current user is unauthorized to view the response due to lack of read permissions"));
 
-                // pk_query is executed in the context of Authenticated role to validate that the create mutation executed in the context of Anonymous role
-                // resulted in the creation of a new record in the database.
-                string graphQLQuery = @"
-                    {
-                      stock_by_pk(categoryid: 5001, pieceid: 5001) {
-                        categoryid
-                        pieceid
-                        categoryName
-                      }
-                    }";
+                    // pk_query is executed in the context of Authenticated role to validate that the create mutation executed in the context of Anonymous role
+                    // resulted in the creation of a new record in the database.
+                    string graphQLQuery = @"
+                        {
+                          stock_by_pk(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            categoryName
+                          }
+                        }";
 
-                string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
+                    JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                client,
+                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                query: graphQLQuery,
+                                queryName: "stock_by_pk",
+                                variables: null,
+                                authToken: authToken,
+                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
 
-                JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                            client,
-                            server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                            query: graphQLQuery,
-                            queryName: "stock_by_pk",
-                            variables: null,
-                            authToken: authToken,
-                            clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+                    Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
+                }
+                finally
+                {
+                    // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
+                    // back to its original state.
+                    string deleteMutation = @"
+                        mutation {
+                            deleteStock(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            }
+                        }";
 
-                Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
-
-                // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
-                // back to its original state.
-                string deleteMutation = @"
-                    mutation {
-                        deleteStock(categoryid: 5001, pieceid: 5001) {
-                        categoryid
-                        pieceid
-                        }
-                    }";
-
-                _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                    client,
-                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                    query: deleteMutation,
-                    queryName: "deleteStock",
-                    variables: null,
-                    authToken: authToken,
-                    clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: deleteMutation,
+                        queryName: "deleteStock",
+                        variables: null,
+                        authToken: authToken,
+                        clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+                }
             }
         }
 
@@ -1611,53 +1616,57 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                // A create mutation operation is executed in the context of Authenticated role and the response is expected to be a valid
-                // response without any errors.
-                string graphQLMutation = @"
-                    mutation {
-                      createStock(
-                        item: {
-                          categoryid: 5001
-                          pieceid: 5001
-                          categoryName: ""SciFi""
-                          piecesAvailable: 100
-                          piecesRequired: 50
-                        }
-                      ) {
-                        categoryid
-                        pieceid
-                      }
-                    }";
+                try
+                {
+                    // A create mutation operation is executed in the context of Authenticated role and the response is expected to be a valid
+                    // response without any errors.
+                    string graphQLMutation = @"
+                        mutation {
+                          createStock(
+                            item: {
+                              categoryid: 5001
+                              pieceid: 5001
+                              categoryName: ""SciFi""
+                              piecesAvailable: 100
+                              piecesRequired: 50
+                            }
+                          ) {
+                            categoryid
+                            pieceid
+                          }
+                        }";
 
-                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                    client,
-                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                    query: graphQLMutation,
-                    queryName: "createStock",
-                    variables: null,
-                    authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
-                    clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
-                    );
-                Assert.IsFalse(mutationResponse.TryGetProperty("errors", out _));
+                    JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: graphQLMutation,
+                        queryName: "createStock",
+                        variables: null,
+                        authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                        clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
+                        );
+                    Assert.IsFalse(mutationResponse.TryGetProperty("errors", out _));
+                }
+                finally
+                {
+                    // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
+                    // back to its original state.
+                    string deleteMutation = @"
+                        mutation {
+                            deleteStock(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            }
+                        }";
 
-                // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
-                // back to its original state.
-                string deleteMutation = @"
-                    mutation {
-                        deleteStock(categoryid: 5001, pieceid: 5001) {
-                        categoryid
-                        pieceid
-                        }
-                    }";
-
-                _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                    client,
-                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                    query: deleteMutation,
-                    queryName: "deleteStock",
-                    variables: null,
-                    clientRoleHeader: null);
-
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: deleteMutation,
+                        queryName: "deleteStock",
+                        variables: null,
+                        clientRoleHeader: null);
+                }
             }
         }
 

@@ -242,7 +242,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to get the DbType corresponding to the given SqlDbType.
+        /// Helper method to get the DbType corresponding to the given SqlDb datetime type.
         /// </summary>
         /// <param name="sqlDbType">Underlying sqlDbType of the parameter.</param>
         /// <param name="dbType">DbType of the parameter corresponding to its sqlDbType.</param>

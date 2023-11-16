@@ -343,6 +343,10 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         paramDefinition.DbType = dbType;
                     }
+                    else
+                    {
+                        _logger.LogWarning("Could not determine DbType for SqlDb type of {sqlType}", sqlType);
+                    }
                 }
 
                 // Add to parameters dictionary without the leading @ sign
@@ -1343,9 +1347,14 @@ namespace Azure.DataApiBuilder.Core.Services
                         // MsSql types like date,smalldatetime,datetime,datetime2 are mapped to the same .NET type of DateTime.
                         // Thus to determine the actual dbtype, we use the underlying MsSql type instead of the .NET type.
                         DbType dbType;
-                        if (TryResolveDbType((string)columnInfo["DATA_TYPE"], out dbType))
+                        string sqlType = (string)columnInfo["DATA_TYPE"];
+                        if (TryResolveDbType(sqlType, out dbType))
                         {
                             columnDefinition.DbType = dbType;
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Could not determine DbType for SqlDb type of {sqlType}", sqlType);
                         }
                     }
                 }

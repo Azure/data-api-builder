@@ -2,8 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Data;
-using System.Diagnostics.CodeAnalysis;
-using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -11,7 +9,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -96,6 +93,8 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // This code should never be hit because every sqlDbTypeName must have a corresponding sqlDbType.
+            // However, when a new data type is introduced in MsSql which maps to .NET type of DateTime, this code block
+            // will be hit. Returning false instead of throwing an exception in that case prevents the engine from crashing.
             dbType = 0;
             return false;
         }

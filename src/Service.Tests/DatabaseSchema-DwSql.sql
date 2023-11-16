@@ -5,6 +5,7 @@ BEGIN TRANSACTION
 DROP VIEW IF EXISTS books_view_all;
 DROP VIEW IF EXISTS books_view_with_mapping;
 DROP VIEW IF EXISTS books_publishers_view_composite;
+DROP VIEW IF EXISTS stocks_view_selected;
 DROP TABLE IF EXISTS book_author_link;
 DROP TABLE IF EXISTS reviews;
 DROP TABLE IF EXISTS authors;
@@ -14,9 +15,19 @@ DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS [foo].[magazines];
 DROP TABLE IF EXISTS stocks;
 DROP TABLE IF EXISTS comics;
+DROP TABLE IF EXISTS brokers;
+DROP TABLE IF EXISTS type_table;
+DROP TABLE IF EXISTS trees;
+DROP TABLE IF EXISTS fungi;
+DROP TABLE IF EXISTS empty_table;
+DROP TABLE IF EXISTS notebooks;
+DROP TABLE IF EXISTS journals;
+DROP TABLE IF EXISTS aow;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS GQLmappings;
+DROP TABLE IF EXISTS bookmarks;
+DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS publishers;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
@@ -89,6 +100,18 @@ CREATE TABLE GQLmappings (
     column3 varchar(2048)
 )
 
+CREATE TABLE bookmarks
+(
+	id int,
+	bkname varchar(1000) NOT NULL
+)
+
+CREATE TABLE mappedbookmarks
+(
+	id int ,
+	bkname varchar(50) NOT NULL
+)
+
 CREATE TABLE publishers(
     id int NOT NULL,
     name varchar(2048) NOT NULL
@@ -100,6 +123,67 @@ CREATE TABLE stocks(
     categoryName varchar(100) NOT NULL,
     piecesAvailable int ,
     piecesRequired int NOT NULL
+);
+
+CREATE TABLE brokers(
+    [ID Number] int NOT NULL,
+    [First Name] varchar(2048) NOT NULL,
+    [Last Name] varchar(2048) NOT NULL
+);
+
+CREATE TABLE empty_table (
+    id int 
+);
+
+CREATE TABLE notebooks (
+    id int ,
+    notebookname varchar(2048),
+    color varchar(2048),
+    ownername varchar(2048)
+);
+
+CREATE TABLE journals (
+    id int,
+    journalname varchar(2048),
+    color varchar(2048),
+    ownername varchar(2048)
+);
+
+CREATE TABLE aow (
+    NoteNum int,
+    DetailAssessmentAndPlanning varchar(2048),
+    WagingWar varchar(2048),
+    StrategicAttack varchar(2048)
+);
+
+CREATE TABLE trees (
+    treeId int,
+    species varchar(2048),
+    region varchar(2048),
+    height varchar(2048)
+);
+
+CREATE TABLE fungi (
+    speciesid int,
+    region varchar(2048)
+);
+
+CREATE TABLE type_table(
+    id int ,
+    short_types smallint,
+    int_types int,
+    long_types bigint,
+    string_types varchar(2048),
+    single_types real,
+    float_types float(53),
+    decimal_types decimal(18,3),
+    boolean_types bit,
+    date_types date,
+    datetime_types datetime2(6),
+    datetime2_types datetime2(6),
+    time_types time(3),
+    bytearray_types varbinary(2048),
+    uuid_types uniqueidentifier
 );
 
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
@@ -141,10 +225,60 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 (5, 'Snow White', 'AnotherTales', 3001);
 
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
+INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
 INSERT INTO stocks(categoryid, pieceid, categoryName, piecesAvailable, piecesRequired) VALUES (1,1,'SciFi',0,0),(2,1,'Tales',0,0),(0,1,'',0,0),(100,99,'Historical',0,0);
 
+INSERT INTO notebooks(id, notebookname, color, ownername) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
+INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');
+INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
+INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
+INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
+INSERT INTO type_table(id, short_types, int_types, long_types,
+string_types,
+single_types, float_types, decimal_types,
+boolean_types,
+date_types, datetime_types, datetime2_types, time_types,
+bytearray_types)
+VALUES
+    (1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1,
+    '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '10:23:54.9999999',
+    0xABCDEF0123),
+    (2, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
+    '1999-01-08', '1999-01-08 10:23:00', '1999-01-08 10:23:00.9999999', '10:23:00.9999999',
+    0x98AB7511AABB1234),
+    (3, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
+    '0001-01-01', '1753-01-01 00:00:00.000', '0001-01-01 00:00:00.0000000', '00:00:00.0000000',
+    0x00000000),
+    (4, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
+    '9999-12-31', '9999-12-31 23:59:59', '9999-12-31 23:59:59.9999999', '23:59:59.9999999',
+    0xFFFFFFFF),
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+
+DECLARE @UpperBound INT = 10000;
+
+INSERT INTO bookmarks ([id], [bkname])
+SELECT TOP 10000
+    ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS Counter,
+    'Test Item #' + FORMAT(ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), '00000') AS bkname
+FROM
+    sys.all_columns AS t1
+CROSS JOIN
+    sys.all_columns AS t2
+ORDER BY
+    Counter
+
+INSERT INTO mappedbookmarks ([id], [bkname])
+SELECT TOP 10000
+    ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS Counter,
+    'Test Item #' + FORMAT(ROW_NUMBER() OVER (ORDER BY (SELECT NULL)), '00000') AS bkname
+FROM
+    sys.all_columns AS t1
+CROSS JOIN
+    sys.all_columns AS t2
+ORDER BY
+    Counter
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
@@ -152,3 +286,6 @@ EXEC('CREATE VIEW books_publishers_view_composite as SELECT
       publishers.name,books.id, books.title, publishers.id as pub_id
       FROM dbo.books,dbo.publishers
       where publishers.id = books.publisher_id');
+EXEC('CREATE VIEW stocks_view_selected AS SELECT
+      categoryid,pieceid,categoryName,piecesAvailable
+      FROM dbo.stocks');

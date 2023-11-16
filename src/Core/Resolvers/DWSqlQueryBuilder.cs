@@ -37,60 +37,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return BuildAsJson(structure);
         }
 
-        private static string GenerateColumnsAsJson(SqlQueryStructure structure, bool outerApplyQuery = false)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="structure">Sql query structure to build query on.</param>
+        /// <param name="subQueryStructure">if this is a sub query executed under outerapply.</param>
+        /// <returns></returns>
+        private string BuildAsJson(SqlQueryStructure structure, bool subQueryStructure = false)
         {
-            string columns;
-            StringBuilder stringAgg = new();
-            int i = 0;
-            // Iterate through all the columns and build the string_agg
-            foreach (LabelledColumn column in structure.Columns)
-            {
-                // Generate the col value.
-                bool subQueryColumn = structure.IsSubqueryColumn(column);
-                string col_value = column.Label;
-
-                // If the column is not a subquery column and is not a string, cast it to string
-                if (!subQueryColumn && structure.GetColumnSystemType(column.ColumnName) != typeof(string))
-                {
-                    col_value = $"CAST({col_value} AS NVARCHAR(MAX))";
-                }
-
-                // Create json. Example: "book.title": "Title" would be a sample output.
-                stringAgg.Append($"\"{column.Label}\":\' + ISNULL(\'\"\'+STRING_ESCAPE({col_value},'json')+\'\"\','null') + \'");
-                i++;
-
-                // Add comma if not last column. example: {"id":"1234","name":"Big Company"}
-                // the below ensures there is a comman after id but not after name.
-                if (i != structure.Columns.Count)
-                {
-                    stringAgg.Append(",");
-                }
-            }
-
-            columns = $"STRING_AGG(\'{{{stringAgg}}}\',', ')";
-            if (structure.IsListQuery)
-            {
-                // Array wrappers if we are trying to get a list of objects.
-                columns = $"COALESCE(\'[\'+{columns}+\']\',\'[]\')";
-            }
-            else if(!outerApplyQuery)
-            {
-                // outer apply sub queries can return null as that will be stored in the json.
-                // However, for the main query, we need to return an empty string if the result is null.
-                columns = $"COALESCE({columns},\'\')";
-            }
-
-            return columns;
-        }
-
-        private string BuildAsJson(SqlQueryStructure structure, bool outerApplyQuery = false)
-        {
-            string columns = GenerateColumnsAsJson(structure, outerApplyQuery);
+            string columns = GenerateColumnsAsJson(structure, subQueryStructure);
             string fromSql = $"{BuildSqlQuery(structure)}";
             string query = $"SELECT {columns}"
                 + $" FROM ({fromSql}) AS {QuoteIdentifier(structure.SourceAlias)}";
             return query;
         }
+
         /// <summary>
         /// Build internal sql query for DW.
         /// This will generate the query that will return results in sql.
@@ -128,6 +89,58 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 + $" WHERE {predicates}"
                 + orderBy;
             return query;
+        }
+
+        private static string GenerateColumnsAsJson(SqlQueryStructure structure, bool subQueryStructure = false)
+        {
+            string columns;
+            StringBuilder stringAgg = new();
+            int i = 0;
+            // Iterate through all the columns and build the string_agg
+            foreach (LabelledColumn column in structure.Columns)
+            {
+                // Generate the col value.
+                bool subQueryColumn = structure.IsSubqueryColumn(column);
+                string col_value = column.Label;
+                string escapedLabel = column.Label.Replace("'", "''");
+
+                // If the column is not a subquery column and is not a string, cast it to string
+                if (!subQueryColumn && structure.GetColumnSystemType(column.ColumnName) != typeof(string))
+                {
+                    col_value = $"CAST([{col_value}] AS NVARCHAR(MAX))";
+                    // Create json. Example: "book.id": 1 would be a sample output.
+                    stringAgg.Append($"\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null') + \'");
+                }
+                else
+                {
+                    // Create json. Example: "book.title": "Title" would be a sample output.
+                    stringAgg.Append($"\"{escapedLabel}\":\' + ISNULL(\'\"\'+STRING_ESCAPE([{col_value}],'json')+\'\"\','null') + \'");
+                }
+
+                i++;
+
+                // Add comma if not last column. example: {"id":"1234","name":"Big Company"}
+                // the below ensures there is a comman after id but not after name.
+                if (i != structure.Columns.Count)
+                {
+                    stringAgg.Append(",");
+                }
+            }
+
+            columns = $"STRING_AGG(\'{{{stringAgg}}}\',', ')";
+            if (structure.IsListQuery)
+            {
+                // Array wrappers if we are trying to get a list of objects.
+                columns = $"COALESCE(\'[\'+{columns}+\']\',\'[]\')";
+            }
+            else if (!subQueryStructure)
+            {
+                // outer apply sub queries can return null as that will be stored in the json.
+                // However, for the main query, we need to return an empty string if the result is null as the sql cant read the NULL
+                columns = $"COALESCE({columns},\'\')";
+            }
+
+            return columns;
         }
 
         /// <inheritdoc />

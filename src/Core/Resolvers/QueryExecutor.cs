@@ -316,7 +316,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 string jsonString = await GetJsonStringFromDbReader(dbDataReader);
 
-                if(!string.IsNullOrEmpty(jsonString))
+                if (!string.IsNullOrEmpty(jsonString))
                 {
                     // Make sure to get the complete json string in case of large document.
                     jsonResult = JsonSerializer.Deserialize<TResult>(jsonString);

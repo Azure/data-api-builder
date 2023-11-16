@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Builds the sql query that will return the json result for the sql query.
         /// </summary>
         /// <param name="structure">Sql query structure to build query on.</param>
         /// <param name="subQueryStructure">if this is a sub query executed under outerapply.</param>

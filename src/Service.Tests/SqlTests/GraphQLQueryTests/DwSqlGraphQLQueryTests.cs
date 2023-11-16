@@ -194,6 +194,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Get all instances of a type with nullable string fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableStringFields()
+        {
+            string msSqlQuery = $"SELECT TOP 100 id, username FROM website_users ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await TestQueryingTypeWithNullableStringFields(msSqlQuery);
+        }
+
+        /// <summary>
         /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
         /// book_id and book_title are aliases used for corresponding query fields.
         /// The response for the query will contain the alias instead of raw db column.

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data.Common;
+using System.Text;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.Data.SqlClient;
@@ -34,7 +35,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Build(SqlQueryStructure structure)
         {
             string columns;
-            string stringAgg = string.Empty;
+            StringBuilder stringAgg = new ();
             int i = 0;
             // Iterate through all the columns and build the string_agg
             foreach (LabelledColumn column in structure.Columns)
@@ -44,20 +45,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string col_value = column.Label;
 
                 // If the column is not a subquery column and is not a string, cast it to string
-                if (!structure.IsSubqueryColumn(column) && structure.GetColumnSystemType(column.ColumnName) != typeof(string))
+                if (structure.GetColumnSystemType(column.ColumnName) != typeof(string))
                 {
                     col_value = $"CAST({col_value} AS NVARCHAR(MAX))";
                 }
 
                 // Create json. Example: "book.title": "Title" would be a sample output.
-                stringAgg += $"\"{column.Label}\":\"\' + STRING_ESCAPE(ISNULL({col_value},''),'json') + \'\"";
+                stringAgg.Append($"\"{column.Label}\":\' + ISNULL(\'\"\'+STRING_ESCAPE({col_value},'json')+\'\"\','null') + \'");
                 i++;
 
                 // Add comma if not last column. example: {"id":"1234","name":"Big Company"}
                 // the below ensures there is a comman after id but not after name.
                 if (i != structure.Columns.Count)
                 {
-                    stringAgg += ",";
+                    stringAgg.Append(",");
                 }
             }
 
@@ -94,13 +95,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private string BuildSqlQuery(SqlQueryStructure structure)
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
-            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                             $"AS {QuoteIdentifier($"{structure.SourceAlias}")}{Build(structure.Joins)}";
+            StringBuilder fromSql = new();
 
-            fromSql += string.Join(
+            fromSql.Append($"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                             $"AS {QuoteIdentifier($"{structure.SourceAlias}")}{Build(structure.Joins)}");
+
+            fromSql.Append(string.Join(
                     "",
                     structure.JoinQueries.Select(
-                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
+                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})")));
+
             string predicates = JoinPredicateStrings(
                                     structure.GetDbPolicyForOperation(EntityActionOperation.Read),
                                     structure.FilterPredicates,

@@ -15,6 +15,7 @@ DROP TABLE IF EXISTS comics;
 DROP TABLE IF EXISTS series;
 DROP TABLE IF EXISTS sales;
 DROP TABLE IF EXISTS GQLmappings;
+DROP TABLE IF EXISTS publishers;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -59,7 +60,6 @@ CREATE TABLE [foo].[magazines](
     title varchar(2048) NOT NULL,
     issue_number int NULL
 );
-ALTER TABLE foo.magazines add CONSTRAINT PK_magazines_id PRIMARY KEY NONCLUSTERED (id) NOT ENFORCED
 
 CREATE TABLE comics(
     id int,
@@ -86,6 +86,11 @@ CREATE TABLE GQLmappings (
     __column2 varchar(2048),
     column3 varchar(2048)
 )
+
+CREATE TABLE publishers(
+    id int NOT NULL,
+    name varchar(2048) NOT NULL
+);
 
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 
@@ -128,7 +133,8 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 (5, 'Snow White', 'AnotherTales', 3001);
 
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
-
+INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
+INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
 
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');

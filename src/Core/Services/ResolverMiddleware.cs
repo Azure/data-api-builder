@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // anything for it.
                 if (TryGetPropertyFromParent(context, out jsonElement))
                 {
-                    context.Result = RepresentsNullValue(jsonElement, context.Selection.Field.Type) ? null : PreParseLeaf(context, jsonElement.ToString());
+                    context.Result = RepresentsNullValue(jsonElement) ? null : PreParseLeaf(context, jsonElement.ToString());
                 }
             }
             else if (IsInnerObject(context))
@@ -219,20 +219,9 @@ namespace Azure.DataApiBuilder.Core.Services
             };
         }
 
-        public static bool RepresentsNullValue(JsonElement element, IType fieldType)
+        public static bool RepresentsNullValue(JsonElement element)
         {
-            bool dwNullCheck = false;
-            if (fieldType is not StringType)
-            {
-                // if the field asked for is not a string type but element return kind is a string
-                // check rawtext, if rawtext is empty then it is a null value.
-                if (element.ValueKind == JsonValueKind.String && string.IsNullOrEmpty(element.ToString()))
-                {
-                    dwNullCheck = true;
-                }
-            }
-
-            return (string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null") || dwNullCheck;
+            return (string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null");
         }
 
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)

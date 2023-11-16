@@ -3,13 +3,11 @@
 
 using System.IO.Abstractions;
 using System.Net;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -77,11 +75,11 @@ public class RuntimeConfigValidator : IConfigValidator
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
-        if (runtimeConfig.Runtime.Host.Mode is HostMode.Development)
+        if (runtimeConfig.IsDevelopmentMode())
         {
             ValidateEntityConfiguration(runtimeConfig);
 
-            if (runtimeConfig.Runtime.GraphQL.Enabled)
+            if (runtimeConfig.IsGraphQLEnabled)
             {
                 ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
             }
@@ -254,7 +252,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
         {
-            if (runtimeConfig.Runtime.Rest.Enabled && entity.Rest is not null && entity.Rest.Enabled)
+            if (runtimeConfig.IsRestEnabled && entity.Rest is not null && entity.Rest.Enabled)
             {
                 // If no custom rest path is defined for the entity, we default it to the entityName.
                 string pathForEntity = entity.Rest.Path is not null ? entity.Rest.Path.TrimStart('/') : entityName;
@@ -273,7 +271,7 @@ public class RuntimeConfigValidator : IConfigValidator
             }
 
             // If GraphQL endpoint is enabled globally and at entity level, then only we perform the validations related to it.
-            if (runtimeConfig.Runtime.GraphQL.Enabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
+            if (runtimeConfig.IsGraphQLEnabled && entity.GraphQL is not null && entity.GraphQL.Enabled)
             {
                 ValidateNameRequirements(entity.GraphQL.Singular);
                 ValidateNameRequirements(entity.GraphQL.Plural);
@@ -345,7 +343,7 @@ public class RuntimeConfigValidator : IConfigValidator
     public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
     {
         // Both REST and GraphQL endpoints cannot be disabled at the same time.
-        if (!runtimeConfig.Runtime.Rest.Enabled && !runtimeConfig.Runtime.GraphQL.Enabled)
+        if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
         {
             throw new DataApiBuilderException(
                 message: $"Both GraphQL and REST endpoints are disabled.",
@@ -353,12 +351,12 @@ public class RuntimeConfigValidator : IConfigValidator
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
 
-        string? runtimeBaseRoute = runtimeConfig.Runtime.BaseRoute;
+        string? runtimeBaseRoute = runtimeConfig.Runtime?.BaseRoute;
 
         // Ensure that the runtime base-route is only configured when authentication provider is StaticWebApps.
         if (runtimeBaseRoute is not null)
         {
-            if (runtimeConfig.Runtime.Host.Authentication is null || !runtimeConfig.Runtime.Host.Authentication.IsStaticWebAppsIdentityProvider())
+            if (!runtimeConfig.IsStaticWebAppsIdentityProvider)
             {
                 throw new DataApiBuilderException(
                     message: "Runtime base-route can only be used when the authentication provider is Static Web Apps.",
@@ -378,14 +376,14 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateRestURI(runtimeConfig);
         ValidateGraphQLURI(runtimeConfig);
         // Do not check for conflicts if GraphQL or REST endpoints are disabled.
-        if (!runtimeConfig.Runtime.Rest.Enabled || !runtimeConfig.Runtime.GraphQL.Enabled)
+        if (!runtimeConfig.IsRestEnabled || !runtimeConfig.IsGraphQLEnabled)
         {
             return;
         }
 
         if (string.Equals(
-            a: runtimeConfig.Runtime.Rest.Path,
-            b: runtimeConfig.Runtime.GraphQL.Path,
+            a: runtimeConfig.RestPath,
+            b: runtimeConfig.GraphQLPath,
             comparisonType: StringComparison.OrdinalIgnoreCase))
         {
             throw new DataApiBuilderException(
@@ -409,7 +407,7 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         // validate the rest path.
-        string restPath = runtimeConfig.Runtime.Rest.Path;
+        string restPath = runtimeConfig.RestPath;
         if (!TryValidateUriComponent(restPath, out string exceptionMsgSuffix))
         {
             throw new DataApiBuilderException(
@@ -426,7 +424,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="runtimeConfig"></param>
     public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
     {
-        string graphqlPath = runtimeConfig.Runtime.GraphQL.Path;
+        string graphqlPath = runtimeConfig.GraphQLPath;
         if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
         {
             throw new DataApiBuilderException(
@@ -481,7 +479,7 @@ public class RuntimeConfigValidator : IConfigValidator
     private static void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
     {
         // Bypass validation of auth if there is no auth provided
-        if (runtimeConfig.Runtime.Host.Authentication is null)
+        if (runtimeConfig.Runtime?.Host?.Authentication is null)
         {
             return;
         }
@@ -791,44 +789,6 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// Validates the parameters given in the config are consistent with the DB i.e., config has all
-    /// the parameters that are specified for the stored procedure in DB.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Current use by dab workflow")]
-    public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
-    {
-        RequestValidator requestValidator = new(sqlMetadataProviderFactory, _runtimeConfigProvider);
-        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
-        {
-            string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
-            ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
-            // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
-            // so if the schema is not correct we will halt the engine
-            // but for rest we can do it when a request is made and only fail that particular request.
-            if (entity.Source.Type is EntitySourceType.StoredProcedure && entity.GraphQL.Enabled)
-            {
-                DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                StoredProcedureRequestContext sqRequestContext =
-                    new(entityName,
-                        dbObject,
-                        JsonSerializer.SerializeToElement(entity.Source.Parameters),
-                        EntityActionOperation.All);
-                try
-                {
-                    requestValidator.ValidateStoredProcedureRequestContext(sqRequestContext);
-                }
-                catch (DataApiBuilderException e)
-                {
-                    throw new DataApiBuilderException(
-                        message: e.Message,
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                }
-            }
-        }
-    }
-
-    /// <summary>
     /// Method to do different validations on claims in the policy.
     /// </summary>
     /// <param name="policy">The policy to be validated and processed.</param>
@@ -838,8 +798,7 @@ public class RuntimeConfigValidator : IConfigValidator
     {
         // Find all the claimTypes from the policy
         MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
-        bool isStaticWebAppsAuthConfigured = Enum.TryParse(runtimeConfig.Runtime.Host.Authentication?.Provider, ignoreCase: true, out EasyAuthType easyAuthMode) ?
-            easyAuthMode is EasyAuthType.StaticWebApps : false;
+        bool isStaticWebAppsAuthConfigured = runtimeConfig.IsStaticWebAppsIdentityProvider;
 
         foreach (Match claimType in claimTypes)
         {

@@ -5,8 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -38,11 +36,14 @@ public class ParameterValidationTests
     [DataTestMethod]
     [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Table with path parameter id")]
     [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "View with path parameter id")]
-    public async Task ValidatePathParametersForTablesAndViews(string entityName, string objectName, EntitySourceType entitySourceType)
+    public async Task TestPathParametersForTablesAndViews(string entityName, string objectName, EntitySourceType entitySourceType)
     {
         EntitySource entitySource = new(Object: objectName, entitySourceType, null, null);
         OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(entityName, entitySource);
 
+        Assert.AreEqual(2, openApiDocument.Paths.Count);
+        Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}"));
+        Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}/id/{{id}}"));
         foreach ((string pathName, OpenApiPathItem pathItem) in openApiDocument.Paths)
         {
             string apiPathWithParam = $"/{entityName}/id/{{id}}";
@@ -63,7 +64,7 @@ public class ParameterValidationTests
     }
 
     /// <summary>
-    /// Validates that Query parameters are generated for GET methods in Table/Views.
+    /// Validates that the default set of query parameters are generated for GET methods in Table/Views.
     /// $select, $filter, $orderby, $first, $after are the query parameters.
     /// </summary>
     /// <param name="entityName">The name of the entity.</param>
@@ -72,130 +73,137 @@ public class ParameterValidationTests
     [DataTestMethod]
     [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Table with query parameters")]
     [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "View with query parameters")]
-    public async Task ValidateQueryParametersForTablesAndViews(string entityName, string objectName, EntitySourceType entitySourceType)
+    public async Task TestQueryParametersAddedForGEToperationOnTablesAndViews(string entityName, string objectName, EntitySourceType entitySourceType)
     {
         EntitySource entitySource = new(Object: objectName, entitySourceType, null, null);
         OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(entityName, entitySource);
 
-        foreach (OpenApiPathItem pathItem in openApiDocument.Paths.Values)
-        {
-            foreach ((OperationType operationType, OpenApiOperation operation) in pathItem.Operations)
-            {
-                if (operationType is OperationType.Get)
-                {
-                    Assert.IsTrue(operation.Parameters.Count is 5);
+        Assert.AreEqual(2, openApiDocument.Paths.Count);
+        Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}"));
+        Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}/id/{{id}}"));
 
-                    // Assert that it contains all the query parameters with appropriate type
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$select" && param.Schema.Type is "string"));
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$filter" && param.Schema.Type is "string"));
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$orderby" && param.Schema.Type is "string"));
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$first" && param.Schema.Type is "integer"));
-                    Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Query && param.Name is "$after" && param.Schema.Type is "string"));
-                }
-                else
-                {
-                    // No query parameters for other OperationTypes. 
-                    Assert.IsFalse(operation.Parameters.Any(param => param.In is ParameterLocation.Query));
-                }
-            }
-        }
+        // Asserting on all the parameters for Get All operation.
+        Assert.IsTrue(openApiDocument.Paths[$"/{entityName}"].Operations.ContainsKey(OperationType.Get));
+        OpenApiOperation openApiOperationForGetAll = openApiDocument.Paths[$"/{entityName}"].Operations[OperationType.Get];
+        AssertOnAllDefaultQueryParameters(openApiOperationForGetAll.Parameters.ToList());
+
+        // Assert that path with id has all the query parameters.
+        Assert.IsTrue(openApiDocument.Paths[$"/{entityName}/id/{{id}}"].Operations.ContainsKey(OperationType.Get));
+        OpenApiOperation openApiOperationForGetById = openApiDocument.Paths[$"/{entityName}/id/{{id}}"].Operations[OperationType.Get];
+        AssertOnAllDefaultQueryParameters(openApiOperationForGetById.Parameters.ToList());
+    }
+
+    /// <summary>
+    /// Validates that the default set of query parameters are generated for GET methods in Table/Views.
+    /// $select, $filter, $orderby, $first, $after are the query parameters.
+    /// </summary>
+    /// <param name="entityName">The name of the entity.</param>
+    /// <param name="objectName">The name of the database object.</param>
+    /// <param name="entitySourceType">The source type of the entity.</param>
+    [DataTestMethod]
+    [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Table with query parameters")]
+    [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "View with query parameters")]
+    public async Task TestQueryParametersExcludedFromNonReadOperationsOnTablesAndViews(string entityName, string objectName, EntitySourceType entitySourceType)
+    {
+        EntitySource entitySource = new(Object: objectName, entitySourceType, null, null);
+        OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(entityName, entitySource);
+
+        Assert.AreEqual(2, openApiDocument.Paths.Count);
+        Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}"));
+        Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}/id/{{id}}"));
+
+        // Assert that Query Parameters Excluded From NonReadOperations for path without id.
+        OpenApiPathItem pathWithouId = openApiDocument.Paths[$"/{entityName}"];
+        Assert.IsTrue(pathWithouId.Operations.ContainsKey(OperationType.Post));
+        Assert.IsTrue(pathWithouId.Operations[OperationType.Post].Parameters.IsNullOrEmpty());
+        Assert.IsFalse(pathWithouId.Operations.ContainsKey(OperationType.Put));
+        Assert.IsFalse(pathWithouId.Operations.ContainsKey(OperationType.Patch));
+        Assert.IsFalse(pathWithouId.Operations.ContainsKey(OperationType.Delete));
+
+        // Assert that Query Parameters Excluded From NonReadOperations for path with id.
+        OpenApiPathItem pathWithId = openApiDocument.Paths[$"/{entityName}/id/{{id}}"];
+        Assert.IsFalse(pathWithId.Operations.ContainsKey(OperationType.Post));
+        Assert.IsTrue(pathWithId.Operations.ContainsKey(OperationType.Put));
+        Assert.IsTrue(pathWithId.Operations[OperationType.Put].Parameters.IsNullOrEmpty());
+        Assert.IsTrue(pathWithId.Operations.ContainsKey(OperationType.Patch));
+        Assert.IsTrue(pathWithId.Operations[OperationType.Patch].Parameters.IsNullOrEmpty());
+        Assert.IsTrue(pathWithId.Operations.ContainsKey(OperationType.Delete));
+        Assert.IsTrue(pathWithId.Operations[OperationType.Delete].Parameters.IsNullOrEmpty());
     }
 
     /// <summary>
     /// Validates that Input parameters are generated for Stored Procedures with GET operation.
-    /// Input parameters for stored procedures will be generated for GET operation.
-    /// If a parameter default value is not provided in the config, it will marked as required.
-    /// It also validates parameter metadatas like type, name, location, required, etc.
+    /// It also validates parameter metadata like type, name, location, required, etc.
     /// </summary>
     /// <param name="entityName">The name of the entity.</param>
     /// <param name="objectName">The name of the database object.</param>
-    [DataTestMethod]
-    [DataRow("CountBooks", "count_books", DisplayName = "StoredProcudure with no parameters results in 0 created input query params.")]
-    [DataRow("UpdateBookTitle", "update_book_title", DisplayName = "StoredProcedure with parameters results in created input query params.")]
-    public async Task ValidateInputParametersForStoredProcedures(string entityName, string objectName)
+    [TestMethod]
+    public async Task TestInputParametersForStoredProcedures()
     {
-        Dictionary<string, object> parameterDefaults = null;
-        if (entityName is "UpdateBookTitle")
-        {
-            // Adding a parameter default value.
-            parameterDefaults = new Dictionary<string, object> { { "title", "Test Title" } };
-        }
+        string entityName = "UpdateBookTitle";
+        string objectName = "update_book_title";
+
+        // Adding a parameter default value.
+        Dictionary<string, object> parameterDefaults = new() { { "title", "Test Title" } };
 
         EntitySource entitySource = new(Object: objectName, EntitySourceType.StoredProcedure, parameterDefaults, null);
-        OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(entityName, entitySource);
+        OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(
+                                                entityName,
+                                                entitySource,
+                                                supportedHttpMethods: new SupportedHttpVerb[] { SupportedHttpVerb.Get });
 
+        Assert.AreEqual(1, openApiDocument.Paths.Count);
+        Assert.IsTrue(openApiDocument.Paths.ContainsKey($"/{entityName}"));
         OpenApiPathItem pathItem = openApiDocument.Paths.First().Value;
-        foreach ((OperationType operationType, OpenApiOperation operation) in pathItem.Operations)
-        {
-            if (entityName.Equals("UpdateBookTitle"))
-            {
-                if (operationType is OperationType.Get)
-                {
-                    Assert.IsTrue(operation.Parameters.Any(param =>
-                    param.In is ParameterLocation.Query
-                    && param.Name is "id"
-                    && param.Schema.Type is "number"
-                    && param.Required is true
-                    ));
+        Assert.AreEqual(1, pathItem.Operations.Count);
+        Assert.IsTrue(pathItem.Operations.ContainsKey(OperationType.Get));
 
-                    // Parameter with default value will be an optional query parameter.
-                    Assert.IsTrue(operation.Parameters.Any(param =>
-                        param.In is ParameterLocation.Query
-                        && param.Name is "title"
-                        && param.Schema.Type is "string"
-                        && param.Required is false));
-                }
-                else
-                {
-                    // Input Parameters are supported only for GET requests
-                    // For Other requests requestBody is used.
-                    Assert.IsTrue(operation.Parameters.IsNullOrEmpty());
-                }
-            }
-            else
-            {
-                // CountBookTitle doesn't require any query parameters.
-                Assert.IsTrue(operation.Parameters.IsNullOrEmpty());
-            }
-        }
+        OpenApiOperation operation = pathItem.Operations[OperationType.Get];
+        Assert.AreEqual(2, operation.Parameters.Count);
+        Assert.IsTrue(operation.Parameters.Any(param =>
+            param.In is ParameterLocation.Query
+            && param.Name.Equals("id")
+            && param.Schema.Type.Equals("number")
+            && param.Required is false));
+
+        // Parameter with default value will be an optional query parameter.
+        Assert.IsTrue(operation.Parameters.Any(param =>
+            param.In is ParameterLocation.Query
+            && param.Name.Equals("title")
+            && param.Schema.Type.Equals("string")
+            && param.Required is false));
     }
 
     /// <summary>
-    /// Test to validate that the custom header parameters are present for each of the operation irrespective of the operation and the type
-    /// of the entity.
+    /// Validates that input query parameters are not generated for Stored Procedures with
+    /// no input parameters or no GET operations.
     /// </summary>
-    /// <param name="entityName">Name of the entity.</param>
-    /// <param name="objectName">Name of the database object backing the entity.</param>
-    /// <param name="entitySourceType">Sourcetype of the entity.</param>
-    /// <returns></returns>
     [DataTestMethod]
-    [DataRow("BooksTable", "books", EntitySourceType.Table, DisplayName = "Validate custom header presence in header parameters for table.")]
-    [DataRow("BooksView", "books_view_all", EntitySourceType.View, DisplayName = "Validate custom header presence in header parameters for view.")]
-    [DataRow("UpdateBookTitle", "update_book_title", EntitySourceType.StoredProcedure, DisplayName = "Validate custom header presence in header parameters for stored procedure.")]
-    public async Task ValidateHeaderParametersForEntity(string entityName, string objectName, EntitySourceType entitySourceType)
+    [DataRow("CountBooks", "count_books", new SupportedHttpVerb[] { SupportedHttpVerb.Get }, DisplayName = "StoredProcudure with no input parameters results in 0 created input query params.")]
+    [DataRow("InsertBook", "insert_book", new SupportedHttpVerb[] { SupportedHttpVerb.Post }, DisplayName = "StoredProcedure without GET operations will results in 0 created input query params.")]
+    public async Task TestStoredProcedureForNoQueryParameters(string entityName, string objectName, SupportedHttpVerb[] supportedHttpVerbs)
     {
-        EntitySource entitySource = new(Object: objectName, entitySourceType, null, null);
-        OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(entityName, entitySource);
+        EntitySource entitySource = new(Object: objectName, EntitySourceType.StoredProcedure, Parameters: null, KeyFields: null);
+        OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(entityName, entitySource, supportedHttpVerbs);
 
-        foreach (OpenApiPathItem pathItem in openApiDocument.Paths.Values)
-        {
-            foreach ((OperationType operationType, OpenApiOperation operation) in pathItem.Operations)
-            {
-                // Assert presence of Authorization header and the expected parameter properties for the header parameter.
-                Assert.IsTrue(operation.Parameters.Any(
-                    param => param.In is ParameterLocation.Header &&
-                    "Authorization".Equals(param.Name) &&
-                    JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type) &&
-                    param.Required is false));
+        Assert.AreEqual(1, openApiDocument.Paths.Count);
+        OpenApiPathItem pathItem = openApiDocument.Paths.First().Value;
+        Assert.AreEqual(1, pathItem.Operations.Count);
+        Assert.AreEqual(supportedHttpVerbs.First().ToString(), pathItem.Operations.Keys.First().ToString());
+        Assert.IsTrue(pathItem.Operations.Values.First().Parameters.IsNullOrEmpty());
+    }
 
-                // Assert presence of X-MS-API-ROLE header and the expected parameter properties for the header parameter.
-                Assert.IsTrue(operation.Parameters.Any(
-                    param => param.In is ParameterLocation.Header &&
-                    AuthorizationResolver.CLIENT_ROLE_HEADER.Equals(param.Name) &&
-                    JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type) &&
-                    param.Required is false));
-            }
-        }
+    /// <summary>
+    /// validate that $select, $filter, $orderby, $first, $after query parameters are present in the openAPI document.
+    /// </summary>
+    private static void AssertOnAllDefaultQueryParameters(List<OpenApiParameter> openApiParameters)
+    {
+        Assert.AreEqual(5, openApiParameters.Count);
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$select") && param.Schema.Type.Equals("string")));
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$filter") && param.Schema.Type.Equals("string")));
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$orderby") && param.Schema.Type.Equals("string")));
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$first") && param.Schema.Type.Equals("integer")));
+        Assert.IsTrue(openApiParameters.Any(param => param.In is ParameterLocation.Query && param.Name.Equals("$after") && param.Schema.Type.Equals("string")));
     }
 
     /// <summary>
@@ -203,12 +211,16 @@ public class ParameterValidationTests
     /// </summary>
     /// <param name="entityName">The name of the entity.</param>
     /// <param name="entitySource">Database source for entity.</param>
-    private async static Task<OpenApiDocument> GenerateOpenApiDocumentForGivenEntityAsync(string entityName, EntitySource entitySource)
+    /// <param name="supportedMethods">Supported HTTP verbs for the entity.</param>
+    private async static Task<OpenApiDocument> GenerateOpenApiDocumentForGivenEntityAsync(
+        string entityName,
+        EntitySource entitySource,
+        SupportedHttpVerb[] supportedHttpMethods = null)
     {
         Entity entity = new(
             Source: entitySource,
             GraphQL: new(Singular: null, Plural: null, Enabled: false),
-            Rest: new(Methods: EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
+            Rest: new(Methods: supportedHttpMethods ?? EntityRestOptions.DEFAULT_SUPPORTED_VERBS),
             Permissions: OpenApiTestBootstrap.CreateBasicPermissions(),
             Mappings: null,
             Relationships: null);

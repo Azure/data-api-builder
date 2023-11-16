@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -43,6 +44,8 @@ public class RuntimeConfigProvider
 
     public RuntimeConfigLoader ConfigLoader { get; private set; }
 
+    private ConfigFileWatcher? _configFileWatcher;
+
     private RuntimeConfig? _runtimeConfig;
 
     public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
@@ -68,6 +71,7 @@ public class RuntimeConfigProvider
         if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
         {
             _runtimeConfig = config;
+            TrySetupConfigFileWatcher();
         }
 
         if (_runtimeConfig is null)
@@ -82,6 +86,35 @@ public class RuntimeConfigProvider
     }
 
     /// <summary>
+    /// Checks if we have already attempted to configure the file watcher, if not
+    /// instantiate the file watcher if we are in the correct scenario. If we
+    /// are not in the correct scenario, do not setup a file watcher but remember
+    /// that we have attempted to do so to avoid repeat checks in future calls.
+    /// Returns true if we instantiate a file watcher.
+    /// </summary>
+    private bool TrySetupConfigFileWatcher()
+    {
+        if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
+        {
+            try
+            {
+                FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
+                _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
+            }
+            catch (Exception ex)
+            {
+                // Need to remove the dependencies in startup on the RuntimeConfigProvider
+                // before we can have an ILogger here.
+                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+            }
+
+            return _configFileWatcher is not null;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Attempt to acquire runtime configuration metadata.
     /// </summary>
     /// <param name="runtimeConfig">Populated runtime configuration, if present.</param>
@@ -93,6 +126,7 @@ public class RuntimeConfigProvider
             if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
             {
                 _runtimeConfig = config;
+                TrySetupConfigFileWatcher();
             }
         }
 
@@ -110,6 +144,15 @@ public class RuntimeConfigProvider
     {
         runtimeConfig = _runtimeConfig;
         return _runtimeConfig is not null;
+    }
+
+    /// <summary>
+    /// Hot Reloads the runtime config when the file watcher
+    /// is active and detects a change to the underlying config file.
+    /// </summary>
+    public void HotReloadConfig()
+    {
+        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true);
     }
 
     /// <summary>
@@ -136,7 +179,8 @@ public class RuntimeConfigProvider
         if (RuntimeConfigLoader.TryParseConfig(
                 configuration,
                 out RuntimeConfig? runtimeConfig,
-                replaceEnvVar: true))
+                replaceEnvVar: false,
+                replacementFailureMode: EnvironmentVariableReplacementFailureMode.Ignore))
         {
             _runtimeConfig = runtimeConfig;
 
@@ -198,7 +242,13 @@ public class RuntimeConfigProvider
     /// <param name="connectionString">The connection string to the database.</param>
     /// <param name="accessToken">The string representation of a managed identity access token</param>
     /// <returns>true if the initialization succeeded, false otherwise.</returns>
-    public async Task<bool> Initialize(string jsonConfig, string? graphQLSchema, string connectionString, string? accessToken)
+    public async Task<bool> Initialize(
+        string jsonConfig,
+        string? graphQLSchema,
+        string connectionString,
+        string? accessToken,
+        bool replaceEnvVar = true,
+        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
         if (string.IsNullOrEmpty(connectionString))
         {
@@ -212,7 +262,7 @@ public class RuntimeConfigProvider
 
         IsLateConfigured = true;
 
-        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: true))
+        if (RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? runtimeConfig, replaceEnvVar: replaceEnvVar, replacementFailureMode: replacementFailureMode))
         {
             _runtimeConfig = runtimeConfig.DataSource.DatabaseType switch
             {

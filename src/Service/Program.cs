@@ -4,6 +4,7 @@
 using System;
 using System.CommandLine;
 using System.CommandLine.Parsing;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.ApplicationInsights;
@@ -38,11 +39,18 @@ namespace Azure.DataApiBuilder.Service
                 CreateHostBuilder(args).Build().Run();
                 return true;
             }
-            catch (Exception)
+            // Catch exception raised by explicit call to IHostApplicationLifetime.StopApplication()
+            catch (TaskCanceledException)
             {
                 // Do not log the exception here because exceptions raised during startup
                 // are already automatically written to the console.
-                Console.Error.WriteLine($"Unable to launch the runtime due to an error.");
+                Console.Error.WriteLine("Unable to launch the Data API builder engine.");
+                return false;
+            }
+            // Catch all remaining unhandled exceptions which may be due to server host operation.
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Unable to launch the runtime due to: {ex}");
                 return false;
             }
         }

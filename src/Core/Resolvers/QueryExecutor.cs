@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
             };
 
-            await SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
             return await _retryPolicy.ExecuteAsync(async () =>
             {
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
                     }
 
-                    TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, args);
+                    TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
 
                     if (retryAttempt > 1)
                     {
@@ -149,6 +149,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext,
+            string dataSourceName,
             List<string>? args = null)
         {
             await conn.OpenAsync();
@@ -157,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
             // at the database level.
-            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters);
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
 
             cmd.CommandText = sessionParamsQuery + sqltext;
             if (parameters is not null)
@@ -363,7 +364,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         message: $"Cannot perform INSERT and could not find {entityName} " +
                             $"with primary key {prettyPrintPk} to perform UPDATE on.",
                             statusCode: HttpStatusCode.NotFound,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
                 }
             }
 

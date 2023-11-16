@@ -343,6 +343,123 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
+
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes
+        /// into account the fields configuration set for READ action of the role with which
+        /// the request was executed.
+        /// The role test_role_with_excluded_fields with which the POST request excludes the field 'publisher_id' from read action. So, the response returned
+        /// should not contain the 'publisher_id' field.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithExcludeFieldsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithExcludeFieldsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "test_role_with_excluded_fields"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes into account that no read action is configured for the role
+        /// and returns an empty response. Since, the role has no read permission defined, the primary key route computed and the
+        /// eventual location header returned in the response will be empty strings.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithNoReadPermissionsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithNoReadPermissionsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: string.Empty,
+                clientRoleHeader: "test_role_with_noread"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes into account the database policies set up
+        /// for READ action of the role with which the request was executed.
+        /// The database policy configured for the read action does not allow the query to select any records when title = Test.
+        /// Since, this test updates the title to Test, the response returned will be empty.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithReadDatabasePolicyTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Test"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithNoReadPermissionsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "test_role_with_policy_excluded_fields"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes into account the database policy
+        /// and the include/exclude configuration set up for READ action of the role with which the request was executed.
+        /// The database policy configured for the read action does not allow the query to select any records when title = Test.
+        /// Since, this test updates the title to a different value, the response returned should be non-empty and should not contain
+        /// publisher_id field as it is excluded.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithReadDatabasePolicyUnsatisfiedTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithExcludeFieldsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "test_role_with_policy_excluded_fields"
+            );
+        }
+
         #endregion
 
         #region Negative Tests

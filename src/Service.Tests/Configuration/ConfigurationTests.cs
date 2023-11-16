@@ -41,6 +41,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
+using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -64,10 +66,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
-
-        // TODO: Remove the old endpoint once we've updated all callers to use the new one.
-        private const string CONFIGURATION_ENDPOINT = "/configuration";
-        private const string CONFIGURATION_ENDPOINT_V2 = "/configuration/v2";
 
         /// <summary>
         /// A valid REST API request body with correct parameter types for all the fields.
@@ -1019,10 +1017,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             catch (Exception e)
             {
-                Assert.AreEqual(typeof(ApplicationException), e.GetType());
+                Assert.AreEqual(typeof(ArgumentException), e.GetType());
                 Assert.AreEqual(
-                    $"Could not initialize the engine with the runtime config file: " +
-                    $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}",
+                    $"Format of the initialization string does not conform to specification starting at index 0.",
                     e.Message);
             }
         }
@@ -1064,15 +1061,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCategory(TestCategory.MSSQL)]
         [DataRow("/graphql/", HostMode.Development, HttpStatusCode.OK, "Banana Cake Pop",
             DisplayName = "GraphQL endpoint with no query in development mode.")]
-        [DataRow("/graphql", HostMode.Production, HttpStatusCode.BadRequest,
-            "Either the parameter query or the parameter id has to be set",
+        [DataRow("/graphql", HostMode.Production, HttpStatusCode.NotFound,
             DisplayName = "GraphQL endpoint with no query in production mode.")]
         [DataRow("/graphql/ui", HostMode.Development, HttpStatusCode.NotFound,
             DisplayName = "Default BananaCakePop in development mode.")]
         [DataRow("/graphql/ui", HostMode.Production, HttpStatusCode.NotFound,
             DisplayName = "Default BananaCakePop in production mode.")]
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
-            HostMode.Development, HttpStatusCode.Moved,
+            HostMode.Development, HttpStatusCode.OK,
             DisplayName = "GraphQL endpoint with query in development mode.")]
         [DataRow("/graphql?query={book_by_pk(id: 1){title}}",
             HostMode.Production, HttpStatusCode.OK, "data",
@@ -1574,7 +1570,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             HostOptions staticWebAppsHostOptions = new(null, AuthenticationOptions);
 
             RuntimeOptions runtimeOptions = configuration.Runtime;
-            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions.Rest, runtimeOptions.GraphQL, staticWebAppsHostOptions, "/data-api");
+            RuntimeOptions baseRouteEnabledRuntimeOptions = new(runtimeOptions?.Rest, runtimeOptions?.GraphQL, staticWebAppsHostOptions, "/data-api");
             RuntimeConfig baseRouteEnabledConfig = configuration with { Runtime = baseRouteEnabledRuntimeOptions };
             File.WriteAllText(CUSTOM_CONFIG, baseRouteEnabledConfig.ToJson());
 
@@ -1982,14 +1978,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             string swaggerEndpoint = "/swagger";
             DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource: dataSource, new(), new(Path: customRestPath));
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(
+                dataSource: dataSource,
+                graphqlOptions: new(),
+                restOptions: new(Path: customRestPath));
+
             configuration = configuration
                 with
             {
                 Runtime = configuration.Runtime
                 with
                 {
-                    Host = configuration.Runtime.Host
+                    Host = configuration.Runtime?.Host
                 with
                     { Mode = hostModeType }
                 }
@@ -2261,7 +2261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             if (CONFIGURATION_ENDPOINT == endpoint)
             {
                 ConfigurationPostParameters configParams = GetCosmosConfigurationParameters();
-                if (config != null)
+                if (config is not null)
                 {
                     configParams = configParams with { Configuration = config };
                 }
@@ -2358,21 +2358,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 AccessToken: null);
         }
 
-        private static RuntimeConfig ReadCosmosConfigurationFromFile()
-        {
-            string cosmosFile = $"{CONFIGFILE_NAME}.{COSMOS_ENVIRONMENT}{CONFIG_EXTENSION}";
-
-            string configurationFileContents = File.ReadAllText(cosmosFile);
-            if (!RuntimeConfigLoader.TryParseConfig(configurationFileContents, out RuntimeConfig config))
-            {
-                throw new Exception("Failed to parse configuration file.");
-            }
-
-            // The Schema file isn't provided in the configuration file when going through the configuration endpoint so we're removing it.
-            config.DataSource.Options.Remove("Schema");
-            return config;
-        }
-
         /// <summary>
         /// Helper used to create the post-startup configuration payload sent to configuration controller.
         /// Adds entity used to hydrate authorization resolver post-startup and validate that hydration succeeds.
@@ -2399,8 +2384,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 RuntimeConfig overrides = new(
                     Schema: null,
                     DataSource: new DataSource(DatabaseType.MSSQL, connectionString, new()),
-                    Runtime: null,
-                    Entities: new(new Dictionary<string, Entity>()));
+                    Entities: new(new Dictionary<string, Entity>()),
+                    Runtime: null);
 
                 ConfigurationPostParametersV2 returnParams = new(
                     Configuration: serializedConfiguration,
@@ -2552,7 +2537,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             return new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
-                Runtime: new(restOptions, graphqlOptions, new(null, null)),
+                Runtime: new(restOptions, graphqlOptions,
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
                 Entities: new(entityMap)
             );
         }

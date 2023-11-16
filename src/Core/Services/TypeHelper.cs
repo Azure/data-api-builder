@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -243,14 +244,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Helper method to get the DbType corresponding to the given SqlDbType.
         /// </summary>
-        public static DbType? GetDbTypeFromSqlDbType(SqlDbType sqlDbType)
+        /// <param name="sqlDbType">Underlying sqlDbType of the parameter.</param>
+        /// <param name="dbType">DbType of the parameter corresponding to its sqlDbType.</param>
+        /// <returns>True if given DateTime sqlDbType is supported by DAB, else false.</returns>
+        public static bool TryGetDbTypeFromSqlDbDateTimeType(SqlDbType sqlDbType, [NotNullWhen(true)] out DbType dbType)
         {
-            if (_sqlDbDateTimeTypeToDbType.TryGetValue(sqlDbType, out DbType dbType))
-            {
-                return dbType;
-            }
-
-            return null;
+            return _sqlDbDateTimeTypeToDbType.TryGetValue(sqlDbType, out dbType);
         }
     }
 }

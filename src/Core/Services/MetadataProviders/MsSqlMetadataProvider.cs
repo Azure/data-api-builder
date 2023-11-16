@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -9,6 +11,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 
@@ -81,7 +84,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public override DbType? ResolveDbType(string sqlDbTypeName)
+        public override bool TryResolveDbType(string sqlDbTypeName, out DbType dbType)
         {
             if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
             {
@@ -89,11 +92,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Hence we cannot directly determine the DbType from the system type.
                 // However, to make sure that the database correctly interprets these datatypes, it is necessary to correctly
                 // populate the DbTypes.
-                return TypeHelper.GetDbTypeFromSqlDbType(sqlDbType);
+                return TypeHelper.TryGetDbTypeFromSqlDbDateTimeType(sqlDbType, out dbType);
             }
 
             // This code should never be hit because every sqlDbTypeName must have a corresponding sqlDbType.
-            return null;
+            dbType = 0;
+            return false;
         }
     }
 }

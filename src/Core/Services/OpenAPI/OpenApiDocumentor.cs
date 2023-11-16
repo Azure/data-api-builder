@@ -50,6 +50,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         // OpenApi query parameters
         private static readonly List<OpenApiParameter> _tableAndViewQueryParameters = CreateTableAndViewQueryParameters();
+
         // Error messages
         public const string DOCUMENT_ALREADY_GENERATED_ERROR = "OpenAPI description document already generated.";
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
@@ -352,7 +353,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="parameters">List of parameters for the operation.</param>
         private static void AddQueryParameters(IList<OpenApiParameter> parameters)
         {
-            foreach(OpenApiParameter openApiParameter in _tableAndViewQueryParameters)
+            foreach (OpenApiParameter openApiParameter in _tableAndViewQueryParameters)
             {
                 parameters.Add(openApiParameter);
             }
@@ -513,57 +514,48 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <returns>A list of OpenAPI parameters.</returns>
         private static List<OpenApiParameter> CreateTableAndViewQueryParameters()
         {
-            List<OpenApiParameter> parameters = new();
-
-            // Add $select query parameter
-            parameters.Add(
+            List<OpenApiParameter> parameters = new()
+            {
+                // Add $select query parameter
                 GetOpenApiQueryParameter(
                     name: RequestParser.FIELDS_URL,
                     description: "A comma separated list of fields to return in the response.",
                     required: false,
                     type: "string"
-                )
-            );
+                ),
 
-            // Add $filter query parameter
-            parameters.Add(
+                // Add $filter query parameter
                 GetOpenApiQueryParameter(
                     name: RequestParser.FILTER_URL,
                     description: "An OData expression (an expression that returns a boolean value) using the entity's fields to retrieve a subset of the results.",
                     required: false,
                     type: "string"
-                )
-            );
+                ),
 
-            // Add $orderby query parameter
-            parameters.Add(
+                // Add $orderby query parameter
                 GetOpenApiQueryParameter(
                     name: RequestParser.SORT_URL,
                     description: "Uses a comma-separated list of expressions to sort response items. Add 'desc' for descending order, otherwise it's ascending by default.",
                     required: false,
                     type: "string"
-                )
-            );
+                ),
 
-            // Add $first query parameter
-            parameters.Add(
+                // Add $first query parameter
                 GetOpenApiQueryParameter(
                     name: RequestParser.FIRST_URL,
                     description: "An integer value that specifies the number of items to return. Default is 100.",
                     required: false,
                     type: "integer"
-                )
-            );
+                ),
 
-            // Add $after query parameter
-            parameters.Add(
+                // Add $after query parameter
                 GetOpenApiQueryParameter(
                     name: RequestParser.AFTER_URL,
                     description: "An opaque string that specifies the cursor position after which results should be returned.",
                     required: false,
                     type: "string"
                 )
-            );
+            };
 
             return parameters;
         }

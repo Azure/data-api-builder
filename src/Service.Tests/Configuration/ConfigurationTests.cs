@@ -1481,7 +1481,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             };
 
             string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
-
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
@@ -1525,17 +1524,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                             categoryName
                           }
                         }";
+                    string queryName = "stock_by_pk";
 
-                    JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                client,
-                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                query: graphQLQuery,
-                                queryName: "stock_by_pk",
-                                variables: null,
-                                authToken: authToken,
-                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
-
-                    Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
+                    ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken);
                 }
                 finally
                 {
@@ -1668,6 +1659,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         clientRoleHeader: null);
                 }
             }
+        }
+
+        /// <summary>
+        /// Helper method to validate that the mutation operation succeded at the database layer by executing a graphQL pk query.
+        /// </summary>
+        /// <param name="server">Test server created for the test</param>
+        /// <param name="client">HTTP client</param>
+        /// <param name="query">GraphQL query/mutation text</param>
+        /// <param name="queryName">GraphQL query/mutation name</param>
+        /// <param name="authToken">Auth token for the graphQL request</param>
+        private static async void ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken)
+        {
+            JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                                client,
+                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                query: query,
+                                                queryName: queryName,
+                                                variables: null,
+                                                authToken: authToken,
+                                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+
+            Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
         }
 
         /// <summary>

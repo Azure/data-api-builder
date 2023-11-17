@@ -1429,8 +1429,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// In this test, Anonymous role is configured with only create permission.
         /// So, a create mutation executed in the context of Anonymous role is expected to result in
         /// 1) Creation of a new item in the database
-        /// 2) An error response containing the error message : "The mutation operation was successful but the current user is unauthorized to view the response due to lack of read permissions"
-        /// 
+        /// 2) An error response containing the error message : "The mutation operation {operation_name} was successful but the current user is unauthorized to view the response due to lack of read permissions"
+        ///
         /// A create mutation operation in the context of Anonymous role is executed and the expected error message is validated.
         /// Authenticated role has read permission configured. A pk query is executed in the context of Authenticated role to validate that a new
         /// record was created in the database.
@@ -1512,7 +1512,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         variables: null,
                         clientRoleHeader: null
                         );
-                    Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation was successful but the current user is unauthorized to view the response due to lack of read permissions"));
+                    Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation createStock was successful but the current user is unauthorized to view the response due to lack of read permissions"));
 
                     // pk_query is executed in the context of Authenticated role to validate that the create mutation executed in the context of Anonymous role
                     // resulted in the creation of a new record in the database.

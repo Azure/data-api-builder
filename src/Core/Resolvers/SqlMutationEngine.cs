@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (!isReadPermissionConfigured)
             {
-                throw new DataApiBuilderException(message: "The mutation operation was successful but the current user is unauthorized to view the response due to lack of read permissions",
+                throw new DataApiBuilderException(message: $"The mutation operation {context.Selection.Field.Name} was successful but the current user is unauthorized to view the response due to lack of read permissions",
                                                   statusCode: HttpStatusCode.Forbidden,
                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }

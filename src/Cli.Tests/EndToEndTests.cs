@@ -3,7 +3,6 @@
 
 using Azure.DataApiBuilder.Product;
 using Microsoft.Data.SqlClient;
-using static Azure.DataApiBuilder.Product.ProductInfo;
 
 namespace Cli.Tests;
 
@@ -640,6 +639,31 @@ public class EndToEndTests
         process.Kill();
     }
 
+    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
+    [DataTestMethod]
+    public void TestVersionHasBuildHash(
+        string command,
+        string options
+    )
+    {
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+
+        // Check that build hash is returned as part of  version number
+        string[] versionParts = output.Split('+');
+        Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
+        Assert.AreEqual(41, versionParts[1].Length, "Build hash is not of expected length.");
+
+        process.Kill();
+    }
+
     /// <summary>
     /// Test to verify that the version info is logged for both correct/incorrect command,
     /// and that the config name is displayed in the logs.
@@ -669,11 +693,6 @@ public class EndToEndTests
 
         // Version Info logged by dab irrespective of commands being parsed correctly.
         StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
-
-        // Check that build hash is returned as part of  version number
-        string[] versionParts = output.Split('+');
-        Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
-        Assert.AreEqual(41, versionParts[1].Length, "Build hash is not of expected length.");
 
         if (isParsableDabCommandName)
         {

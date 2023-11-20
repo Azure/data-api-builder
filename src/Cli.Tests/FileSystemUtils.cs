@@ -18,7 +18,7 @@ internal static class FileSystemUtils
             fileSystem.Path.Combine(
                 fileSystem.Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "",
                 "dab.draft.schema.json"),
-            new MockFileData("{ \"additionalProperties\": {\"version\": \"https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json\"} }"));
+            new MockFileData("{ \"$id\": \"https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json\" }"));
 
         return fileSystem;
     }

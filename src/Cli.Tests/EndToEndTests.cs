@@ -659,7 +659,7 @@ public class EndToEndTests
         // Check that build hash is returned as part of  version number
         string[] versionParts = output.Split('+');
         Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
-        Assert.AreEqual(41, versionParts[1].Length, "Build hash is not of expected length.");
+        Assert.AreEqual(40, versionParts[1].Length, "Build hash is not of expected length.");
 
         process.Kill();
     }

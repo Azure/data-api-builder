@@ -11,7 +11,7 @@ add WebsiteUser --config "dab-config.DwSql.json" --source website_users --permis
 add SupportedType --config "dab-config.DwSql.json" --source type_table --permissions "anonymous:create,read,delete,update" --source.key-fields "id"
 add Tree --config "dab-config.DwSql.json" --source trees --permissions "anonymous:create,read,update,delete" --source.key-fields "treeId"
 add Shrub --config "dab-config.DwSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants --source.key-fields "treeId"
-add Fungus --config "dab-config.DwSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi" --source.key-fields "speciesId"
+add Fungus --config "dab-config.DwSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi" --source.key-fields "speciesid"
 add books_view_all --config "dab-config.DwSql.json" --source books_view_all --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add books_view_with_mapping --config "dab-config.DwSql.json" --source books_view_with_mapping --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add series --config "dab-config.DwSql.json" --source "series" --permissions "anonymous:*" --source.key-fields "id"

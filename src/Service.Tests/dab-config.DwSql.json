@@ -1403,7 +1403,7 @@
         "object": "fungi",
         "type": "table",
         "key-fields": [
-          "speciesId"
+          "speciesid"
         ]
       },
       "graphql": {

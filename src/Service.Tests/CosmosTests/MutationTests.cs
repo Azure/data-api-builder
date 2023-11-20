@@ -2,13 +2,25 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net.Http;
+using System.Reflection.Metadata;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.NamingPolicies;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.OData.UriParser;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Sprache;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -388,6 +400,246 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
             string expected = @"Planet";
             string actual = response.GetProperty("__typename").Deserialize<string>();
             Assert.AreEqual(expected, actual);
+        }
+
+        /// <summary>
+        /// For mutation operations, both the respective operation(create/update/delete) + read permissions are needed to receive a valid response.
+        /// In this test, Anonymous role is configured with only create permission.
+        /// So, a create mutation executed in the context of Anonymous role is expected to result in
+        /// 1) Creation of a new item in the database
+        /// 2) An error response containing the error message : "The mutation operation {operation_name} was successful but the current user is unauthorized to view the response due to lack of read permissions"
+        ///
+        /// A create mutation operation in the context of Anonymous role is executed and the expected error message is validated.
+        /// Authenticated role has read permission configured. A pk query is executed in the context of Authenticated role to validate that a new
+        /// record was created in the database.
+        /// </summary>
+        [TestMethod]
+        public async Task ValidateErrorMessageForMutationWithoutReadPermission()
+        {
+            const string SCHEMA = @"
+type Planet @model {
+    id : ID!,
+    name : String,
+    age : Int,
+}";
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            Dictionary<string, JsonElement> dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement("graphqldb"));
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(_containerName));
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement("custom-schema.gql"));
+            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
+                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityAction deleteAction = new(
+                Action: EntityActionOperation.Delete,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] {new EntityPermission( Role: AuthorizationResolver.ROLE_ANONYMOUS , Actions: new[] { createAction }),
+                       new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { readAction, createAction, deleteAction })};
+
+            Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Rest: null,
+                                  GraphQL: new(Singular: "Planet", Plural: "Planets"),
+                                  Permissions: permissions,
+                                  Relationships: null,
+                                  Mappings: null);
+
+            string entityName = "Planet";
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            const string CUSTOM_SCHEMA = "custom-schema.gql";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            File.WriteAllText(CUSTOM_SCHEMA, SCHEMA);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}",
+            };
+
+            string id = Guid.NewGuid().ToString();
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try
+                {
+                    var input = new
+                    {
+                        id,
+                        name = "test_name",
+                    };
+
+                    // A create mutation operation is executed in the context of Anonymous role. The Anonymous role has create action configured but lacks
+                    // read action. As a result, a new record should be created in the database but the mutation operation should return an error message.
+                    JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: _createPlanetMutation,
+                        queryName: "createPlanet",
+                        variables: new() { { "item", input } },
+                        clientRoleHeader: null
+                        );
+
+                    Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation createPlanet was successful but the current user is unauthorized to view the response due to lack of read permissions"));
+
+                    // pk_query is executed in the context of Authenticated role to validate that the create mutation executed in the context of Anonymous role
+                    // resulted in the creation of a new record in the database.
+                    string graphQLQuery = @$"
+query {{
+    planet_by_pk (id: ""{id}"") {{
+        id
+        name
+    }}
+}}";
+                    string queryName = "planet_by_pk";
+
+                    JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                                client,
+                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                query: graphQLQuery,
+                                                queryName: queryName,
+                                                variables: null,
+                                                authToken: authToken,
+                                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+
+                    Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
+                }
+                finally
+                {
+                    // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
+                    // back to its original state.
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: _deletePlanetMutation,
+                        queryName: "deletePlanet",
+                        variables: new() { { "id", id }, { "partitionKeyValue", id } },
+                        authToken: authToken,
+                        clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+                }
+            }
+        }
+
+        /// <summary>
+        /// For mutation operations, the respective mutation operation type(create/update/delete) + read permissions are needed to receive a valid response.
+        /// For graphQL requests, if read permission is configured for Anonymous role, then it is inherited by other roles.
+        /// In this test, Anonymous role has read permission configured. Authenticated role has only create permission configured.
+        /// A create mutation operation is executed in the context of Authenticated role and the response is expected to have no errors because
+        /// the read permission is inherited from Anonymous role.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateInheritanceOfReadPermissionFromAnonymous()
+        {
+            const string SCHEMA = @"
+type Planet @model {
+    id : ID!,
+    name : String,
+    age : Int,
+}";
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            Dictionary<string, JsonElement> dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement("graphqldb"));
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(_containerName));
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement("custom-schema.gql"));
+            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
+                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityAction deleteAction = new(
+                Action: EntityActionOperation.Delete,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] {new EntityPermission( Role: AuthorizationResolver.ROLE_ANONYMOUS , Actions: new[] { createAction, readAction, deleteAction }),
+                       new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { createAction })};
+
+            Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Rest: null,
+                                  GraphQL: new(Singular: "Planet", Plural: "Planets"),
+                                  Permissions: permissions,
+                                  Relationships: null,
+                                  Mappings: null);
+
+            string entityName = "Planet";
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            const string CUSTOM_SCHEMA = "custom-schema.gql";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            File.WriteAllText(CUSTOM_SCHEMA, SCHEMA);
+
+            string id = Guid.NewGuid().ToString();
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try
+                {
+                    var input = new
+                    {
+                        id,
+                        name = "test_name",
+                    };
+
+                    // A create mutation operation is executed in the context of Authenticated role and the response is expected to be a valid
+                    // response without any errors.
+                    JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: _createPlanetMutation,
+                        queryName: "createPlanet",
+                        variables: new() { { "item", input } },
+                        authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                        clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
+                        );
+                        
+                    Assert.IsFalse(mutationResponse.TryGetProperty("errors", out _));
+                }
+                finally
+                {
+                    // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
+                    // back to its original state.
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: _deletePlanetMutation,
+                        queryName: "deletePlanet",
+                        variables: new() { { "id", id }, { "partitionKeyValue", id } },
+                        clientRoleHeader: null);
+                }
+            }
         }
 
         /// <summary>

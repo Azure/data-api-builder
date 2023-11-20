@@ -1089,7 +1089,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary> 
-        /// This test method checks a valid config entities against 
+        /// This test method checks a valid config's entities against 
         /// the database and ensures they are valid. 
         /// The config contains an entity source object not present in the database.
         /// It also contains an entity whose source is incorrectly specified as a stored procedure.
@@ -1161,7 +1161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This test method validates the configuration file against the schema.
+        /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures. 
         /// It also verifies that the expected log message is logged.
         /// </summary>
@@ -1193,7 +1193,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This test tries to validate an config file which is not complaint with the schema.
+        /// This test tries to validate a runtime config file that is not compliant with the runtime config JSON schema.
         /// It validates no additional properties are defined in the config file.
         /// The config file used here contains `data-source-file` instead of `data-source-files`,
         /// and `graphql` property in runtime is written as `GraphQL` in the Global runtime section.

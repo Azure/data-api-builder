@@ -43,6 +43,8 @@ update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_0
 update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_06:read" --fields.include "*" --policy-database "@item.id eq 1940"
 update Publisher --config "dab-config.DwSql.json" --permissions "database_policy_tester:read" --policy-database "@item.id ne 1234 or @item.id gt 1940"
 update Publisher --config "dab-config.DwSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
+update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
+update Stock --config "dab-config.MsSql.json" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Stock --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read"
 update Stock --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:read"
 update Stock --config "dab-config.DwSql.json" --permissions "database_policy_tester:update" --policy-database "@item.pieceid ne 1"

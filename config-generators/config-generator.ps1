@@ -15,7 +15,7 @@ if($args.Count -eq 0){
 }
 elseif($args.Count -eq 1){
     $databaseType = $args[0];
-    if(!($allowedDbTypes contains $databaseType)){
+    if(!($allowedDbTypes -contains $databaseType)){
         throw "Valid arguments are mssql, mysql, postgresql, cosmosdb_nosql or dwsql";
     }
     $databaseTypes += $databaseType;

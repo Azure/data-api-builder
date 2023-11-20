@@ -639,7 +639,7 @@ public class EndToEndTests
         process.Kill();
     }
 
-    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
     [DataTestMethod]
     public void TestVersionHasBuildHash(
         string command,

@@ -194,7 +194,6 @@ public abstract class RuntimeConfigLoader
             return connectionString;
         }
 
-        // Get the application name using ProductInfo.GetDataApiBuilderApplicationName().
         string applicationName = ProductInfo.GetDataApiBuilderApplicationName();
 
         // Create a StringBuilder from the connection string.

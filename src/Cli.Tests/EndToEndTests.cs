@@ -668,7 +668,7 @@ public class EndToEndTests
         Assert.IsNotNull(output);
 
         // Version Info logged by dab irrespective of commands being parsed correctly.
-        StringAssert.Contains(ProductInfo.GetProductVersion(), $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
 
         // Check that build hash is returned as part of  version number
         string[] versionParts = output.Split('+');

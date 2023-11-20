@@ -39,7 +39,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using NJsonSchema.Validation;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
@@ -1056,7 +1055,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 new (
                     configProvider,
                     new MockFileSystem(),
-                    configValidatorLogger.Object);
+                    configValidatorLogger.Object,
+                    isValidateOnly: true);
 
             configValidator.ValidateConfigProperties();
             TestHelper.UnsetAllDABEnvironmentVariables();
@@ -1069,20 +1069,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates config entites against database is valid."), TestCategory(TestCategory.MSSQL)]
         public async Task TestSqlMetadataForValidConfigEntities()
         {
-            RuntimeConfigValidator.TurnOnValidationOnlyMode();
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
+
             RuntimeConfigValidator configValidator =
                 new (
                     configProvider,
                     new MockFileSystem(),
-                    configValidatorLogger.Object);
+                    configValidatorLogger.Object,
+                    isValidateOnly: true);
 
-            await configValidator.ValidateEntitiesMetadata();
-            Assert.IsTrue(RuntimeConfigValidator.SqlMetadataProviderExceptions.IsNullOrEmpty());
+            await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+            Assert.IsTrue(configValidator.ConfigValidationExceptions.IsNullOrEmpty());
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
@@ -1095,7 +1097,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates config entites agains database is invalid."), TestCategory(TestCategory.MSSQL)]
         public async Task TestSqlMetadataForInvalidConfigEntities()
         {
-            RuntimeConfigValidator.TurnOnValidationOnlyMode();
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
 
             DataSource dataSource = new(DatabaseType.MSSQL,
@@ -1143,13 +1144,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 new (
                     configProvider,
                     new MockFileSystem(),
-                    configValidatorLogger.Object);
+                    configValidatorLogger.Object,
+                    isValidateOnly: true);
 
-            await configValidator.ValidateEntitiesMetadata();
+            ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
 
-            Assert.IsTrue(RuntimeConfigValidator.SqlMetadataProviderExceptions.Any());
-            Assert.AreEqual(2, RuntimeConfigValidator.SqlMetadataProviderExceptions.Count);
-            List<Exception> exceptionsList = RuntimeConfigValidator.SqlMetadataProviderExceptions.ToList();
+            await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+
+            Assert.IsTrue(configValidator.ConfigValidationExceptions.Any());
+            Assert.AreEqual(2, configValidator.ConfigValidationExceptions.Count);
+            List<Exception> exceptionsList = configValidator.ConfigValidationExceptions;
             Assert.AreEqual("Cannot obtain Schema for entity Book with underlying database "
                 + "object source: dbo.bokos due to: Invalid object name 'master.dbo.bokos'.", exceptionsList[0].Message);
             Assert.AreEqual("No stored procedure definition found for the given database object publishers", exceptionsList[1].Message);
@@ -1167,18 +1171,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
 
-            Mock<ILogger<JsonSchemaValidator>> schemaValidatorLogger = new();
-
-            SetLoggerAndFileSystemForJsonConfigSchemaValidator(
-                schemaValidatorLogger.Object, new MockFileSystem());
-
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
             
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
             string jsonData = File.ReadAllText(configLoader.ConfigFilePath);
 
-            (bool isValid, ICollection<ValidationError> validationFailures) = await ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
-            Assert.IsTrue(isValid);
-            Assert.IsTrue(validationFailures.IsNullOrEmpty());
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            Assert.IsTrue(result.IsValid);
+            Assert.IsTrue(result.ValidationErrors.IsNullOrEmpty());
             schemaValidatorLogger.Verify(
                 x => x.Log(
                     LogLevel.Information,
@@ -1200,17 +1202,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod("Validates the invalid config file schema."), TestCategory(TestCategory.MSSQL)]
         public async Task TestConfigSchemaIsInvalid()
         {
-            Mock<ILogger<JsonSchemaValidator>> schemaValidatorLogger = new();
-
-            SetLoggerAndFileSystemForJsonConfigSchemaValidator(
-                schemaValidatorLogger.Object, new MockFileSystem());
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
 
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
-            (bool isValid, ICollection<ValidationError> validationFailures) = await ValidateJsonConfigWithSchemaAsync(jsonSchema, CONFIG_WITH_INVALID_SCHEMA);
-            Assert.IsFalse(isValid);
-            Assert.AreEqual(3, validationFailures.Count);
 
-            string errorMessage = FormatSchemaValidationErrorMessage(validationFailures);
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, CONFIG_WITH_INVALID_SCHEMA);
+            Assert.IsFalse(result.IsValid);
+            Assert.AreEqual(3, result.ValidationErrors.Count);
+
+            string errorMessage = result.ErrorMessage;
             Assert.IsTrue(errorMessage.Contains("Total schema validation errors: 3"));
             Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/data-source-file at 7:31"));
             Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/runtime.Graphql at 13:26"));
@@ -1218,6 +1219,71 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     +"{\n  NoAdditionalPropertiesAllowed: #/entities.Publisher.rst\n}\n at 32:30"));
 
             TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
+        /// <summary>
+        /// DAB config doesn't support additional properties in it's config. This test validates that
+        /// a config file with additional properties fails the schema validation but still has no effect on engine startup.
+        /// </summary>
+        [TestMethod("Validates the config with custom properties works with the engine."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestInteractiveGraphQLEndpointsX()
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            loader.TryLoadKnownConfig(out RuntimeConfig config);
+
+            string customProperty = @"
+                {
+                    ""description"": ""This is a custom property""
+                }
+            ";
+
+            string combinedJson = TestHelper.AddPropertiesToJson(config.ToJson(), customProperty);
+
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, combinedJson);
+            Assert.IsFalse(result.IsValid);
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1"));
+            Assert.IsTrue(result.ErrorMessage.Contains("NoAdditionalPropertiesAllowed: #/description"));
+
+            File.WriteAllText(CUSTOM_CONFIG, combinedJson);
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            // Non-Hosted Scenario
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    book_by_pk(id: 1) {
+                       id,
+                       title,
+                       publisher_id
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+
+                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
+                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+            }
         }
 
         /// <summary>

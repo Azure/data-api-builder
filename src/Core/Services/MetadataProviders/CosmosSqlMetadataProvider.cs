@@ -34,6 +34,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public DocumentNode GraphQLSchemaRoot { get; set; }
 
+        public List<Exception> SqlMetadataExceptions {get; private set;} = new();
+
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
@@ -63,6 +65,11 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
+        }
+
+        public void HandleOrRecordException(Exception e)
+        {
+            throw new NotImplementedException();
         }
 
         /// <inheritdoc />

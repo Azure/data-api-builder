@@ -249,7 +249,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             try
             {
-                MsSqlMetadataProvider.ValidateEntityAndGraphQLPathUniqueness(path: entityPath, graphQLGlobalPath: graphQLConfigPath);
+                RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+                RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+                SetUpSQLMetadataProvider(runtimeConfigProvider);
+                ((MsSqlMetadataProvider)_sqlMetadataProvider).ValidateEntityAndGraphQLPathUniqueness(path: entityPath, graphQLGlobalPath: graphQLConfigPath);
                 if (expectsError)
                 {
                     Assert.Fail(message: "REST and GraphQL path validation expected to fail.");

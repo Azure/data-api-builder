@@ -1018,19 +1018,10 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            string? configToBeUsed = options.Config;
-            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            if (!TryGetFinalConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
             {
-                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
-            }
-
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out string runtimeConfigFile))
-            {
-                _logger.LogError("Config not provided and default config file doesn't exist.");
                 return false;
             }
-
-            loader.UpdateConfigFilePath(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
             // Replaces all the environment variables while deserializing when starting DAB.
@@ -1088,6 +1079,63 @@ namespace Cli
             }
 
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="loader"></param>
+        /// <param name="fileSystem"></param>
+        /// <returns></returns>
+        public static bool IsConfigValid(ValidateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetFinalConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            // Validates that config file has data and it is properly deserialized
+            // Replaces all the environment variables while deserializing when starting DAB.
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
+            {
+                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+            else
+            {
+                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+            }
+
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            ILoggerFactory loggerFactory = Utils.GetLoggerFactoryForCli();
+            ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
+
+            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, loggerFactory).Result;
+        }
+
+        public static bool TryGetFinalConfigForRuntimeEngine(
+            string? configToBeUsed,
+            FileSystemRuntimeConfigLoader loader,
+            IFileSystem fileSystem,
+            out string runtimeConfigFile)
+        {
+            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            {
+                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+            }
+
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile))
+            {
+                _logger.LogError("Config not provided and default config file doesn't exist.");
+                return false;
+            }
+
+            loader.UpdateConfigFilePath(runtimeConfigFile);
+
+            return true;
         }
 
         /// <summary>

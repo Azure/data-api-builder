@@ -567,7 +567,7 @@ namespace Azure.DataApiBuilder.Service
                 if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                    runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
                 IMetadataProviderFactory sqlMetadataProviderFactory =

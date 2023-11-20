@@ -27,8 +27,9 @@ namespace Azure.DataApiBuilder.Core.Services
             RuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
-            string dataSourceName)
-            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName)
+            string dataSourceName,
+            bool isValidateOnly = false)
+            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
         }
 
@@ -77,6 +78,22 @@ namespace Azure.DataApiBuilder.Core.Services
                     sourceDefinition.IsInsertDMLTriggerEnabled = true;
                     _logger.LogInformation($"An insert trigger is enabled for the entity: {entityName}");
                 }
+            }
+        }
+
+        public static bool VerifyConnectionToDatabase(string connectionString)
+        {
+            try
+            {
+                using (SqlConnection connection = new (connectionString))
+                {
+                    connection.Open();
+                    return true;
+                }
+            }
+            catch
+            {
+                return false;
             }
         }
     }

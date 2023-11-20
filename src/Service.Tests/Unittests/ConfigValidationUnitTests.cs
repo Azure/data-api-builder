@@ -55,8 +55,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 databasePolicy: dbPolicy
             );
 
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -131,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
                 Assert.AreEqual(true, isValid);
             }
             catch (DataApiBuilderException ex)
@@ -167,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             // Assert that expected exception is thrown.
-            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual($"action:{action} specified for entity:{AuthorizationHelpers.TEST_ENTITY}," +
                     $" role:{AuthorizationHelpers.TEST_ROLE} is not valid.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -204,7 +206,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
                 Assert.IsFalse(errorExpected, message: "Validation expected to have failed.");
             }
             catch (DataApiBuilderException ex)
@@ -650,7 +653,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.AreEqual("ClaimType cannot be empty.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -683,7 +686,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
             Assert.IsTrue(ex.Message.StartsWith("Invalid format for claim type"));
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -714,7 +717,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 );
             try
             {
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
                 Assert.IsFalse(errorExpected);
             }
             catch (DataApiBuilderException ex)
@@ -740,7 +744,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 );
 
             // All the validations would pass, and no exception would be thrown.
-            RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+            configValidator.ValidatePermissionsInConfig(runtimeConfig);
         }
 
         /// <summary>
@@ -763,7 +768,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the included set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
@@ -787,7 +792,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Assert that expected exception is thrown.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
             string actionName = actionOp.ToString();
             Assert.AreEqual($"No other field can be present with wildcard in the excluded set for: entity:{AuthorizationHelpers.TEST_ENTITY}," +
                 $" role:{AuthorizationHelpers.TEST_ROLE}, action:{actionName}", ex.Message);
@@ -858,12 +863,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             if (!exceptionExpected)
             {
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
             else
             {
                 DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+                configValidator.ValidatePermissionsInConfig(runtimeConfig));
 
                 // Assert that the exception returned is the one we expected.
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -1256,7 +1261,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "BOOK", bookWithAllUpperCase },
                 { "Book_alt", book_alt_upperCase }
             };
-            RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection));
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection));
         }
 
         /// <summary>
@@ -1282,7 +1289,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration);
+                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+                configValidator.ValidateGlobalEndpointRouteConfig(configuration);
 
                 if (expectError)
                 {
@@ -1311,8 +1319,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="entityName">Entity name to construct the expected exception message</param>
         private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName)
         {
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-               action: () => RuntimeConfigValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection)));
+               action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection)));
 
             Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
@@ -1505,18 +1514,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 new(DatabaseType.MSSQL, "", Options: null),
                 graphQL,
                 rest);
+            
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             if (expectError)
             {
                 DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration));
+                configValidator.ValidateGlobalEndpointRouteConfig(configuration));
                 Assert.AreEqual(expectedErrorMessage, ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration);
+                configValidator.ValidateGlobalEndpointRouteConfig(configuration);
             }
         }
 
@@ -1547,7 +1558,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(configuration);
+                RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+                configValidator.ValidateGlobalEndpointRouteConfig(configuration);
 
                 if (expectError)
                 {
@@ -1666,14 +1678,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
                 Assert.AreEqual("Not all the columns required by policy are accessible.", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
             else
             {
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
         }
 
@@ -1762,7 +1774,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             if (exceptionExpected)
             {
                 DataApiBuilderException ex =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidatePermissionsInConfig(runtimeConfig));
                 Assert.AreEqual($"No other field can be present with wildcard in the {misconfiguredColumnSet} " +
                     $"set for: entity:Publisher, role:anonymous, action:Read", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -1770,7 +1782,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             else
             {
-                RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                configValidator.ValidatePermissionsInConfig(runtimeConfig);
             }
         }
 
@@ -2020,14 +2032,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Entities: new(new Dictionary<string, Entity>())
             );
 
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+
             if (!isExceptionExpected)
             {
-                RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig);
+                configValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig);
             }
             else
             {
                 DataApiBuilderException dabException =
-                    Assert.ThrowsException<DataApiBuilderException>(() => RuntimeConfigValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig));
+                    Assert.ThrowsException<DataApiBuilderException>(() => configValidator.ValidateGlobalEndpointRouteConfig(runtimeConfig));
                 Assert.AreEqual(expectedExceptionMessage, dabException.Message);
                 Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
                 Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);

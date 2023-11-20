@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests
@@ -26,8 +27,6 @@ namespace Azure.DataApiBuilder.Service.Tests
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.ASP_NET_CORE_ENVIRONMENT_VAR_NAME, null);
             Environment.SetEnvironmentVariable(FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING, null);
-            RuntimeConfigValidator.TurnOffValidationOnlyMode();
-            RuntimeConfigValidator.SqlMetadataProviderExceptions.Clear();
         }
 
         /// <summary>
@@ -41,6 +40,12 @@ namespace Azure.DataApiBuilder.Service.Tests
             FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
             return runtimeConfigLoader;
         }
+
+        public static ILoggerFactory ProvisionLoggerFactory() =>
+          LoggerFactory.Create(builder =>
+          {
+              builder.AddConsole();
+          });
 
         /// <summary>
         /// Given the configuration path, generate the runtime configuration provider
@@ -156,6 +161,57 @@ namespace Azure.DataApiBuilder.Service.Tests
             },
             ""entities"": {}" +
           "}";
+
+        /// <summary>
+        /// <summary>
+        /// A minimal valid config json with invalid schema due to custom property `description`.
+        /// This config string is used in unit tests for schema validation tests.
+        /// </summary>
+        public const string CONFIG_WITH_INVALID_SCHEMA =
+          @"{" +
+              @"""data-source"": {
+            ""database-type"": ""mssql"",
+            ""connection-string"": """",
+            ""options"":{
+              ""set-session-context"": true
+            },
+            ""description"": ""This is a sample description""
+          },
+          ""runtime"": {
+            ""rest"": {
+              ""path"": ""/api"",
+              ""enabled"": true
+            },
+            ""graphql"": {
+              ""path"": ""/graphql"",
+              ""enabled"": true,
+              ""allow-introspection"": false
+            },
+            ""host"": {
+              ""mode"": ""production"",
+              ""cors"": {
+                ""origins"": [],
+                ""allow-credentials"": false
+              },
+              ""authentication"": {
+                ""provider"": ""StaticWebApps""
+              }
+            }
+          },
+          ""entities"": {
+            ""book"": {
+              ""source"": ""s001.book"",
+              ""permissions"": [
+                {
+                  ""role"": ""anonymous"",
+                  ""actions"": [
+                    ""*""
+                  ]
+                }
+              ]
+            }
+          }
+        }";
 
         /// <summary>
         /// A minimal valid config json without any entities. This config string is used in tests.

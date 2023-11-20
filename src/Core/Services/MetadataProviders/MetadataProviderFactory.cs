@@ -16,7 +16,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     {
         private readonly IDictionary<string, ISqlMetadataProvider> _metadataProviders;
 
-        public MetadataProviderFactory(RuntimeConfigProvider runtimeConfigProvider, IAbstractQueryManagerFactory queryManagerFactory, ILogger<ISqlMetadataProvider> logger, IFileSystem fileSystem)
+        public MetadataProviderFactory(
+            RuntimeConfigProvider runtimeConfigProvider,
+            IAbstractQueryManagerFactory queryManagerFactory,
+            ILogger<ISqlMetadataProvider> logger,
+            IFileSystem fileSystem,
+            bool isValidateOnly=false)
         {
             _metadataProviders = new Dictionary<string, ISqlMetadataProvider>();
             foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
@@ -24,9 +29,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 ISqlMetadataProvider metadataProvider = dataSource.DatabaseType switch
                 {
                     DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(runtimeConfigProvider, fileSystem),
-                    DatabaseType.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName),
-                    DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName),
-                    DatabaseType.MySQL => new MySqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName),
+                    DatabaseType.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly),
+                    DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly),
+                    DatabaseType.MySQL => new MySqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly),
                     _ => throw new NotSupportedException(dataSource.DatabaseTypeNotSupportedMessage),
                 };
 
@@ -58,6 +63,24 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     await provider.InitializeAsync();
                 }
             }
+        }
+
+        /// <summary>
+        /// Captures all the metadata exceptions from all the metadata providers at a single place.
+        /// </summary>
+        /// <returns>List of Exceptions</returns>
+        public List<Exception> GetAllMetadataExceptions()
+        {
+            List<Exception> allMetadataExceptions = new();
+            foreach ((_, ISqlMetadataProvider provider) in _metadataProviders)
+            {
+                if (provider is not null)
+                {
+                    allMetadataExceptions.AddRange(provider.SqlMetadataExceptions);
+                }
+            }
+
+            return allMetadataExceptions;
         }
 
         public IEnumerable<ISqlMetadataProvider> ListMetadataProviders()

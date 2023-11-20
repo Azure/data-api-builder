@@ -25,8 +25,9 @@ namespace Azure.DataApiBuilder.Core.Services
             RuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
-            string dataSourceName)
-            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName)
+            string dataSourceName,
+            bool isValidateOnly = false)
+            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
             try
             {
@@ -133,6 +134,23 @@ namespace Azure.DataApiBuilder.Core.Services
         public override Type SqlToCLRType(string sqlType)
         {
             throw new NotImplementedException();
+        }
+
+        public static bool VerifyConnectionToDatabase(string connectionString)
+        {
+            try
+            {
+                using (MySqlConnection conn = new(connectionString))
+                {
+                    conn.Open();
+                }
+
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
     }
 }

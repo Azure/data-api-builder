@@ -94,66 +94,54 @@ namespace Cli.Tests
         ";
 
         /// <summary>
-        /// A minimal valid config json without any entities. This config string is used in unit tests.
+        /// Data source property of the config json with custom property `description`.
+        /// This is to test that custom properties are not allowed and fails during schema validation.
         /// </summary>
-        public const string INITIAL_CONFIG =
-          "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE + "," +
-            @"
-            ""runtime"": {
+        public const string SAMPLE_DATA_SOURCE_WITH_CUSTOM_PROPERTIES = @"
+            ""data-source"": {
+              ""database-type"": ""mssql"",
+              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
+              ""description"": ""This is a sample data source description""
+            }
+        ";
+
+        public const string RUNTIME_SECTION = @"
+          ""runtime"": {
               ""rest"": {
-                ""path"": ""/api"",
-                ""enabled"": true
+                  ""path"": ""/api"",
+                  ""enabled"": true
               },
               ""graphql"": {
-                ""path"": ""/graphql"",
-                ""enabled"": true,
-                ""allow-introspection"": true
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
               },
               ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [],
-                  ""allow-credentials"": false
-                },
-                ""authentication"": {
-                  ""provider"": ""StaticWebApps""
-                }
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""StaticWebApps""
+                  }
               }
-            },
-            ""entities"": {}" +
-          "}";
+          },
+          ""entities"": {}";
+
+        /// <summary>
+        /// A minimal valid config json without any entities. This config string is used in unit tests.
+        /// </summary>
+        public const string INITIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
+          
 
         /// <summary>
         /// A minimal config json without any entities. This config is invalid as it contains an empty connection
         /// string. This config is used in tests to verify validation failures.
         /// </summary>
-        public const string INVALID_INTIAL_CONFIG = "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING + "," +
-            @"
-            ""runtime"": {
-              ""rest"": {
-                ""path"": ""/api"",
-                ""enabled"": true
-              },
-              ""graphql"": {
-                ""path"": ""/graphql"",
-                ""enabled"": true,
-                ""allow-introspection"": true
-              },
-              ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [],
-                  ""allow-credentials"": false
-                },
-                ""authentication"": {
-                  ""provider"": ""StaticWebApps""
-                }
-              }
-            },
-            ""entities"": {}" +
-          "}";
+        public const string INVALID_INTIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING},{RUNTIME_SECTION}}}";
+
+        public const string CONFIG_WITH_CUSTOM_PROPERTIES = $"{{{SAMPLE_DATA_SOURCE_WITH_CUSTOM_PROPERTIES},{RUNTIME_SECTION}}}";
 
         public const string SINGLE_ENTITY = @"
           {

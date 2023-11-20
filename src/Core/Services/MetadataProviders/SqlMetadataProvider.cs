@@ -19,7 +19,6 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
-using static Azure.DataApiBuilder.Core.Configurations.RuntimeConfigValidator;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
 namespace Azure.DataApiBuilder.Core.Services
@@ -77,11 +76,35 @@ namespace Azure.DataApiBuilder.Core.Services
 
         protected readonly ILogger<ISqlMetadataProvider> _logger;
 
+        public readonly bool _isValidateOnly;
+        public List<Exception> SqlMetadataExceptions {get; private set; } = new();
+
+        public void HandleOrRecordException(Exception e)
+        {
+            if (_isValidateOnly)
+            {
+                SqlMetadataExceptions.Add(e);
+            }
+            else
+            {
+                throw e;
+            }
+        }
+
+        public void LogSqlMetadataExceptions()
+        {
+            foreach (Exception e in SqlMetadataExceptions)
+            {
+                _logger.LogError(e.Message);
+            }
+        }
+
         public SqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory engineFactory,
             ILogger<ISqlMetadataProvider> logger,
-            string dataSourceName)
+            string dataSourceName,
+            bool isValidateOnly = false)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             _runtimeConfigProvider = runtimeConfigProvider;
@@ -89,11 +112,12 @@ namespace Azure.DataApiBuilder.Core.Services
             _databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             _entities = runtimeConfig.Entities.Where(x => string.Equals(runtimeConfig.GetDataSourceNameFromEntityName(x.Key), _dataSourceName, StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value);
             _logger = logger;
+            _isValidateOnly = isValidateOnly;
             foreach ((string entityName, Entity entityMetatdata) in _entities)
             {
                 if (runtimeConfig.IsRestEnabled)
                 {
-                    string restPath = entityMetatdata.Rest?.Path ?? entityName;
+                    string restPath = entityMetatdata.Rest?.Path ?? entityName;                    _logger.LogError("asd");
                     _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
                 }
                 else
@@ -312,10 +336,10 @@ namespace Azure.DataApiBuilder.Core.Services
             // Stored procedure does not exist in DB schema
             if (procedureMetadata.Rows.Count == 0)
             {
-                HandleOrRecordException( new DataApiBuilderException(
+                throw new DataApiBuilderException(
                     message: $"No stored procedure definition found for the given database object {storedProcedureSourceName}",
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization));
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             // Each row in the procedureParams DataTable corresponds to a single parameter
@@ -417,7 +441,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="path">Entity's calculated REST path.</param>
         /// <param name="graphQLGlobalPath">Developer configured GraphQL Path</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static void ValidateEntityAndGraphQLPathUniqueness(string path, string graphQLGlobalPath)
+        public void ValidateEntityAndGraphQLPathUniqueness(string path, string graphQLGlobalPath)
         {
             // Handle case when path does not have forward slash (/) prefix
             // by adding one if not present or ignoring an existing slash.
@@ -1218,11 +1242,11 @@ namespace Azure.DataApiBuilder.Core.Services
             // it was not set to an invalid state after initialization.
             if (string.IsNullOrWhiteSpace(ConnectionString))
             {
-                HandleOrRecordException(new DataApiBuilderException(
+                throw new DataApiBuilderException(
                     DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE +
                     " Connection string is null, empty, or whitespace.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization));
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             try
@@ -1236,11 +1260,11 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 string message = DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE +
                     $" Underlying Exception message: {ex.Message}";
-                HandleOrRecordException(new DataApiBuilderException(
+                throw new DataApiBuilderException(
                     message,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
-                    innerException: ex));
+                    innerException: ex);
             }
 
             await conn.OpenAsync();
@@ -1441,7 +1465,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
         /// whose definition has to be populated with foreign key information.</param>
         /// <exception cref="NotSupportedException"></exception>
-        private static void ValidateAllFkHaveBeenInferred(
+        private void ValidateAllFkHaveBeenInferred(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
             foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)

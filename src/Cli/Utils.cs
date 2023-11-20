@@ -840,5 +840,12 @@ namespace Cli
 
             return true;
         }
+
+        public static ILoggerFactory GetLoggerFactoryForCli()
+        {
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(new CustomLoggerProvider());
+            return loggerFactory;
+        }
     }
 }

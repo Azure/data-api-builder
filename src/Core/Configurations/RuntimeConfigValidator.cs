@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Core.Configurations.JsonConfigSchemaValidator;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -32,8 +33,8 @@ public class RuntimeConfigValidator : IConfigValidator
     // Only characters from a-z,A-Z,0-9,.,_ are allowed to be present within the claimType.
     private static readonly string _invalidClaimChars = @"[^a-zA-Z0-9_\.]+";
 
-    private static bool _isValidateOnly;
-    public static HashSet<Exception> SqlMetadataProviderExceptions {get; } = new();
+    private bool _isValidateOnly;
+    public List<Exception> ConfigValidationExceptions { get; private set; }
 
     // Regex to check occurrence of any character not among [a-z,A-Z,0-9,.,_] in the claimType.
     // The claimType is invalid if there is a match found.
@@ -58,21 +59,14 @@ public class RuntimeConfigValidator : IConfigValidator
     public RuntimeConfigValidator(
         RuntimeConfigProvider runtimeConfigProvider,
         IFileSystem fileSystem,
-        ILogger<RuntimeConfigValidator> logger)
+        ILogger<RuntimeConfigValidator> logger,
+        bool isValidateOnly = false)
     {
         _runtimeConfigProvider = runtimeConfigProvider;
         _fileSystem = fileSystem;
         _logger = logger;
-    }
-
-    public static void TurnOnValidationOnlyMode()
-    {
-        _isValidateOnly = true;
-    }
-
-    public static void TurnOffValidationOnlyMode()
-    {
-        _isValidateOnly = false;
+        _isValidateOnly = isValidateOnly;
+        ConfigValidationExceptions = new ();
     }
 
     /// <summary>
@@ -107,7 +101,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Throws exception if Invalid connection-string or database type
     /// is present in the config
     /// </summary>
-    public static void ValidateDataSourceInConfig(
+    public void ValidateDataSourceInConfig(
         RuntimeConfig runtimeConfig,
         IFileSystem fileSystem,
         ILogger logger)
@@ -117,56 +111,112 @@ public class RuntimeConfigValidator : IConfigValidator
             // Connection string can't be null or empty
             if (string.IsNullOrWhiteSpace(dataSource.ConnectionString))
             {
-                HandleOrRecordException(
-                    new DataApiBuilderException(
-                        message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization)
-                );
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization));
             }
         }
 
         ValidateDatabaseType(runtimeConfig, fileSystem, logger);
     }
 
-    public async void ValidateConfig(string configFilePath)
+    public async Task<bool> TryValidateConfig(
+        string configFilePath,
+        RuntimeConfig runtimeConfig,
+        ILoggerFactory loggerFactory,
+        bool isValidateOnly = false)
     {
-        _isValidateOnly = true;
-        await ValidateConfigSchema(configFilePath);
+        JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
-        ValidatePermissionsInConfig(_runtimeConfigProvider.GetConfig());
-        await ValidateEntitiesMetadata();
-        _isValidateOnly = false;
+        bool isValidConnectionString = ValidateConnectionString(runtimeConfig.DataSource);
+        if (!isValidConnectionString)
+        {
+            // return from here as databse connection could not be estabilished.
+            return false;
+        }
+
+        ValidatePermissionsInConfig(runtimeConfig);
+        await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
+
+        if (validationResult.IsValid && !ConfigValidationExceptions.Any())
+        {
+            return true;
+        }
+        else
+        {
+            if (!validationResult.IsValid)
+            {
+                // log schema validation errors
+                _logger.LogError(validationResult.ErrorMessage);
+            }
+
+            // log config validation errors
+            LogConfigValidationExceptions();
+            return false;
+        }
     }
 
-    public async Task ValidateConfigSchema(string configFilePath)
+    public async Task<JsonSchemaValidationResult> ValidateConfigSchema(RuntimeConfig runtimeConfig, string configFilePath, ILoggerFactory loggerFactory)
     {
-        string jsonData = _fileSystem.File.ReadAllText(configFilePath);
-        await JsonConfigSchemaValidator.ValidateJsonConfig(jsonData);
+        string jsonData = File.ReadAllText(configFilePath);
+        ILogger<JsonConfigSchemaValidator> jsonConfigValidatorLogger = loggerFactory.CreateLogger<JsonConfigSchemaValidator>();
+        JsonConfigSchemaValidator jsonConfigSchemaValidator = new(jsonConfigValidatorLogger, _fileSystem);
+
+        string? jsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+
+        if (string.IsNullOrWhiteSpace(jsonSchema))
+        {
+            _logger.LogError("Failed to get the json schema for the config.");
+            return new JsonSchemaValidationResult(false, null);
+        }
+
+        return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+
+        
     }
 
-    public async Task ValidateEntitiesMetadata()
+    public async Task ValidateEntitiesMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
     {
-        LoggerFactory loggerFactory = new();
         QueryManagerFactory queryManagerFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
             logger: loggerFactory.CreateLogger<IQueryExecutor>(),
             contextAccessor: null!);
         
+        // create metadata provider factory to validate metadata against the database
         MetadataProviderFactory metadataProviderFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
             queryManagerFactory: queryManagerFactory,
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
-            fileSystem: _fileSystem);
+            fileSystem: _fileSystem,
+            isValidateOnly: _isValidateOnly);
         
         await metadataProviderFactory.InitializeAsync();
+        ConfigValidationExceptions.AddRange(metadataProviderFactory.GetAllMetadataExceptions());
         
-        ValidateRelationshipsInConfig(_runtimeConfigProvider.GetConfig(), metadataProviderFactory);
-        ValidateStoredProceduresInConfig(_runtimeConfigProvider.GetConfig(), metadataProviderFactory);
+        ValidateRelationshipsInConfig(runtimeConfig, metadataProviderFactory);
+        ValidateStoredProceduresInConfig(runtimeConfig, metadataProviderFactory);
+    }
 
-        foreach (Exception exception in SqlMetadataProviderExceptions)
+    public void LogConfigValidationExceptions()
+    {
+        foreach (Exception exception in ConfigValidationExceptions)
         {
             _logger.LogError(exception.Message);
+        }
+    }
+
+    public static bool ValidateConnectionString(DataSource dataSource)
+    {
+        string connectionString = dataSource.ConnectionString;
+        DatabaseType databaseType = dataSource.DatabaseType;
+
+        switch(databaseType)
+        {
+            case DatabaseType.MSSQL: return MsSqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
+            case DatabaseType.MySQL: return MySqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
+            case DatabaseType.PostgreSQL: return PostgreSqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
+            default: return true;
         }
     }
 
@@ -174,7 +224,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Throws exception if database type is incorrectly configured
     /// in the config.
     /// </summary>
-    public static void ValidateDatabaseType(
+    public void ValidateDatabaseType(
         RuntimeConfig runtimeConfig,
         IFileSystem fileSystem,
         ILogger logger)
@@ -185,8 +235,7 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
             {
-                try
-                {
+                try{
                     CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
                         dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
                         throw new DataApiBuilderException(
@@ -212,23 +261,11 @@ public class RuntimeConfigValidator : IConfigValidator
                         }
                     }
                 }
-                catch (Exception e)
+                catch(Exception e)
                 {
                     HandleOrRecordException(e);
                 }
             }
-        }
-    }
-
-    public static void HandleOrRecordException(Exception exception)
-    {
-        if (_isValidateOnly)
-        {
-            SqlMetadataProviderExceptions.Add(exception);
-        }
-        else
-        {
-            throw exception;
         }
     }
 
@@ -260,7 +297,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     /// <param name="entityCollection">Entity definitions</param>
     /// <exception cref="DataApiBuilderException"></exception>
-    public static void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(RuntimeEntities entityCollection)
+    public void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(RuntimeEntities entityCollection)
     {
         HashSet<string> graphQLOperationNames = new();
 
@@ -409,7 +446,7 @@ public class RuntimeConfigValidator : IConfigValidator
         }
     }
 
-    private static void ValidateNameRequirements(string entityName)
+    private void ValidateNameRequirements(string entityName)
     {
         if (GraphQLNaming.ViolatesNamePrefixRequirements(entityName) ||
             GraphQLNaming.ViolatesNameRequirements(entityName))
@@ -427,7 +464,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// are enabled.
     /// </summary>
     /// <param name="runtimeConfig">The config that will be validated.</param>
-    public static void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
+    public void ValidateGlobalEndpointRouteConfig(RuntimeConfig runtimeConfig)
     {
         // Both REST and GraphQL endpoints cannot be disabled at the same time.
         if (!runtimeConfig.IsRestEnabled && !runtimeConfig.IsGraphQLEnabled)
@@ -485,7 +522,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Skips validation for cosmosDB since it doesn't support REST.
     /// </summary>
     /// <param name="runtimeConfig"></param>
-    public static void ValidateRestURI(RuntimeConfig runtimeConfig)
+    public void ValidateRestURI(RuntimeConfig runtimeConfig)
     {
         if (runtimeConfig.ListAllDataSources().All(x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL))
         {
@@ -509,7 +546,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Method to validate that the GraphQL URI (GraphQL path prefix).
     /// </summary>
     /// <param name="runtimeConfig"></param>
-    public static void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
+    public void ValidateGraphQLURI(RuntimeConfig runtimeConfig)
     {
         string graphqlPath = runtimeConfig.GraphQLPath;
         if (!TryValidateUriComponent(graphqlPath, out string exceptionMsgSuffix))
@@ -563,7 +600,7 @@ public class RuntimeConfigValidator : IConfigValidator
         return _reservedUriCharsRgx.IsMatch(uriComponent);
     }
 
-    private static void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
+    private void ValidateAuthenticationOptions(RuntimeConfig runtimeConfig)
     {
         // Bypass validation of auth if there is no auth provided
         if (runtimeConfig.Runtime?.Host?.Authentication is null)
@@ -598,7 +635,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Validates the semantic correctness of the permissions defined for each entity within runtime configuration.
     /// </summary>
     /// <exception cref="DataApiBuilderException">Throws exception when permission validation fails.</exception>
-    public static void ValidatePermissionsInConfig(RuntimeConfig runtimeConfig)
+    public void ValidatePermissionsInConfig(RuntimeConfig runtimeConfig)
     {
         foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
         {
@@ -933,7 +970,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="policy">The policy to be validated and processed.</param>
     /// <returns>Processed policy</returns>
     /// <exception cref="DataApiBuilderException">Throws exception when one or the other validations fail.</exception>
-    private static void ValidateClaimsInPolicy(string policy, RuntimeConfig runtimeConfig)
+    private void ValidateClaimsInPolicy(string policy, RuntimeConfig runtimeConfig)
     {
         // Find all the claimTypes from the policy
         MatchCollection claimTypes = GetClaimTypesInPolicy(policy);
@@ -992,7 +1029,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="policy">Database policy</param>
     /// <param name="include">Array of fields which are accessible to the user.</param>
     /// <param name="exclude">Array of fields which are not accessible to the user.</param>
-    private static void AreFieldsAccessible(string policy, HashSet<string>? includedFields, HashSet<string> excludedFields)
+    private void AreFieldsAccessible(string policy, HashSet<string>? includedFields, HashSet<string> excludedFields)
     {
         // Pattern of field references in the policy
         string fieldCharsRgx = @"@item\.[a-zA-Z0-9_]*";
@@ -1060,6 +1097,18 @@ public class RuntimeConfigValidator : IConfigValidator
             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
     }
 
+    private void HandleOrRecordException(Exception ex)
+    {
+        if (_isValidateOnly)
+        {
+            ConfigValidationExceptions.Add(ex);
+        }
+        else
+        {
+            throw ex;
+        }
+    }
+
     /// <summary>
     /// Returns whether the action is a valid
     /// Valid non stored procedure actions:
@@ -1072,7 +1121,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="entity">Used to identify entity's representative object type.</param>
     /// <param name="entityName">Used to supplement error messages.</param>
     /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-    public static bool IsValidPermissionAction(EntityActionOperation action, Entity entity, string entityName)
+    public bool IsValidPermissionAction(EntityActionOperation action, Entity entity, string entityName)
     {
         if (entity.Source.Type is EntitySourceType.StoredProcedure)
         {
@@ -1098,5 +1147,10 @@ public class RuntimeConfigValidator : IConfigValidator
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);
         }
+    }
+
+    public void ClearValidationExceptionList()
+    {
+        ConfigValidationExceptions.Clear();
     }
 }

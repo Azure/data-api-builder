@@ -27,8 +27,7 @@ namespace Cli
             DotNetEnv.Env.Load();
 
             // Setting up Logger for CLI.
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(new CustomLoggerProvider());
+            ILoggerFactory loggerFactory = Utils.GetLoggerFactoryForCli();
 
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
@@ -58,6 +57,7 @@ namespace Cli
                 .WithParsed((Action<AddOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<UpdateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<StartOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
+                .WithParsed((Action<ValidateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<ExportOptions>)(options => Exporter.Export(options, cliLogger, loader, fileSystem)))
                 .WithNotParsed(err =>
                 {

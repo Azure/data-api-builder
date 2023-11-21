@@ -5,8 +5,10 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Web;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -519,17 +521,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>The string representing nextLink.</returns>
         public static JsonElement CreateNextLink(string path, NameValueCollection? nvc, string after)
         {
-            if (nvc is null)
-            {
-                nvc = new();
-            }
-
+            string queryString = FormatQueryString(queryParameters: nvc);
             if (!string.IsNullOrWhiteSpace(after))
             {
-                nvc["$after"] = after;
+                string afterPrefix = string.IsNullOrWhiteSpace(queryString) ? "?" : "&";
+                queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={after}";
             }
-
-            string queryString = FormatQueryString(queryParameters: nvc);
 
             // ValueKind will be array so we can differentiate from other objects in the response
             // to be returned.
@@ -567,9 +564,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="queryParameters">Key: $QueryParamKey Value: QueryParamValue</param>
         /// <returns>Query string prefixed with question mark (?). Returns an empty string when
         /// no entries exist in queryParameters.</returns>
-        public static string FormatQueryString(NameValueCollection queryParameters)
+        public static string FormatQueryString(NameValueCollection? queryParameters)
         {
             string queryString = "";
+            if (queryParameters is null || queryParameters.Count is 0)
+            {
+                return queryString;
+            }
+
             foreach (string key in queryParameters)
             {
                 if (string.IsNullOrWhiteSpace(key))

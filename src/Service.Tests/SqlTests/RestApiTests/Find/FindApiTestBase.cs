@@ -708,7 +708,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrPath: _integrationPaginationEntityName,
                 sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink)),
-                expectedAfterQueryString: $"?$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"?$after={after}",
                 paginated: true
             );
         }

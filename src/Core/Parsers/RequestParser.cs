@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <summary>
         /// Prefix used for specifying paging in the query string of the URL.
         /// </summary>
-        private const string AFTER_URL = "$after";
+        public const string AFTER_URL = "$after";
 
         /// <summary>
         /// Parses the primary key string to identify the field names composing the key

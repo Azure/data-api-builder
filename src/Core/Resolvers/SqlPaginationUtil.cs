@@ -5,7 +5,6 @@ using System.Collections.Specialized;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Web;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;

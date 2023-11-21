@@ -153,6 +153,7 @@ namespace Cli
                     dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement(graphQLSchemaPath));
                     break;
 
+                case DatabaseType.DWSQL:
                 case DatabaseType.MSSQL:
                     dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), JsonSerializer.SerializeToElement(options.SetSessionContext));
 

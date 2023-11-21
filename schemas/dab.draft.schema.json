@@ -8,7 +8,7 @@
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "Location of the schema file used for building Data API builder configuration file.",
+      "description": "URI of the JSON schema with which the structure, constraints, and data types of this Data API builder runtime configuration file should conform.",
       "default": null
     },
     "data-source": {
@@ -403,7 +403,7 @@
             },
             "permissions": {
               "type": "array",
-              "description": "Permissions assigned to this object"
+              "description": "Permissions assigned to this entity"
             },
             "mappings": {
               "type": "object",

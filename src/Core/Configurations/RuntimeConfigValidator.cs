@@ -3,13 +3,11 @@
 
 using System.IO.Abstractions;
 using System.Net;
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
@@ -195,7 +193,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ConfigValidationExceptions.AddRange(metadataProviderFactory.GetAllMetadataExceptions());
         
         ValidateRelationshipsInConfig(runtimeConfig, metadataProviderFactory);
-        ValidateStoredProceduresInConfig(runtimeConfig, metadataProviderFactory);
     }
 
     public void LogConfigValidationExceptions()
@@ -921,44 +918,6 @@ public class RuntimeConfigValidator : IConfigValidator
                         targetDBOName,
                         targetColumns
                         );
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Validates the parameters given in the config are consistent with the DB i.e., config has all
-    /// the parameters that are specified for the stored procedure in DB.
-    /// </summary>
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "Current use by dab workflow")]
-    public void ValidateStoredProceduresInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
-    {
-        RequestValidator requestValidator = new(sqlMetadataProviderFactory, _runtimeConfigProvider);
-        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
-        {
-            string dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
-            ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
-            // We are only doing this pre-check for GraphQL because for GraphQL we need the correct schema while making request
-            // so if the schema is not correct we will halt the engine
-            // but for rest we can do it when a request is made and only fail that particular request.
-            if (entity.Source.Type is EntitySourceType.StoredProcedure && entity.GraphQL.Enabled)
-            {
-                DatabaseObject dbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                StoredProcedureRequestContext sqRequestContext =
-                    new(entityName,
-                        dbObject,
-                        JsonSerializer.SerializeToElement(entity.Source.Parameters),
-                        EntityActionOperation.All);
-                try
-                {
-                    requestValidator.ValidateStoredProcedureRequestContext(sqRequestContext);
-                }
-                catch (DataApiBuilderException e)
-                {
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: e.Message,
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
             }
         }

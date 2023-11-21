@@ -41,9 +41,9 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
+using static Azure.DataApiBuilder.Core.Configurations.JsonConfigSchemaValidator;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
-using static Azure.DataApiBuilder.Core.Configurations.JsonConfigSchemaValidator;
 
 namespace Azure.DataApiBuilder.Service.Tests.Configuration
 {
@@ -377,7 +377,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 }
             }
         }";
-        
 
         [TestCleanup]
         public void CleanupAfterEachTest()
@@ -1052,7 +1051,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
             RuntimeConfigValidator configValidator =
-                new (
+                new(
                     configProvider,
                     new MockFileSystem(),
                     configValidatorLogger.Object,
@@ -1077,7 +1076,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
 
             RuntimeConfigValidator configValidator =
-                new (
+                new(
                     configProvider,
                     new MockFileSystem(),
                     configValidatorLogger.Object,
@@ -1114,7 +1113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Relationships: null,
                 Mappings: null
                 );
-            
+
             Entity entityWithInvalidSourceType = new(
                 Source: new("publishers", EntitySourceType.StoredProcedure, null, null),
                 Rest: null,
@@ -1124,14 +1123,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Mappings: null
                 );
 
-            configuration = configuration with { 
-                    Entities = new RuntimeEntities( new Dictionary<string,Entity>()
+            configuration = configuration with
+            {
+                Entities = new RuntimeEntities(new Dictionary<string, Entity>()
                     {
                         { "Book", entityWithInvalidSourceName },
                         { "Publisher", entityWithInvalidSourceType}
                     })
-                };
-            
+            };
+
             const string CUSTOM_CONFIG = "custom-config.json";
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
 
@@ -1141,7 +1141,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
             RuntimeConfigValidator configValidator =
-                new (
+                new(
                     configProvider,
                     new MockFileSystem(),
                     configValidatorLogger.Object,
@@ -1172,7 +1172,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
 
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
-            
+
             string jsonSchema = File.ReadAllText("dab.draft.schema.json");
             string jsonData = File.ReadAllText(configLoader.ConfigFilePath);
 
@@ -1216,7 +1216,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/data-source-file at 7:31"));
             Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/runtime.Graphql at 13:26"));
             Assert.IsTrue(errorMessage.Contains("AdditionalPropertiesNotValid: #/entities.Publisher\n"
-                    +"{\n  NoAdditionalPropertiesAllowed: #/entities.Publisher.rst\n}\n at 32:30"));
+                    + "{\n  NoAdditionalPropertiesAllowed: #/entities.Publisher.rst\n}\n at 32:30"));
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }

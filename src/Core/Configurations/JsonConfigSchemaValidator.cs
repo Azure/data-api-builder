@@ -37,24 +37,25 @@ public class JsonConfigSchemaValidator
     /// if the validation was successful and a collection of validation errors if there were any.</returns> 
     public async Task<JsonSchemaValidationResult> ValidateJsonConfigWithSchemaAsync(string jsonSchema, string jsonData)
     {
-        try{
+        try
+        {
             JsonSchema schema = await JsonSchema.FromJsonAsync(jsonSchema);
             ICollection<ValidationError> validationErrors = schema.Validate(jsonData, SchemaType.JsonSchema);
 
             if (!validationErrors.Any())
             {
                 _logger!.LogInformation("The config satisfies the schema requirements.");
-                return new (true, null);
+                return new(true, null);
             }
             else
             {
-                return new (false, validationErrors);
+                return new(false, validationErrors);
             }
         }
         catch (Exception e)
         {
             _logger!.LogError($"Failed to validate config against schema due to \n{e.Message}");
-            return new (false, null);
+            return new(false, null);
         }
     }
 
@@ -70,7 +71,6 @@ public class JsonConfigSchemaValidator
             Console.WriteLine("The config is invalid.");
             return;
         }
-        
 
         string? jsonSchema = await GetJsonSchema(config);
 
@@ -81,7 +81,7 @@ public class JsonConfigSchemaValidator
         }
 
         JsonSchemaValidationResult jsonSchemaValidationResult = await ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonConfig);
-        
+
         if (!jsonSchemaValidationResult.IsValid && jsonSchemaValidationResult.ValidationErrors != null)
         {
             _logger!.LogInformation(FormatSchemaValidationErrorMessage(jsonSchemaValidationResult.ValidationErrors));
@@ -99,7 +99,7 @@ public class JsonConfigSchemaValidator
     //     }
 
     //     JsonSchemaValidationResult jsonSchemaValidationResult = await ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonConfig);
-        
+
     //     if (!jsonSchemaValidationResult.IsValid && jsonSchemaValidationResult.ValidationErrors != null)
     //     {
     //         _logger!.LogInformation(FormatSchemaValidationErrorMessage(jsonSchemaValidationResult.ValidationErrors));
@@ -115,7 +115,8 @@ public class JsonConfigSchemaValidator
     {
         if (!string.IsNullOrWhiteSpace(runtimeConfig.Schema) && !runtimeConfig.Schema.Equals(RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK))
         {
-            try {
+            try
+            {
                 JsonSchema jsonSchema = await JsonSchema.FromUrlAsync(runtimeConfig.Schema);
                 return jsonSchema.ToJson();
             }
@@ -125,7 +126,8 @@ public class JsonConfigSchemaValidator
             }
         }
 
-        try {
+        try
+        {
             return GetSchemaFromAssemblyPackage();
         }
         catch (Exception e)
@@ -176,7 +178,7 @@ public class JsonConfigSchemaValidator
             IsValid = isValid;
             ValidationErrors = errors;
             ErrorCount = errors?.Count ?? 0;
-            ErrorMessage = errors is null? string.Empty :FormatSchemaValidationErrorMessage(errors);
+            ErrorMessage = errors is null ? string.Empty : FormatSchemaValidationErrorMessage(errors);
         }
 
         private static string FormatSchemaValidationErrorMessage(ICollection<ValidationError> validationErrors)

@@ -40,7 +40,7 @@ public class ValidateConfigTests
     {
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_CUSTOM_PROPERTIES);
 
-        ValidateOptions validateOptions = new (TEST_RUNTIME_CONFIG_FILE);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
         bool isConfigValid = ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
         Assert.IsFalse(isConfigValid);
@@ -54,7 +54,7 @@ public class ValidateConfigTests
     {
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
-        ValidateOptions validateOptions = new (TEST_RUNTIME_CONFIG_FILE);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
         bool isConfigValid = ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
         Assert.IsTrue(isConfigValid);
@@ -68,7 +68,7 @@ public class ValidateConfigTests
     {
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY));
 
-        ValidateOptions validateOptions = new (TEST_RUNTIME_CONFIG_FILE);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
         bool isConfigValid = ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
         Assert.IsFalse(isConfigValid);

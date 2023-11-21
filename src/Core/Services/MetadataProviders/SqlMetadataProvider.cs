@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Services
         protected readonly ILogger<ISqlMetadataProvider> _logger;
 
         public readonly bool _isValidateOnly;
-        public List<Exception> SqlMetadataExceptions {get; private set; } = new();
+        public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
         public void HandleOrRecordException(Exception e)
         {
@@ -117,7 +117,8 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 if (runtimeConfig.IsRestEnabled)
                 {
-                    string restPath = entityMetatdata.Rest?.Path ?? entityName;                    _logger.LogError("asd");
+                    string restPath = entityMetatdata.Rest?.Path ?? entityName;
+                    _logger.LogError("asd");
                     _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
                 }
                 else
@@ -371,7 +372,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
                     {
-                        HandleOrRecordException( new DataApiBuilderException(
+                        HandleOrRecordException(new DataApiBuilderException(
                             message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureSourceName}\"",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization));
@@ -455,7 +456,7 @@ namespace Azure.DataApiBuilder.Core.Services
             if (string.Equals(path, graphQLGlobalPath, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(path, GraphQLRuntimeOptions.DEFAULT_PATH, StringComparison.OrdinalIgnoreCase))
             {
-                HandleOrRecordException( new DataApiBuilderException(
+                HandleOrRecordException(new DataApiBuilderException(
                     message: "Entity's REST path conflicts with GraphQL reserved paths.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
@@ -549,7 +550,8 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, DatabaseObject> sourceObjects = new();
             foreach ((string entityName, Entity entity) in _entities)
             {
-                try {
+                try
+                {
                     EntitySourceType sourceType = GetEntitySourceType(entityName, entity);
 
                     if (!EntityToDatabaseObject.ContainsKey(entityName))
@@ -604,7 +606,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
                     }
                 }
-                catch (Exception e) {
+                catch (Exception e)
+                {
                     HandleOrRecordException(e);
                 }
             }

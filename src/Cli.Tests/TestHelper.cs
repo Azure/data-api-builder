@@ -133,7 +133,6 @@ namespace Cli.Tests
         /// A minimal valid config json without any entities. This config string is used in unit tests.
         /// </summary>
         public const string INITIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
-          
 
         /// <summary>
         /// A minimal config json without any entities. This config is invalid as it contains an empty connection

@@ -64,7 +64,7 @@ public class RuntimeConfigValidator : IConfigValidator
         _fileSystem = fileSystem;
         _logger = logger;
         _isValidateOnly = isValidateOnly;
-        ConfigValidationExceptions = new ();
+        ConfigValidationExceptions = new();
     }
 
     /// <summary>
@@ -171,7 +171,6 @@ public class RuntimeConfigValidator : IConfigValidator
 
         return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
 
-        
     }
 
     public async Task ValidateEntitiesMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
@@ -180,7 +179,7 @@ public class RuntimeConfigValidator : IConfigValidator
             runtimeConfigProvider: _runtimeConfigProvider,
             logger: loggerFactory.CreateLogger<IQueryExecutor>(),
             contextAccessor: null!);
-        
+
         // create metadata provider factory to validate metadata against the database
         MetadataProviderFactory metadataProviderFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
@@ -188,10 +187,10 @@ public class RuntimeConfigValidator : IConfigValidator
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
             fileSystem: _fileSystem,
             isValidateOnly: _isValidateOnly);
-        
+
         await metadataProviderFactory.InitializeAsync();
         ConfigValidationExceptions.AddRange(metadataProviderFactory.GetAllMetadataExceptions());
-        
+
         ValidateRelationshipsInConfig(runtimeConfig, metadataProviderFactory);
     }
 
@@ -208,12 +207,16 @@ public class RuntimeConfigValidator : IConfigValidator
         string connectionString = dataSource.ConnectionString;
         DatabaseType databaseType = dataSource.DatabaseType;
 
-        switch(databaseType)
+        switch (databaseType)
         {
-            case DatabaseType.MSSQL: return MsSqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
-            case DatabaseType.MySQL: return MySqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
-            case DatabaseType.PostgreSQL: return PostgreSqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
-            default: return true;
+            case DatabaseType.MSSQL:
+                return MsSqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
+            case DatabaseType.MySQL:
+                return MySqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
+            case DatabaseType.PostgreSQL:
+                return PostgreSqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
+            default:
+                return true;
         }
     }
 
@@ -232,7 +235,8 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
             {
-                try{
+                try
+                {
                     CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
                         dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
                         throw new DataApiBuilderException(
@@ -258,7 +262,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         }
                     }
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     HandleOrRecordException(e);
                 }
@@ -707,7 +711,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         operationsList.Add(actionOp);
                         totalSupportedOperationsFromAllRoles.Add(actionOp);
                     }
-                    catch(Exception e)
+                    catch (Exception e)
                     {
                         HandleOrRecordException(e);
                     }

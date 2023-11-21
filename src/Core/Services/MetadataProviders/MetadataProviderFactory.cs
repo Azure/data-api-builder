@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             IFileSystem fileSystem,
-            bool isValidateOnly=false)
+            bool isValidateOnly = false)
         {
             _metadataProviders = new Dictionary<string, ISqlMetadataProvider>();
             foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())

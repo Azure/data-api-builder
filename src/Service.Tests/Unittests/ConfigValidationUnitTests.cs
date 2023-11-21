@@ -1514,7 +1514,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 new(DatabaseType.MSSQL, "", Options: null),
                 graphQL,
                 rest);
-            
+
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
 
             if (expectError)

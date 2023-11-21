@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             try
             {
-                using (SqlConnection connection = new (connectionString))
+                using (SqlConnection connection = new(connectionString))
                 {
                     connection.Open();
                     return true;

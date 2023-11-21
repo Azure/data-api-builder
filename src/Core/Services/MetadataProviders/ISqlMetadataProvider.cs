@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public void HandleOrRecordException(Exception e);
 
-        public List<Exception> SqlMetadataExceptions {get;}
+        public List<Exception> SqlMetadataExceptions { get; }
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 

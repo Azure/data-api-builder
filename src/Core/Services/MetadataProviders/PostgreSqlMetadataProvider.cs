@@ -74,22 +74,5 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             throw new NotImplementedException();
         }
-
-        public static bool VerifyConnectionToDatabase(string connectionString)
-        {
-            try
-            {
-                using (NpgsqlConnection conn = new(connectionString))
-                {
-                    conn.Open();
-                }
-
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }

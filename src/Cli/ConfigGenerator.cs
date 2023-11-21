@@ -1083,12 +1083,8 @@ namespace Cli
         }
 
         /// <summary>
-        /// 
+        /// Runs all the validations on the config file and returns true if the config is valid.
         /// </summary>
-        /// <param name="options"></param>
-        /// <param name="loader"></param>
-        /// <param name="fileSystem"></param>
-        /// <returns></returns>
         public static bool IsConfigValid(ValidateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             if (!TryGetFinalConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
@@ -1117,6 +1113,11 @@ namespace Cli
             return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, loggerFactory).Result;
         }
 
+        /// <summary>
+        /// Tries to fetch the config file based on the precedence.
+        /// if config provided by the user, it will be the final config used, else will check based on the environment variable.
+        /// Returns true if the config file is found, else false.
+        /// </summary>
         public static bool TryGetFinalConfigForRuntimeEngine(
             string? configToBeUsed,
             FileSystemRuntimeConfigLoader loader,

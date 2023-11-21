@@ -80,21 +80,5 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
         }
-
-        public static bool VerifyConnectionToDatabase(string connectionString)
-        {
-            try
-            {
-                using (SqlConnection connection = new(connectionString))
-                {
-                    connection.Open();
-                    return true;
-                }
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }

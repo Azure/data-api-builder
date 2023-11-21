@@ -88,24 +88,6 @@ public class JsonConfigSchemaValidator
         }
     }
 
-    // public async Task ValidateJsonSchema(RuntimeConfig runtimeConfig, string jsonData)
-    // {
-    //     string? jsonSchema = await GetJsonSchema(config);
-
-    //     if (string.IsNullOrWhiteSpace(jsonSchema))
-    //     {
-    //         _logger!.LogWarning("The schema file is invalid. Unable to verify provided config against schema.");
-    //         return;
-    //     }
-
-    //     JsonSchemaValidationResult jsonSchemaValidationResult = await ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonConfig);
-
-    //     if (!jsonSchemaValidationResult.IsValid && jsonSchemaValidationResult.ValidationErrors != null)
-    //     {
-    //         _logger!.LogInformation(FormatSchemaValidationErrorMessage(jsonSchemaValidationResult.ValidationErrors));
-    //     }
-    // }
-
     /// <summary>
     /// Retrieves the JSON schema for validation from the provided runtime config or the assembly package. 
     /// </summary> 
@@ -113,6 +95,7 @@ public class JsonConfigSchemaValidator
     /// <returns>The JSON schema as a string, or null if the schema cannot be obtained.</returns> 
     public async Task<string?> GetJsonSchema(RuntimeConfig runtimeConfig)
     {
+        // DEFAULT_CONFIG_SCHEMA_LINK is just a placeholder with no actual schema, hence should not be used to fetch the schema.
         if (!string.IsNullOrWhiteSpace(runtimeConfig.Schema) && !runtimeConfig.Schema.Equals(RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK))
         {
             try
@@ -164,6 +147,9 @@ public class JsonConfigSchemaValidator
         return contents;
     }
 
+    /// <summary>
+    /// Class to hold the result of a JSON schema validation.
+    /// </summary>
     public class JsonSchemaValidationResult
     {
         public bool IsValid;

@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
     /// </summary>
     [TestCategory(TestCategory.MSSQL)]
     [TestClass]
-    public class PathValidation
+    public class PathValidationTests
     {
         private const string CUSTOM_CONFIG = "path-config.MsSql.json";
         private const string MSSQL_ENVIRONMENT = TestCategory.MSSQL;
@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.OpenApiIntegration
             };
 
             RuntimeEntities runtimeEntities = new(entities);
-            OpenApiDocument openApiDocument = await OpenApiTestBootstrap.GenerateOpenApiDocument(
+            OpenApiDocument openApiDocument = await OpenApiTestBootstrap.GenerateOpenApiDocumentAsync(
                 runtimeEntities: runtimeEntities,
                 configFileName: CUSTOM_CONFIG,
                 databaseEnvironment: MSSQL_ENVIRONMENT);

@@ -18,11 +18,11 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <summary>
         /// Prefix used for specifying the fields in the query string of the URL.
         /// </summary>
-        private const string FIELDS_URL = "$select";
+        public const string FIELDS_URL = "$select";
         /// <summary>
         /// Prefix used for specifying the fields to be used to sort the result in the query string of the URL.
         /// </summary>
-        private const string SORT_URL = "$orderby";
+        public const string SORT_URL = "$orderby";
         /// <summary>
         /// Prefix used for specifying filter in the query string of the URL.
         /// </summary>
@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <summary>
         /// Prefix used for specifying limit in the query string of the URL.
         /// </summary>
-        private const string FIRST_URL = "$first";
+        public const string FIRST_URL = "$first";
         /// <summary>
         /// Prefix used for specifying paging in the query string of the URL.
         /// </summary>

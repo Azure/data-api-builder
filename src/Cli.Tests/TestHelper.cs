@@ -130,6 +130,34 @@ namespace Cli.Tests
           ""entities"": {}";
 
         /// <summary>
+        /// Runtime section containing both rest and graphql disabled.
+        /// This is used for validating config to test that exceptions are thrown when both rest and graphql are disabled.
+        /// </summary>
+        public const string RUNTIME_SECTION_WITH_DISABLED_REST_GRAPHQL = @"
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": false
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": false,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""StaticWebApps""
+                  }
+              }
+          },
+          ""entities"": {}";
+
+        /// <summary>
         /// A minimal valid config json without any entities. This config string is used in unit tests.
         /// </summary>
         public const string INITIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
@@ -141,6 +169,8 @@ namespace Cli.Tests
         public const string INVALID_INTIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING},{RUNTIME_SECTION}}}";
 
         public const string CONFIG_WITH_CUSTOM_PROPERTIES = $"{{{SAMPLE_DATA_SOURCE_WITH_CUSTOM_PROPERTIES},{RUNTIME_SECTION}}}";
+
+        public const string CONFIG_WITH_DISABLED_GLOBAL_REST_GRAPHQL = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION_WITH_DISABLED_REST_GRAPHQL}}}";
 
         public const string SINGLE_ENTITY = @"
           {

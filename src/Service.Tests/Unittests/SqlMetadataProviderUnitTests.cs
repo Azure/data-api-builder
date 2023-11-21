@@ -249,6 +249,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             try
             {
+                DatabaseEngine = TestCategory.MSSQL;
+                TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
                 RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
                 RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
                 SetUpSQLMetadataProvider(runtimeConfigProvider);

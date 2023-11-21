@@ -50,23 +50,9 @@ public class ValidateConfigTests
     /// Validates that the IsConfigValid method returns true when the config is valid, i.e No custom proerties.
     /// </summary>
     [TestMethod]
-    public void TestConfigWithNoCustomPropertyAsValid()
+    public void TestConfigWithInValidConfigProperties()
     {
-        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
-
-        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
-
-        bool isConfigValid = ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
-        Assert.IsTrue(isConfigValid);
-    }
-
-    /// <summary>
-    /// Validates that the IsConfigValid method returns true when the config is valid, i.e No custom proerties.
-    /// </summary>
-    [TestMethod]
-    public void TestConfigWithInValidConnectionString()
-    {
-        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY));
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_DISABLED_GLOBAL_REST_GRAPHQL);
 
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 

@@ -127,13 +127,6 @@ public class RuntimeConfigValidator : IConfigValidator
     {
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
-        bool isValidConnectionString = ValidateConnectionString(runtimeConfig.DataSource);
-        if (!isValidConnectionString)
-        {
-            // return from here as databse connection could not be estabilished.
-            return false;
-        }
-
         ValidatePermissionsInConfig(runtimeConfig);
         await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
 
@@ -170,7 +163,6 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
-
     }
 
     public async Task ValidateEntitiesMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
@@ -199,24 +191,6 @@ public class RuntimeConfigValidator : IConfigValidator
         foreach (Exception exception in ConfigValidationExceptions)
         {
             _logger.LogError(exception.Message);
-        }
-    }
-
-    public static bool ValidateConnectionString(DataSource dataSource)
-    {
-        string connectionString = dataSource.ConnectionString;
-        DatabaseType databaseType = dataSource.DatabaseType;
-
-        switch (databaseType)
-        {
-            case DatabaseType.MSSQL:
-                return MsSqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
-            case DatabaseType.MySQL:
-                return MySqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
-            case DatabaseType.PostgreSQL:
-                return PostgreSqlMetadataProvider.VerifyConnectionToDatabase(connectionString);
-            default:
-                return true;
         }
     }
 

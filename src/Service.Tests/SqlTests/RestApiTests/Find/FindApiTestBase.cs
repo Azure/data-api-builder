@@ -688,7 +688,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -730,7 +730,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$select=id",
                 entityNameOrPath: _integrationPaginationEntityName,
                 sqlQuery: GetQuery(nameof(FindTest_OrderByNotFirstQueryParam_PaginationNextLink)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -765,7 +765,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":7,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={Uri.EscapeDataString(after)}",
+                queryString: $"?$after={after}",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination))
             );
@@ -803,7 +803,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: $"?$first=1",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifSinglePrimaryKeyInAfter)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -859,7 +859,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationMappedPaginationEntityName,
                 sqlQuery: GetQuery(nameof(FindMany_MappedColumn_NoOrderByQueryParameter)),
                 paginated: true,
-                expectedAfterQueryString: $"?$after={Uri.EscapeDataString(after)}"
+                expectedAfterQueryString: $"?$after={after}"
             );
         }
 
@@ -980,7 +980,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=1&$orderby=id",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyIncludedInOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -999,7 +999,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$first=2&$orderby=id",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }

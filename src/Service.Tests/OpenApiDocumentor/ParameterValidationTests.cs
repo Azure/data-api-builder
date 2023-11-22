@@ -256,18 +256,16 @@ public class ParameterValidationTests
     [DataRow("UpdateBookTitle", "update_book_title", EntitySourceType.StoredProcedure, DisplayName = "Validate custom header presence in header parameters for stored procedure.")]
     public async Task ValidateHeaderParametersForEntity(string entityName, string objectName, EntitySourceType entitySourceType)
     {
-        EntitySource entitySource = new(Object: objectName, entitySourceType, null, null);
+        EntitySource entitySource = new(Object: objectName, Type: entitySourceType, Parameters: null, KeyFields: null);
         OpenApiDocument openApiDocument = await GenerateOpenApiDocumentForGivenEntityAsync(entityName, entitySource);
         foreach (OpenApiPathItem pathItem in openApiDocument.Paths.Values)
         {
             foreach ((OperationType operationType, OpenApiOperation operation) in pathItem.Operations)
             {
-                Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Header && "Authorization".Equals(param.Name) && JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type)));
-                Assert.IsTrue(operation.Parameters.Any(param => param.In is ParameterLocation.Header && AuthorizationResolver.CLIENT_ROLE_HEADER.Equals(param.Name) && JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type)));
                 // Assert presence of Authorization header and the expected parameter properties for the header parameter.
                 Assert.IsTrue(operation.Parameters.Any(
                     param => param.In is ParameterLocation.Header &&
-                    "Authorization".Equals(param.Name) &&
+                    AuthorizationResolver.AUTHORIZATION_HEADER.Equals(param.Name) &&
                     JsonDataType.String.ToString().ToLower().Equals(param.Schema.Type) &&
                     param.Required is false));
 

@@ -36,7 +36,7 @@ public class ValidateConfigTests
     /// this method  validates that the IsConfigValid method returns false when the config is invalid.
     /// </summary>
     [TestMethod]
-    public void TestConfigWithCustomPropertyAsInValid()
+    public void TestConfigWithCustomPropertyAsInvalid()
     {
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_CUSTOM_PROPERTIES);
 

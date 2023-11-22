@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 i++;
 
                 // Add comma if not last column. example: {"id":"1234","name":"Big Company"}
-                // the below ensures there is a comman after id but not after name.
+                // the below ensures there is a comma after id but not after name.
                 if (i != structure.Columns.Count)
                 {
                     stringAgg.Append(",");

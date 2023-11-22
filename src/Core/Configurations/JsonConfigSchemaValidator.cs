@@ -66,12 +66,15 @@ public class JsonConfigSchemaValidator
     /// <returns>The JSON schema as a string, or null if the schema cannot be obtained.</returns> 
     public async Task<string?> GetJsonSchema(RuntimeConfig runtimeConfig)
     {
+        _logger!.LogInformation("Getting JSON schema for validation.");
         // DEFAULT_CONFIG_SCHEMA_LINK is just a placeholder with no actual schema, hence should not be used to fetch the schema.
         if (!string.IsNullOrWhiteSpace(runtimeConfig.Schema) && !runtimeConfig.Schema.Equals(RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK))
         {
             try
             {
+                _logger!.LogInformation("P1");
                 JsonSchema jsonSchema = await JsonSchema.FromUrlAsync(runtimeConfig.Schema);
+                _logger!.LogInformation("P2");
                 return jsonSchema.ToJson();
             }
             catch (Exception e)
@@ -82,6 +85,7 @@ public class JsonConfigSchemaValidator
 
         try
         {
+            _logger!.LogInformation("P3");
             return GetSchemaFromAssemblyPackage();
         }
         catch (Exception e)

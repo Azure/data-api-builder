@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -317,23 +318,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await base.TestQueryOnCompositeView(msSqlQuery);
         }
 
-        /// <inheritdoc />
-        [DataTestMethod]
-        [DataRow(null, null, 1113, "Real Madrid", DisplayName = "Mock data for DW.")]
-        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+        /// <summary>
+        /// Datawarehouse does not support explicit foreign keys. ignoring this test.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public override Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
             string[] sourceFields,
             string[] targetFields,
             int club_id,
-            string club_name)
+            string club_name,
+            DatabaseType dbType,
+            string testEnvironment)
         {
-            await TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
-                sourceFields,
-                targetFields,
-                club_id,
-                club_name,
-                DatabaseType.DWSQL,
-                TestCategory.DWSQL);
+            throw new NotImplementedException();
         }
+
         #endregion
     }
 }

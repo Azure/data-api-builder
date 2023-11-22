@@ -1627,7 +1627,7 @@ query {
         /// In this Test the result changes when we override the source and target fields in the config.
         /// </summary>
         [TestMethod]
-        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+        public virtual async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
             string[] sourceFields,
             string[] targetFields,
             int club_id,
@@ -1635,12 +1635,6 @@ query {
             DatabaseType dbType,
             string testEnvironment)
         {
-            if (dbType is DatabaseType.DWSQL)
-            {
-                // DW SQL does not support explicit foreign keys in the warehouse.
-                return;
-            }
-
             RuntimeConfig configuration = SqlTestHelper.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
 
             Entity clubEntity = new(

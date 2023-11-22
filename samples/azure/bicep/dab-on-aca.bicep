@@ -1,20 +1,19 @@
+@secure()
+param connectionString string
+
 param appName string
-param dabConfigFileName string = 'dab-config.json'
-param mountedStorageName string = 'dabconfig'
-param isExternalIngress bool = true
-param location string = resourceGroup().location
+
 param environmentId string
+
+param dabConfigFileName string = 'dab-config.json'
+
+param mountedStorageName string = 'dabconfig'
+
+param isExternalIngress bool = true
+
+param location string = resourceGroup().location
+
 param tag string = 'latest'
-param env array = [
-  {
-      name: 'DOTNET_ENVIRONMENT'
-      value: 'Production'
-  }
-  {
-    name: 'ASPNETCORE_ENVIRONMENT'
-    value: 'Production'
-  }
-]
 
 var dabConfigFilePath='--ConfigFileName=./${mountedStorageName}/${dabConfigFileName}'
 
@@ -37,7 +36,20 @@ resource containerApp 'Microsoft.App/containerApps@2022-10-01' = {
         {
           image: 'mcr.microsoft.com/azure-databases/data-api-builder:${tag}'
           name: appName
-          env: env
+          env: [
+            {
+                name: 'DOTNET_ENVIRONMENT'
+                value: 'Production'
+            }
+            {
+              name: 'ASPNETCORE_ENVIRONMENT'
+              value: 'Production'
+            }
+            {
+              name: 'DATABASE_CONNECTION_STRING'
+              value: connectionString
+            }
+          ]
           args: [dabConfigFilePath]
           volumeMounts: [
             {

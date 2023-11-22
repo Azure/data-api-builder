@@ -7,7 +7,10 @@ set -euo pipefail
 FILE=".env"
 if [[ -f $FILE ]]; then
 	echo "loading from .env"
-    export $(egrep . $FILE | xargs -n1)
+  # load all the variables defined in the .env file and exports them
+  # so that they can be seen by other processes
+  # improved to handle comments and white spaces
+  eval $(egrep "^[^#;]" $FILE | tr '\n' '\0' | xargs -0 -n1 | sed 's/^/export /')
 else
 	cat << EOF > .env
 RESOURCE_GROUP=""
@@ -17,6 +20,7 @@ LOG_ANALYTICS_WORKSPACE=""
 CONTAINERAPPS_ENVIRONMENT="dm-dab-aca-env"
 CONTAINERAPPS_APP_NAME="dm-dab-aca-app"
 DAB_CONFIG_FILE="./dab-config.json"
+DATABASE_CONNECTION_STRING=''
 EOF
 	echo "Enviroment file (.env) not detected."
 	echo "Please configure values for your environment in the created .env file and run the script again."
@@ -37,7 +41,7 @@ az group create --name $RESOURCE_GROUP --location $LOCATION \
     -o json >> log.txt
 
 echo "creating storage account: '$STORAGE_ACCOUNT'" | tee -a log.txt
-az storage account create --name $STORAGE_ACCOUNT --resource-group $RESOURCE_GROUP --location $LOCATION --sku Standard_LRS \
+az storage account create --name $STORAGE_ACCOUNT --resource-group $RESOURCE_GROUP --location $LOCATION --sku Standard_LRS --allow-blob-public-acces false \
     -o json >> log.txt
 
 echo "retrieving storage connection string" | tee -a log.txt
@@ -55,7 +59,8 @@ echo "create log analytics workspace '$LOG_ANALYTICS_WORKSPACE'" | tee -a log.tx
 az monitor log-analytics workspace create \
   --resource-group $RESOURCE_GROUP \
   --location $LOCATION \
-  --workspace-name $LOG_ANALYTICS_WORKSPACE
+  --workspace-name $LOG_ANALYTICS_WORKSPACE \
+  -o json >> log.txt
 
 echo "retrieving log analytics client id" | tee -a log.txt
 LOG_ANALYTICS_WORKSPACE_CLIENT_ID=$(az monitor log-analytics workspace show  \
@@ -80,7 +85,8 @@ az containerapp env create \
   --location $LOCATION \
   --name "$CONTAINERAPPS_ENVIRONMENT" \
   --logs-workspace-id "$LOG_ANALYTICS_WORKSPACE_CLIENT_ID" \
-  --logs-workspace-key "$LOG_ANALYTICS_WORKSPACE_CLIENT_SECRET"
+  --logs-workspace-key "$LOG_ANALYTICS_WORKSPACE_CLIENT_SECRET" \
+  -o json >> log.txt
 
 echo "waiting to finalize the ACA environment" | tee -a log.txt
 while [ "$(az containerapp env show -n $CONTAINERAPPS_ENVIRONMENT -g $RESOURCE_GROUP --query properties.provisioningState -o tsv | tr -d '[:space:]')" != "Succeeded" ]; do sleep 10; done
@@ -97,12 +103,12 @@ RES=$(az containerapp env storage set --name $CONTAINERAPPS_ENVIRONMENT \
   --azure-file-share-name $FILE_SHARE \
   --access-mode ReadWrite)
 
-
 echo "creating container app : '$CONTAINERAPPS_APP_NAME' on the environment : '$CONTAINERAPPS_ENVIRONMENT'" | tee -a log.txt
 az deployment group create \
   -g $RESOURCE_GROUP \
   -f ./bicep/dab-on-aca.bicep \
-  -p appName=$CONTAINERAPPS_APP_NAME dabConfigFileName=$DAB_CONFIG_FILE_NAME mountedStorageName=$FILE_SHARE environmentId=$CONTAINERAPPS_ENVIRONMENTID
+  -p appName=$CONTAINERAPPS_APP_NAME dabConfigFileName=$DAB_CONFIG_FILE_NAME mountedStorageName=$FILE_SHARE environmentId=$CONTAINERAPPS_ENVIRONMENTID connectionString="$DATABASE_CONNECTION_STRING" \
+  -o json >> log.txt
 
 echo "get the azure container app FQDN" | tee -a log.txt
 ACA_FQDN=$(az containerapp show -n $CONTAINERAPPS_APP_NAME -g $RESOURCE_GROUP --query properties.configuration.ingress.fqdn -o tsv | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')

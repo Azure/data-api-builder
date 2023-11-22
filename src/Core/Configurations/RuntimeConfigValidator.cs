@@ -119,6 +119,16 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateDatabaseType(runtimeConfig, fileSystem, logger);
     }
 
+    /// <summary>
+    /// This method runs several validations against the config file such as schema validation,
+    /// validation of entities metadata, validation of permissions, validation of entity configuration.
+    /// This method is called by the CLI when the user runs `validate` command with `isValidateOnly=true`.
+    /// </summary>
+    /// <param name="configFilePath">full/relative config file path with extension</param>
+    /// <param name="runtimeConfig">RuntimeConfig object</param>
+    /// <param name="loggerFactory">Logger Factory</param>
+    /// <param name="isValidateOnly">true if run for validate only mode</param>
+    /// <returns>true if no validation failures, else false.</returns>
     public async Task<bool> TryValidateConfig(
         string configFilePath,
         RuntimeConfig runtimeConfig,
@@ -148,6 +158,10 @@ public class RuntimeConfigValidator : IConfigValidator
         }
     }
 
+    /// <summary>
+    /// This method runs schema validation against the config file.
+    /// It uses runtime config object to check if the schema uri is provided in the config file
+    /// </summary>
     public async Task<JsonSchemaValidationResult> ValidateConfigSchema(RuntimeConfig runtimeConfig, string configFilePath, ILoggerFactory loggerFactory)
     {
         string jsonData = File.ReadAllText(configFilePath);
@@ -165,6 +179,9 @@ public class RuntimeConfigValidator : IConfigValidator
         return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
     }
 
+    /// <summary>
+    /// This method runs validates the entities metadata against the database objects.
+    /// </summary>
     public async Task ValidateEntitiesMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
     {
         QueryManagerFactory queryManagerFactory = new(
@@ -186,6 +203,9 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateRelationshipsInConfig(runtimeConfig, metadataProviderFactory);
     }
 
+    /// <summary>
+    /// Helper method to log exceptions occured during validation of the config file.
+    /// </summary>
     public void LogConfigValidationExceptions()
     {
         foreach (Exception exception in ConfigValidationExceptions)

@@ -59,35 +59,6 @@ public class JsonConfigSchemaValidator
         }
     }
 
-    /// <summary> 
-    /// Validates the given json config. 
-    /// </summary> 
-    /// <param name="jsonConfig">The JSON config file data to validate.</param> 
-    public async Task ValidateJsonConfig(string jsonConfig)
-    {
-        // deserialize jsonData to runtimeConfig
-        if (!RuntimeConfigLoader.TryParseConfig(jsonConfig, out RuntimeConfig? config))
-        {
-            Console.WriteLine("The config is invalid.");
-            return;
-        }
-
-        string? jsonSchema = await GetJsonSchema(config);
-
-        if (string.IsNullOrWhiteSpace(jsonSchema))
-        {
-            _logger!.LogWarning("The schema file is invalid. Unable to verify provided config against schema.");
-            return;
-        }
-
-        JsonSchemaValidationResult jsonSchemaValidationResult = await ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonConfig);
-
-        if (!jsonSchemaValidationResult.IsValid && jsonSchemaValidationResult.ValidationErrors != null)
-        {
-            _logger!.LogInformation(FormatSchemaValidationErrorMessage(jsonSchemaValidationResult.ValidationErrors));
-        }
-    }
-
     /// <summary>
     /// Retrieves the JSON schema for validation from the provided runtime config or the assembly package. 
     /// </summary> 
@@ -121,18 +92,6 @@ public class JsonConfigSchemaValidator
         return null;
     }
 
-    /// <summary>
-    /// Formats a collection of validation errors into a human-readable error message. 
-    /// </summary> 
-    /// <param name="validationErrors">The collection of validation errors to format.</param> 
-    /// <returns>The formatted error message.</returns> 
-    private static string FormatSchemaValidationErrorMessage(ICollection<ValidationError> validationErrors)
-    {
-        return $"> Total schema validation errors: {validationErrors.Count}\n" +
-            string.Join("", validationErrors.Select(e => $"> {e} at " +
-            $"{e.LineNumber}:{e.LinePosition}\n\n"));
-    }
-
     /// <summary> 
     /// Retrieves the JSON schema from the assembly package. 
     /// </summary>
@@ -141,7 +100,7 @@ public class JsonConfigSchemaValidator
     {
         string assemblyPath = Assembly.GetExecutingAssembly().Location;
         string directoryPath = _fileSystem.Path.GetDirectoryName(assemblyPath)!;
-        string jsonPath = _fileSystem.Path.Combine(directoryPath, "dab.draft.schema.json");
+        string jsonPath = _fileSystem.Path.Combine(directoryPath, FileSystemRuntimeConfigLoader.SCHEMA);
 
         string contents = File.ReadAllText(jsonPath);
         return contents;

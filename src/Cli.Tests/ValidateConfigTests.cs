@@ -50,7 +50,7 @@ public class ValidateConfigTests
     /// Validates that the IsConfigValid method returns true when the config is valid, i.e No custom proerties.
     /// </summary>
     [TestMethod]
-    public void TestConfigWithInValidConfigProperties()
+    public void TestConfigWithInvalidConfigProperties()
     {
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_DISABLED_GLOBAL_REST_GRAPHQL);
 

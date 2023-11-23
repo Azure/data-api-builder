@@ -1092,6 +1092,8 @@ namespace Cli
                 return false;
             }
 
+            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
+
             // Validates that config file has data and it is properly deserialized
             // Replaces all the environment variables while deserializing when starting DAB.
             if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))

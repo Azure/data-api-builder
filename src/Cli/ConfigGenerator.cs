@@ -1126,6 +1126,7 @@ namespace Cli
             IFileSystem fileSystem,
             out string runtimeConfigFile)
         {
+            Console.WriteLine("configToBeUsed: {0}", configToBeUsed);
             if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
             {
                 _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
@@ -1137,6 +1138,7 @@ namespace Cli
                 return false;
             }
 
+            Console.WriteLine($"Using config file: {runtimeConfigFile}");
             loader.UpdateConfigFilePath(runtimeConfigFile);
 
             return true;

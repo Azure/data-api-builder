@@ -37,6 +37,10 @@ public class JsonConfigSchemaValidator
     /// if the validation was successful and a collection of validation errors if there were any.</returns> 
     public async Task<JsonSchemaValidationResult> ValidateJsonConfigWithSchemaAsync(string jsonSchema, string jsonData)
     {
+        // Debugging
+        _logger!.LogInformation("Json Schema: \n" + jsonSchema);
+        _logger!.LogInformation("Json Data: \n" + jsonData);
+
         try
         {
             JsonSchema schema = await JsonSchema.FromJsonAsync(jsonSchema);
@@ -72,9 +76,7 @@ public class JsonConfigSchemaValidator
         {
             try
             {
-                _logger!.LogInformation("P1");
                 JsonSchema jsonSchema = await JsonSchema.FromUrlAsync(runtimeConfig.Schema);
-                _logger!.LogInformation("P2");
                 return jsonSchema.ToJson();
             }
             catch (Exception e)
@@ -85,7 +87,6 @@ public class JsonConfigSchemaValidator
 
         try
         {
-            _logger!.LogInformation("P3");
             return GetSchemaFromAssemblyPackage();
         }
         catch (Exception e)

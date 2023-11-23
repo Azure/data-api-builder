@@ -1093,6 +1093,7 @@ namespace Cli
             }
 
             _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
+            _logger.LogInformation("Validating config file1 : {runtimeConfigFile}", fileSystem.File.ReadAllText(runtimeConfigFile));
 
             // Validates that config file has data and it is properly deserialized
             // Replaces all the environment variables while deserializing when starting DAB.
@@ -1106,6 +1107,7 @@ namespace Cli
                 _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
             }
 
+            _logger.LogInformation("Validating config file2 : {runtimeConfigFile}", fileSystem.File.ReadAllText(runtimeConfigFile));
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             ILoggerFactory loggerFactory = Utils.GetLoggerFactoryForCli();

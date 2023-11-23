@@ -488,7 +488,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// This method creates a list of OpenApiParameter objects for the input parameters of a stored procedure.
+        /// This method adds the input parameters from the stored procedure definition to the OpenApi operation parameters.
         /// A input parameter will be marked REQUIRED if default value is not available.
         /// </summary>
         private static void AddStoredProcedureInputParameters(OpenApiOperation operation, StoredProcedureDefinition spDefinition)

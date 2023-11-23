@@ -95,6 +95,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             runtimeConfig = DatabaseEngine switch
             {
                 TestCategory.MYSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "magazines"),
+                TestCategory.DWSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines", new string[] { "id" }),
                 _ => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines"),
             };
 
@@ -310,6 +311,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                              _sqlMetadataLogger,
                              dataSourceName);
                     break;
+                case TestCategory.DWSQL:
+                    Mock<ILogger<MsSqlQueryExecutor>> DwSqlQueryExecutorLogger = new();
+                    _queryBuilder = new DwSqlQueryBuilder();
+                    _defaultSchemaName = "dbo";
+                    _dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+                    _queryExecutor = new MsSqlQueryExecutor(
+                        runtimeConfigProvider,
+                        _dbExceptionParser,
+                        DwSqlQueryExecutorLogger.Object,
+                        httpContextAccessor.Object);
+                    _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                    _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
+                    _sqlMetadataProvider =
+                         new MsSqlMetadataProvider(
+                             runtimeConfigProvider,
+                             _queryManagerFactory.Object,
+                             _sqlMetadataLogger,
+                             dataSourceName);
+                    break;
+
             }
         }
 

@@ -97,7 +97,7 @@ steps:
   inputs:
     command: test
     projects: '**/*Tests*.csproj'
-    arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+    arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql&TestCategory!=DwSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
 
 - task: CmdLine@2
   displayName: 'Set flag to publish Verify *.received files when tests fail'

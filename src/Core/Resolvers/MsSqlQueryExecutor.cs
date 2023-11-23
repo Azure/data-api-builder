@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   httpContextAccessor)
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.MSSQL);
+            IEnumerable<KeyValuePair<string, DataSource>> mssqldbs = runtimeConfig.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType is DatabaseType.MSSQL || x.Value.DatabaseType is DatabaseType.DWSQL);
             _dataSourceAccessTokenUsage = new Dictionary<string, bool>();
             _dataSourceToSessionContextUsage = new Dictionary<string, bool>();
             _accessTokensFromConfiguration = runtimeConfigProvider.ManagedIdentityAccessToken;

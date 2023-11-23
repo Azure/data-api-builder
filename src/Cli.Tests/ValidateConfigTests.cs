@@ -40,8 +40,6 @@ public class ValidateConfigTests
     {
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_CUSTOM_PROPERTIES);
 
-        Console.WriteLine(_fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE));
-
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
         bool isConfigValid = ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);

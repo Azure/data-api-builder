@@ -135,7 +135,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ILoggerFactory loggerFactory,
         bool isValidateOnly = false)
     {
-        loggerFactory.CreateLogger<RuntimeConfigValidator>().LogInformation("JsonData: {rawData}", File.ReadAllText(configFilePath));
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);
@@ -165,8 +164,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     public async Task<JsonSchemaValidationResult> ValidateConfigSchema(RuntimeConfig runtimeConfig, string configFilePath, ILoggerFactory loggerFactory)
     {
-        string jsonData = File.ReadAllText(configFilePath);
-        _logger.LogInformation("RuntimeConfigValidator JsonData: {rawData}", jsonData);
+        string jsonData = _fileSystem.File.ReadAllText(configFilePath);
         ILogger<JsonConfigSchemaValidator> jsonConfigValidatorLogger = loggerFactory.CreateLogger<JsonConfigSchemaValidator>();
         JsonConfigSchemaValidator jsonConfigSchemaValidator = new(jsonConfigValidatorLogger, _fileSystem);
 

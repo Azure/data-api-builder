@@ -37,10 +37,6 @@ public class JsonConfigSchemaValidator
     /// if the validation was successful and a collection of validation errors if there were any.</returns> 
     public async Task<JsonSchemaValidationResult> ValidateJsonConfigWithSchemaAsync(string jsonSchema, string jsonData)
     {
-        // Debugging
-        _logger!.LogInformation("Json Schema: \n" + jsonSchema);
-        _logger!.LogInformation("Json Data: \n" + jsonData);
-
         try
         {
             JsonSchema schema = await JsonSchema.FromJsonAsync(jsonSchema);
@@ -70,7 +66,6 @@ public class JsonConfigSchemaValidator
     /// <returns>The JSON schema as a string, or null if the schema cannot be obtained.</returns> 
     public async Task<string?> GetJsonSchema(RuntimeConfig runtimeConfig)
     {
-        _logger!.LogInformation("Getting JSON schema for validation.");
         // DEFAULT_CONFIG_SCHEMA_LINK is just a placeholder with no actual schema, hence should not be used to fetch the schema.
         if (!string.IsNullOrWhiteSpace(runtimeConfig.Schema) && !runtimeConfig.Schema.Equals(RuntimeConfig.DEFAULT_CONFIG_SCHEMA_LINK))
         {

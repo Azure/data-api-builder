@@ -8,7 +8,6 @@ internal static class TestLoggerSupport
     public static ILoggerFactory ProvisionLoggerFactory() =>
         LoggerFactory.Create(builder =>
     {
-        builder.AddProvider(new CustomLoggerProvider());
         builder.AddConsole();
     });
 }

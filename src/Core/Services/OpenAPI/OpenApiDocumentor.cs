@@ -348,7 +348,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to add query parameters like $select, $first, $orderby etc. to get,getAll operations for tables/views.
+        /// Helper method to add query parameters like $select, $first, $orderby etc. to get and getAll operations for tables/views.
         /// </summary>
         /// <param name="parameters">List of parameters for the operation.</param>
         private static void AddQueryParameters(IList<OpenApiParameter> parameters)

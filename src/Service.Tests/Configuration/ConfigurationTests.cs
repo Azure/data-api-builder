@@ -298,12 +298,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     },
                     ""permissions"": [
                         {
-                            ""role"": ""anonymous"",
-                            ""actions"": [
-                                {
-                                ""action"": ""create""
-                                }
-                            ]
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                            {
+                            ""action"": ""execute"",
+                            ""fields"": null,
+                            ""policy"": {
+                                ""request"": null,
+                                ""database"": null
+                            }
+                            }
+                        ]
                         }
                     ],
                     ""mappings"": null,
@@ -1089,7 +1094,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// The config contains an entity source object not present in the database.
         /// It also contains an entity whose source is incorrectly specified as a stored procedure.
         /// </summary> 
-        [TestMethod("Validates config entites agains database is invalid."), TestCategory(TestCategory.MSSQL)]
+        [TestMethod("Validates config entites against database is invalid."), TestCategory(TestCategory.MSSQL)]
         public async Task TestSqlMetadataForInvalidConfigEntities()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
@@ -1222,7 +1227,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// a config file with additional properties fails the schema validation but still has no effect on engine startup.
         /// </summary>
         [TestMethod("Validates the config with custom properties works with the engine."), TestCategory(TestCategory.MSSQL)]
-        public async Task TestInteractiveGraphQLEndpointsX()
+        public async Task TestEngineCanStartConfigWithCustomProperties()
         {
             const string CUSTOM_CONFIG = "custom-config.json";
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);

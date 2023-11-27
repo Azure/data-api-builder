@@ -118,7 +118,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (runtimeConfig.IsRestEnabled)
                 {
                     string restPath = entityMetatdata.Rest?.Path ?? entityName;
-                    _logger.LogError("asd");
                     _logger.LogInformation("[{entity}] REST path: {globalRestPath}/{entityRestPath}", entityName, runtimeConfig.RestPath, restPath);
                 }
                 else

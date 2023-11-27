@@ -52,7 +52,7 @@ namespace Cli
             });
 
             // Parsing user arguments and executing required methods.
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ExportOptions>(args)
+            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions>(args)
                 .WithParsed((Action<InitOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<AddOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<UpdateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))

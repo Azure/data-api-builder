@@ -3,7 +3,6 @@
 
 using Azure.DataApiBuilder.Product;
 using Microsoft.Data.SqlClient;
-using static Azure.DataApiBuilder.Product.ProductInfo;
 
 namespace Cli.Tests;
 
@@ -121,7 +120,7 @@ public class EndToEndTests
             replaceEnvVar: true));
 
         SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
-        Assert.AreEqual(DEFAULT_APP_NAME, builder.ApplicationName);
+        Assert.AreEqual(ProductInfo.GetDataApiBuilderApplicationName(), builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
@@ -636,6 +635,31 @@ public class EndToEndTests
         {
             StringAssert.Contains(output, expectedOutput, StringComparison.Ordinal);
         }
+
+        process.Kill();
+    }
+
+    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
+    [DataTestMethod]
+    public void TestVersionHasBuildHash(
+        string command,
+        string options
+    )
+    {
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+
+        // Check that build hash is returned as part of  version number
+        string[] versionParts = output.Split('+');
+        Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
+        Assert.AreEqual(40, versionParts[1].Length, "Build hash is not of expected length.");
 
         process.Kill();
     }

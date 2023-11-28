@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             JsonElement nextLink = SqlPaginationUtil.CreateNextLink(
                                   path,
-                                  nvc: context!.ParsedQueryString,
+                                  queryStringParameters: context!.ParsedQueryString,
                                   after);
 
             // When there are extra fields present, they are removed before returning the response.

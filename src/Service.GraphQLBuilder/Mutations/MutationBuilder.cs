@@ -6,7 +6,6 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
@@ -129,7 +128,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 switch (operation)
                 {
                     case EntityActionOperation.Create:
-                        mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, rolesAllowedForMutation));
+                        // Get the point/batch fields for the create mutation.
+                        Tuple<FieldDefinitionNode, FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, rolesAllowedForMutation);
+                        mutationFields.Add(createMutationNodes.Item1); // Add field corresponding to point insertion.
+                        mutationFields.Add(createMutationNodes.Item2); // Add field corresponding to batch insertion.
                         break;
                     case EntityActionOperation.Update:
                         mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, rolesAllowedForMutation));

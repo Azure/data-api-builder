@@ -16,6 +16,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
     public static class CreateMutationBuilder
     {
         public const string INPUT_ARGUMENT_NAME = "item";
+        public const string ARRAY_INPUT_ARGUMENT_NAME = "items";
 
         /// <summary>
         /// Generate the GraphQL input type from an object type
@@ -116,27 +117,27 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <returns>true if the field is allowed, false if it is not.</returns>
         private static bool IsComplexFieldAllowedOnCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
+            if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
+            {
+                // Support for inserting nested entities with relationship cardinalities of 1-N or N-N is only supported for MsSql.
+                switch (databaseType)
+                {
+                    case DatabaseType.MSSQL:
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
             // When creating, you don't need to provide the data for nested models, but you will for other nested types
             // For cosmos, allow updating nested objects
-            if (databaseType is DatabaseType.CosmosDB_NoSQL)
-            {
-                return true;
-            }
-
-            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType))
+            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)
             {
                 return databaseType is DatabaseType.MSSQL;
             }
-            else if (definition is null && databaseType is DatabaseType.MSSQL)
-            {
-                // This is the case where we are dealing with entity having *-Many relationship with the parent entity.
-                string targetObjectName = RelationshipDirectiveType.Target(field);
-                Cardinality cardinality = RelationshipDirectiveType.Cardinality(field);
-                return cardinality is Cardinality.Many;
-            }
 
-            return false;
+            return true;
         }
 
         private static bool IsBuiltInTypeFieldAllowedForCreateInput(FieldDefinitionNode field, DatabaseType databaseType)
@@ -272,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Generate the `create` mutation field for the GraphQL mutations for a given Object Definition
+        /// Generate the `create` point/batch mutation fields for the GraphQL mutations for a given Object Definition
         /// </summary>
         /// <param name="name">Name of the GraphQL object to generate the create field for.</param>
         /// <param name="inputs">All known GraphQL input types.</param>
@@ -282,7 +283,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="entity">Runtime config information for the type.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
-        public static FieldDefinitionNode Build(
+        public static Tuple<FieldDefinitionNode, FieldDefinitionNode> Build(
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
@@ -313,12 +314,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             string singularName = GetDefinedSingularName(name.Value, entity);
-            return new(
+
+            // Point insertion node.
+            FieldDefinitionNode createOneNode = new(
                 location: null,
                 new NameNode($"create{singularName}"),
                 new StringValueNode($"Creates a new {singularName}"),
                 new List<InputValueDefinitionNode> {
-                new InputValueDefinitionNode(
+                new(
                     location : null,
                     new NameNode(INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for creating {name}"),
@@ -329,6 +332,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 new NamedTypeNode(name),
                 fieldDefinitionNodeDirectives
             );
+
+            // Batch insertion node.
+            FieldDefinitionNode createMultipleNode = new(
+                location: null,
+                new NameNode($"create{singularName}_Multiple"),
+                new StringValueNode($"Creates multiple new {singularName}"),
+                new List<InputValueDefinitionNode> {
+                new(
+                    location : null,
+                    new NameNode(ARRAY_INPUT_ARGUMENT_NAME),
+                    new StringValueNode($"Input representing all the fields for creating {name}"),
+                    new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(input.Name))),
+                    defaultValue: null,
+                    new List<DirectiveNode>())
+                },
+                new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(dbEntityName, entity))),
+                fieldDefinitionNodeDirectives
+            );
+
+            return new(createOneNode, createMultipleNode);
         }
     }
 }

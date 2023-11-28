@@ -207,6 +207,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             IType leafType = context.Selection.Field.Type is NonNullType
                  ? context.Selection.Field.Type.NullableType() : context.Selection.Field.Type;
+
             return leafType switch
             {
                 ByteType => byte.Parse(leafJson),
@@ -220,7 +221,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public static bool RepresentsNullValue(JsonElement element)
         {
-            return string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null";
+            return (string.IsNullOrEmpty(element.ToString()) && element.GetRawText() == "null");
         }
 
         protected static bool TryGetPropertyFromParent(IMiddlewareContext context, out JsonElement jsonElement)

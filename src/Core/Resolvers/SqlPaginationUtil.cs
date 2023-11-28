@@ -34,6 +34,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Maintains the connection JSON object *Connection
             Dictionary<string, object> connectionJson = new();
 
+            // in dw we wrap array with "" and hence jsonValueKind is string instead of array.
+            if (root.ValueKind is JsonValueKind.String)
+            {
+                JsonDocument document = JsonDocument.Parse(root.GetString()!);
+                root = document.RootElement;
+            }
+
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
 
             bool hasExtraElement = false;

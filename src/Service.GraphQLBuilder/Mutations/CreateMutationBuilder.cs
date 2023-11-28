@@ -42,41 +42,68 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 return inputs[inputName];
             }
 
-            IEnumerable<InputValueDefinitionNode> inputFields =
-                objectTypeDefinitionNode.Fields
-                .Where(f => FieldAllowedOnCreateInput(f, databaseType, definitions))
+            // The input fields for a create object will be a combination of:
+            // 1. Simple input fields corresponding to columns which belong to the table.
+            // 2. Complex input fields corresponding to tables having a foreign key relationship with this table.
+            List<InputValueDefinitionNode> inputFields = new();
+
+            // Simple input fields.
+            IEnumerable<InputValueDefinitionNode> simpleInputFields = objectTypeDefinitionNode.Fields
+                .Where(f => IsBuiltInType(f.Type))
+                .Where(f => IsBuiltInTypeFieldAllowedForCreateInput(f, databaseType))
                 .Select(f =>
                 {
-                    if (!IsBuiltInType(f.Type))
-                    {
-                        string typeName = RelationshipDirectiveType.Target(f);
-                        HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value == typeName);
-
-                        if (def is null)
-                        {
-                            throw new DataApiBuilderException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.GraphQLMapping);
-                        }
-
-                        if (def is ObjectTypeDefinitionNode otdn)
-                        {
-                            //Get entity definition for this ObjectTypeDefinitionNode
-                            return GetComplexInputType(inputs, definitions, f, typeName, otdn, databaseType, entities);
-                        }
-                    }
-
-                    return GenerateSimpleInputType(name, f);
+                    return GenerateSimpleInputType(name, f, databaseType);
                 });
 
+            // Add simple input fields to list of input fields for current input type.
+            foreach (InputValueDefinitionNode simpleInputField in simpleInputFields)
+            {
+                inputFields.Add(simpleInputField);
+            }
+
+            // Create input object for this entity.
             InputObjectTypeDefinitionNode input =
                 new(
                     location: null,
                     inputName,
                     new StringValueNode($"Input type for creating {name}"),
                     new List<DirectiveNode>(),
-                    inputFields.ToList()
+                    inputFields
                 );
 
+            // Add input object to the dictionary of entities for which input object has already been created.
+            // This input object currently holds only simple fields. The complex fields (for related entities)
+            // would be added later when we return from recursion.
+            // Adding the input object to the dictionary ensures that we don't go into infinite recursion and return whenever
+            // we find that the input object has already been created for the entity.
             inputs.Add(input.Name, input);
+
+            // Evaluate input objects for related entities.
+            IEnumerable < InputValueDefinitionNode > complexInputFields =
+                objectTypeDefinitionNode.Fields
+                .Where(f => !IsBuiltInType(f.Type))
+                .Where(f => IsComplexFieldAllowedOnCreateInput(f, databaseType, definitions))
+                .Select(f =>
+                {
+                    string typeName = RelationshipDirectiveType.Target(f);
+                    HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value == typeName);
+
+                    if (def is null)
+                    {
+                        throw new DataApiBuilderException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                    }
+
+                    // Get entity definition for this ObjectTypeDefinitionNode.
+                    // Recurse for evaluating input objects for related entities.
+                    return GetComplexInputType(inputs, definitions, f, typeName, (ObjectTypeDefinitionNode)def, databaseType, entities);
+                });
+
+            foreach (InputValueDefinitionNode inputValueDefinitionNode in complexInputFields)
+            {
+                inputFields.Add(inputValueDefinitionNode);
+            }
+
             return input;
         }
 
@@ -87,37 +114,49 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType">The type of database to generate for</param>
         /// <param name="definitions">The other named types in the schema</param>
         /// <returns>true if the field is allowed, false if it is not.</returns>
-        private static bool FieldAllowedOnCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
+        private static bool IsComplexFieldAllowedOnCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
-            if (IsBuiltInType(field.Type))
-            {
-                // cosmosdb_nosql doesn't have the concept of "auto increment" for the ID field, nor does it have "auto generate"
-                // fields like timestap/etc. like SQL, so we're assuming that any built-in type will be user-settable
-                // during the create mutation
-                return databaseType switch
-                {
-                    DatabaseType.CosmosDB_NoSQL => true,
-                    _ => !IsAutoGeneratedField(field),
-                };
-            }
-
-            if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
-            {
-                return false;
-            }
-
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
             // When creating, you don't need to provide the data for nested models, but you will for other nested types
             // For cosmos, allow updating nested objects
-            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)
+            if (databaseType is DatabaseType.CosmosDB_NoSQL)
             {
-                return false;
+                return true;
             }
 
-            return true;
+            if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType))
+            {
+                return databaseType is DatabaseType.MSSQL;
+            }
+            else if (definition is null && databaseType is DatabaseType.MSSQL)
+            {
+                // This is the case where we are dealing with entity having *-Many relationship with the parent entity.
+                string targetObjectName = RelationshipDirectiveType.Target(field);
+                Cardinality cardinality = RelationshipDirectiveType.Cardinality(field);
+                return cardinality is Cardinality.Many;
+            }
+
+            return false;
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f)
+        private static bool IsBuiltInTypeFieldAllowedForCreateInput(FieldDefinitionNode field, DatabaseType databaseType)
+        {
+            // cosmosdb_nosql doesn't have the concept of "auto increment" for the ID field, nor does it have "auto generate"
+            // fields like timestap/etc. like SQL, so we're assuming that any built-in type will be user-settable
+            // during the create mutation
+            return databaseType switch
+            {
+                DatabaseType.CosmosDB_NoSQL => true,
+                _ => !IsAutoGeneratedField(field)
+            };
+        }
+
+        private static bool IsForeignKeyReference(FieldDefinitionNode field)
+        {
+            return field.Directives.Any(d => d.Name.Value == ForeignKeyDirectiveType.DirectiveName);
+        }
+
+        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, DatabaseType databaseType)
         {
             IValueNode? defaultValue = null;
 
@@ -130,7 +169,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
-                defaultValue is not null ? f.Type.NullableType() : f.Type,
+                defaultValue is not null || databaseType is DatabaseType.MSSQL && IsForeignKeyReference(f) ? f.Type.NullableType() : f.Type,
                 defaultValue,
                 new List<DirectiveNode>()
             );
@@ -160,7 +199,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateCreateInputType(inputs, otdn, field.Type.NamedType().Name, definitions, databaseType, entities);
+                node = GenerateCreateInputType(inputs, otdn, new NameNode(typeName), definitions, databaseType, entities);
             }
             else
             {
@@ -169,6 +208,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             ITypeNode type = new NamedTypeNode(node.Name);
 
+            bool isNToManyRelatedEntity = QueryBuilder.IsPaginationType(field.Type.NamedType());
+            //bool isNonNullableType = field.Type.IsNonNullType();
+
+            if (isNToManyRelatedEntity)
+            {
+                //ITypeNode typeNode = isNonNullableType ? new ListTypeNode(type) : new ListTypeNode(new NonNullType(type));
+                return new(
+                location: null,
+                field.Name,
+                new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
+                databaseType is DatabaseType.MSSQL ? new ListTypeNode(type) : type,
+                defaultValue: null,
+                databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
+            );
+            }
             // For a type like [Bar!]! we have to first unpack the outer non-null
             if (field.Type.IsNonNullType())
             {
@@ -192,9 +246,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 field.Name,
                 new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                type,
+                databaseType is DatabaseType.MSSQL ? type.NullableType() : type,
                 defaultValue: null,
-                field.Directives
+                databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
             );
         }
 

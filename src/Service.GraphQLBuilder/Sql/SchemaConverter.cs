@@ -112,6 +112,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
+            HashSet<string> foreignKeyFieldsInEntity = new();
             if (configEntity.Relationships is not null)
             {
                 foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
@@ -143,6 +144,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             if (pair.ReferencingDbTable.Equals(databaseObject))
                             {
                                 isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
+                                foreignKeyFieldsInEntity.UnionWith(foreignKeyInfo.ReferencingColumns);
                             }
                             else
                             {
@@ -185,6 +187,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
                     fields.Add(relationshipField.Name.Value, relationshipField);
                 }
+            }
+
+            // If there are foreign key references present in the entity, the values of these foreign keys can come
+            // via insertions in the related entity. By adding ForiegnKeyDirective here, we can later ensure that while creating input type for
+            // create mutations, these fields can be marked as nullable/optional.
+            foreach (string foreignKeyFieldInEntity in foreignKeyFieldsInEntity)
+            {
+                FieldDefinitionNode field = fields[foreignKeyFieldInEntity];
+                List<DirectiveNode> directives = (List<DirectiveNode>)field.Directives;
+                directives.Add(new DirectiveNode(ForeignKeyDirectiveType.DirectiveName));
+                field = field.WithDirectives(directives);
+                fields[foreignKeyFieldInEntity] = field;
             }
 
             objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));

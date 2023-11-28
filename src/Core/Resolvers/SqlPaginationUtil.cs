@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -32,6 +33,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             // Maintains the connection JSON object *Connection
             Dictionary<string, object> connectionJson = new();
+
+            // in dw we wrap array with "" and hence jsonValueKind is string instead of array.
+            if (root.ValueKind is JsonValueKind.String)
+            {
+                JsonDocument document = JsonDocument.Parse(root.GetString()!);
+                root = document.RootElement;
+            }
 
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
 
@@ -514,22 +522,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// using the same query options.
         /// </summary>
         /// <param name="path">The request path.</param>
-        /// <param name="nvc">Collection of query params.</param>
+        /// <param name="queryStringParameters">Collection of query string parameters.</param>
         /// <param name="after">The values needed for next page.</param>
         /// <returns>The string representing nextLink.</returns>
-        public static JsonElement CreateNextLink(string path, NameValueCollection? nvc, string after)
+        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string after)
         {
-            if (nvc is null)
-            {
-                nvc = new();
-            }
-
+            string queryString = FormatQueryString(queryStringParameters: queryStringParameters);
             if (!string.IsNullOrWhiteSpace(after))
             {
-                nvc["$after"] = after;
+                string afterPrefix = string.IsNullOrWhiteSpace(queryString) ? "?" : "&";
+                queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={after}";
             }
-
-            string queryString = FormatQueryString(queryParameters: nvc);
 
             // ValueKind will be array so we can differentiate from other objects in the response
             // to be returned.
@@ -559,32 +562,40 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Creates a query string from a NameValueCollection using .NET QueryHelpers.
+        /// Creates a uri encoded query string from a NameValueCollection using .NET QueryHelpers.
         /// Addresses the limitations:
         /// 1) NameValueCollection is not resolved as string in JSON serialization.
         /// 2) NameValueCollection keys and values are not URL escaped.
         /// </summary>
-        /// <param name="queryParameters">Key: $QueryParamKey Value: QueryParamValue</param>
+        /// <param name="queryStringParameters">Key: $QueryStringParamKey Value: QueryStringParamValue</param>
         /// <returns>Query string prefixed with question mark (?). Returns an empty string when
-        /// no entries exist in queryParameters.</returns>
-        public static string FormatQueryString(NameValueCollection queryParameters)
+        /// no entries exist in queryStringParameters.</returns>
+        public static string FormatQueryString(NameValueCollection? queryStringParameters)
         {
             string queryString = "";
-            foreach (string key in queryParameters)
+            if (queryStringParameters is null || queryStringParameters.Count is 0)
+            {
+                return queryString;
+            }
+
+            foreach (string key in queryStringParameters)
             {
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     continue;
                 }
 
-                // There may be duplicate query parameter keys, so get
+                // There may be duplicate query string parameter keys, so get
                 // all values associated to given key in a comma-separated list
                 // format compatible with OData expression syntax.
-                string? queryParamValues = queryParameters.Get(key);
+                string? queryStringParamValues = queryStringParameters.Get(key);
 
-                if (!string.IsNullOrWhiteSpace(queryParamValues))
+                if (!string.IsNullOrWhiteSpace(queryStringParamValues))
                 {
-                    queryString = QueryHelpers.AddQueryString(queryString, key, queryParamValues);
+                    // AddQueryString will URI encode the returned string which may
+                    // interfere with other encodings, ie: base64 encoding used for
+                    // the "after" parameter's value.
+                    queryString = QueryHelpers.AddQueryString(queryString, key, queryStringParamValues);
                 }
             }
 

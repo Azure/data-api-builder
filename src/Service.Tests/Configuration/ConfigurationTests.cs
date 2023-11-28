@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// A config file with SP entity with no REST section defined.
-        /// This config string is used for validating the REST HTTP methods that are enabled. 
+        /// This config string is used for validating the REST HTTP methods that are enabled.
         /// </summary>
         public const string SP_CONFIG_WITH_NO_REST_SETTINGS = @"
         {
@@ -502,11 +502,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
 
-            // SourceLink appends the commit ID to the assembly metadata. The application name is extracted from the
-            // assembly metadata. So, the connection string after appending the application name will be of the form
-            // dab_oss_1.0.0+<commit-id> or dab_hosted_1.0.0+<commit-id> depending on oss or hosted scenario respectively.
-            // So, the updated connection string is validated to check if it starts with dab_oss_1.0.0 or dab_hosted_1.0.0.
-            Assert.IsTrue(actualUpdatedConnectionString.StartsWith(expectedUpdatedConnectionString));
+            Assert.AreEqual(actualUpdatedConnectionString, expectedUpdatedConnectionString);
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
@@ -1952,7 +1948,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 if (includeExtraneousFieldInRequestBody)
                 {
                     string responseBody = await response.Content.ReadAsStringAsync();
-                    // Assert that including an extraneous field in request body while operating in strict mode leads to a bad request exception. 
+                    // Assert that including an extraneous field in request body while operating in strict mode leads to a bad request exception.
                     Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
                     Assert.IsTrue(responseBody.Contains("Invalid request body. Contained unexpected fields in body: extraField"));
                 }

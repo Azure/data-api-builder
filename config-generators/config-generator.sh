@@ -16,8 +16,8 @@ databaseTypes=()
 if [[ $# -eq 0 ]]; then
     databaseTypes=("${allowedDbTypes[@]}")
 elif [[ $# -eq 1 ]]; then
-    databaseType=$1
-    if [[ ! ${allowedDbTypes[@]} =~ ${databaseType} ]]; then
+    databaseType=$1;
+    if [[ " ${allowedDbTypes[@]} " =~ " ${databaseType} " ]]; then
         echo "Valid arguments are mssql, mysql, postgresql, cosmosdb_nosql, or dwsql";
         exit 1;
     fi

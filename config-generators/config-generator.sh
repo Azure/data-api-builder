@@ -51,6 +51,9 @@ do
     elif [[ $databaseType == "postgresql" ]]; then
         commandFile="postgresql-commands.txt";
         configFile="dab-config.PostgreSql.json";
+    elif [[ $databaseType == "dwsql" ]]; then
+        commandFile="dwsql-commands.txt";
+        configFile="dab-config.DwSql.json";
     else 
         commandFile="cosmosdb_nosql-commands.txt";
         configFile="dab-config.CosmosDb_NoSql.json";

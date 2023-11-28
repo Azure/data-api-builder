@@ -152,9 +152,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             };
         }
 
-        private static bool IsForeignKeyReference(FieldDefinitionNode field)
+        private static bool HasForeignKeyReference(FieldDefinitionNode field)
         {
-            return field.Directives.Any(d => d.Name.Value == ForeignKeyDirectiveType.DirectiveName);
+            return field.Directives.Any(d => d.Name.Value.Equals(ForeignKeyDirectiveType.DirectiveName));
         }
 
         private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, DatabaseType databaseType)
@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
-                defaultValue is not null || databaseType is DatabaseType.MSSQL && IsForeignKeyReference(f) ? f.Type.NullableType() : f.Type,
+                defaultValue is not null || databaseType is DatabaseType.MSSQL && HasForeignKeyReference(f) ? f.Type.NullableType() : f.Type,
                 defaultValue,
                 new List<DirectiveNode>()
             );
@@ -208,21 +208,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-
-            bool isNToManyRelatedEntity = QueryBuilder.IsPaginationType(field.Type.NamedType());
             //bool isNonNullableType = field.Type.IsNonNullType();
 
-            if (isNToManyRelatedEntity)
+            if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
                 //ITypeNode typeNode = isNonNullableType ? new ListTypeNode(type) : new ListTypeNode(new NonNullType(type));
                 return new(
-                location: null,
-                field.Name,
-                new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                databaseType is DatabaseType.MSSQL ? new ListTypeNode(type) : type,
-                defaultValue: null,
-                databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
-            );
+                    location: null,
+                    field.Name,
+                    new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
+                    databaseType is DatabaseType.MSSQL ? new ListTypeNode(type) : type,
+                    defaultValue: null,
+                    databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
+                );
             }
             // For a type like [Bar!]! we have to first unpack the outer non-null
             if (field.Type.IsNonNullType())

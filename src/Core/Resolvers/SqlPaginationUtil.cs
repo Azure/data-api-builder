@@ -567,7 +567,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// 1) NameValueCollection is not resolved as string in JSON serialization.
         /// 2) NameValueCollection keys and values are not URL escaped.
         /// </summary>
-        /// <param name="queryStringParameters">Key: $QueryParamKey Value: QueryStringParamValue</param>
+        /// <param name="queryStringParameters">Key: $QueryStringParamKey Value: QueryStringParamValue</param>
         /// <returns>Query string prefixed with question mark (?). Returns an empty string when
         /// no entries exist in queryStringParameters.</returns>
         public static string FormatQueryString(NameValueCollection? queryStringParameters)

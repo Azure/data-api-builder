@@ -7,6 +7,9 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters;
 
+/// <summary>
+/// Defines how DAB reads and writes an entity's cache options (JSON).
+/// </summary>
 internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
 {
     /// <inheritdoc/>
@@ -25,7 +28,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
     {
         /// <summary>
         /// Defines how DAB reads an entity's cache options and defines which values are
-        /// written to the runtime configuration.
+        /// used to instantiate EntityCacheOptions.
         /// </summary>
         /// <exception cref="JsonException">Thrown when improperly formatted cache options are provided.</exception>
         public override EntityCacheOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
@@ -83,7 +86,7 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
         /// property and value when EntityCacheOptions.Enabled is true. This avoids polluting
         /// the written JSON file with a property the user most likely ommitted when writing the
         /// original DAB runtime config file.
-        /// This Write operation is only used when the 
+        /// This Write operation is only used when a RuntimeConfig object is serialized to JSON.
         /// </summary>
         public override void Write(Utf8JsonWriter writer, EntityCacheOptions value, JsonSerializerOptions options)
         {

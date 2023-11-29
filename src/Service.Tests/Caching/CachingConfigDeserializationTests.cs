@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching;
 [TestClass]
 public class CachingConfigDeserializationTests
 {
-    private const int DEFAULT_CACHE_TTL_SECONDS = 60;
+    private const int DEFAULT_CACHE_TTL_SECONDS = 45;
     private const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
 
     /// <summary>
@@ -39,9 +39,9 @@ public class CachingConfigDeserializationTests
     [DataRow(@",""cache"": { ""enabled"": false, ""ttl-seconds"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "EntityCacheOptions.TtlSeconds set to null results in (default) ttl value.")]
     [DataTestMethod]
     public void EntityCacheOptionsDeserialization_ValidJson(
-    string entityCacheConfig,
-    bool expectedEnabled,
-    int expectedTTL,
+        string entityCacheConfig,
+        bool expectedEnabled,
+        int expectedTTL,
         bool expectedUserDefinedTtl)
     {
         // Arrange
@@ -88,7 +88,7 @@ public class CachingConfigDeserializationTests
         string fullConfig = GetRawConfigJson(globalCacheConfig: string.Empty, entityCacheConfig: entityCacheConfig);
 
         // Act
-        bool parsingSuccessful = RuntimeConfigLoader.TryParseConfig(
+        bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
             json: fullConfig,
             out _,
             logger: null,
@@ -99,7 +99,7 @@ public class CachingConfigDeserializationTests
             replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
 
         // Assert
-        Assert.IsFalse(parsingSuccessful, message: "Expected JSON parsing to fail.");
+        Assert.IsFalse(isParsingSuccessful, message: "Expected JSON parsing to fail.");
     }
 
     /// <summary>
@@ -107,7 +107,7 @@ public class CachingConfigDeserializationTests
     /// the global Runtime.Cache property.
     /// </summary>
     /// <param name="globalCacheConfig">Escaped JSON string defining global cache configuration.</param>
-    /// <param name="expectedEnabled">Whether to expect deserialized Runtime.Cache to be enabled.</param>
+    /// <param name="expectCacheEnabled">Whether to expect deserialized Runtime.Cache to be enabled.</param>
     [DataRow(@"", false, DisplayName = "Global cache property left out of JSON config: default values used.")]
     [DataRow(@",""cache"": null", false, DisplayName = "Global cache property set to Null: default values used.")]
     [DataRow(@",""cache"": false", false, DisplayName = "Global cache property disabled -> Provided Enabled flag used with default ttl")]
@@ -115,7 +115,7 @@ public class CachingConfigDeserializationTests
     [DataTestMethod]
     public void GlobalCacheOptionsDeserialization_ValidJson(
         string globalCacheConfig,
-        bool expectedEnabled)
+        bool expectCacheEnabled)
     {
         // Arrange
         string fullConfig = GetRawConfigJson(globalCacheConfig: globalCacheConfig, entityCacheConfig: string.Empty);
@@ -133,9 +133,9 @@ public class CachingConfigDeserializationTests
 
         // Assert
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
-        Assert.AreEqual(expected: expectedEnabled, actual: config.IsCachingEnabled, message: "RuntimeConfig.CacheEnabled expected to be: " + expectedEnabled);
+        Assert.AreEqual(expected: expectCacheEnabled, actual: config.IsCachingEnabled, message: "RuntimeConfig.CacheEnabled expected to be: " + expectCacheEnabled);
 
-        if (expectedEnabled)
+        if (expectCacheEnabled)
         {
             Assert.IsNotNull(config.Runtime?.CacheEnabled, message: "Expected global cache property to be non-null.");
         }

@@ -16,8 +16,8 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// entities and optionally provides details on what underlying database
 /// objects can be used to support such relationships.</param>
 /// <param name="Mappings">Defines mappings between database fields and GraphQL and REST fields.</param>
-/// <param name="Cache">Defines whether to allow caching for read operation response's and
-/// how long those responses should be valid in the cache.</param>
+/// <param name="Cache">Defines whether to allow caching for a read operation's response and
+/// how long that response should be valid in the cache.</param>
 public record Entity
 {
     public const string PROPERTY_PATH = "path";

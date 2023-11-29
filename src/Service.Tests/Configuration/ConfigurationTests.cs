@@ -21,6 +21,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
@@ -41,7 +42,6 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
-using static Azure.DataApiBuilder.Core.Configurations.JsonConfigSchemaValidator;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.TestConfigFileReader;
 
@@ -1055,18 +1055,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 new(
                     configProvider,
                     new MockFileSystem(),
-                    configValidatorLogger.Object,
-                    isValidateOnly: true);
+                    configValidatorLogger.Object);
 
             configValidator.ValidateConfigProperties();
-            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary> 
-        /// This test method checks a valid config entities against 
+        /// This test method checks a valid config's entities against 
         /// the database and ensures they are valid. 
         /// </summary> 
-        [TestMethod("Validates config entites against database is valid."), TestCategory(TestCategory.MSSQL)]
+        [TestMethod("Validation passes for valid entities against database."), TestCategory(TestCategory.MSSQL)]
         public async Task TestSqlMetadataForValidConfigEntities()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
@@ -1085,7 +1083,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
             Assert.IsTrue(configValidator.ConfigValidationExceptions.IsNullOrEmpty());
-            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary> 
@@ -1094,7 +1091,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// The config contains an entity source object not present in the database.
         /// It also contains an entity whose source is incorrectly specified as a stored procedure.
         /// </summary> 
-        [TestMethod("Validates config entites against database is invalid."), TestCategory(TestCategory.MSSQL)]
+        [TestMethod("Validation fails for invalid entities against database."), TestCategory(TestCategory.MSSQL)]
         public async Task TestSqlMetadataForInvalidConfigEntities()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
@@ -1158,7 +1155,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual("Cannot obtain Schema for entity Book with underlying database "
                 + "object source: dbo.bokos due to: Invalid object name 'master.dbo.bokos'.", exceptionsList[0].Message);
             Assert.AreEqual("No stored procedure definition found for the given database object publishers", exceptionsList[1].Message);
-            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -1190,7 +1186,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     It.IsAny<Exception>(),
                     (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
                 Times.Once);
-            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -1218,8 +1213,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/runtime.Graphql at 13:26"));
             Assert.IsTrue(errorMessage.Contains("AdditionalPropertiesNotValid: #/entities.Publisher\n"
                     + "{\n  NoAdditionalPropertiesAllowed: #/entities.Publisher.rst\n}\n at 32:30"));
-
-            TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
         /// <summary>
@@ -1409,8 +1402,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.AreEqual(expectedStatusCode, response.StatusCode);
                 string actualBody = await response.Content.ReadAsStringAsync();
                 Assert.IsTrue(actualBody.Contains(expectedContent));
-
-                TestHelper.UnsetAllDABEnvironmentVariables();
             }
         }
 

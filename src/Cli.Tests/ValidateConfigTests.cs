@@ -33,7 +33,7 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// this method  validates that the IsConfigValid method returns false when the config is invalid.
+    /// This method validates that the IsConfigValid method returns false when the config is invalid.
     /// </summary>
     [TestMethod]
     public void TestConfigWithCustomPropertyAsInvalid()
@@ -47,7 +47,8 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// Validates that the IsConfigValid method returns true when the config is valid, i.e No custom proerties.
+    /// Validates that the IsConfigValid method returns false when a config is passed with
+    /// both rest and graphQL disabled globally.
     /// </summary>
     [TestMethod]
     public void TestConfigWithInvalidConfigProperties()

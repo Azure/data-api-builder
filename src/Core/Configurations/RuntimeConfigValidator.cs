@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
@@ -15,7 +16,6 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
-using static Azure.DataApiBuilder.Core.Configurations.JsonConfigSchemaValidator;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -138,7 +138,13 @@ public class RuntimeConfigValidator : IConfigValidator
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);
-        await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
+
+        // if the ConfigValidationExceptions list doesn't contain a DataApiBuilderException with message "I am Khan",
+        // then only we run the metadata validation.
+        if (!ConfigValidationExceptions.Any(x => x.Message.Equals(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
+        {
+            await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
+        }
 
         if (validationResult.IsValid && !ConfigValidationExceptions.Any())
         {
@@ -173,7 +179,7 @@ public class RuntimeConfigValidator : IConfigValidator
         if (string.IsNullOrWhiteSpace(jsonSchema))
         {
             _logger.LogError("Failed to get the json schema for the config.");
-            return new JsonSchemaValidationResult(false, null);
+            return new JsonSchemaValidationResult(isValid: false, errors: null);
         }
 
         return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
@@ -206,7 +212,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <summary>
     /// Helper method to log exceptions occured during validation of the config file.
     /// </summary>
-    public void LogConfigValidationExceptions()
+    private void LogConfigValidationExceptions()
     {
         foreach (Exception exception in ConfigValidationExceptions)
         {
@@ -997,9 +1003,10 @@ public class RuntimeConfigValidator : IConfigValidator
             if (!IsFieldAccessible(fieldNameMatch, includedFields, excludedFields))
             {
                 HandleOrRecordException(new DataApiBuilderException(
-                message: $"Not all the columns required by policy are accessible.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    message: $"Not all the columns required by policy are accessible.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError)
+                );
             }
         }
     }
@@ -1078,7 +1085,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="entity">Used to identify entity's representative object type.</param>
     /// <param name="entityName">Used to supplement error messages.</param>
     /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-    public bool IsValidPermissionAction(EntityActionOperation action, Entity entity, string entityName)
+    private bool IsValidPermissionAction(EntityActionOperation action, Entity entity, string entityName)
     {
         if (entity.Source.Type is EntitySourceType.StoredProcedure)
         {
@@ -1104,10 +1111,5 @@ public class RuntimeConfigValidator : IConfigValidator
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);
         }
-    }
-
-    public void ClearValidationExceptionList()
-    {
-        ConfigValidationExceptions.Clear();
     }
 }

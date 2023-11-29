@@ -27,7 +27,7 @@ namespace Cli
             DotNetEnv.Env.Load();
 
             // Setting up Logger for CLI.
-            ILoggerFactory loggerFactory = Utils.GetLoggerFactoryForCli();
+            ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
 
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();

@@ -67,11 +67,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             ParseSchemaGraphQLFieldsForGraphQLType();
         }
 
-        public void HandleOrRecordException(Exception e)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <inheritdoc />
         public string GetDatabaseObjectName(string entityName)
         {

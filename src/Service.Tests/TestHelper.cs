@@ -163,57 +163,6 @@ namespace Azure.DataApiBuilder.Service.Tests
           "}";
 
         /// <summary>
-        /// <summary>
-        /// A minimal valid config json with invalid schema due to custom property `description`.
-        /// This config string is used in unit tests for schema validation tests.
-        /// </summary>
-        public const string CONFIG_WITH_INVALID_SCHEMA =
-          @"{" +
-              @"""data-source"": {
-            ""database-type"": ""mssql"",
-            ""connection-string"": """",
-            ""options"":{
-              ""set-session-context"": true
-            },
-            ""description"": ""This is a sample description""
-          },
-          ""runtime"": {
-            ""rest"": {
-              ""path"": ""/api"",
-              ""enabled"": true
-            },
-            ""graphql"": {
-              ""path"": ""/graphql"",
-              ""enabled"": true,
-              ""allow-introspection"": false
-            },
-            ""host"": {
-              ""mode"": ""production"",
-              ""cors"": {
-                ""origins"": [],
-                ""allow-credentials"": false
-              },
-              ""authentication"": {
-                ""provider"": ""StaticWebApps""
-              }
-            }
-          },
-          ""entities"": {
-            ""book"": {
-              ""source"": ""s001.book"",
-              ""permissions"": [
-                {
-                  ""role"": ""anonymous"",
-                  ""actions"": [
-                    ""*""
-                  ]
-                }
-              ]
-            }
-          }
-        }";
-
-        /// <summary>
         /// A minimal valid config json without any entities. This config string is used in tests.
         /// Note: The test ConfigurationTests.ValidateStrictModeAsDefaultForRestRequestBody depends on BASE_CONFIG
         /// omitting the request-body-strict property.

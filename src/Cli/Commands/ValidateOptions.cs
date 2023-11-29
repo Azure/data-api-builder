@@ -20,6 +20,10 @@ namespace Cli.Commands
             : base(config)
         { }
 
+        /// <summary>
+        /// This Handler method is responsible for validating the config file and is called when `validate`
+        /// command is invoked.
+        /// </summary>
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());

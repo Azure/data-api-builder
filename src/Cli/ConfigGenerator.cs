@@ -1019,7 +1019,7 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetFinalConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
             {
                 return false;
             }
@@ -1087,7 +1087,7 @@ namespace Cli
         /// </summary>
         public static bool IsConfigValid(ValidateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            if (!TryGetFinalConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
             {
                 return false;
             }
@@ -1106,11 +1106,10 @@ namespace Cli
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
-            ILoggerFactory loggerFactory = Utils.GetLoggerFactoryForCli();
-            ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = loggerFactory.CreateLogger<RuntimeConfigValidator>();
+            ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
-            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, loggerFactory).Result;
+            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, LoggerFactoryForCli).Result;
         }
 
         /// <summary>
@@ -1118,7 +1117,7 @@ namespace Cli
         /// if config provided by the user, it will be the final config used, else will check based on the environment variable.
         /// Returns true if the config file is found, else false.
         /// </summary>
-        public static bool TryGetFinalConfigForRuntimeEngine(
+        public static bool TryGetConfigForRuntimeEngine(
             string? configToBeUsed,
             FileSystemRuntimeConfigLoader loader,
             IFileSystem fileSystem,

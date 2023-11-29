@@ -27,6 +27,7 @@ namespace Cli
         private static ILogger<Utils> _logger;
 #pragma warning restore CS8618
 
+        public static ILoggerFactory LoggerFactoryForCli = GetLoggerFactoryForCli();
         public static void SetCliUtilsLogger(ILogger<Utils> cliUtilsLogger)
         {
             _logger = cliUtilsLogger;

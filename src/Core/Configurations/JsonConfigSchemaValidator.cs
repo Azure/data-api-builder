@@ -5,6 +5,7 @@ using System.IO.Abstractions;
 using System.Reflection;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Models;
 using Microsoft.Extensions.Logging;
 using NJsonSchema;
 using NJsonSchema.Validation;
@@ -13,8 +14,8 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 
 public class JsonConfigSchemaValidator
 {
-    private ILogger<JsonConfigSchemaValidator>? _logger;
-    private IFileSystem _fileSystem = new FileSystem();
+    private ILogger<JsonConfigSchemaValidator> _logger;
+    private IFileSystem _fileSystem;
 
     /// <summary> 
     /// Sets the logger and file system for the JSON config schema validator. 
@@ -45,17 +46,17 @@ public class JsonConfigSchemaValidator
             if (!validationErrors.Any())
             {
                 _logger!.LogInformation("The config satisfies the schema requirements.");
-                return new(true, null);
+                return new(isValid: true, errors: null);
             }
             else
             {
-                return new(false, validationErrors);
+                return new(isValid: false, errors: validationErrors);
             }
         }
         catch (Exception e)
         {
             _logger!.LogError($"Failed to validate config against schema due to \n{e.Message}");
-            return new(false, null);
+            return new(isValid: false, errors: null);
         }
     }
 
@@ -104,33 +105,5 @@ public class JsonConfigSchemaValidator
 
         string contents = File.ReadAllText(jsonPath);
         return contents;
-    }
-
-    /// <summary>
-    /// Class to hold the result of a JSON schema validation.
-    /// </summary>
-    public class JsonSchemaValidationResult
-    {
-        public bool IsValid;
-        public ICollection<ValidationError>? ValidationErrors;
-
-        public int ErrorCount;
-
-        public string ErrorMessage;
-
-        public JsonSchemaValidationResult(bool isValid, ICollection<ValidationError>? errors)
-        {
-            IsValid = isValid;
-            ValidationErrors = errors;
-            ErrorCount = errors?.Count ?? 0;
-            ErrorMessage = errors is null ? string.Empty : FormatSchemaValidationErrorMessage(errors);
-        }
-
-        private static string FormatSchemaValidationErrorMessage(ICollection<ValidationError> validationErrors)
-        {
-            return $"> Total schema validation errors: {validationErrors.Count}\n" +
-                string.Join("", validationErrors.Select(e => $"> {e} at " +
-                $"{e.LineNumber}:{e.LinePosition}\n\n"));
-        }
     }
 }

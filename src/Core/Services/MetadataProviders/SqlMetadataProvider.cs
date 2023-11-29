@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public readonly bool _isValidateOnly;
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public void HandleOrRecordException(Exception e)
+        private void HandleOrRecordException(Exception e)
         {
             if (_isValidateOnly)
             {
@@ -88,14 +88,6 @@ namespace Azure.DataApiBuilder.Core.Services
             else
             {
                 throw e;
-            }
-        }
-
-        public void LogSqlMetadataExceptions()
-        {
-            foreach (Exception e in SqlMetadataExceptions)
-            {
-                _logger.LogError(e.Message);
             }
         }
 
@@ -262,6 +254,22 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
             GenerateDatabaseObjectForEntities();
+            if (_isValidateOnly)
+            {
+                // Currently Validate mode only support single datasource,
+                // so using the below validation we can check connection once instead of checking for each entity.
+                // To enable to check for multiple data-sources just remove this validation and each entity will have its own connection check.
+                try
+                {
+                    await ValidateDatabaseConnection();
+                }
+                catch (DataApiBuilderException e)
+                {
+                    HandleOrRecordException(e);
+                    return;
+                }
+            }
+
             await PopulateObjectDefinitionForEntities();
             GenerateExposedToBackingColumnMapsForEntities();
             // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
@@ -321,17 +329,32 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             using ConnectionT conn = new();
             conn.ConnectionString = ConnectionString;
-            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
-            await conn.OpenAsync();
-
+            DataTable procedureMetadata;
             string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
 
-            // To restrict the parameters for the current stored procedure, specify its name
-            procedureRestrictions[0] = conn.Database;
-            procedureRestrictions[1] = schemaName;
-            procedureRestrictions[2] = storedProcedureSourceName;
+            try
+            {
+                await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
+                await conn.OpenAsync();
 
-            DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
+                // To restrict the parameters for the current stored procedure, specify its name
+                procedureRestrictions[0] = conn.Database;
+                procedureRestrictions[1] = schemaName;
+                procedureRestrictions[2] = storedProcedureSourceName;
+
+                procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
+            }
+            catch (Exception ex)
+            {
+                string message = $"Cannot obtain Schema for entity {entityName} " +
+                            $"with underlying database object source: {schemaName}.{storedProcedureSourceName} " +
+                            $"due to: {ex.Message}";
+
+                throw new DataApiBuilderException(
+                    message: message,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
 
             // Stored procedure does not exist in DB schema
             if (procedureMetadata.Rows.Count == 0)
@@ -1224,6 +1247,33 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return dataTable!;
+        }
+
+        /// <summary>
+        /// This method attempts to open a database connection using the provided connection string.
+        /// If the connection fails to open, it catches the exception and throws a DataApiBuilderException.
+        /// It is specifically used to validate the connection string provided in the runtime configuration
+        /// for single datasource.
+        /// </summary>
+        private async Task ValidateDatabaseConnection()
+        {
+            using ConnectionT conn = new();
+            conn.ConnectionString = ConnectionString;
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
+            try
+            {
+                await conn.OpenAsync();
+            }
+            catch (Exception ex)
+            {
+                string message = DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE +
+                    $" Database connection failed due to: {ex.Message}";
+                throw new DataApiBuilderException(
+                    message,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
+            }
         }
 
         /// <summary>

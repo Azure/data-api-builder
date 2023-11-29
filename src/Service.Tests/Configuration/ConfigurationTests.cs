@@ -1508,6 +1508,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         variables: null,
                         clientRoleHeader: null
                         );
+
+                    Assert.IsNotNull(mutationResponse);
                     Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation createStock was successful but the current user is unauthorized to view the response due to lack of read permissions"));
 
                     // pk_query is executed in the context of Authenticated role to validate that the create mutation executed in the context of Anonymous role
@@ -1522,7 +1524,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         }";
                     string queryName = "stock_by_pk";
 
-                    ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken);
+                    ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
                 }
                 finally
                 {
@@ -1632,6 +1634,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
                         clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
                         );
+
+                    Assert.IsNotNull(mutationResponse);
                     Assert.IsFalse(mutationResponse.TryGetProperty("errors", out _));
                 }
                 finally
@@ -1665,7 +1669,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="query">GraphQL query/mutation text</param>
         /// <param name="queryName">GraphQL query/mutation name</param>
         /// <param name="authToken">Auth token for the graphQL request</param>
-        private static async void ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken)
+        private static async void ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
         {
             JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                                                 client,
@@ -1674,8 +1678,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                                                 queryName: queryName,
                                                 variables: null,
                                                 authToken: authToken,
-                                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+                                                clientRoleHeader: clientRoleHeader);
 
+            Assert.IsNotNull(queryResponse);
             Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
         }
 

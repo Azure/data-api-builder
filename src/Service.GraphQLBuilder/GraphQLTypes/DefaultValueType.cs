@@ -5,6 +5,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Types;
 using HotChocolate.Types.NodaTime;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedDateTimeTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
 {

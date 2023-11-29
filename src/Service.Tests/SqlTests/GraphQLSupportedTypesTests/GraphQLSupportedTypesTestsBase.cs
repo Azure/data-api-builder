@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedSqlTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedDateTimeTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {

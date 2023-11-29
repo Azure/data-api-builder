@@ -20,7 +20,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
         public const string DECIMAL_TYPE = "Decimal";
         public const string STRING_TYPE = "String";
         public const string BOOLEAN_TYPE = "Boolean";
-        public const string DATETIME_TYPE = "DateTime";
         public const string BYTEARRAY_TYPE = "ByteArray";
         public const string DATETIMEOFFSET_TYPE = "DateTimeOffset";
         public const string LOCALTIME_TYPE = "LocalTime";
@@ -28,11 +27,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes
     }
 
     /// <summary>
-    /// Class representing the sql data types supported by DAB which do not have a
-    /// corresponding identical representation in HotChocolate scalar built in types.
+    /// Class representing the sql datetime types supported by DAB which all map to the same .NET type of DateTime
+    /// and Hotchocolate scalar type of DateTime.
     /// </summary>
-    public static class SupportedSqlTypes
+    public static class SupportedDateTimeTypes
     {
+        public const string DATETIME_TYPE = "DateTime";
         public const string DATE_TYPE = "date";
         public const string SMALLDATETIME_TYPE = "smalldatetime";
         public const string DATETIME2_TYPE = "datetime2";

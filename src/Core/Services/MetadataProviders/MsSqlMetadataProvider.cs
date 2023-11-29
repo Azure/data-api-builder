@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public override bool TryResolveDbType(string sqlDbTypeName, out DbType dbType)
+        protected override bool TryResolveDbType(string sqlDbTypeName, out DbType dbType)
         {
             if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
             {

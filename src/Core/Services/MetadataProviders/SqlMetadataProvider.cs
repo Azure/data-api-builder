@@ -404,7 +404,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="sqlDbTypeName">Name of the sqlDbType.<</param>
         /// <param name="dbType">DbType of the parameter corresponding to its sqlDbTypeName.</param>
         /// <returns>Returns true when the given sqlDbTypeName datetime type is supported by DAB and resolve it to its corresponding DbType, else false.</returns>
-        public virtual bool TryResolveDbType(string sqlDbTypeName, [NotNullWhen(true)] out DbType dbType) => throw new NotImplementedException();
+        protected virtual bool TryResolveDbType(string sqlDbTypeName, [NotNullWhen(true)] out DbType dbType) => throw new NotImplementedException();
 
         /// <summary>
         /// Generates the map used to find a given entity based

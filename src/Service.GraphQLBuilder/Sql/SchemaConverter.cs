@@ -16,6 +16,7 @@ using HotChocolate.Types.NodaTime;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedDateTimeTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 {

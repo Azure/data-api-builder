@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json;
+using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -11,8 +11,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
     /// <summary>
     /// Test GraphQL Queries validating proper resolver/engine operation.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlGraphQLQueryTests : GraphQLQueryTestBase
+    [TestClass, TestCategory(TestCategory.DWSQL)]
+    public class DwSqlGraphQLQueryTests : GraphQLQueryTestBase
     {
         /// <summary>
         /// Set the database engine for the tests
@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
-            DatabaseEngine = TestCategory.MSSQL;
+            DatabaseEngine = TestCategory.DWSQL;
             await InitializeTestFixture();
         }
 
@@ -28,34 +28,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         /// <summary>
         /// Gets array of results for querying more than one item.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task MultipleResultQuery()
         {
-            string msSqlQuery = $"SELECT id, title FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
-            await MultipleResultQuery(msSqlQuery);
+            string msSqlQueryToValidateDWResultAgainst = $"SELECT id, title FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await MultipleResultQuery(msSqlQueryToValidateDWResultAgainst);
         }
 
         /// <summary>
-        /// Gets array of results for querying a table containing computed columns.
+        /// Gets array of results for querying more than one item using query variables
+        /// <checks>Runs an mssql query and then validates that the result from the dwsql query graphql call matches the mssql query result.</checks>
         /// </summary>
-        /// <check>rows from sales table</check>
-        [TestMethod]
-        public async Task MultipleResultQueryContainingComputedColumns()
-        {
-            string msSqlQuery = @"
-                SELECT
-                    id,
-                    item_name,
-                    ROUND(subtotal,2) AS subtotal,
-                    ROUND(tax,2) AS tax,
-                    ROUND(total,2) AS total
-                FROM
-                    sales
-                ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
-            await MultipleResultQueryContainingComputedColumns(msSqlQuery);
-        }
-
         [TestMethod]
         public async Task MultipleResultQueryWithVariables()
         {
@@ -63,6 +46,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await MultipleResultQueryWithVariables(msSqlQuery);
         }
 
+        /// <summary>
+        /// Gets array of results for querying more than one item using query mappings.
+        /// </summary>
         [TestMethod]
         public async Task MultipleResultQueryWithMappings()
         {
@@ -124,6 +110,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await OneToOneJoinQuery(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test getting a single item by use of primary key
+        /// <summary>
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {
@@ -135,6 +124,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await QueryWithSingleColumnPrimaryKey(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test getting a single item by use of primary key and mappings.
+        /// <summary>
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKeyAndMappings()
         {
@@ -146,6 +138,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await QueryWithSingleColumnPrimaryKeyAndMappings(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test getting a single item by use of primary key and other columns.
+        /// <summary>
         [TestMethod]
         public async Task QueryWithMultipleColumnPrimaryKey()
         {
@@ -157,6 +152,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await QueryWithMultipleColumnPrimaryKey(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test with a nullable foreign key
+        /// <summary>
         [TestMethod]
         public async Task QueryWithNullableForeignKey()
         {
@@ -188,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Get all instances of a type with nullable interger fields
+        /// Get all instances of a type with nullable integer fields
         /// </summary>
         [TestMethod]
         public async Task TestQueryingTypeWithNullableIntFields()
@@ -273,6 +271,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await TestOrderByWithOnlyNullFieldsDefaultsToPkSorting(msSqlQuery);
         }
 
+        /// <summary>
+        /// Tests that orderBy works using Variable.
+        /// </summary>
         [TestMethod]
         public async Task TestSettingOrderByOrderUsingVariable()
         {
@@ -280,6 +281,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await TestSettingOrderByOrderUsingVariable(msSqlQuery);
         }
 
+        /// <summary>
+        /// Tests complex arguments using variables
+        /// </summary>
         [TestMethod]
         public async Task TestSettingComplexArgumentUsingVariables()
         {
@@ -287,6 +291,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await base.TestSettingComplexArgumentUsingVariables(msSqlQuery);
         }
 
+        /// <summary>
+        /// Tests query with null arguments in gql call.
+        /// </summary>
         [TestMethod]
         public async Task TestQueryWithExplicitlyNullArguments()
         {
@@ -294,51 +301,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await TestQueryWithExplicitlyNullArguments(msSqlQuery);
         }
 
+        /// <summary>
+        /// Tests query on view.
+        /// </summary>
         [TestMethod]
         public async Task TestQueryOnBasicView()
         {
             string msSqlQuery = $"SELECT TOP 5 id, title FROM books_view_all ORDER BY id FOR JSON PATH, INCLUDE_NULL_VALUES";
             await base.TestQueryOnBasicView(msSqlQuery);
-        }
-
-        /// <summary>
-        /// Test to execute stored-procedure in graphQL that returns a single row
-        /// </summary>
-        [TestMethod]
-        public async Task TestStoredProcedureQueryForGettingSingleRow()
-        {
-            string msSqlQuery = $"EXEC dbo.get_publisher_by_id @id=1234";
-            await TestStoredProcedureQueryForGettingSingleRow(msSqlQuery);
-        }
-
-        /// <summary>
-        /// Test to execute stored-procedure in graphQL that returns a list(multiple rows)
-        /// </summary>
-        [TestMethod]
-        public async Task TestStoredProcedureQueryForGettingMultipleRows()
-        {
-            string msSqlQuery = $"EXEC dbo.get_books";
-            await TestStoredProcedureQueryForGettingMultipleRows(msSqlQuery);
-        }
-
-        /// <summary>
-        /// Test to execute stored-procedure in graphQL that counts the total number of rows
-        /// </summary>
-        [TestMethod]
-        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows()
-        {
-            string msSqlQuery = $"EXEC dbo.count_books";
-            await TestStoredProcedureQueryForGettingTotalNumberOfRows(msSqlQuery);
-        }
-
-        /// <summary>
-        /// Test to execute stored-procedure in graphQL that contains null in the result set.
-        /// </summary>
-        [TestMethod]
-        public async Task TestStoredProcedureQueryWithResultsContainingNull()
-        {
-            string msSqlQuery = $"EXEC dbo.get_authors_history_by_first_name @firstName='Aaron'";
-            await TestStoredProcedureQueryWithResultsContainingNull(msSqlQuery);
         }
 
         [TestMethod]
@@ -348,51 +318,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await base.TestQueryOnCompositeView(msSqlQuery);
         }
 
-        /// <inheritdoc />
-        [DataTestMethod]
-        [DataRow(null, null, 1113, "Real Madrid", DisplayName = "No Overriding of existing relationship fields in DB.")]
-        [DataRow(new string[] { "new_club_id" }, new string[] { "id" }, 1111, "Manchester United", DisplayName = "Overriding existing relationship fields in DB.")]
-        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+        /// <summary>
+        /// Datawarehouse does not support explicit foreign keys. ignoring this test.
+        /// </summary>
+        [TestMethod]
+        [Ignore]
+        public override Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
             string[] sourceFields,
             string[] targetFields,
             int club_id,
-            string club_name)
+            string club_name,
+            DatabaseType dbType,
+            string testEnvironment)
         {
-            await TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
-                sourceFields,
-                targetFields,
-                club_id,
-                club_name,
-                DatabaseType.MSSQL,
-                TestCategory.MSSQL);
+            throw new NotImplementedException();
         }
 
-        /// <inheritdoc/>>
-        [TestMethod]
-        public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet()
-        {
-            string dbQuery = "select count(*) as count from books";
-            await QueryAgainstSPWithOnlyTypenameInSelectionSet(dbQuery);
-        }
-
-        /// <summary>
-        /// Checks failure on providing arguments with no default in runtimeconfig.
-        /// In this test, there is no default value for the argument 'id' in runtimeconfig, nor is it specified in the query.
-        /// Stored procedure expects id argument to be provided.
-        /// </summary>
-        [TestMethod]
-        public async Task TestStoredProcedureQueryWithNoDefaultInConfig()
-        {
-            string graphQLQueryName = "executeGetPublisher";
-            string graphQLQuery = @"{
-                executeGetPublisher {
-                    name
-                }
-            }";
-
-            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "Did not provide all procedure params");
-        }
         #endregion
     }
 }

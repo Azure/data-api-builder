@@ -85,10 +85,15 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
 
-            // Add ApplicationTelemetry service and register custom ITelemetryInitializer implementation with the dependency injection
-            services.AddApplicationInsightsTelemetry();
-
-            services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
+                && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
+            {
+                // Add ApplicationTelemetry service and register
+                // custom ITelemetryInitializer implementation with the dependency injection
+                services.AddApplicationInsightsTelemetry();
+                services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            }
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
@@ -602,8 +607,6 @@ namespace Azure.DataApiBuilder.Service
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProviderFactory!);
                 }
-
-                runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProviderFactory!);
 
                 // Attempt to create OpenAPI document.
                 // Errors must not crash nor halt the intialization of the engine

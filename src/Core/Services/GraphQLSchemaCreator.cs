@@ -162,6 +162,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private DocumentNode GenerateSqlGraphQLObjects(RuntimeEntities entities, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
+            Dictionary<string, Entity> linkingEntities = new();
 
             // First pass - build up the object and input types for all the entities
             foreach ((string entityName, Entity entity) in entities)
@@ -170,6 +171,11 @@ namespace Azure.DataApiBuilder.Core.Services
                 // explicitly excluding the entity from the GraphQL endpoint.
                 if (!entity.GraphQL.Enabled)
                 {
+                    if (entity.IsLinkingEntity)
+                    {
+                        linkingEntities.Add(entityName, entity);
+                    }
+
                     continue;
                 }
 
@@ -233,8 +239,33 @@ namespace Azure.DataApiBuilder.Core.Services
                 objectTypes[entityName] = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
             }
 
+            // Create ObjectTypeDefinitionNode for linking entities
+            GenerateObjectForLinkingEntities(linkingEntities, objectTypes);
             List<IDefinitionNode> nodes = new(objectTypes.Values);
             return new DocumentNode(nodes);
+        }
+
+        private void GenerateObjectForLinkingEntities(Dictionary<string, Entity> linkingEntities, Dictionary<string, ObjectTypeDefinitionNode> objectTypes)
+        {
+            foreach((string entityName, Entity entity) in linkingEntities)
+            {
+                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+                ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+
+                if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(entityName, out DatabaseObject? databaseObject))
+                {
+                    ObjectTypeDefinitionNode node = SchemaConverter.FromDatabaseObject(
+                            entityName,
+                            databaseObject,
+                            entity,
+                            entities: new(new Dictionary<string, Entity>()),
+                            rolesAllowedForEntity: new List<string>(),
+                            rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>()
+                        );
+
+                    objectTypes.Add(entityName, node);
+                }
+            }
         }
 
         /// <summary>

@@ -41,7 +41,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
-            List<DirectiveNode> objectTypeDirectives = new();
+            List<DirectiveNode> objectTypeDirectives = new()
+            {
+                new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName))
+            };
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             NameNode nameNode = new(value: GetDefinedSingularName(entityName, configEntity));
 
@@ -77,13 +80,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
                 // If no roles are allowed for the field, we should not include it in the schema.
                 // Consequently, the field is only added to schema if this conditional evaluates to TRUE.
-                if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
+                if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles) || configEntity.IsLinkingEntity)
                 {
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
                     // Since Stored-procedures only support 1 CRUD action, it's possible that stored-procedures might return some values
                     // during mutation operation (i.e, containing one of create/update/delete permission).
                     // Hence, this check is bypassed for stored-procedures.
-                    if (roles.Count() > 0 || databaseObject.SourceType is EntitySourceType.StoredProcedure)
+                    if (configEntity.IsLinkingEntity || roles is not null && roles.Count() > 0 || databaseObject.SourceType is EntitySourceType.StoredProcedure)
                     {
                         if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
                                 roles,
@@ -112,102 +115,103 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
-            HashSet<string> foreignKeyFieldsInEntity = new();
-            if (configEntity.Relationships is not null)
+            if (!configEntity.IsLinkingEntity)
             {
-                foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
+                HashSet<string> foreignKeyFieldsInEntity = new();
+                if (configEntity.Relationships is not null)
                 {
-                    // Generate the field that represents the relationship to ObjectType, so you can navigate through it
-                    // and walk the graph
-                    string targetEntityName = relationship.TargetEntity.Split('.').Last();
-                    Entity referencedEntity = entities[targetEntityName];
-
-                    bool isNullableRelationship = false;
-
-                    if (// Retrieve all the relationship information for the source entity which is backed by this table definition
-                        sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
-                        &&
-                        // From the relationship information, obtain the foreign key definition for the given target entity
-                        relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
-                            out List<ForeignKeyDefinition>? listOfForeignKeys))
+                    foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
                     {
-                        ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
+                        // Generate the field that represents the relationship to ObjectType, so you can navigate through it
+                        // and walk the graph
+                        string targetEntityName = relationship.TargetEntity.Split('.').Last();
+                        Entity referencedEntity = entities[targetEntityName];
 
-                        // Determine whether the relationship should be nullable by obtaining the nullability
-                        // of the referencing(if source entity is the referencing object in the pair)
-                        // or referenced columns (if source entity is the referenced object in the pair).
-                        if (foreignKeyInfo is not null)
+                        bool isNullableRelationship = false;
+
+                        if (// Retrieve all the relationship information for the source entity which is backed by this table definition
+                            sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
+                            &&
+                            // From the relationship information, obtain the foreign key definition for the given target entity
+                            relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
+                                out List<ForeignKeyDefinition>? listOfForeignKeys))
                         {
-                            RelationShipPair pair = foreignKeyInfo.Pair;
-                            // The given entity may be the referencing or referenced database object in the foreign key
-                            // relationship. To determine this, compare with the entity's database object.
-                            if (pair.ReferencingDbTable.Equals(databaseObject))
+                            ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
+
+                            // Determine whether the relationship should be nullable by obtaining the nullability
+                            // of the referencing(if source entity is the referencing object in the pair)
+                            // or referenced columns (if source entity is the referenced object in the pair).
+                            if (foreignKeyInfo is not null)
                             {
-                                isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
-                                foreignKeyFieldsInEntity.UnionWith(foreignKeyInfo.ReferencingColumns);
+                                RelationShipPair pair = foreignKeyInfo.Pair;
+                                // The given entity may be the referencing or referenced database object in the foreign key
+                                // relationship. To determine this, compare with the entity's database object.
+                                if (pair.ReferencingDbTable.Equals(databaseObject))
+                                {
+                                    isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
+                                    foreignKeyFieldsInEntity.UnionWith(foreignKeyInfo.ReferencingColumns);
+                                }
+                                else
+                                {
+                                    isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
+                                }
                             }
                             else
                             {
-                                isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
+                                throw new DataApiBuilderException(
+                                    message: $"No relationship exists between {entityName} and {targetEntityName}",
+                                    statusCode: HttpStatusCode.InternalServerError,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
                             }
                         }
-                        else
+
+                        INullableTypeNode targetField = relationship.Cardinality switch
                         {
-                            throw new DataApiBuilderException(
-                                message: $"No relationship exists between {entityName} and {targetEntityName}",
-                                statusCode: HttpStatusCode.InternalServerError,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
-                        }
-                    }
+                            Cardinality.One =>
+                                new NamedTypeNode(GetDefinedSingularName(targetEntityName, referencedEntity)),
+                            Cardinality.Many =>
+                                new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(targetEntityName, referencedEntity))),
+                            _ =>
+                                throw new DataApiBuilderException(
+                                    message: "Specified cardinality isn't supported",
+                                    statusCode: HttpStatusCode.InternalServerError,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
+                        };
 
-                    INullableTypeNode targetField = relationship.Cardinality switch
-                    {
-                        Cardinality.One =>
-                            new NamedTypeNode(GetDefinedSingularName(targetEntityName, referencedEntity)),
-                        Cardinality.Many =>
-                            new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(targetEntityName, referencedEntity))),
-                        _ =>
-                            throw new DataApiBuilderException(
-                                message: "Specified cardinality isn't supported",
-                                statusCode: HttpStatusCode.InternalServerError,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
-                    };
-
-                    FieldDefinitionNode relationshipField = new(
-                        location: null,
-                        new NameNode(relationshipName),
-                        description: null,
-                        new List<InputValueDefinitionNode>(),
-                        isNullableRelationship ? targetField : new NonNullTypeNode(targetField),
-                        new List<DirectiveNode> {
+                        FieldDefinitionNode relationshipField = new(
+                            location: null,
+                            new NameNode(relationshipName),
+                            description: null,
+                            new List<InputValueDefinitionNode>(),
+                            isNullableRelationship ? targetField : new NonNullTypeNode(targetField),
+                            new List<DirectiveNode> {
                             new(RelationshipDirectiveType.DirectiveName,
                                 new ArgumentNode("target", GetDefinedSingularName(targetEntityName, referencedEntity)),
                                 new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
-                        });
+                            });
 
-                    fields.Add(relationshipField.Name.Value, relationshipField);
+                        fields.Add(relationshipField.Name.Value, relationshipField);
+                    }
                 }
-            }
 
-            // If there are foreign key references present in the entity, the values of these foreign keys can come
-            // via insertions in the related entity. By adding ForiegnKeyDirective here, we can later ensure that while creating input type for
-            // create mutations, these fields can be marked as nullable/optional.
-            foreach (string foreignKeyFieldInEntity in foreignKeyFieldsInEntity)
-            {
-                FieldDefinitionNode field = fields[foreignKeyFieldInEntity];
-                List<DirectiveNode> directives = (List<DirectiveNode>)field.Directives;
-                directives.Add(new DirectiveNode(ForeignKeyDirectiveType.DirectiveName));
-                field = field.WithDirectives(directives);
-                fields[foreignKeyFieldInEntity] = field;
-            }
+                // If there are foreign key references present in the entity, the values of these foreign keys can come
+                // via insertions in the related entity. By adding ForiegnKeyDirective here, we can later ensure that while creating input type for
+                // create mutations, these fields can be marked as nullable/optional.
+                foreach (string foreignKeyFieldInEntity in foreignKeyFieldsInEntity)
+                {
+                    FieldDefinitionNode field = fields[foreignKeyFieldInEntity];
+                    List<DirectiveNode> directives = (List<DirectiveNode>)field.Directives;
+                    directives.Add(new DirectiveNode(ForeignKeyDirectiveType.DirectiveName));
+                    field = field.WithDirectives(directives);
+                    fields[foreignKeyFieldInEntity] = field;
+                }
 
-            objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
-
-            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
-                    rolesAllowedForEntity,
-                    out DirectiveNode? authorizeDirective))
-            {
-                objectTypeDirectives.Add(authorizeDirective!);
+                if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                        rolesAllowedForEntity,
+                        out DirectiveNode? authorizeDirective))
+                {
+                    objectTypeDirectives.Add(authorizeDirective!);
+                }
             }
 
             // Top-level object type definition name should be singular.

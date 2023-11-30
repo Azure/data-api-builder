@@ -36,7 +36,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly DatabaseType _databaseType;
 
-        private readonly IReadOnlyDictionary<string, Entity> _entities;
+        protected readonly IReadOnlyDictionary<string, Entity> _entities;
+
+        public Dictionary<string, Entity> LinkingEntities { get; } = new();
 
         protected readonly string _dataSourceName;
 

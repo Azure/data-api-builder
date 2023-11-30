@@ -158,7 +158,7 @@ public record RuntimeConfig
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = Entities;
+        this.Entities = GetAggregrateEntities(Entities);
         _defaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
@@ -168,7 +168,7 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        foreach (KeyValuePair<string, Entity> entity in Entities)
+        foreach (KeyValuePair<string, Entity> entity in this.Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
         }
@@ -178,7 +178,7 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>> allEntities = this.Entities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
@@ -212,6 +212,50 @@ public record RuntimeConfig
 
     }
 
+    private static RuntimeEntities GetAggregrateEntities(RuntimeEntities entities)
+    {
+        Dictionary<string, Entity> linkingEntities = new();
+        foreach ((string sourceEntityName, Entity entity) in entities)
+        {
+            if (entity.Relationships is null || entity.Relationships.Count == 0 || !entity.GraphQL.Enabled)
+            {   
+                continue;
+            }
+
+            foreach ((_, EntityRelationship entityRelationship) in entity.Relationships)
+            {
+                if (entityRelationship.LinkingObject is null)
+                {
+                    continue;
+                }
+
+                string targetEntityName = entityRelationship.TargetEntity;
+                string linkingEntityName = "LinkingEntity_" + ConcatenateStringsLexicographically(sourceEntityName, targetEntityName);
+                Entity linkingEntity = new(
+                    Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),
+                    Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                    GraphQL: new(Singular: "", Plural: "", Enabled: false),
+                    Permissions: Array.Empty<EntityPermission>(),
+                    Relationships: null,
+                    Mappings: new(),
+                    IsLinkingEntity: true);
+                linkingEntities.TryAdd(linkingEntityName, linkingEntity);
+            }
+        }
+
+        return new(entities.Union(linkingEntities).ToDictionary(pair => pair.Key, pair => pair.Value));
+    }
+
+    private static string ConcatenateStringsLexicographically(string source, string target)
+    {
+        if (string.Compare(source, target) <= 0)
+        {
+            return source + target;
+        }
+
+        return target + source;
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// This constructor is to be used when dynamically setting up the config as opposed to using a cli json file.
@@ -230,7 +274,7 @@ public record RuntimeConfig
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = Entities;
+        this.Entities = GetAggregrateEntities(Entities);
         _defaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
@@ -336,6 +380,11 @@ public record RuntimeConfig
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
+    }
+
+    public void AddEntityNameToDataSourceNameMapping(string entityName, string dataSourceName)
+    {
+        _entityNameToDataSourceName.TryAdd(entityName, dataSourceName);
     }
 
     private void SetupDataSourcesUsed()

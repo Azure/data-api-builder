@@ -1114,7 +1114,7 @@ namespace Cli
 
         /// <summary>
         /// Tries to fetch the config file based on the precedence.
-        /// if config provided by the user, it will be the final config used, else will check based on the environment variable.
+        /// If config provided by the user, it will be the final config used, else will check based on the environment variable.
         /// Returns true if the config file is found, else false.
         /// </summary>
         public static bool TryGetConfigForRuntimeEngine(

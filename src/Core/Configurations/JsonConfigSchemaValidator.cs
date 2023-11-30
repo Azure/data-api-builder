@@ -22,7 +22,6 @@ public class JsonConfigSchemaValidator
     /// </summary> 
     /// <param name="jsonSchemaValidatorLogger">The logger to use for the JSON schema validator.</param> 
     /// <param name="fileSystem">The file system to use for the JSON schema validator.</param>
-
     public JsonConfigSchemaValidator(ILogger<JsonConfigSchemaValidator> jsonSchemaValidatorLogger, IFileSystem fileSystem)
     {
         _logger = jsonSchemaValidatorLogger;

@@ -352,6 +352,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 throw new DataApiBuilderException(
                     message: message,
+                    innerException: ex,
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
@@ -996,7 +997,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 try
                 {
-                    // InCase of StoredProcedures, result set definitions becomes the column definition.
+                    // For StoredProcedures, result set definitions become the column definition.
                     Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
                     EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
                     EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);

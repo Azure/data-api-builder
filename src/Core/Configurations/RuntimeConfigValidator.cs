@@ -139,7 +139,7 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);
 
-        // if the ConfigValidationExceptions list doesn't contain a DataApiBuilderException with message "I am Khan",
+        // If the ConfigValidationExceptions list doesn't contain a DataApiBuilderException with connection string error message,
         // then only we run the metadata validation.
         if (!ConfigValidationExceptions.Any(x => x.Message.Equals(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
         {

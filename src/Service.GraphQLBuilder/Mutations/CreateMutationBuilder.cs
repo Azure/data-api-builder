@@ -95,9 +95,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         throw new DataApiBuilderException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.GraphQLMapping);
                     }
 
+                    if (databaseType is DatabaseType.MSSQL && IsNToNRelationship(f, (ObjectTypeDefinitionNode)def, name))
+                    {
+                        typeName = LINKING_OBJECT_PREFIX + name.Value + typeName;
+                        def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == typeName)!;
+                    }
+
                     // Get entity definition for this ObjectTypeDefinitionNode.
                     // Recurse for evaluating input objects for related entities.
-                    return GetComplexInputType(name, inputs, definitions, f, typeName, (ObjectTypeDefinitionNode)def, databaseType);
+                    return GetComplexInputType(inputs, definitions, f, typeName, (ObjectTypeDefinitionNode)def, databaseType);
                 });
 
             foreach (InputValueDefinitionNode inputValueDefinitionNode in complexInputFields)
@@ -188,7 +194,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="entities">Runtime configuration information for entities.</param>
         /// <returns>A GraphQL input type value.</returns>
         private static InputValueDefinitionNode GetComplexInputType(
-            NameNode parentNodeName,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             FieldDefinitionNode field,
@@ -197,14 +202,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode node;
-            bool isManyToManyRelationship = IsNToNRelationship(field, childObjectTypeDefinitionNode, parentNodeName);
-            if (databaseType is DatabaseType.MSSQL && isManyToManyRelationship)
-            {
-                NameNode linkingObjectName = new(LINKING_OBJECT_PREFIX + parentNodeName.Value + typeName);
-                typeName = linkingObjectName.Value;
-                childObjectTypeDefinitionNode = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == linkingObjectName.Value)!;
-            }
-
             NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {
@@ -216,20 +213,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-            //bool isNonNullableType = field.Type.IsNonNullType();
 
-            /*if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
-            {
-                //ITypeNode typeNode = isNonNullableType ? new ListTypeNode(type) : new ListTypeNode(new NonNullType(type));
-                return new(
-                    location: null,
-                    field.Name,
-                    new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                    databaseType is DatabaseType.MSSQL ? new ListTypeNode(type) : type,
-                    defaultValue: null,
-                    databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
-                );
-            }*/
             // For a type like [Bar!]! we have to first unpack the outer non-null
             if (field.Type.IsNonNullType())
             {
@@ -259,16 +243,33 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             );
         }
 
-        private static bool IsNToNRelationship(FieldDefinitionNode field, ObjectTypeDefinitionNode childObjectTypeDefinitionNode, NameNode parentNodeName)
+        /// <summary>
+        /// Helper method to determine if there is a N:N relationship between the parent and child node.
+        /// </summary>
+        /// <param name="fieldDefinitionNode">FieldDefinition of the child node.</param>
+        /// <param name="childObjectTypeDefinitionNode">Object definition of the child node.</param>
+        /// <param name="parentNode">Parent node's NameNode.</param>
+        /// <returns></returns>
+        private static bool IsNToNRelationship(FieldDefinitionNode fieldDefinitionNode, ObjectTypeDefinitionNode childObjectTypeDefinitionNode, NameNode parentNode)
         {
-            if (!QueryBuilder.IsPaginationType(field.Type.NamedType()))
+            Cardinality rightCardinality = RelationshipDirectiveType.Cardinality(fieldDefinitionNode);
+            if (rightCardinality is not Cardinality.Many)
             {
                 return false;
             }
 
-            List<FieldDefinitionNode> fields = childObjectTypeDefinitionNode.Fields.ToList();
-            int index = fields.FindIndex(field => field.Type.NamedType().Name.Value == QueryBuilder.GeneratePaginationTypeName(parentNodeName.Value));
-            return index != -1;
+            List<FieldDefinitionNode> fieldsInChildNode = childObjectTypeDefinitionNode.Fields.ToList();
+            int index = fieldsInChildNode.FindIndex(field => field.Type.NamedType().Name.Value.Equals(QueryBuilder.GeneratePaginationTypeName(parentNode.Value)));
+            if (index == -1)
+            {
+                // Indicates that there is a 1:N relationship between parent and child nodes.
+                return false;
+            }
+
+            FieldDefinitionNode parentFieldInChildNode = fieldsInChildNode[index];
+
+            // Return true if left cardinality is also N.
+            return RelationshipDirectiveType.Cardinality(parentFieldInChildNode) is Cardinality.Many;
         }
 
         private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)

@@ -33,8 +33,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             NameNode name,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
-            DatabaseType databaseType,
-            RuntimeEntities entities)
+            DatabaseType databaseType)
         {
             NameNode inputName = GenerateInputTypeName(name.Value);
 
@@ -48,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // 2. Complex input fields corresponding to tables having a foreign key relationship with this table.
             List<InputValueDefinitionNode> inputFields = new();
 
-            // Simple input fields.
+            // 1. Simple input fields.
             IEnumerable<InputValueDefinitionNode> simpleInputFields = objectTypeDefinitionNode.Fields
                 .Where(f => IsBuiltInType(f.Type))
                 .Where(f => IsBuiltInTypeFieldAllowedForCreateInput(f, databaseType))
@@ -74,12 +73,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 );
 
             // Add input object to the dictionary of entities for which input object has already been created.
-            // This input object currently holds only simple fields. The complex fields (for related entities)
-            // would be added later when we return from recursion.
+            // This input object currently holds only simple fields.
+            // The complex fields (for related entities) would be added later when we return from recursion.
             // Adding the input object to the dictionary ensures that we don't go into infinite recursion and return whenever
             // we find that the input object has already been created for the entity.
             inputs.Add(input.Name, input);
 
+            // 2. Complex input fields.
             // Evaluate input objects for related entities.
             IEnumerable < InputValueDefinitionNode > complexInputFields =
                 objectTypeDefinitionNode.Fields
@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                     // Get entity definition for this ObjectTypeDefinitionNode.
                     // Recurse for evaluating input objects for related entities.
-                    return GetComplexInputType(inputs, definitions, f, typeName, (ObjectTypeDefinitionNode)def, databaseType, entities);
+                    return GetComplexInputType(name, inputs, definitions, f, typeName, (ObjectTypeDefinitionNode)def, databaseType);
                 });
 
             foreach (InputValueDefinitionNode inputValueDefinitionNode in complexInputFields)
@@ -183,24 +183,32 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
         /// <param name="field">Field that the input type is being generated for.</param>
         /// <param name="typeName">Name of the input type in the dictionary.</param>
-        /// <param name="otdn">The GraphQL object type to create the input type for.</param>
+        /// <param name="childObjectTypeDefinitionNode">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
         /// <param name="entities">Runtime configuration information for entities.</param>
         /// <returns>A GraphQL input type value.</returns>
         private static InputValueDefinitionNode GetComplexInputType(
+            NameNode parentNodeName,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             FieldDefinitionNode field,
             string typeName,
-            ObjectTypeDefinitionNode otdn,
-            DatabaseType databaseType,
-            RuntimeEntities entities)
+            ObjectTypeDefinitionNode childObjectTypeDefinitionNode,
+            DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode node;
+            bool isManyToManyRelationship = IsNToNRelationship(field, childObjectTypeDefinitionNode, parentNodeName);
+            if (databaseType is DatabaseType.MSSQL && isManyToManyRelationship)
+            {
+                NameNode linkingObjectName = new(LINKING_OBJECT_PREFIX + parentNodeName.Value + typeName);
+                typeName = linkingObjectName.Value;
+                childObjectTypeDefinitionNode = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == linkingObjectName.Value)!;
+            }
+
             NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateCreateInputType(inputs, otdn, new NameNode(typeName), definitions, databaseType, entities);
+                node = GenerateCreateInputType(inputs, childObjectTypeDefinitionNode, new NameNode(typeName), definitions, databaseType);
             }
             else
             {
@@ -210,7 +218,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             ITypeNode type = new NamedTypeNode(node.Name);
             //bool isNonNullableType = field.Type.IsNonNullType();
 
-            if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
+            /*if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
                 //ITypeNode typeNode = isNonNullableType ? new ListTypeNode(type) : new ListTypeNode(new NonNullType(type));
                 return new(
@@ -221,7 +229,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     defaultValue: null,
                     databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
                 );
-            }
+            }*/
             // For a type like [Bar!]! we have to first unpack the outer non-null
             if (field.Type.IsNonNullType())
             {
@@ -249,6 +257,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 defaultValue: null,
                 databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
             );
+        }
+
+        private static bool IsNToNRelationship(FieldDefinitionNode field, ObjectTypeDefinitionNode childObjectTypeDefinitionNode, NameNode parentNodeName)
+        {
+            if (!QueryBuilder.IsPaginationType(field.Type.NamedType()))
+            {
+                return false;
+            }
+
+            List<FieldDefinitionNode> fields = childObjectTypeDefinitionNode.Fields.ToList();
+            int index = fields.FindIndex(field => field.Type.NamedType().Name.Value == QueryBuilder.GeneratePaginationTypeName(parentNodeName.Value));
+            return index != -1;
         }
 
         private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)
@@ -298,8 +318,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 objectTypeDefinitionNode,
                 name,
                 root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
-                databaseType,
-                entities);
+                databaseType);
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new();

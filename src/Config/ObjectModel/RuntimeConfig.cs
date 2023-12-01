@@ -230,7 +230,7 @@ public record RuntimeConfig
                 }
 
                 string targetEntityName = entityRelationship.TargetEntity;
-                string linkingEntityName = "LinkingEntity_" + ConcatenateStringsLexicographically(sourceEntityName, targetEntityName);
+                string linkingEntityName = GenerateLinkingEntityName(sourceEntityName, targetEntityName);
                 Entity linkingEntity = new(
                     Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),
                     Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
@@ -246,14 +246,9 @@ public record RuntimeConfig
         return new(entities.Union(linkingEntities).ToDictionary(pair => pair.Key, pair => pair.Value));
     }
 
-    private static string ConcatenateStringsLexicographically(string source, string target)
+    public static string GenerateLinkingEntityName(string source, string target)
     {
-        if (string.Compare(source, target) <= 0)
-        {
-            return source + target;
-        }
-
-        return target + source;
+        return Entity.LINKING_ENTITY_PREFIX + (string.Compare(source, target) <= 0 ? source + target : target + source);
     }
 
     /// <summary>

@@ -38,8 +38,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             [NotNull] Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            HashSet<Tuple<string, string>>? relationshipsWithRightCardinalityMany = null,
+            HashSet<Tuple<string, string>>? manyToManyRelationships = null)
         {
+            if (relationshipsWithRightCardinalityMany is null)
+            {
+                relationshipsWithRightCardinalityMany = new();
+            }
+
+            if (manyToManyRelationships is null)
+            {
+                manyToManyRelationships = new();
+            }
+
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new()
             {
@@ -78,14 +90,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                 }
 
-                // If no roles are allowed for the field, we should not include it in the schema.
-                // Consequently, the field is only added to schema if this conditional evaluates to TRUE.
+                // A field is added to the schema when:
+                // 1. The entity is a linking entity. A linking entity is not exposed by DAB for query/mutation but the fields are required to generate
+                // object definitions of directional linking entities between (source, target) and (target, source).
+                // 2. The entity is not a linking entity and there is atleast one roles allowed to access the field.
                 if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles) || configEntity.IsLinkingEntity)
                 {
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
-                    // Since Stored-procedures only support 1 CRUD action, it's possible that stored-procedures might return some values
+                    // This check is bypassed for:
+                    // 1. Stored-procedures since they only support 1 CRUD action, and it's possible that it might return some values
                     // during mutation operation (i.e, containing one of create/update/delete permission).
-                    // Hence, this check is bypassed for stored-procedures.
+                    // 2. Linking entity for the same reason explained above.
                     if (configEntity.IsLinkingEntity || roles is not null && roles.Count() > 0 || databaseObject.SourceType is EntitySourceType.StoredProcedure)
                     {
                         if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
@@ -115,6 +130,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
+            // A linking entity is not exposed in the runtime config file but is used by DAB to support nested mutations on entities with N:N relationship.
+            // Hence we don't need to process relationships for the linking entity itself.
             if (!configEntity.IsLinkingEntity)
             {
                 HashSet<string> foreignKeyFieldsInEntity = new();
@@ -126,7 +143,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         // and walk the graph
                         string targetEntityName = relationship.TargetEntity.Split('.').Last();
                         Entity referencedEntity = entities[targetEntityName];
-
                         bool isNullableRelationship = false;
 
                         if (// Retrieve all the relationship information for the source entity which is backed by this table definition
@@ -177,6 +193,23 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                                     statusCode: HttpStatusCode.InternalServerError,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
                         };
+
+                        if (relationship.Cardinality is Cardinality.Many)
+                        {
+                            Tuple<string, string> sourceToTarget = new(entityName, targetEntityName);
+                            Tuple<string, string> targetToSource = new(targetEntityName, entityName);
+                            if (relationshipsWithRightCardinalityMany.Contains(sourceToTarget))
+                            {
+                                throw new Exception("relationship present");
+                            }
+
+                            relationshipsWithRightCardinalityMany.Add(sourceToTarget);
+                            if (relationshipsWithRightCardinalityMany.Contains(targetToSource))
+                            {
+                                manyToManyRelationships.Add(sourceToTarget);
+                                manyToManyRelationships.Add(targetToSource);
+                            }
+                        }
 
                         FieldDefinitionNode relationshipField = new(
                             location: null,

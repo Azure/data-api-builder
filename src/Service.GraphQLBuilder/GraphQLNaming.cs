@@ -28,6 +28,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <seealso cref="https://spec.graphql.org/October2021/#sec-Names.Reserved-Names"/>
         public const string INTROSPECTION_FIELD_PREFIX = "__";
 
+        public const string LINKING_OBJECT_PREFIX = "LinkingObject_";
+        public const string LINKING_OBJECT_FIELD_PREFIX = "LinkingField_";
+
         /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
         /// Completely removes invalid characters from the input parameter: name.

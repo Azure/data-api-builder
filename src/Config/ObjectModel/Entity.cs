@@ -23,6 +23,7 @@ public record Entity(
     Dictionary<string, EntityRelationship>? Relationships,
     bool IsLinkingEntity = false)
 {
+    public const string LINKING_ENTITY_PREFIX = "LinkingEntity_";
     public const string PROPERTY_PATH = "path";
     public const string PROPERTY_METHODS = "methods";
 }

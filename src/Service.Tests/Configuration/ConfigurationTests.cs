@@ -1708,6 +1708,270 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// For mutation operations, both the respective operation(create/update/delete) + read permissions are needed to receive a valid response.
+        /// In this test, Anonymous role is configured with only create permission.
+        /// So, a create mutation executed in the context of Anonymous role is expected to result in
+        /// 1) Creation of a new item in the database
+        /// 2) An error response containing the error message : "The mutation operation {operation_name} was successful but the current user is unauthorized to view the response due to lack of read permissions"
+        ///
+        /// A create mutation operation in the context of Anonymous role is executed and the expected error message is validated.
+        /// Authenticated role has read permission configured. A pk query is executed in the context of Authenticated role to validate that a new
+        /// record was created in the database.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateErrorMessageForMutationWithoutReadPermission()
+        {
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityAction deleteAction = new(
+                Action: EntityActionOperation.Delete,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] {new EntityPermission( Role: AuthorizationResolver.ROLE_ANONYMOUS , Actions: new[] { createAction }),
+                       new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { readAction, createAction, deleteAction })};
+
+            Entity entity = new(Source: new("stocks", EntitySourceType.Table, null, null),
+                                  Rest: null,
+                                  GraphQL: new(Singular: "Stock", Plural: "Stocks"),
+                                  Permissions: permissions,
+                                  Relationships: null,
+                                  Mappings: null);
+
+            string entityName = "Stock";
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try
+                {
+                    // A create mutation operation is executed in the context of Anonymous role. The Anonymous role has create action configured but lacks
+                    // read action. As a result, a new record should be created in the database but the mutation operation should return an error message.
+                    string graphQLMutation = @"
+                            mutation {
+                              createStock(
+                                item: {
+                                  categoryid: 5001
+                                  pieceid: 5001
+                                  categoryName: ""SciFi""
+                                  piecesAvailable: 100
+                                  piecesRequired: 50
+                                }
+                              ) {
+                                categoryid
+                                pieceid
+                              }
+                            }";
+
+                    JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: graphQLMutation,
+                        queryName: "createStock",
+                        variables: null,
+                        clientRoleHeader: null
+                        );
+
+                    Assert.IsNotNull(mutationResponse);
+                    Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation createStock was successful but the current user is unauthorized to view the response due to lack of read permissions"));
+
+                    // pk_query is executed in the context of Authenticated role to validate that the create mutation executed in the context of Anonymous role
+                    // resulted in the creation of a new record in the database.
+                    string graphQLQuery = @"
+                        {
+                          stock_by_pk(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            categoryName
+                          }
+                        }";
+                    string queryName = "stock_by_pk";
+
+                    ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
+                }
+                finally
+                {
+                    // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
+                    // back to its original state.
+                    string deleteMutation = @"
+                        mutation {
+                            deleteStock(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            }
+                        }";
+
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: deleteMutation,
+                        queryName: "deleteStock",
+                        variables: null,
+                        authToken: authToken,
+                        clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+                }
+            }
+        }
+
+        /// <summary>
+        /// For mutation operations, the respective mutation operation type(create/update/delete) + read permissions are needed to receive a valid response.
+        /// For graphQL requests, if read permission is configured for Anonymous role, then it is inherited by other roles.
+        /// In this test, Anonymous role has read permission configured. Authenticated role has only create permission configured.
+        /// A create mutation operation is executed in the context of Authenticated role and the response is expected to have no errors because
+        /// the read permission is inherited from Anonymous role.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateInheritanceOfReadPermissionFromAnonymous()
+        {
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityAction deleteAction = new(
+                Action: EntityActionOperation.Delete,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] {new EntityPermission( Role: AuthorizationResolver.ROLE_ANONYMOUS , Actions: new[] { createAction, readAction, deleteAction }),
+                       new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { createAction })};
+
+            Entity entity = new(Source: new("stocks", EntitySourceType.Table, null, null),
+                                  Rest: null,
+                                  GraphQL: new(Singular: "Stock", Plural: "Stocks"),
+                                  Permissions: permissions,
+                                  Relationships: null,
+                                  Mappings: null);
+
+            string entityName = "Stock";
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try
+                {
+                    // A create mutation operation is executed in the context of Authenticated role and the response is expected to be a valid
+                    // response without any errors.
+                    string graphQLMutation = @"
+                        mutation {
+                          createStock(
+                            item: {
+                              categoryid: 5001
+                              pieceid: 5001
+                              categoryName: ""SciFi""
+                              piecesAvailable: 100
+                              piecesRequired: 50
+                            }
+                          ) {
+                            categoryid
+                            pieceid
+                          }
+                        }";
+
+                    JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: graphQLMutation,
+                        queryName: "createStock",
+                        variables: null,
+                        authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                        clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
+                        );
+
+                    Assert.IsNotNull(mutationResponse);
+                    Assert.IsFalse(mutationResponse.TryGetProperty("errors", out _));
+                }
+                finally
+                {
+                    // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
+                    // back to its original state.
+                    string deleteMutation = @"
+                        mutation {
+                            deleteStock(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            }
+                        }";
+
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: deleteMutation,
+                        queryName: "deleteStock",
+                        variables: null,
+                        clientRoleHeader: null);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to validate that the mutation operation succeded at the database layer by executing a graphQL pk query.
+        /// </summary>
+        /// <param name="server">Test server created for the test</param>
+        /// <param name="client">HTTP client</param>
+        /// <param name="query">GraphQL query/mutation text</param>
+        /// <param name="queryName">GraphQL query/mutation name</param>
+        /// <param name="authToken">Auth token for the graphQL request</param>
+        private static async void ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
+        {
+            JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                                client,
+                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                query: query,
+                                                queryName: queryName,
+                                                variables: null,
+                                                authToken: authToken,
+                                                clientRoleHeader: clientRoleHeader);
+
+            Assert.IsNotNull(queryResponse);
+            Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
+        }
+
+        /// <summary>
         /// Validates the Location header field returned for a POST request when a 201 response is returned. The idea behind returning
         /// a Location header is to provide a URL against which a GET request can be performed to fetch the details of the new item.
         /// Base Route is not configured in the config file used for this test. If base-route is configured, the Location header URL should contain the base-route.

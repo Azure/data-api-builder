@@ -24,6 +24,8 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
+      dbPassword: ''
+      data-source.connection-string: ''
 
   steps:
   - task: NuGetAuthenticate@0
@@ -51,22 +53,20 @@ jobs:
       releaseType: stable
 
   - task: Bash@3
-    displayName: 'Bash generate password'
+    displayName: 'Generate password'
     inputs:
       targetType: 'inline'
       script: |
         password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9_!#%^&*()\-+=' | head -c24)
-        echo "##vso[task.setvariable variable=passTemp;]$password"
-        echo "##vso[task.setvariable variable=connStringTemp;]$(data-source.connection-string)"
-        echo $(passTemp)
-        echo $(connStringTemp)
+        echo "##vso[task.setvariable variable=dbPassword;]$password"
   
   - task: Bash@3
-    displayName: 'Bash Check val'
+    displayName: 'Generate connection string'
     inputs:
-       targetType: 'inline'
-       script: |
-         echo $(DockerSqlPass)
+      targetType: 'inline'
+      script: |
+        connectionString="Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=SA;Password=$(dbPassword);MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;Encrypt=False;"
+        echo "##vso[task.setvariable variable=data-source.connection-string;]$connectionString"
 
   - task: Bash@3
     condition: eq( variables['Agent.OS'], 'Linux' )

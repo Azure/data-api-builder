@@ -88,7 +88,7 @@ jobs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
       targetFiles: 'src/out/tests/net6.0/dab-config.DwSql.json'
-  
+
   - task: DotNetCoreCLI@2
     displayName: 'Run DwSql Integration Tests'
     inputs:

@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
     <Nullable>disable</Nullable>
     <OutputPath>$(BaseOutputPath)\tests</OutputPath>
+    <Platforms>AnyCPU;ARM64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

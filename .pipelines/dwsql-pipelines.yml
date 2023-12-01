@@ -73,7 +73,7 @@ jobs:
     displayName: Get and Start Ubuntu SQL Server Image Docker with SSL enabled
     inputs:
       filePath: scripts/start-mssql-server.bash
-      arguments: $(DockerSQLPass)
+      arguments: $(dbPassword)
 
   - task: DotNetCoreCLI@2
     displayName: Build

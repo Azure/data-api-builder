@@ -163,8 +163,8 @@ namespace Azure.DataApiBuilder.Core.Services
         private DocumentNode GenerateSqlGraphQLObjects(RuntimeEntities entities, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
             // Dictionary to store object types for:
-            // 1. Every entity exposed in the config file.
-            // 2. Directional linking entities to support nested insertions for N:N relationships. We generate the directional linking object types
+            // 1. Every entity exposed for MySql/PgSql/MsSql/DwSql in the config file.
+            // 2. Directional linking entities to support nested insertions for N:N relationships for MsSql. We generate the directional linking object types
             // from source -> target and target -> source.
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
 
@@ -186,11 +186,13 @@ namespace Azure.DataApiBuilder.Core.Services
             // 1. Build up the object and input types for all the exposed entities in the config.
             foreach ((string entityName, Entity entity) in entities)
             {
+                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+                ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 // Skip creating the GraphQL object for the current entity due to configuration
                 // explicitly excluding the entity from the GraphQL endpoint.
                 if (!entity.GraphQL.Enabled)
                 {
-                    if (entity.IsLinkingEntity)
+                    if (entity.IsLinkingEntity && sqlMetadataProvider.GetDatabaseType() is DatabaseType.MSSQL)
                     {
                         // Both GraphQL and REST are disabled for linking entities. Add an entry for this linking entity
                         // to generate its object type later.
@@ -199,9 +201,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     continue;
                 }
-
-                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
-                ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
                 if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(entityName, out DatabaseObject? databaseObject))
                 {
@@ -266,8 +265,11 @@ namespace Azure.DataApiBuilder.Core.Services
             // but are used to generate the object definitions of directional linking entities for (source, target) and (target, source) entities.
             Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities(linkingEntityNames, entities);
 
-            // 2. Generate and store object types for directional linking entities using the linkingObjectTypes generated in the previous step. 
-            GenerateObjectDefinitionsForDirectionalLinkingEntities(objectTypes, linkingObjectTypes, entitiesWithmanyToManyRelationships);
+            // 2. Generate and store object types for directional linking entities using the linkingObjectTypes generated in the previous step.
+            if (linkingObjectTypes.Count > 0)
+            {
+                GenerateObjectDefinitionsForDirectionalLinkingEntities(objectTypes, linkingObjectTypes, entitiesWithmanyToManyRelationships);
+            }
 
             // Return a list of all the object types to be exposed in the schema.
             List<IDefinitionNode> nodes = new(objectTypes.Values);
@@ -291,6 +293,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(sourceEntityName);
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+                if (sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                {
+                    // We support nested mutations only for MsSql as of now.
+                    continue;
+                }
+
                 ObjectTypeDefinitionNode linkingNode = linkingObjectTypes[linkingEntityName];
                 ObjectTypeDefinitionNode targetNode = objectTypes[targetEntityName]; 
                 if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? databaseObject))
@@ -309,7 +317,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // 1. All the fields from the target node to perform insertion on the target entity,
                     // 2. Fields from the linking node which are not a foreign key reference to source or target node. This is required to get all the
                     // values in the linking entity other than FK references so that insertion can be performed on the linking entity.
-                    fieldsInDirectionalLinkingNode = fieldsInDirectionalLinkingNode.Union(fieldsInLinkingNode.Where(field => !referencingColumnNames.Contains(field.Name.Value))).ToList();
+                    fieldsInDirectionalLinkingNode = fieldsInDirectionalLinkingNode.Union(fieldsInLinkingNode.Where(field => !referencingColumnNames.Contains(field.Name.Value.Substring(LINKING_OBJECT_FIELD_PREFIX.Length)))).ToList();
 
                     // We don't need the model/authorization directives for the linking node as it will not be exposed via query/mutation.
                     // Removing the model directive ensures that we treat these object definitions as helper objects only and do not try to expose

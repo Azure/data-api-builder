@@ -56,7 +56,9 @@ jobs:
       targetType: 'inline'
       script: |
         password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9_!#%^&*()\-+=' | head -c24)
-        echo "##vso[task.setvariable variable=DockerSQLPass;issecret=true]password"
+        echo $(password)
+        echo password
+        echo "##vso[task.setvariable variable=DockerSQLPass;issecret=true]$(password)"
   
   - task: Bash@3
     displayName: 'Bash Check val'

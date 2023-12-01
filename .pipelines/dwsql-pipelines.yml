@@ -51,6 +51,14 @@ jobs:
       releaseType: stable
 
   - task: Bash@3
+    displayName: 'Bash generate password'
+    inputs:
+      targetType: 'inline'
+      script: |
+        password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9_!@#$%^&*()\-+=' | head -c24)
+        echo "##vso[task.setvariable variable=DockerSQLPass;issecret=true]$password"
+
+  - task: Bash@3
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker with SSL enabled
     inputs:

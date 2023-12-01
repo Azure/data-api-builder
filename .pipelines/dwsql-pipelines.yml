@@ -77,7 +77,7 @@ jobs:
     inputs:
       command: build
       projects: '**/*.csproj'
-      arguments: '-p:generateConfigFileForDbType=DwSql --configuration $(buildConfiguration)' # Update this to match your need
+      arguments: '-p:generateConfigFileForDbType=dwsql --configuration $(buildConfiguration)' # Update this to match your need
 
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.DwSql.json'

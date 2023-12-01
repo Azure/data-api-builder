@@ -57,7 +57,7 @@ jobs:
     inputs:
       targetType: 'inline'
       script: |
-        password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9_!#%^&*()\-+=' | head -c24)
+        password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9' | head -c24)
         echo "##vso[task.setvariable variable=dbPassword;]$password"
   
   - task: Bash@3

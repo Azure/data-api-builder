@@ -56,14 +56,16 @@ jobs:
       targetType: 'inline'
       script: |
         password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9_!#%^&*()\-+=' | head -c24)
-        echo "##vso[task.setvariable variable=DockerSQLPass;issecret=true]$(password)"
+        echo "##vso[task.setvariable variable=passTemp;isoutput=true]password"
+        echo "##vso[task.setvariable variable=connStringTemp;isoutput=true]$(data-source.connection-string)"
   
   - task: Bash@3
     displayName: 'Bash Check val'
     inputs:
        targetType: 'inline'
        script: |
-         echo $(DockerSQLPass)
+         echo $(passTemp)
+         echo $(connStringTemp)
 
   - task: Bash@3
     condition: eq( variables['Agent.OS'], 'Linux' )
@@ -86,16 +88,6 @@ jobs:
       fileType: 'json'
       targetFiles: 'src/out/tests/net6.0/dab-config.DwSql.json'
   
-  - task: Bash@3 
-    displayName: 'Bash Check variable replacement'
-    inputs:
-      targetType: 'inline'
-      script: |
-        cat src/out/tests/net6.0/dab-config.DwSql.json | while read line
-        do
-          echo "$line"
-        done
-
   - task: DotNetCoreCLI@2
     displayName: 'Run DwSql Integration Tests'
     inputs:

@@ -24,8 +24,8 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
-      passTemp: 'passTemp'
-      connStringTemp: 'connStringTemp'
+      passTemp: 'initalpass'
+      connStringTemp: 'initialconnString'
 
   steps:
   - task: NuGetAuthenticate@0
@@ -58,10 +58,10 @@ jobs:
       targetType: 'inline'
       script: |
         password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9_!#%^&*()\-+=' | head -c24)
-        echo "##vso[task.setvariable variable=passTemp;isoutput=true]password"
+        echo "##vso[task.setvariable variable=passTemp;isoutput=true]$password"
         echo "##vso[task.setvariable variable=connStringTemp;isoutput=true]$(data-source.connection-string)"
-        echo ${{ variables.passTemp }}
-        echo ${{ variables.connStringTemp }}
+        echo $(passTemp)
+        echo $(connStringTemp)
   
   - task: Bash@3
     displayName: 'Bash Check val'

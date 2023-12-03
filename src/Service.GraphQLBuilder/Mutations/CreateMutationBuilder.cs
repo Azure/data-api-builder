@@ -213,9 +213,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-
+            if (databaseType is DatabaseType.MSSQL && RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
+            {
+                // For *:N relationships, we need to create a list type.
+                type = new ListTypeNode(new NonNullTypeNode((INullableTypeNode)type));
+            }
             // For a type like [Bar!]! we have to first unpack the outer non-null
-            if (field.Type.IsNonNullType())
+            else if (field.Type.IsNonNullType())
             {
                 // The innerType is the raw List, scalar or object type without null settings
                 ITypeNode innerType = field.Type.InnerType();
@@ -237,7 +241,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 field.Name,
                 new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                databaseType is DatabaseType.MSSQL ? type.NullableType() : type,
+                type,
                 defaultValue: null,
                 databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
             );

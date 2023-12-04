@@ -203,7 +203,6 @@ jobs:
     displayName: Build
     inputs:
       command: build
-      projects: build
       projects: |
         **/*.csproj
         !**/*Tests*.csproj

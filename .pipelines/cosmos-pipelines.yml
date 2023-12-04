@@ -60,7 +60,7 @@ steps:
   displayName: Build
   inputs:
     command: build
-    projects: projects: |
+    projects: |
         **/*.csproj
         !**/*Tests*.csproj
     arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need

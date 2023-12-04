@@ -60,7 +60,9 @@ jobs:
     displayName: Build
     inputs:
       command: build
-      projects: '**/*.csproj;!**/*Tests/*.csproj'
+      projects: |
+        '**/*.csproj'
+        '!**/Tests/*.csproj'
       arguments: '-p:generateConfigFileForDbType=mysql --configuration $(buildConfiguration)' # Update this to match your need
 
   - task: DotNetCoreCLI@2

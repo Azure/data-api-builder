@@ -62,7 +62,7 @@ jobs:
       command: build
       projects: |
         **/*.csproj
-        !**/*Tests.csproj
+        !**/*Tests*.csproj
       arguments: '-p:generateConfigFileForDbType=mysql --configuration $(buildConfiguration)' # Update this to match your need
 
   - task: DotNetCoreCLI@2
@@ -70,7 +70,7 @@ jobs:
     inputs:
       command: build
       projects: '**/*Tests/*.csproj'
-      arguments: '--configuration $(buildConfiguration)' # Update this to match your need
+      arguments: '--configuration $(buildConfiguration)'
 
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MySql.json'

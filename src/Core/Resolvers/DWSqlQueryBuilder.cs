@@ -109,12 +109,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     col_value = $"CAST([{col_value}] AS NVARCHAR(MAX))";
                     // Create json. Example: "book.id": 1 would be a sample output.
-                    stringAgg.Append($"\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null') + \'");
+                    stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null')");
                 }
                 else
                 {
                     // Create json. Example: "book.title": "Title" would be a sample output.
-                    stringAgg.Append($"\"{escapedLabel}\":\' + ISNULL(\'\"\'+STRING_ESCAPE([{col_value}],'json')+\'\"\','null') + \'");
+                    stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(\'\"\'+STRING_ESCAPE([{col_value}],'json')+\'\"\','null')");
                 }
 
                 i++;
@@ -123,11 +123,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // the below ensures there is a comma after id but not after name.
                 if (i != structure.Columns.Count)
                 {
-                    stringAgg.Append(",");
+                    stringAgg.Append("+\',\'+");
                 }
             }
 
-            columns = $"STRING_AGG(\'{{{stringAgg}}}\',', ')";
+            columns = $"STRING_AGG(\'{{\'+{stringAgg}+\'}}\',', ')";
             if (structure.IsListQuery)
             {
                 // Array wrappers if we are trying to get a list of objects.

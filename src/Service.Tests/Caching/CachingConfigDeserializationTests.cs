@@ -38,7 +38,7 @@ public class CachingConfigDeserializationTests
     [DataRow(@",""cache"": { ""enabled"": false }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "EntityCacheOptions disabled with left out ttl: -> Provided Enabled flag used with default ttl")]
     [DataRow(@",""cache"": { ""enabled"": false, ""ttl-seconds"": 2147483647 }", false, 2147483647, true, DisplayName = "EntityCacheOptions disabled with explicit Int.MaxValue ttl: -> provided values used and userDefined flag set to true")]
     [DataRow(@",""cache"": { ""enabled"": true }", true, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "EntityCacheOptions enabled and ttl left out: provided enabled flag used with default ttl and userdefined flag set to false")]
-    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 60 }", true, DEFAULT_CACHE_TTL_SECONDS, true, DisplayName = "EntityCacheOptions provided: provided values used and userdefined flag set to true")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 5 }", true, DEFAULT_CACHE_TTL_SECONDS, true, DisplayName = "EntityCacheOptions provided: provided values used and userdefined flag set to true")]
     [DataRow(@",""cache"": { ""enabled"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "EntityCacheOptions.Enabled set to null results in (default) disabled entity cache.")]
     [DataRow(@",""cache"": { ""enabled"": false, ""ttl-seconds"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "EntityCacheOptions.TtlSeconds set to null results in (default) ttl value.")]
     [DataTestMethod]
@@ -197,7 +197,6 @@ public class CachingConfigDeserializationTests
             @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
             @"""data-source"": {
                     ""database-type"": ""mssql"",
-                    ""connection-string"": ""ReplaceMe"",
                     ""options"":{
                         ""set-session-context"": false
                     }

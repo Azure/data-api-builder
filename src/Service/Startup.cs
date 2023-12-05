@@ -569,12 +569,12 @@ namespace Azure.DataApiBuilder.Service
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
 
-                runtimeConfigValidator.ValidateConfig();
+                runtimeConfigValidator.ValidateConfigProperties();
 
                 if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                    runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
                 IMetadataProviderFactory sqlMetadataProviderFactory =

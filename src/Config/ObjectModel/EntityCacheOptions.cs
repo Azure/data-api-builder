@@ -12,7 +12,10 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// </summary>
 public record EntityCacheOptions
 {
-    public const int DEFAULT_TTL_SECONDS = 45;
+    /// <summary>
+    /// Default ttl value for an entity.
+    /// </summary>
+    public const int DEFAULT_TTL_SECONDS = 5;
 
     /// <summary>
     /// Whether the cache should be used for the entity.

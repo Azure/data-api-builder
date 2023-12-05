@@ -70,7 +70,13 @@ internal class EntityCacheOptionsConverterFactory : JsonConverterFactory
                             }
                             else
                             {
-                                ttlSeconds = reader.GetInt32();
+                                int parseTtlSeconds = reader.GetInt32();
+                                if (parseTtlSeconds <= 0)
+                                {
+                                    throw new JsonException($"Invalid value for ttl-seconds: {parseTtlSeconds}. Value must be greater than 0.");
+                                }
+
+                                ttlSeconds = parseTtlSeconds;
                             }
 
                             break;

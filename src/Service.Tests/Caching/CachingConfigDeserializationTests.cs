@@ -16,7 +16,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching;
 [TestClass]
 public class CachingConfigDeserializationTests
 {
-    private const int DEFAULT_CACHE_TTL_SECONDS = 45;
+    /// <summary>
+    /// Default ttl value for an entity. Must align with EntityCacheOptions.DEFAULT_TTL_SECONDS.
+    /// </summary>
+    private const int DEFAULT_CACHE_TTL_SECONDS = 5;
+
     private const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
 
     /// <summary>
@@ -81,8 +85,11 @@ public class CachingConfigDeserializationTests
     /// <param name="entityCacheConfig">Escaped JSON string defining entity cache configuration.</param>
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 2147483648 }", DisplayName = "EntityCacheOptions.TtlSeconds set to Int.MaxValue+1 is invalid for parser.")]
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": -2147483649 }", DisplayName = "EntityCacheOptions.TtlSeconds set to Int.MinValue-1 is invalid for parser.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 0 }", DisplayName = "EntityCacheOptions.TtlSeconds set to zero is invalid configuration.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": -1 }", DisplayName = "EntityCacheOptions.TtlSeconds set to negative number is invalid configuration.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 1.1 }", DisplayName = "EntityCacheOptions.TtlSeconds set to decimal is invalid configuration.")]
     [DataTestMethod]
-    public void EntityCacheOptionsDeserialization_InvalidJson(string entityCacheConfig)
+    public void EntityCacheOptionsDeserialization_InvalidValues(string entityCacheConfig)
     {
         // Arrange
         string fullConfig = GetRawConfigJson(globalCacheConfig: string.Empty, entityCacheConfig: entityCacheConfig);

@@ -44,7 +44,7 @@ public class CachingConfigDeserializationTests
     [DataTestMethod]
     public void EntityCacheOptionsDeserialization_ValidJson(
         string entityCacheConfig,
-        bool expectedEnabled,
+        bool expectCacheEnabled,
         int expectedTTL,
         bool expectedUserDefinedTtl)
     {
@@ -66,13 +66,13 @@ public class CachingConfigDeserializationTests
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
 
         Entity entity = config.Entities.First().Value;
-        Assert.AreEqual(expectedEnabled, entity.IsCachingEnabled, message: "EntityCacheConfig.Enabled expected to be: " + expectedEnabled);
+        Assert.AreEqual(expectCacheEnabled, entity.IsCachingEnabled, message: "EntityCacheConfig.Enabled expected to be: " + expectCacheEnabled);
 
         EntityCacheOptions? resolvedEntityCacheOptions = entity.Cache;
-        if (expectedEnabled)
+        if (expectCacheEnabled)
         {
             Assert.IsNotNull(resolvedEntityCacheOptions, message: "EntityCacheConfig must not be null, unexpected entity JSON deserialization result.");
-            Assert.AreEqual(expectedEnabled, resolvedEntityCacheOptions.Enabled, message: "EntityCacheConfig.Enabled expected to be: " + expectedEnabled);
+            Assert.AreEqual(expectCacheEnabled, resolvedEntityCacheOptions.Enabled, message: "EntityCacheConfig.Enabled expected to be: " + expectCacheEnabled);
             Assert.AreEqual(expectedTTL, resolvedEntityCacheOptions.TtlSeconds);
             Assert.AreEqual(expectedUserDefinedTtl, resolvedEntityCacheOptions.UserProvidedTtlOptions, message: "UserProvidedTtlOptions expected to be: " + expectedUserDefinedTtl);
         }
@@ -92,6 +92,8 @@ public class CachingConfigDeserializationTests
     [DataRow(@",""cache"": { ""enabled"": 0 }", DisplayName = "EntityCacheOptions.Enabled property set to 0 should fail because not a boolean.")]
     [DataRow(@",""cache"": 1", DisplayName = "EntityCacheOptions property set to 1 should fail because it's not a JSON object.")]
     [DataRow(@",""cache"": 0", DisplayName = "EntityCacheOptions property set to 0 should fail because it's not a JSON object.")]
+    [DataRow(@",""cache"": true", DisplayName = "EntityCacheOptions property set to true should fail because it's not a JSON object.")]
+    [DataRow(@",""cache"": false", DisplayName = "EntityCacheOptions property set to false should fail because it's not a JSON object.")]
     [DataTestMethod]
     public void EntityCacheOptionsDeserialization_InvalidValues(string entityCacheConfig)
     {
@@ -119,14 +121,21 @@ public class CachingConfigDeserializationTests
     /// </summary>
     /// <param name="globalCacheConfig">Escaped JSON string defining global cache configuration.</param>
     /// <param name="expectCacheEnabled">Whether to expect deserialized Runtime.Cache to be enabled.</param>
-    [DataRow(@"", false, DisplayName = "Global cache property left out of JSON config: default values used.")]
-    [DataRow(@",""cache"": null", false, DisplayName = "Global cache property set to Null: default values used.")]
-    [DataRow(@",""cache"": false", false, DisplayName = "Global cache property disabled -> Provided Enabled flag used with default ttl")]
-    [DataRow(@",""cache"": true", true, DisplayName = "EntityGlobal cache property enabled -> provided values used and userDefined flag set to true")]
+    [DataRow(@"", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions left out of JSON config: default values used.")]
+    [DataRow(@",""cache"": null", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions set to Null: default values used.")]
+    [DataRow(@",""cache"": {}", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions is empty: default values used.")]
+    [DataRow(@",""cache"": { ""enabled"": false }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions disabled with left out ttl: -> Provided Enabled flag used with default ttl")]
+    [DataRow(@",""cache"": { ""enabled"": false, ""ttl-seconds"": 2147483647 }", false, 2147483647, true, DisplayName = "GlobalCacheOptions disabled with explicit Int.MaxValue ttl: -> provided values used and userDefined flag set to true")]
+    [DataRow(@",""cache"": { ""enabled"": true }", true, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions enabled and ttl left out: provided enabled flag used with default ttl and userdefined flag set to false")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 5 }", true, DEFAULT_CACHE_TTL_SECONDS, true, DisplayName = "GlobalCacheOptions provided: provided values used and userdefined flag set to true")]
+    [DataRow(@",""cache"": { ""enabled"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions.Enabled set to null results in (default) disabled entity cache.")]
+    [DataRow(@",""cache"": { ""enabled"": false, ""ttl-seconds"": null }", false, DEFAULT_CACHE_TTL_SECONDS, false, DisplayName = "GlobalCacheOptions.TtlSeconds set to null results in (default) ttl value.")]
     [DataTestMethod]
-    public void GlobalCacheOptionsDeserialization_ValidJson(
+    public void GlobalCacheOptionsDeserialization_ValidValues(
         string globalCacheConfig,
-        bool expectCacheEnabled)
+        bool expectCacheEnabled,
+        int expectedTTL,
+        bool expectedUserDefinedTtl)
     {
         // Arrange
         string fullConfig = GetRawConfigJson(globalCacheConfig: globalCacheConfig, entityCacheConfig: string.Empty);
@@ -146,9 +155,14 @@ public class CachingConfigDeserializationTests
         Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
         Assert.AreEqual(expected: expectCacheEnabled, actual: config.IsCachingEnabled, message: "RuntimeConfig.CacheEnabled expected to be: " + expectCacheEnabled);
 
+        EntityCacheOptions? resolvedGlobalCacheOptions = config?.Runtime?.Cache;
         if (expectCacheEnabled)
         {
-            Assert.IsNotNull(config.Runtime?.CacheEnabled, message: "Expected global cache property to be non-null.");
+            Assert.IsNotNull(config?.IsCachingEnabled, message: "Expected global cache property to be non-null.");
+            Assert.IsNotNull(resolvedGlobalCacheOptions, message: "GlobalCacheConfig must not be null, unexpected entity JSON deserialization result.");
+            Assert.AreEqual(expectCacheEnabled, resolvedGlobalCacheOptions.Enabled, message: "GlobalCacheConfig.Enabled expected to be: " + expectCacheEnabled);
+            Assert.AreEqual(expectedTTL, resolvedGlobalCacheOptions.TtlSeconds);
+            Assert.AreEqual(expectedUserDefinedTtl, resolvedGlobalCacheOptions.UserProvidedTtlOptions, message: "UserProvidedTtlOptions expected to be: " + expectedUserDefinedTtl);
         }
     }
 
@@ -157,16 +171,22 @@ public class CachingConfigDeserializationTests
     /// a failure to deserialize the runtime config.
     /// </summary>
     /// <param name="globalCacheConfig">Escaped JSON string defining entity cache configuration.</param>
-    [DataRow(@",""cache"": {}", DisplayName = "GlobalCacheOptions property is empty: deserialization fails.")]
-    [DataRow(@",""cache"": 1", DisplayName = "GlobalCacheOptions property set to 1 should fail because it's not a JSON object.")]
-    [DataRow(@",""cache"": 0", DisplayName = "GlobalCacheOptions property set to 0 should fail because it's not a JSON object.")]
-    [DataRow(@",""cache"": { ""enabled"": 1 }", DisplayName = "GlobalCacheOptions.Enabled property set to 1 should fail because not a boolean.")]
-    [DataRow(@",""cache"": { ""enabled"": 0 }", DisplayName = "GlobalCacheOptions.Enabled property set to 0 should fail because not a boolean.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 2147483648 }", DisplayName = "EntityCacheOptions.TtlSeconds set to Int.MaxValue+1 is invalid for parser.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": -2147483649 }", DisplayName = "EntityCacheOptions.TtlSeconds set to Int.MinValue-1 is invalid for parser.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 0 }", DisplayName = "EntityCacheOptions.TtlSeconds set to zero is invalid configuration.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": -1 }", DisplayName = "EntityCacheOptions.TtlSeconds set to negative number is invalid configuration.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 1.1 }", DisplayName = "EntityCacheOptions.TtlSeconds set to decimal is invalid configuration.")]
+    [DataRow(@",""cache"": { ""enabled"": 1 }", DisplayName = "EntityCacheOptions.Enabled property set to 1 should fail because not a boolean.")]
+    [DataRow(@",""cache"": { ""enabled"": 0 }", DisplayName = "EntityCacheOptions.Enabled property set to 0 should fail because not a boolean.")]
+    [DataRow(@",""cache"": 1", DisplayName = "EntityCacheOptions property set to 1 should fail because it's not a JSON object.")]
+    [DataRow(@",""cache"": 0", DisplayName = "EntityCacheOptions property set to 0 should fail because it's not a JSON object.")]
+    [DataRow(@",""cache"": true", DisplayName = "EntityCacheOptions property set to true should fail because it's not a JSON object.")]
+    [DataRow(@",""cache"": false", DisplayName = "EntityCacheOptions property set to false should fail because it's not a JSON object.")]
     [DataTestMethod]
-    public void GlobalCacheOptionsDeserialization_InvalidJson(string entityCacheConfig)
+    public void GlobalCacheOptionsDeserialization_InvalidValues(string globalCacheConfig)
     {
         // Arrange
-        string fullConfig = GetRawConfigJson(globalCacheConfig: entityCacheConfig, entityCacheConfig: string.Empty);
+        string fullConfig = GetRawConfigJson(globalCacheConfig: globalCacheConfig, entityCacheConfig: string.Empty);
 
         // Act
         bool parsingSuccessful = RuntimeConfigLoader.TryParseConfig(
@@ -181,6 +201,47 @@ public class CachingConfigDeserializationTests
 
         // Assert
         Assert.IsFalse(parsingSuccessful, message: "Expected JSON parsing to fail.");
+    }
+
+    /// <summary>
+    /// Validates that an entity's cache config ttl is used when both the global cache config ttl and the entity cache config ttl are explicitly set.
+    /// Validates that the explicitly configured global cache config ttl is NOT used in an entity's cache config
+    /// when an entity's cache config ttl is not explicitly set -> This behavior is only expected at runtime and not in config (de)serialization.
+    /// </summary>
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", @",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", 10, 10, DisplayName = "EntityCacheTTL honored")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 15 }", @",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", 15, 10, DisplayName = "EntityCacheTTL honored over differing global default ttl.")]
+    [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 15 }", @",""cache"": { ""enabled"": true }", 15, 5, DisplayName = "GlobalTTL not yet honored over unset entity ttl. This behavior will be in runtime behavior and not in config (de)serialization.")]
+    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": true, ""ttl-seconds"": 10 }", DEFAULT_CACHE_TTL_SECONDS, 10, DisplayName = "EntityCacheTTL honored over unset global ttl.")]
+    [DataRow(@",""cache"": { ""enabled"": true }", @",""cache"": { ""enabled"": true }", DEFAULT_CACHE_TTL_SECONDS, DEFAULT_CACHE_TTL_SECONDS, DisplayName = "Default ttl honored for both global and entity cache config ttl.")]
+    [DataTestMethod]
+    public void GlobalCacheOptionsOverridesEntityCacheOptions(string globalCacheConfig, string entityCacheConfig, int expectedGlobalCacheTtl, int expectedEntityCacheTtl)
+    {
+        // Arrange
+        string fullConfig = GetRawConfigJson(globalCacheConfig, entityCacheConfig);
+
+        // Act
+        RuntimeConfigLoader.TryParseConfig(
+                       json: fullConfig,
+                       out RuntimeConfig? config,
+                       logger: null,
+                       connectionString: null,
+                       replaceEnvVar: false,
+                       dataSourceName: string.Empty,
+                       datasourceNameToConnectionString: null,
+                       replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+
+        // Assert
+        Assert.IsNotNull(config, message: "Config must not be null, runtime config JSON deserialization failed.");
+
+        EntityCacheOptions? resolvedGlobalCacheOptions = config?.Runtime?.Cache;
+        Assert.IsNotNull(config?.IsCachingEnabled, message: "Expected global cache property to be non-null.");
+        Assert.IsNotNull(resolvedGlobalCacheOptions, message: "GlobalCacheConfig must not be null, unexpected JSON deserialization result.");
+        Assert.AreEqual(expected: expectedGlobalCacheTtl, actual: resolvedGlobalCacheOptions.TtlSeconds);
+
+        Entity entity = config.Entities.First().Value;
+        EntityCacheOptions? resolvedEntityCacheOptions = entity.Cache;
+        Assert.IsNotNull(resolvedEntityCacheOptions, message: "EntityCacheConfig must not be null, unexpected entity JSON deserialization result.");
+        Assert.AreEqual(expected: expectedEntityCacheTtl, actual: resolvedEntityCacheOptions.TtlSeconds);
     }
 
     /// <summary>

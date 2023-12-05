@@ -38,8 +38,7 @@ public record RuntimeConfig
     [JsonIgnore]
     public bool IsCachingEnabled =>
         Runtime is not null &&
-        Runtime.CacheEnabled is not null &&
-        Runtime.CacheEnabled is true;
+        Runtime.IsCachingEnabled;
 
     /// <summary>
     /// Retrieves the value of runtime.rest.request-body-strict property if present, default is true.

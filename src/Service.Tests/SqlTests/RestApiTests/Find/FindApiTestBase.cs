@@ -36,7 +36,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery("FindByIdTest")
             );
+        }
 
+        /// <summary>
+        /// Tests the REST Api for FindByDateTimePk operation without a query string.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindByDateTimePKTest()
+        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1/instant/2023-08-21T15:11:04",
                 queryString: string.Empty,

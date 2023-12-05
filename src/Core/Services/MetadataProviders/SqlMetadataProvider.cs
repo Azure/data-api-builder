@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         protected IQueryExecutor QueryExecutor { get; }
 
-        private const int NUMBER_OF_RESTRICTIONS = 4;
+        protected const int NUMBER_OF_RESTRICTIONS = 4;
 
         protected string ConnectionString { get; init; }
 
@@ -287,7 +287,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Verify that the stored procedure exists in the database schema, then populate its database object parameters accordingly
         /// </summary>
-        private async Task FillSchemaForStoredProcedureAsync(
+        protected virtual async Task FillSchemaForStoredProcedureAsync(
             Entity procedureEntity,
             string entityName,
             string schemaName,
@@ -332,22 +332,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     SystemType = systemType,
                     DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
                 };
-
-                if (GetDatabaseType() is DatabaseType.MSSQL &&
-                    (paramDefinition.SystemType == typeof(DateTime) || paramDefinition.SystemType == typeof(DateTimeOffset)))
-                {
-                    // MsSql types like date,smalldatetime,datetime,datetime2 are mapped to the same .NET type of DateTime.
-                    // Thus to determine the actual dbtype, we use the underlying MsSql type instead of the .NET type.
-                    DbType dbType;
-                    if (TryResolveDbType(sqlType, out dbType))
-                    {
-                        paramDefinition.DbType = dbType;
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Could not determine DbType for SqlDb type of {sqlType}", sqlType);
-                    }
-                }
 
                 // Add to parameters dictionary without the leading @ sign
                 storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..], paramDefinition);
@@ -397,14 +381,6 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             throw new NotImplementedException();
         }
-
-        /// <summary>
-        /// Takes a string version of a sql date/time type and returns its corresponding DbType.
-        /// </summary>
-        /// <param name="sqlDbTypeName">Name of the sqlDbType.<</param>
-        /// <param name="dbType">DbType of the parameter corresponding to its sqlDbTypeName.</param>
-        /// <returns>Returns true when the given sqlDbTypeName datetime type is supported by DAB and resolve it to its corresponding DbType, else false.</returns>
-        protected virtual bool TryResolveDbType(string sqlDbTypeName, [NotNullWhen(true)] out DbType dbType) => throw new NotImplementedException();
 
         /// <summary>
         /// Generates the map used to find a given entity based
@@ -1322,7 +1298,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Helper method to populate the column definition with HasDefault and DbType properties.
         /// </summary>
-        private void PopulateColumnDefinitionWithHasDefaultAndDbType(
+        protected virtual void PopulateColumnDefinitionWithHasDefaultAndDbType(
             SourceDefinition sourceDefinition,
             DataTable allColumnsInTable)
         {
@@ -1341,22 +1317,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
 
                     columnDefinition.DbType = TypeHelper.GetDbTypeFromSystemType(columnDefinition.SystemType);
-                    if (GetDatabaseType() is DatabaseType.MSSQL &&
-                        (columnDefinition.SystemType == typeof(DateTime) || columnDefinition.SystemType == typeof(DateTimeOffset)))
-                    {
-                        // MsSql types like date,smalldatetime,datetime,datetime2 are mapped to the same .NET type of DateTime.
-                        // Thus to determine the actual dbtype, we use the underlying MsSql type instead of the .NET type.
-                        DbType dbType;
-                        string sqlType = (string)columnInfo["DATA_TYPE"];
-                        if (TryResolveDbType(sqlType, out dbType))
-                        {
-                            columnDefinition.DbType = dbType;
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Could not determine DbType for SqlDb type of {sqlType}", sqlType);
-                        }
-                    }
                 }
             }
         }

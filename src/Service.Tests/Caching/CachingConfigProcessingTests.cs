@@ -3,6 +3,7 @@
 #nullable enable
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -14,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching;
 /// Validates that the caching configuration in the runtime config is deserialized correctly.
 /// </summary>
 [TestClass]
-public class CachingConfigDeserializationTests
+public class CachingConfigProcessingTests
 {
     /// <summary>
     /// Default ttl value for an entity. Must align with EntityCacheOptions.DEFAULT_TTL_SECONDS.
@@ -242,6 +243,150 @@ public class CachingConfigDeserializationTests
         EntityCacheOptions? resolvedEntityCacheOptions = entity.Cache;
         Assert.IsNotNull(resolvedEntityCacheOptions, message: "EntityCacheConfig must not be null, unexpected entity JSON deserialization result.");
         Assert.AreEqual(expected: expectedEntityCacheTtl, actual: resolvedEntityCacheOptions.TtlSeconds);
+    }
+
+    /// <summary>
+    /// Validates that when a user explicitly sets a value for ttl-seconds in the cache config,
+    /// that value is serialized into JSON when the runtime config is serialized. (Occurs when DAB CLI handles configs.)
+    /// </summary>
+    /// <param name="expectIsUserDefinedTtl">Whether to expect ttl-seconds property/value to be serialized.</param>
+    /// <param name="userDefinedTtl">Expected number of seconds defined for ttl-seconds.</param>
+    [DataRow(true, 10, DisplayName = "TTL explicitly set to non-default value and should be serialized.")]
+    [DataRow(true, 5, DisplayName = "TTL explicitly set to default value and should be serialized.")]
+    [DataTestMethod]
+    public void UserDefinedTtlWrittenToSerializedJsonConfigFile(bool expectIsUserDefinedTtl, int userDefinedTtl)
+    {
+        // Arrange
+        string cacheConfig = @",""cache"": { ""enabled"": true, ""ttl-seconds"": " + userDefinedTtl + " }";
+        string fullConfig = GetRawConfigJson(globalCacheConfig: cacheConfig, entityCacheConfig: cacheConfig);
+        RuntimeConfigLoader.TryParseConfig(
+                       json: fullConfig,
+                       out RuntimeConfig? config,
+                       logger: null,
+                       connectionString: null,
+                       replaceEnvVar: false,
+                       dataSourceName: string.Empty,
+                       datasourceNameToConnectionString: null,
+                       replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+        Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
+
+        // Act
+        string serializedConfig = config.ToJson();
+
+        // Assert
+        using (JsonDocument parsedRuntimeConfigDom = JsonDocument.Parse(serializedConfig))
+        {
+            JsonElement root = parsedRuntimeConfigDom.RootElement;
+
+            // Validate global cache config in runtimeConfig.runtime section.
+            JsonElement runtimeElement = root.GetProperty("runtime");
+            bool cachePropertyExists = runtimeElement.TryGetProperty("cache", out JsonElement globalCacheElement);
+            Assert.AreEqual(expected: true, actual: cachePropertyExists);
+
+            bool cacheTtlPropertyExists = globalCacheElement.TryGetProperty("ttl-seconds", out JsonElement ttl);
+            Assert.IsTrue(cacheTtlPropertyExists);
+            Assert.AreEqual(expected: userDefinedTtl, actual: ttl.GetInt32());
+
+            // Validate entity cache config in runtimeConfig.entities section.
+            JsonElement entitiesElement = root.GetProperty("entities");
+            JsonElement entityElement = entitiesElement.EnumerateObject().First().Value;
+            cachePropertyExists = entityElement.TryGetProperty("cache", out JsonElement entityCacheElement);
+            Assert.AreEqual(expected: true, actual: cachePropertyExists);
+            Assert.AreEqual(expected: userDefinedTtl, actual: ttl.GetInt32());
+        }
+    }
+
+    /// <summary>
+    /// Validates that when a user does not explicitly set a value for the cache property,
+    /// the cache property and its defaults (enabled: false, ttl-seconds: 5) will NOT be serialized
+    /// to the JSON config file. (Occurs when DAB CLI handles configs.)
+    /// </summary>
+    /// <param name="cacheConfig">JSON cache configuration. Can be left empty to indicate no caching config.</param>
+    [DataRow(@",""cache"": null", DisplayName = "Null cache object should not be serialized to config file.")]
+    [DataRow(@"", DisplayName = "Excluded cache property object should not result in serialized cache object in config file.")]
+    [TestMethod]
+    public void CachePropertyNotWrittenToSerializedJsonConfigFile(string cacheConfig)
+    {
+        // Arrange
+        string fullConfig = GetRawConfigJson(globalCacheConfig: cacheConfig, entityCacheConfig: cacheConfig);
+        RuntimeConfigLoader.TryParseConfig(
+                       json: fullConfig,
+                       out RuntimeConfig? config,
+                       logger: null,
+                       connectionString: null,
+                       replaceEnvVar: false,
+                       dataSourceName: string.Empty,
+                       datasourceNameToConnectionString: null,
+                       replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+        Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
+
+        // Act
+        string serializedConfig = config.ToJson();
+
+        // Assert
+        using (JsonDocument parsedRuntimeConfigDom = JsonDocument.Parse(serializedConfig))
+        {
+            JsonElement root = parsedRuntimeConfigDom.RootElement;
+
+            // Validate global cache config in runtimeConfig.runtime section.
+            JsonElement runtimeElement = root.GetProperty("runtime");
+            bool cachePropertyExists = runtimeElement.TryGetProperty("cache", out JsonElement globalCacheElement);
+            Assert.AreEqual(expected: false, actual: cachePropertyExists, message: "Global cache property should not be serialized to config file.");
+
+            // Validate entity cache config in runtimeConfig.entities section.
+            JsonElement entitiesElement = root.GetProperty("entities");
+            JsonElement entityElement = entitiesElement.EnumerateObject().First().Value;
+            cachePropertyExists = entityElement.TryGetProperty("cache", out JsonElement entityCacheElement);
+            Assert.AreEqual(expected: false, actual: cachePropertyExists, message: "Entity cache property should not be serialized to config file.");
+        }
+    }
+
+    /// <summary>
+    /// Validates that when ttl-seconds is not set by the user explicitly, the default value implicitly used by engine (5) is used and
+    /// the property/value should not be serialized to the JSON config file because it was not provided initially.
+    /// </summary>
+    /// <param name="cacheConfig">JSON cache configuration. Can be left empty to indicate no caching config.</param>
+    [DataRow(@",""cache"": { }", DisplayName = "Empty cache object should be serialized to config file with default enabled:false and no ttl-seconds property/value.")]
+    [DataRow(@",""cache"": { ""enabled"": true }", DisplayName = "Cache object with no users defined ttl should be serialized to config file without ttl-seconds property/value.")]
+    [DataTestMethod]
+    public void DefaultTtlNotWrittenToSerializedJsonConfigFile(string cacheConfig)
+    {
+        // Arrange
+        string fullConfig = GetRawConfigJson(globalCacheConfig: cacheConfig, entityCacheConfig: cacheConfig);
+        RuntimeConfigLoader.TryParseConfig(
+                       json: fullConfig,
+                       out RuntimeConfig? config,
+                       logger: null,
+                       connectionString: null,
+                       replaceEnvVar: false,
+                       dataSourceName: string.Empty,
+                       datasourceNameToConnectionString: null,
+                       replacementFailureMode: EnvironmentVariableReplacementFailureMode.Throw);
+        Assert.IsNotNull(config, message: "Test setup failure. Config must not be null, runtime config JSON deserialization failed.");
+
+        // Act
+        string serializedConfig = config.ToJson();
+
+        // Assert
+        using (JsonDocument parsedRuntimeConfigDom = JsonDocument.Parse(serializedConfig))
+        {
+            JsonElement root = parsedRuntimeConfigDom.RootElement;
+
+            // Validate global cache config in runtimeConfig.runtime section.
+            bool cachePropertyExists = root.GetProperty("runtime").TryGetProperty("cache", out JsonElement globalCacheElement);
+            Assert.AreEqual(expected: true, actual: cachePropertyExists);
+
+            bool globalCacheTtlPropertyExists = globalCacheElement.TryGetProperty("ttl-seconds", out JsonElement _);
+            Assert.IsFalse(globalCacheTtlPropertyExists, message: "Global cache TTL property/value pair should not be serialized to config file.");
+
+            // Validate entity cache config in runtimeConfig.entities section.
+            JsonElement entityElement = root.GetProperty("entities").EnumerateObject().First().Value;
+            cachePropertyExists = entityElement.TryGetProperty("cache", out JsonElement entityCacheElement);
+            Assert.AreEqual(expected: true, actual: cachePropertyExists, message: "Global Cache property expected to be serialized to config file.");
+
+            bool entityCacheTtlPropertyExists = entityCacheElement.TryGetProperty("ttl-seconds", out JsonElement _);
+            Assert.IsFalse(entityCacheTtlPropertyExists, message: "Global cache TTL property/value pair should not be serialized to config file.");
+        }
     }
 
     /// <summary>

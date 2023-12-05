@@ -88,6 +88,10 @@ public class CachingConfigDeserializationTests
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 0 }", DisplayName = "EntityCacheOptions.TtlSeconds set to zero is invalid configuration.")]
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": -1 }", DisplayName = "EntityCacheOptions.TtlSeconds set to negative number is invalid configuration.")]
     [DataRow(@",""cache"": { ""enabled"": true, ""ttl-seconds"": 1.1 }", DisplayName = "EntityCacheOptions.TtlSeconds set to decimal is invalid configuration.")]
+    [DataRow(@",""cache"": { ""enabled"": 1 }", DisplayName = "EntityCacheOptions.Enabled property set to 1 should fail because not a boolean.")]
+    [DataRow(@",""cache"": { ""enabled"": 0 }", DisplayName = "EntityCacheOptions.Enabled property set to 0 should fail because not a boolean.")]
+    [DataRow(@",""cache"": 1", DisplayName = "EntityCacheOptions property set to 1 should fail because it's not a JSON object.")]
+    [DataRow(@",""cache"": 0", DisplayName = "EntityCacheOptions property set to 0 should fail because it's not a JSON object.")]
     [DataTestMethod]
     public void EntityCacheOptionsDeserialization_InvalidValues(string entityCacheConfig)
     {
@@ -153,7 +157,11 @@ public class CachingConfigDeserializationTests
     /// a failure to deserialize the runtime config.
     /// </summary>
     /// <param name="globalCacheConfig">Escaped JSON string defining entity cache configuration.</param>
-    [DataRow(@",""cache"": {}", DisplayName = "Global cache property is empty: deserialization fails.")]
+    [DataRow(@",""cache"": {}", DisplayName = "GlobalCacheOptions property is empty: deserialization fails.")]
+    [DataRow(@",""cache"": 1", DisplayName = "GlobalCacheOptions property set to 1 should fail because it's not a JSON object.")]
+    [DataRow(@",""cache"": 0", DisplayName = "GlobalCacheOptions property set to 0 should fail because it's not a JSON object.")]
+    [DataRow(@",""cache"": { ""enabled"": 1 }", DisplayName = "GlobalCacheOptions.Enabled property set to 1 should fail because not a boolean.")]
+    [DataRow(@",""cache"": { ""enabled"": 0 }", DisplayName = "GlobalCacheOptions.Enabled property set to 0 should fail because not a boolean.")]
     [DataTestMethod]
     public void GlobalCacheOptionsDeserialization_InvalidJson(string entityCacheConfig)
     {

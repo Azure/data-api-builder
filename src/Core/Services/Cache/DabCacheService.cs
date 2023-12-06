@@ -25,6 +25,11 @@ public class DabCacheService
     // Constants
     private const char KEY_DELIMITER = ':';
 
+    // Log Messages
+    private const string CACHE_KEY_EMPTY = "The cache key should not be empty.";
+    private const string CACHE_KEY_TOO_LARGE = "The cache key is too large.";
+    private const string CACHE_KEY_CREATED = "The cache key was created by the cache service.";
+
     /// <summary>
     /// Create cache service which encapsulates actual caching implementation.
     /// </summary>
@@ -87,11 +92,10 @@ public class DabCacheService
         cacheKeyBuilder.Append(queryMetadata.QueryText);
         cacheKeyBuilder.Append(KEY_DELIMITER);
         cacheKeyBuilder.Append(JsonSerializer.Serialize(queryMetadata.QueryParameters));
-        string cacheKey = cacheKeyBuilder.ToString();
 
         if (_logger?.IsEnabled(LogLevel.Trace) ?? false)
         {
-            _logger.LogTrace(message: "{cacheKey}", cacheKey);
+            _logger.LogTrace(message: CACHE_KEY_CREATED);
         }
 
         return cacheKeyBuilder.ToString();
@@ -104,13 +108,14 @@ public class DabCacheService
     /// <param name="cacheKey">Cache key string.</param>
     /// <param name="cacheValue">Cache value as a serialized JSON payload.</param>
     /// <returns>Size in bytes.</returns>
+    /// <seealso cref="https://learn.microsoft.com/dotnet/csharp/language-reference/statements/checked-and-unchecked"/>
     /// <exception cref="ArgumentException">Thrown when the cacheKey value is empty or whitespace.</exception>
     /// <exception cref="OverflowException">Thrown when the cache entry size is too big.</exception>
     private long EstimateCacheEntrySize(string cacheKey, string? cacheValue)
     {
         if (string.IsNullOrWhiteSpace(cacheKey))
         {
-            throw new ArgumentException(message: "Cache key should not be empty.");
+            throw new ArgumentException(message: CACHE_KEY_EMPTY);
         }
 
         try
@@ -128,7 +133,7 @@ public class DabCacheService
         {
             if (_logger?.IsEnabled(LogLevel.Trace) ?? false)
             {
-                _logger.LogTrace(message: "Cache entry is too big.");
+                _logger.LogTrace(message: CACHE_KEY_TOO_LARGE);
             }
 
             throw;

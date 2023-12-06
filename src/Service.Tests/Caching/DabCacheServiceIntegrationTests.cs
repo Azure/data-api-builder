@@ -151,6 +151,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
         /// <summary>
         /// This test validates the behavior of the DabCacheService when a cache entry is larger than the cache capacity.
+        /// Since the cache entry's size is larger than the cache size limit (defined when creating Fusion Cache),
+        /// the cache entry will not be saved in the cache. Consequently, the database is queried for both requests.
+        /// This test asserts the mockQueryExecutor is invoked twice, once for each request.
         /// </summary>
         [TestMethod]
         public async Task LargeCacheKey_BadBehavior()

@@ -4,6 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -215,27 +216,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Open connection and execute query using _queryExecutor
             string queryString = queryBuilder.Build(structure);
 
-            if (await _featureManager.IsEnabledAsync("CachingPreview") && runtimeConfig.IsCachingEnabled)
+            if (await _featureManager.IsEnabledAsync(FeatureFlagConstants.INMEMORYCACHE) && runtimeConfig.CanUseCache())
             {
-                if (_runtimeConfigProvider.GetConfig().SqlDataSourceUsed
-                && (!_runtimeConfigProvider.GetConfig().DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true))
+                bool dbPolicyConfigured = !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
+
+                if (dbPolicyConfigured)
                 {
                     DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: 5);
+                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
                     byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
-                    JsonDocument doc = JsonDocument.Parse(jsonBytes);
-                    return doc;
+                    JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+                    return cacheServiceResponse;
                 }
             }
 
-            JsonDocument? jsonDocument = await queryExecutor.ExecuteQueryAsync(
+            JsonDocument? response = await queryExecutor.ExecuteQueryAsync(
                 sqltext: queryString,
                 parameters: structure.Parameters,
                 dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
                 httpContext: _httpContextAccessor.HttpContext!,
                 args: null,
                 dataSourceName: dataSourceName);
-            return jsonDocument;
+            return response;
         }
 
         // <summary>

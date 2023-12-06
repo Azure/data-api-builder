@@ -1261,6 +1261,14 @@
         },
         Permissions: [
           {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
             Role: authenticated,
             Actions: [
               {
@@ -1274,14 +1282,6 @@
               },
               {
                 Action: Delete
-              }
-            ]
-          },
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: Read
               }
             ]
           },

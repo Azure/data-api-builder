@@ -329,6 +329,66 @@ public record RuntimeConfig
         Runtime is not null && Runtime.Host is not null
         && Runtime.Host.Mode is HostMode.Development;
 
+    /// <summary>
+    /// Returns the ttl-seconds value for a given entity.
+    /// If the property is not set, returns the global default value set in the runtime config.
+    /// If the global default value is not set, the default value is used (5 seconds).
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    public int GetEntityCacheEntryTtl(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        if (!entityConfig.IsCachingEnabled)
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} does not have caching enabled.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+        }
+
+        if (entityConfig.Cache.UserProvidedTtlOptions)
+        {
+            return entityConfig.Cache.TtlSeconds.Value;
+        }
+        else
+        {
+            return GlobalCacheEntryTtl();
+        }
+    }
+
+    /// <summary>
+    /// Whether the caching service should be used for a given operation. This is determined by
+    /// - whether caching is enabled globally
+    /// - whether the datasource is SQL and session context is disabled.
+    /// </summary>
+    /// <returns>Whether cache operations should proceed.</returns>
+    public bool CanUseCache()
+    {
+        bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
+        return IsCachingEnabled && SqlDataSourceUsed && !setSessionContextEnabled;
+    }
+
+    /// <summary>
+    /// Returns the ttl-seconds value for the global cache entry.
+    /// If no value is explicitly set, returns the global default value.
+    /// </summary>
+    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
+    public int GlobalCacheEntryTtl()
+    {
+        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
+            ? Runtime.Cache.TtlSeconds.Value
+            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
+    }
+
     private void CheckDataSourceNamePresent(string dataSourceName)
     {
         if (!_dataSourceNameToDataSource.ContainsKey(dataSourceName))

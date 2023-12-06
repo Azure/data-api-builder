@@ -841,10 +841,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// placement
         /// </summary>
         [TestMethod]
-        public async Task TestViolatingOneToOneRelashionShip()
+        public async Task TestViolatingOneToOneRelationship()
         {
             string expectedErrorMessageSubString = "Violation of UNIQUE KEY constraint";
-            await TestViolatingOneToOneRelashionShip(expectedErrorMessageSubString);
+            await TestViolatingOneToOneRelationship(expectedErrorMessageSubString);
         }
         #endregion
     }

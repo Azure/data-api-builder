@@ -27,6 +27,7 @@ namespace Cli
         private static ILogger<Utils> _logger;
 #pragma warning restore CS8618
 
+        public static ILoggerFactory LoggerFactoryForCli = GetLoggerFactoryForCli();
         public static void SetCliUtilsLogger(ILogger<Utils> cliUtilsLogger)
         {
             _logger = cliUtilsLogger;
@@ -175,50 +176,6 @@ namespace Cli
             }
 
             return !DoesUriComponentContainReservedChars(uriComponent);
-        }
-
-        /// <summary>
-        /// Returns the default host Global Settings
-        /// If the user doesn't specify host mode. Default value to be used is Production.
-        /// Sample:
-        // "host": {
-        //     "mode": "production",
-        //     "cors": {
-        //         "origins": [],
-        //         "allow-credentials": true
-        //     },
-        //     "authentication": {
-        //         "provider": "StaticWebApps"
-        //     }
-        // }
-        /// </summary>
-        public static HostOptions GetDefaultHostOptions(
-            HostMode hostMode,
-            IEnumerable<string>? corsOrigin,
-            string authenticationProvider,
-            string? audience,
-            string? issuer)
-        {
-            string[]? corsOriginArray = corsOrigin is null ? new string[] { } : corsOrigin.ToArray();
-            CorsOptions cors = new(Origins: corsOriginArray);
-            AuthenticationOptions AuthenticationOptions;
-            if (Enum.TryParse<EasyAuthType>(authenticationProvider, ignoreCase: true, out _)
-                || AuthenticationOptions.SIMULATOR_AUTHENTICATION.Equals(authenticationProvider))
-            {
-                AuthenticationOptions = new(Provider: authenticationProvider, null);
-            }
-            else
-            {
-                AuthenticationOptions = new(
-                    Provider: authenticationProvider,
-                    Jwt: new(audience, issuer)
-                );
-            }
-
-            return new(
-                Mode: hostMode,
-                Cors: cors,
-                Authentication: AuthenticationOptions);
         }
 
         /// <summary>
@@ -883,6 +840,16 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Returns ILoggerFactory with CLI custom logger provider.
+        /// </summary>
+        public static ILoggerFactory GetLoggerFactoryForCli()
+        {
+            ILoggerFactory loggerFactory = new LoggerFactory();
+            loggerFactory.AddProvider(new CustomLoggerProvider());
+            return loggerFactory;
         }
     }
 }

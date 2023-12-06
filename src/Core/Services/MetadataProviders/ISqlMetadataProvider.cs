@@ -61,6 +61,8 @@ namespace Azure.DataApiBuilder.Core.Services
         // of referencing and referenced tables.
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; }
 
+        public List<Exception> SqlMetadataExceptions { get; }
+
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
         /// <summary>
@@ -84,7 +86,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="backingFieldName">The field used for the lookup in the mapping.</param>
         /// <param name="name">Out parameter in which we will save exposed name.</param>
         /// <returns>True if exists, false otherwise.</returns>
-        bool TryGetExposedColumnName(string entityName, string backingFieldName, out string? name);
+        bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name);
 
         /// <summary>
         /// For the entity that is provided as an argument,

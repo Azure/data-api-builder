@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests
@@ -40,6 +41,12 @@ namespace Azure.DataApiBuilder.Service.Tests
             return runtimeConfigLoader;
         }
 
+        public static ILoggerFactory ProvisionLoggerFactory() =>
+          LoggerFactory.Create(builder =>
+          {
+              builder.AddConsole();
+          });
+
         /// <summary>
         /// Given the configuration path, generate the runtime configuration provider
         /// using a mock logger.
@@ -69,10 +76,10 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <param name="config">RuntimeConfig object</param>
         /// <param name="entityKey">The key with which the entity is to be added.</param>
         /// <param name="entityName">The source name of the entity.</param>
-        public static RuntimeConfig AddMissingEntitiesToConfig(RuntimeConfig config, string entityKey, string entityName)
+        public static RuntimeConfig AddMissingEntitiesToConfig(RuntimeConfig config, string entityKey, string entityName, string[] keyfields = null)
         {
             Entity entity = new(
-                Source: new(entityName, EntitySourceType.Table, null, null),
+                Source: new(entityName, EntitySourceType.Table, null, keyfields),
                 GraphQL: new(entityKey, entityKey.Pluralize()),
                 Rest: new(Enabled: true),
                 Permissions: new[]
@@ -217,7 +224,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                     Runtime = config.Runtime
                 with
                     {
-                        Host = config.Runtime.Host
+                        Host = config.Runtime?.Host
                 with
                         { Mode = hostModeType },
                         BaseRoute = runtimeBaseRoute

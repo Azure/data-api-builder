@@ -13,6 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+      <PackageReference Include="Azure.Identity" />
       <PackageReference Include="Microsoft.AspNetCore.Authorization" />
       <PackageReference Include="System.IO.Abstractions" />
       <PackageReference Include="System.Drawing.Common" />

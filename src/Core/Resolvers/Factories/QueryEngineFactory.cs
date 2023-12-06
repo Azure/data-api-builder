@@ -42,6 +42,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                 _queryEngines.Add(DatabaseType.MSSQL, queryEngine);
                 _queryEngines.Add(DatabaseType.MySQL, queryEngine);
                 _queryEngines.Add(DatabaseType.PostgreSQL, queryEngine);
+                _queryEngines.Add(DatabaseType.DWSQL, queryEngine);
             }
 
             if (config.CosmosDataSourceUsed)

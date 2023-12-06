@@ -27,6 +27,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindByDateTimePKTest",
+                @"
+                  SELECT to_jsonb(subq) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _tableWithDateTimePK + @"
+                      WHERE categoryid = 2 AND pieceid = 1 AND instant = '2023-08-21 15:11:04'
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "FindEmptyTable",
                 @"
                     SELECT to_jsonb(subq) AS data

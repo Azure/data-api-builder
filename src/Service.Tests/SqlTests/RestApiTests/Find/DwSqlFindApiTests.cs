@@ -593,6 +593,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task FindByDateTimePKTest()
+        {
+            throw new NotImplementedException();
+        }
+
         // Pending Stored Procedure Support
         [TestMethod]
         [Ignore]

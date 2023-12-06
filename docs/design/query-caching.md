@@ -178,7 +178,7 @@ For additional context see this document by Mark Nottingham titled "Caching Tuto
 > https://www.mnot.net/cache_docs/. 
 This document aims to explain web caching and usage of (HTTP) control caches. 
 
-Additionally, HTTP cache-control is not applicable to GraphQL due to (described later) the fact that most GraphQL requests would come via HTTP POST (not GET). More context can be found in article titled "GraphQL & Caching: The Elephant in the Room" by Marc-André Giroux.
+Additionally, HTTP cache-control(described later) is not applicable to GraphQL due to the fact that most GraphQL requests would come via HTTP POST (not GET). More context can be found in article titled "GraphQL & Caching: The Elephant in the Room" by Marc-André Giroux.
 > https://www.apollographql.com/blog/backend/caching/graphql-caching-the-elephant-in-the-room/ 
 
 ##### Overview

@@ -235,7 +235,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 args: null,
                 dataSourceName: dataSourceName);
             return jsonDocument;
-
         }
 
         // <summary>

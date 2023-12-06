@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service
                 })
                 .WithDefaultEntryOptions(new FusionCacheEntryOptions
                 {
-                    Duration = TimeSpan.FromMinutes(1)
+                    Duration = TimeSpan.FromSeconds(5)
                 });
 
             services.AddSingleton<DabCacheService>();

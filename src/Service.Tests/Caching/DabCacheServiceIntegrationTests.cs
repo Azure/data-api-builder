@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 #nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -65,6 +66,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Assert
             Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
 
+            // Validates that the expected database response is returned by the cache service.
+            Assert.AreEqual(expected: expectedDatabaseResponseJson, actual: result.ToString(), message: ERROR_UNEXPECTED_RESULT);
+
+            // Validates the values of arguments passed to the mock ExecuteQueryAsync method.
             IReadOnlyList<object> actualExecuteQueryAsyncArguments = mockQueryExecutor.Invocations[0].Arguments;
             Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText " + ERROR_FAILED_ARG_PASSTHROUGH);
             Assert.AreEqual(expected: queryMetadata.QueryParameters, actual: actualExecuteQueryAsyncArguments[1], message: "Query parameters " + ERROR_FAILED_ARG_PASSTHROUGH);
@@ -176,13 +181,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Assert.AreEqual(expected: expectedDatabaseResponseJson, actual: result.ToString(), message: ERROR_UNEXPECTED_RESULT);
         }
 
+        /// <summary>
+        /// Validates that the DabCacheService gracefully reacts to the factory method returning null.
+        /// Also ensures the cache service returns that same null value to the caller. 
+        /// </summary>
         [TestMethod]
         public async Task CacheServiceFactoryInvocationReturnsNull()
         {
             // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
-            string expectedDatabaseResponseJson = @"{""key"": ""value""}";
-            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Null);
+
+            // rawJsonResponse is unused when ExecutorReturnType is Null.
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: String.Empty, ExecutorReturnType.Null);
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -199,19 +209,28 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Assert
             Assert.AreEqual(expected: true, actual: mockQueryExecutor.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
 
+            // Get and validate the arguments passed to the mock ExecuteQueryAsync method.
             IReadOnlyList<object> actualExecuteQueryAsyncArguments = mockQueryExecutor.Invocations[0].Arguments;
             Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText " + ERROR_FAILED_ARG_PASSTHROUGH);
             Assert.AreEqual(expected: queryMetadata.QueryParameters, actual: actualExecuteQueryAsyncArguments[1], message: "Query parameters " + ERROR_FAILED_ARG_PASSTHROUGH);
             Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[5], message: "Data source " + ERROR_FAILED_ARG_PASSTHROUGH);
+
+            // Validate that the null value retrned by the factory method is propogated through to and returned by the cache service.
             Assert.AreEqual(expected: null, actual: result, message: "Expected factory to return a null result.");
         }
 
+        /// <summary>
+        /// Validates that the DabCacheService throws an exception when the factory method throws an exception.
+        /// In other words, validates that exceptions aren't lost and are propagated to the caller.
+        /// </summary>
         [TestMethod]
         public async Task CacheServiceFactoryInvocationThrowsException()
         {
             // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
             string expectedDatabaseResponseJson = @"{""key"": ""value""}";
+
+            // Create mock query executor which raises an exception when called.
             Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Exception);
 
             Dictionary<string, DbConnectionParam> parameters = new()

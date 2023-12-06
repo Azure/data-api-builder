@@ -241,7 +241,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 field.Name,
                 new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                type,
+                databaseType is DatabaseType.MSSQL ? type.NullableType() : type,
                 defaultValue: null,
                 databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
             );

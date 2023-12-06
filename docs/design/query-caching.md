@@ -6,7 +6,7 @@ Reduce the number of round-trip requests between Data API builder (DAB) and the 
 ### Objectives
 
 - Cache responses to read operations
-    - REST: GET requests REST
+    - REST: GET requests
     - GraphQL: Queries
 - Make cache configuration simple.
     - Limit developer exposure to implementation details of the cache and only surface essential properties in the runtime configuration.
@@ -51,7 +51,7 @@ The goals of the created key:
 - Equivalent query metadata will map to the same cache value.
   - This protects against reference type comparison where two distinct C# objects with same property values (request metadata) are treated as two separate cache entries instead of the same entry.
 
-- Rely on the underlying cache implementation to store the key/value pair in a concurrency compatible collection. The implementation defined collection will abstract away the work done to handle cache key hash collisions and appropriate bucketing.
+- Rely on the underlying cache implementation (FusionCache https://github.com/ZiggyCreatures/FusionCache) to store the key/value pair in a concurrency compatible collection. The implementation defined collection will abstract away the work done to handle cache key hash collisions and appropriate bucketing.
   - Important to note that we can't and won't use a hashcode as the verbatim string for a cache key. Microsoft Docs remarks on default implementation of GetHashCode() say not to use a hashcode as a key to retrieve an object from a keyed collection or to store the value in a database because the value is not “permanent.” https://learn.microsoft.com/en-us/dotnet/api/system.object.gethashcode?view=net-7.0#remarks
   - If in the future we determine that we want to optimize to creating a consistently sized string to provide as a cache key, we can evaluate hashing the string generated. One example would be SHA256 hashing, however sha256 is a crypto operation and may result in a performance degradation that makes caching benefits neglible.
 
@@ -67,6 +67,7 @@ The size of the value stored is variable and dependent on the data returned by t
 
 The maximum cache size is dependent on the memory (RAM) specifications of the hosting server. The cache will share memory space with the running instance of DAB and other operating system/hosting resources. 
 Since key/value pairs are not consistently sized, we can utilize string length (character count) to determine a relative size of the cache entry. 
+An estimated size of a cache entry can be calculated to be provided as cache entry metadata.
 
 ### Cache Behavior
 
@@ -101,7 +102,9 @@ Access tokens directly influence how database policies are resolved. Access toke
 
 ## Configuration Changes
 
-Entity object have the following top-level properties: source, graphql, rest, permissions, relationships, mappings. Caching will introduce a new top-level property for entities to enable entity-level granularity in cache settings.
+The `runtime` section of the runtime config allows defining a `cache` property to set the default values for all cache enabled entities.
+
+The `entities` section of the runtime config allows individual entity objects to have the following top-level properties: source, graphql, rest, permissions, relationships, mappings. Caching will introduce the new top-level property `cache` for entities to enable entity-level granularity in cache settings.
 
 ```json
 {
@@ -109,7 +112,7 @@ Entity object have the following top-level properties: source, graphql, rest, pe
     "EntityA": {
       "cache": {
         "enabled": true,
-        "ttl": 123
+        "ttl-seconds": 5
       }
     }
   }
@@ -119,15 +122,15 @@ Entity object have the following top-level properties: source, graphql, rest, pe
 | Property | JSON Data Type | Default Value | Description Value | Required |
 |----------|------------|-------------|---------------|----------|
 | enabled  | Boolean | false | Whether caching is enabled for read requests on this entity. |  Yes |
-| ttl      | Number | 30 | Number of seconds a cache entry is valid before cache eviction. Min: 1s Max: 24hrs/1440s |  Yes |
+| ttl-seconds | Number | 5 | Number of seconds a cache entry is valid before cache eviction. Min: 1s Max: 24hrs/1440s |  Yes |
 
-Entity configuration does not require you to set the **cache** property because caching is disabled by default. When you enable caching explicitly by setting **enabled** to true, you must also define the **ttl** property with an integer value. When evaluating the behavior of caching an entity, you can set the **enabled** property to false instead of removing the entire caching section from the entity's configuration section.
+Entity configuration does not require you to set the **cache** property because caching is disabled by default. When you enable caching explicitly by setting **enabled** to true, you must also define the **ttl-seconds** property with an integer value. When evaluating the behavior of caching an entity, you can set the **enabled** property to false instead of removing the entire caching section from the entity's configuration section.
 
 **Note:** You should consider enabling caching on an entity when existing records are rarely modified and the entity is frequently accessed.
 
-While the **ttl** property has a default value of 30 seconds, you should specify a value most applicable for your use case. 
-- A higher **ttl** value may be appropriate for entities which are rarely modified and frequently accessed.
-- A lower **ttl** value may be appropriate for entities which may change on occassion and are frequentiy accessed. 
+While the **ttl-seconds** property has a default value of `5` seconds, you should specify a value most applicable for your use case. 
+- A higher **ttl-seconds** value may be appropriate for entities which are rarely modified and frequently accessed.
+- A lower **ttl-seconds** value may be appropriate for entities which may change on occassion and are frequentiy accessed. 
 
 ## Endpoint Behavior
 
@@ -165,7 +168,7 @@ GET https://localhost:<port>/api/Entity/id/?$filter=1 ne id
 ```
 - The `rest-request-strict` configuration property doesn't affect caching because the property only affects requests with a request body. GET requests validated by DAB to not have request bodies. Additionally, any extraneous properties provided in a PUT, PATCH, or POST request are ignored by DAB.
 
-#### `cache-control` HTTP header behavior
+#### `cache-control` HTTP header behavior (NOT APPLICABLE TO IN-MEMORY CACHE)
 
 ##### Disclaimer about applicability to this design doc
 
@@ -180,7 +183,7 @@ Additionally, HTTP cache-control is not applicable to GraphQL due to (described 
 
 ##### Overview
 
-The `cache-control`` header is defined as: 
+The `cache-control` header is defined as: 
 
 > The Cache-Control HTTP header field holds directives (instructions) — in both requests and responses — that control caching in browsers and shared caches (e.g. Proxies, CDNs). [developers.mozilla.org](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control)
 

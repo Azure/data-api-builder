@@ -31,6 +31,16 @@ public record RuntimeConfig
     public bool SqlDataSourceUsed { get; private set; }
 
     /// <summary>
+    /// Retrieves the value of runtime.CacheEnabled property if present, default is false.
+    /// Caching is enabled only when explicitly set to true.
+    /// </summary>
+    /// <returns>Whether caching is globally enabled.</returns>
+    [JsonIgnore]
+    public bool IsCachingEnabled =>
+        Runtime is not null &&
+        Runtime.IsCachingEnabled;
+
+    /// <summary>
     /// Retrieves the value of runtime.rest.request-body-strict property if present, default is true.
     /// </summary>
     [JsonIgnore]
@@ -341,7 +351,7 @@ public record RuntimeConfig
     private void SetupDataSourcesUsed()
     {
         SqlDataSourceUsed = _dataSourceNameToDataSource.Values.Any
-            (x => x.DatabaseType is DatabaseType.MSSQL || x.DatabaseType is DatabaseType.PostgreSQL || x.DatabaseType is DatabaseType.MySQL);
+            (x => x.DatabaseType is DatabaseType.MSSQL || x.DatabaseType is DatabaseType.PostgreSQL || x.DatabaseType is DatabaseType.MySQL || x.DatabaseType is DatabaseType.DWSQL);
 
         CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
             (x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL);

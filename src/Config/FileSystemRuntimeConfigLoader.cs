@@ -62,6 +62,32 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
+    /// Get the directory name of the config file and
+    /// return as a string.
+    /// </summary>
+    /// <returns>String representing the full file path
+    /// of the config up to but not including the filename.</returns>
+    public string GetConfigDirectoryName()
+    {
+        string? directoryName = Path.GetDirectoryName(ConfigFilePath);
+        directoryName = string.IsNullOrWhiteSpace(directoryName) ?
+                    _fileSystem.Directory.GetCurrentDirectory() :
+                    directoryName;
+        return directoryName;
+    }
+
+    /// <summary>
+    /// Get the config file name and return it
+    /// as a string.
+    /// </summary>
+    /// <returns>String representing the file name and extension.</returns>
+    public string GetConfigFileName()
+    {
+        string configFileName = Path.GetFileName(ConfigFilePath);
+        return configFileName;
+    }
+
+    /// <summary>
     /// Load the runtime config from the specified path.
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>
@@ -258,26 +284,15 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        object? additionalProperties;
-        if (!jsonDictionary.TryGetValue("additionalProperties", out additionalProperties))
+        if (!jsonDictionary.TryGetValue("$id", out object? id))
         {
             throw new DataApiBuilderException(
-                message: "The schema file doesn't have the required field : additionalProperties",
+                message: "The schema file doesn't have the required field : $id",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
         }
 
-        // properties cannot be null since the property additionalProperties exist in the schema file.
-        Dictionary<string, string> properties = JsonSerializer.Deserialize<Dictionary<string, string>>(additionalProperties.ToString()!)!;
-
-        if (!properties.TryGetValue("version", out string? versionNum))
-        {
-            throw new DataApiBuilderException(message: "Missing required property 'version' in additionalProperties section.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-        }
-
-        return versionNum;
+        return id.ToString()!;
     }
 
     public static string GetMergedFileNameForEnvironment(string fileName, string environmentValue)

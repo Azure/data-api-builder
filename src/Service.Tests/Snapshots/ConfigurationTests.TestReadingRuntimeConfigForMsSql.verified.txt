@@ -2095,16 +2095,13 @@
       GetPublisher: {
         Source: {
           Object: get_publisher_by_id,
-          Type: stored-procedure,
-          Parameters: {
-            id: 1
-          }
+          Type: stored-procedure
         },
         GraphQL: {
           Singular: GetPublisher,
           Plural: GetPublishers,
           Enabled: true,
-          Operation: Mutation
+          Operation: Query
         },
         Rest: {
           Methods: [

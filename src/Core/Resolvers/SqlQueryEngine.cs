@@ -207,20 +207,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName)
         {
-            DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
 
             // Open connection and execute query using _queryExecutor
             string queryString = queryBuilder.Build(structure);
 
-            if (await _featureManager.IsEnabledAsync("CachingPreview"))
+            if (await _featureManager.IsEnabledAsync("CachingPreview") && runtimeConfig.IsCachingEnabled)
             {
                 if (_runtimeConfigProvider.GetConfig().SqlDataSourceUsed
                 && (!_runtimeConfigProvider.GetConfig().DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true))
                 {
                     DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: 10);
+                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: 5);
                     byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
                     JsonDocument doc = JsonDocument.Parse(jsonBytes);
                     return doc;

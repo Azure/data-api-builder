@@ -191,8 +191,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
 
-            // rawJsonResponse is unused when ExecutorReturnType is Null.
-            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: String.Empty, ExecutorReturnType.Null);
+            string expectedDatabaseResponseJson = @"{""key"": ""value""}";
+            Mock<IQueryExecutor> mockQueryExecutor = CreateMockQueryExecutor(rawJsonResponse: expectedDatabaseResponseJson, ExecutorReturnType.Null);
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {

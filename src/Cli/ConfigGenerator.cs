@@ -153,6 +153,7 @@ namespace Cli
                     dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement(graphQLSchemaPath));
                     break;
 
+                case DatabaseType.DWSQL:
                 case DatabaseType.MSSQL:
                     dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), JsonSerializer.SerializeToElement(options.SetSessionContext));
 
@@ -1018,19 +1019,10 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            string? configToBeUsed = options.Config;
-            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
             {
-                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
-            }
-
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out string runtimeConfigFile))
-            {
-                _logger.LogError("Config not provided and default config file doesn't exist.");
                 return false;
             }
-
-            loader.UpdateConfigFilePath(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
             // Replaces all the environment variables while deserializing when starting DAB.
@@ -1088,6 +1080,63 @@ namespace Cli
             }
 
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
+        }
+
+        /// <summary>
+        /// Runs all the validations on the config file and returns true if the config is valid.
+        /// </summary>
+        public static bool IsConfigValid(ValidateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            // Validates that config file has data and it is properly deserialized
+            // Replaces all the environment variables while deserializing when starting DAB.
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
+            {
+                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+            else
+            {
+                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+            }
+
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
+
+            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, LoggerFactoryForCli).Result;
+        }
+
+        /// <summary>
+        /// Tries to fetch the config file based on the precedence.
+        /// If config provided by the user, it will be the final config used, else will check based on the environment variable.
+        /// Returns true if the config file is found, else false.
+        /// </summary>
+        public static bool TryGetConfigForRuntimeEngine(
+            string? configToBeUsed,
+            FileSystemRuntimeConfigLoader loader,
+            IFileSystem fileSystem,
+            out string runtimeConfigFile)
+        {
+            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            {
+                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+            }
+
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile))
+            {
+                _logger.LogError("Config not provided and default config file doesn't exist.");
+                return false;
+            }
+
+            loader.UpdateConfigFilePath(runtimeConfigFile);
+
+            return true;
         }
 
         /// <summary>

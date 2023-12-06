@@ -29,6 +29,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     public const string CLAIM_PREFIX = "@claims.";
     public const string FIELD_PREFIX = "@item.";
     public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+    public const string AUTHORIZATION_HEADER = "Authorization";
     public const string ROLE_ANONYMOUS = "anonymous";
     public const string ROLE_AUTHENTICATED = "authenticated";
 

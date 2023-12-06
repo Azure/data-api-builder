@@ -146,11 +146,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
 
-            Mock<MsSqlMetadataProvider> sqlMetadataProvider = new(
-                provider,
-                queryManagerFactory.Object,
-                sqlMetadataLogger.Object,
-                provider.GetConfig().GetDefaultDataSourceName());
+            Mock<ISqlMetadataProvider> sqlMetadataProvider = new();
             string outParam;
             sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
             Dictionary<string, string> _pathToEntityMock = new() { { entityName, entityName } };

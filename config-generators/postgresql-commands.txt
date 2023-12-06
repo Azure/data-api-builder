@@ -10,6 +10,7 @@ add Broker --config "dab-config.PostgreSql.json" --source brokers --permissions 
 add WebsiteUser --config "dab-config.PostgreSql.json" --source website_users --permissions "anonymous:create,read,delete,update"
 add SupportedType --config "dab-config.PostgreSql.json" --source type_table --permissions "anonymous:create,read,delete,update"
 add stocks_price --config "dab-config.PostgreSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
+update stocks_price --config "dab-config.PostgreSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
 update stocks_price --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"
 add Tree --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete"

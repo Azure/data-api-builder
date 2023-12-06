@@ -60,8 +60,17 @@ steps:
   displayName: Build
   inputs:
     command: build
-    projects: '**/*.csproj'
+    projects: |
+        **/*.csproj
+        !**/*Tests*.csproj
     arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need
+
+- task: DotNetCoreCLI@2
+  displayName: Build Test Projects
+  inputs:
+    command: build
+    projects: '**/*Tests/*.csproj'
+    arguments: '--configuration $(buildConfiguration)'
 
 - bash: |
     echo "Waiting for CosmosDB Emulator to Start"

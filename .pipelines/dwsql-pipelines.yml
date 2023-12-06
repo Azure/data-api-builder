@@ -79,8 +79,17 @@ jobs:
     displayName: Build
     inputs:
       command: build
-      projects: '**/*.csproj'
+      projects: |
+        **/*.csproj
+        !**/*Tests*.csproj
       arguments: '-p:generateConfigFileForDbType=dwsql --configuration $(buildConfiguration)' # Update this to match your need
+
+  - task: DotNetCoreCLI@2
+    displayName: Build Test Projects
+    inputs:
+      command: build
+      projects: '**/*Tests/*.csproj'
+      arguments: '--configuration $(buildConfiguration)'
 
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.DwSql.json'
@@ -194,9 +203,18 @@ jobs:
     displayName: Build
     inputs:
       command: build
-      projects: '**/*.csproj'
+      projects: |
+        **/*.csproj
+        !**/*Tests*.csproj
       arguments: '-p:generateConfigFileForDbType=DwSql --configuration $(buildConfiguration)' # Update this to match your need
-    
+
+  - task: DotNetCoreCLI@2
+    displayName: Build Test Projects
+    inputs:
+      command: build
+      projects: '**/*Tests/*.csproj'
+      arguments: '--configuration $(buildConfiguration)'
+
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.DwSql.json'
     inputs:

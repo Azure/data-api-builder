@@ -1336,6 +1336,14 @@
       },
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
           "role": "authenticated",
           "actions": [
             {
@@ -2178,14 +2186,11 @@
     "GetPublisher": {
       "source": {
         "object": "get_publisher_by_id",
-        "type": "stored-procedure",
-        "parameters": {
-          "id": 1
-        }
+        "type": "stored-procedure"
       },
       "graphql": {
         "enabled": true,
-        "operation": "mutation",
+        "operation": "query",
         "type": {
           "singular": "GetPublisher",
           "plural": "GetPublishers"

@@ -3,7 +3,6 @@
 
 using Azure.DataApiBuilder.Product;
 using Microsoft.Data.SqlClient;
-using static Azure.DataApiBuilder.Product.ProductInfo;
 
 namespace Cli.Tests;
 
@@ -61,7 +60,7 @@ public class EndToEndTests
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
 
         Assert.IsNotNull(runtimeConfig);
-        Assert.IsTrue(runtimeConfig.Runtime.GraphQL.AllowIntrospection);
+        Assert.IsTrue(runtimeConfig.AllowIntrospection);
         Assert.AreEqual(DatabaseType.CosmosDB_NoSQL, runtimeConfig.DataSource.DatabaseType);
         CosmosDbNoSQLDataSourceOptions? cosmosDataSourceOptions = runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
         Assert.IsNotNull(cosmosDataSourceOptions);
@@ -92,13 +91,17 @@ public class EndToEndTests
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.CosmosDB_PostgreSQL, runtimeConfig.DataSource.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.IsNotNull(runtimeConfig.Runtime.Rest);
         Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
         Assert.IsTrue(runtimeConfig.Runtime.Rest.Enabled);
+        Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
         Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL.Path);
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL.Enabled);
 
-        HostOptions hostGlobalSettings = runtimeConfig.Runtime.Host;
-        CollectionAssert.AreEqual(new string[] { "localhost:3000", "www.nolocalhost.com:80" }, hostGlobalSettings.Cors!.Origins);
+        HostOptions? hostGlobalSettings = runtimeConfig.Runtime?.Host;
+        Assert.IsNotNull(hostGlobalSettings);
+        Assert.IsNotNull(hostGlobalSettings.Cors);
+        CollectionAssert.AreEqual(new string[] { "localhost:3000", "www.nolocalhost.com:80" }, hostGlobalSettings.Cors.Origins);
     }
 
     /// <summary>
@@ -117,15 +120,15 @@ public class EndToEndTests
             replaceEnvVar: true));
 
         SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
-        Assert.AreEqual(DEFAULT_APP_NAME, builder.ApplicationName);
+        Assert.AreEqual(ProductInfo.GetDataApiBuilderApplicationName(), builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
         Assert.IsNotNull(runtimeConfig.Runtime);
-        Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest.Path);
-        Assert.IsFalse(runtimeConfig.Runtime.Rest.Enabled);
-        Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL.Path);
-        Assert.IsTrue(runtimeConfig.Runtime.GraphQL.Enabled);
+        Assert.AreEqual("/rest-api", runtimeConfig.Runtime.Rest?.Path);
+        Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
+        Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
+        Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
     }
 
     /// <summary>
@@ -143,7 +146,7 @@ public class EndToEndTests
         // Perform assertions on various properties.
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
-        Assert.AreEqual(HostMode.Development, runtimeConfig.Runtime.Host.Mode);
+        Assert.AreEqual(HostMode.Development, runtimeConfig.Runtime?.Host?.Mode);
 
         string[] addArgs = {"add", "todo", "-c", TEST_RUNTIME_CONFIG_FILE, "--source", "s001.todo",
                             "--rest", "todo", "--graphql", "todo", "--permissions", "anonymous:*"};
@@ -179,6 +182,8 @@ public class EndToEndTests
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
         Assert.IsNotNull(runtimeConfig);
 
+        Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.IsNotNull(runtimeConfig.Runtime.Host);
         Assert.AreEqual("AzureAD", runtimeConfig.Runtime.Host.Authentication?.Provider);
         Assert.AreEqual("aud-xxx", runtimeConfig.Runtime.Host.Authentication?.Jwt?.Audience);
         Assert.AreEqual("issuer-xxx", runtimeConfig.Runtime.Host.Authentication?.Jwt?.Issuer);
@@ -204,7 +209,7 @@ public class EndToEndTests
         if (expectSuccess)
         {
             Assert.IsNotNull(runtimeConfig);
-            Assert.AreEqual(hostModeEnumType, runtimeConfig.Runtime.Host.Mode);
+            Assert.AreEqual(hostModeEnumType, runtimeConfig.Runtime?.Host?.Mode);
         }
         else
         {
@@ -225,7 +230,7 @@ public class EndToEndTests
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(0, runtimeConfig.Entities.Count()); // No entities
-        Assert.AreEqual(HostMode.Production, runtimeConfig.Runtime.Host.Mode);
+        Assert.AreEqual(HostMode.Production, runtimeConfig.Runtime?.Host?.Mode);
 
         string[] addArgs = { "add", "book", "-c", TEST_RUNTIME_CONFIG_FILE, "--source", "s001.book", "--permissions", "anonymous:*" };
         Program.Execute(addArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
@@ -634,6 +639,31 @@ public class EndToEndTests
         process.Kill();
     }
 
+    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
+    [DataTestMethod]
+    public void TestVersionHasBuildHash(
+        string command,
+        string options
+    )
+    {
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+
+        // Check that build hash is returned as part of  version number
+        string[] versionParts = output.Split('+');
+        Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
+        Assert.AreEqual(40, versionParts[1].Length, "Build hash is not of expected length.");
+
+        process.Kill();
+    }
+
     /// <summary>
     /// Test to verify that the version info is logged for both correct/incorrect command,
     /// and that the config name is displayed in the logs.
@@ -765,6 +795,7 @@ public class EndToEndTests
         {
             Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
             Assert.IsNotNull(runtimeConfig);
+            Assert.IsNotNull(runtimeConfig.Runtime);
             Assert.AreEqual("/base-route", runtimeConfig.Runtime.BaseRoute);
         }
     }
@@ -821,10 +852,14 @@ public class EndToEndTests
 
             if (apiType is ApiType.REST)
             {
+                Assert.IsNotNull(runtimeConfig.Runtime);
+                Assert.IsNotNull(runtimeConfig.Runtime.Rest);
                 Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.Rest.Enabled);
             }
             else
             {
+                Assert.IsNotNull(runtimeConfig.Runtime);
+                Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
                 Assert.AreEqual(expectedEnabledFlagValueInConfig, runtimeConfig.Runtime.GraphQL.Enabled);
             }
         }
@@ -855,6 +890,8 @@ public class EndToEndTests
         Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
 
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.IsNotNull(runtimeConfig.Runtime.Rest);
         Assert.AreEqual(isRequestBodyStrict, runtimeConfig.Runtime.Rest.RequestBodyStrict);
     }
 }

@@ -29,6 +29,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     public const string CLAIM_PREFIX = "@claims.";
     public const string FIELD_PREFIX = "@item.";
     public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+    public const string AUTHORIZATION_HEADER = "Authorization";
     public const string ROLE_ANONYMOUS = "anonymous";
     public const string ROLE_AUTHENTICATED = "authenticated";
 
@@ -160,7 +161,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                         return false;
                     }
                 }
-                else if (runtimeConfig is not null && runtimeConfig.Runtime.Rest.RequestBodyStrict)
+                else if (runtimeConfig is not null && runtimeConfig.IsRequestBodyStrict)
                 {
                     // Throw exception when we are not allowed extraneous fields in the rest request body,
                     // and no mapping exists for the given exposed field to a backing column.

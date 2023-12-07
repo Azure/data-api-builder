@@ -25,12 +25,12 @@ internal class RestRuntimeOptionsConverterFactory : JsonConverterFactory
     {
         public override RestRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if (reader.TokenType == JsonTokenType.True)
+            if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
             {
                 return new RestRuntimeOptions();
             }
 
-            if (reader.TokenType == JsonTokenType.Null || reader.TokenType == JsonTokenType.False)
+            if (reader.TokenType == JsonTokenType.False)
             {
                 return new RestRuntimeOptions(Enabled: false);
             }

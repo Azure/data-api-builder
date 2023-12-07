@@ -63,6 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _autogenPKTableWithTrigger = "fte_data";
         protected static readonly string _nonAutogenPKEntityWithTrigger = "InternData";
         protected static readonly string _nonAutogenPKTableWithTrigger = "intern_data";
+        protected static readonly string _tableWithDateTimePK = "stocks_price";
 
         public abstract string GetQuery(string key);
     }

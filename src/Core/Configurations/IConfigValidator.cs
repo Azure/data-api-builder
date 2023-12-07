@@ -9,8 +9,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 public interface IConfigValidator
 {
     /// <summary>
-    /// Validate the runtime config both within the
-    /// config itself and in relation to the schema if available.
+    /// Validate the runtime config properties.
     /// </summary>
-    void ValidateConfig();
+    void ValidateConfigProperties();
 }

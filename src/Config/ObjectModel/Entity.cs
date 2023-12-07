@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -56,6 +57,7 @@ public record Entity
     /// </summary>
     /// <returns>Whether caching is enabled for the entity.</returns>
     [JsonIgnore]
+    [MemberNotNullWhen(true, nameof(Cache))]
     public bool IsCachingEnabled =>
         Cache is not null &&
         Cache.Enabled is not null &&

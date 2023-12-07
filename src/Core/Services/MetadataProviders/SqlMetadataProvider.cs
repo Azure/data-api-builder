@@ -62,7 +62,11 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
+        public IReadOnlyDictionary<string, Dictionary<string, string>> ColumnToEntityFieldMappings => EntityBackingColumnsToExposedNames;
+
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
+
+        public IReadOnlyDictionary<string, Dictionary<string, string>> EntityToColumnFieldMappings => EntityExposedNamesToBackingColumnNames;
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
@@ -222,7 +226,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc />
-        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
+        public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject;
         }

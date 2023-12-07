@@ -15,13 +15,11 @@
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
     <PackageReference Include="HotChocolate.Types.NodaTime" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
-    <PackageReference Include="NJsonSchema"/>
+    <PackageReference Include="NJsonSchema" />
     <PackageReference Include="Microsoft.Azure.Cosmos" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-    <PackageReference Include="Microsoft.FeatureManagement" />
-    <PackageReference Include="Microsoft.FeatureManagement.AspNetCore" />
     <PackageReference Include="Microsoft.OData.Core" />
     <PackageReference Include="Microsoft.OData.Edm" />
     <PackageReference Include="Microsoft.OpenApi" />

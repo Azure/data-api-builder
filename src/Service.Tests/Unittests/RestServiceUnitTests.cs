@@ -19,7 +19,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using ZiggyCreatures.Caching.Fusion;
@@ -165,10 +164,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<IFusionCache> cache = new();
             DabCacheService cacheService = new(cache.Object, logger: null, httpContextAccessor.Object);
 
-            // Features flags disabled by default because tests are not built to accommodate feature flags.
-            Mock<IFeatureManager> mockFeatureManager = new();
-            mockFeatureManager.Setup(x => x.IsEnabledAsync(It.IsAny<string>()).Result).Returns(false);
-
             SqlQueryEngine queryEngine = new(
                 queryManagerFactory.Object,
                 metadataProviderFactory.Object,
@@ -177,8 +172,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 gQLFilterParser,
                 queryEngineLogger.Object,
                 provider,
-                cacheService,
-                mockFeatureManager.Object);
+                cacheService);
 
             queryEngineFactory.Setup(x => x.GetQueryEngine(It.IsAny<DatabaseType>())).Returns(queryEngine);
 

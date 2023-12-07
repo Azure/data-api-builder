@@ -4,7 +4,6 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -16,7 +15,6 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Microsoft.FeatureManagement;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLStoredProcedureBuilder;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -34,7 +32,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly DabCacheService _cache;
-        private readonly IFeatureManager _featureManager;
 
         // <summary>
         // Constructor.
@@ -47,8 +44,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
             RuntimeConfigProvider runtimeConfigProvider,
-            DabCacheService cache,
-            IFeatureManager featureManager)
+            DabCacheService cache)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -58,7 +54,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
             _cache = cache;
-            _featureManager = featureManager;
         }
 
         /// <summary>
@@ -216,7 +211,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Open connection and execute query using _queryExecutor
             string queryString = queryBuilder.Build(structure);
 
-            if (await _featureManager.IsEnabledAsync(FeatureFlagConstants.INMEMORYCACHE) && runtimeConfig.CanUseCache())
+            if (runtimeConfig.CanUseCache())
             {
                 bool dbPolicyConfigured = !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
 

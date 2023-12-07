@@ -31,7 +31,6 @@ using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
-using Microsoft.FeatureManagement;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
@@ -147,10 +146,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             Mock<IFusionCache> cache = new();
             DabCacheService cacheService = new(cache.Object, logger: null, _httpContextAccessor.Object);
 
-            // Features flags disabled by default because tests are not built to accommodate feature flags.
-            Mock<IFeatureManager> mockFeatureManager = new();
-            mockFeatureManager.Setup(x => x.IsEnabledAsync(It.IsAny<string>()).Result).Returns(false);
-
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
@@ -169,8 +164,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _gQLFilterParser,
                                 _queryEngineLogger,
                                 runtimeConfigProvider,
-                                cacheService,
-                                mockFeatureManager.Object
+                                cacheService
                                 );
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>

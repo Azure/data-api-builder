@@ -39,7 +39,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.FeatureManagement;
 using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
@@ -84,7 +83,6 @@ namespace Azure.DataApiBuilder.Service
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
             RuntimeConfigProvider configProvider = new(configLoader);
 
-            services.AddFeatureManagement();
             services.AddSingleton(fileSystem);
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);

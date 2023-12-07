@@ -28,8 +28,6 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="6.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Logging.ApplicationInsights" Version="2.21.0" />
-    <PackageVersion Include="Microsoft.FeatureManagement" Version="3.0.0" />
-    <PackageVersion Include="Microsoft.FeatureManagement.AspNetCore" Version="3.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
     <PackageVersion Include="Microsoft.OData.Edm" Version="7.12.5" />
     <PackageVersion Include="Microsoft.OData.Core" Version="7.12.5" />

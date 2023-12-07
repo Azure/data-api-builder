@@ -483,6 +483,7 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 (5, 'Snow White', 'AnotherTales', 3001);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'Tales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, 1), (1, 1, 42.75, 0), (100, 99, NULL, NULL);
+INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100.57, 1);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');

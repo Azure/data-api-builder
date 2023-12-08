@@ -62,11 +62,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
-        public IReadOnlyDictionary<string, Dictionary<string, string>> ColumnToEntityFieldMappings => EntityBackingColumnsToExposedNames;
-
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
-
-        public IReadOnlyDictionary<string, Dictionary<string, string>> EntityToColumnFieldMappings => EntityExposedNamesToBackingColumnNames;
 
         private Dictionary<string, string> EntityPathToEntityName { get; } = new();
 
@@ -286,6 +282,38 @@ namespace Azure.DataApiBuilder.Core.Services
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        /// <summary>
+        /// Given entity name, gets the entity to column mappings if present.
+        /// </summary>
+        public bool TryGetEntityToColumnMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            Dictionary<string, string>? entityToColumnMappings;
+            mappings = null;
+            if (EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out entityToColumnMappings))
+            {
+                mappings = entityToColumnMappings;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Given entity name, gets the column to entity mappings if present.
+        /// </summary>
+        public bool TryGetColumnToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            Dictionary<string, string>? columntoEntityMappings;
+            mappings = null;
+            if (EntityBackingColumnsToExposedNames.TryGetValue(entityName, out columntoEntityMappings))
+            {
+                mappings = columntoEntityMappings;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

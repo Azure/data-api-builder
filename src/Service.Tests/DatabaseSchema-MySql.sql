@@ -34,6 +34,7 @@ DROP TABLE IF EXISTS GQLmappings;
 DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS books_sold;
+DROP TABLE IF EXISTS default_with_function_table;
 
 CREATE TABLE publishers(
     id int AUTO_INCREMENT PRIMARY KEY,
@@ -219,6 +220,19 @@ CREATE TABLE books_sold (
   copies_sold INT DEFAULT 0,
   last_sold_on DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_sold_on_date DATETIME GENERATED ALWAYS AS (last_sold_on) STORED
+);
+
+CREATE TABLE default_with_function_table
+(
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_value INT,
+    `current_date` TIMESTAMP DEFAULT (CURRENT_DATE) NOT NULL,
+    `current_timestamp` TIMESTAMP DEFAULT (NOW()) NOT NULL,
+    random_number INT DEFAULT (FLOOR(RAND() * 1000)) NOT NULL,
+    next_day TIMESTAMP DEFAULT (CURRENT_DATE + INTERVAL 1 DAY),
+    default_string_with_paranthesis VARCHAR(100) DEFAULT ('()'),
+    default_function_string_with_paranthesis VARCHAR(100) DEFAULT ('NOW()'),
+    default_integer INT DEFAULT 100
 );
 
 

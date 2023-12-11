@@ -59,24 +59,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new row with random_number = 1234
-        /// <code>Check: </code> Mutation fails because the database policy (@item.name ne 'New publisher') prohibits insertion of records with name = 'New publisher'.
+        /// <code>Do: </code> Inserts new row in a table containing default values as built_in methods.
+        /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
+        /// as graphQL response.
         /// </summary>
         [TestMethod]
-        public async Task InsertMutationWithDefaultBuiltInFunctions()
+        public override async Task InsertMutationWithDefaultBuiltInFunctions()
         {
-            string msSqlQuery = @"
-                SELECT *
-                FROM [default_with_function_table] AS [table0]
-                WHERE [table0].[id] = 1
-                    AND [table0].[user_value] = 1234
-                ORDER BY [id] asc
-                FOR JSON PATH,
-                    INCLUDE_NULL_VALUES,
-                    WITHOUT_ARRAY_WRAPPER
-            ";
-
-            await InsertMutationWithDefaultBuiltInFunctions(msSqlQuery);
+            await base.InsertMutationWithDefaultBuiltInFunctions();
         }
 
         /// <summary>

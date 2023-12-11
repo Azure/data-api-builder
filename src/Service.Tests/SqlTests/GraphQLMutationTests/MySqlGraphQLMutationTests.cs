@@ -97,6 +97,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new row with random_number = 1234
+        /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
+        /// as graphQL response.
+        /// </summary>
+        [TestMethod]
+        public override async Task InsertMutationWithDefaultBuiltInFunctions()
+        {
+            await base.InsertMutationWithDefaultBuiltInFunctions();
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
         /// if the mutation query has returned the correct information

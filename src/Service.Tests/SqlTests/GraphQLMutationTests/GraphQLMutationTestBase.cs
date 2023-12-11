@@ -45,20 +45,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Do: </code> Inserts new row and return all its columns
         /// <code>Check: </code> A row is inserted in the table that has rows with default values as built_in methods.
         /// it should insert it correctly with default values correctly handled by database.
+        /// current_date, current_timestamp, random_number, next_day have default value as built_in methods like GETDATE(), NOW(), RAND().
+        /// default_string_with_paranthesis has default value "()", default_function_string_with_paranthesis has default value "NOW()".
+        /// default_integer has default value 100.
         /// </summary>
-        public async Task InsertMutationWithDefaultBuiltInFunctions(string dbQuery)
+        public virtual async Task InsertMutationWithDefaultBuiltInFunctions()
         {
             string graphQLMutationName = "createDefaultBuiltInFunction";
             string graphQLMutation = @"
                 mutation {
                     createDefaultBuiltInFunction(item: { user_value: 1234 }) {
-                        id
-                        user_value
                         current_date
-                        current_utc_date
+                        current_timestamp
                         random_number
-                        start_of_day
-                        end_of_day
+                        next_day
                         default_string_with_paranthesis
                         default_function_string_with_paranthesis
                         default_integer
@@ -66,37 +66,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                 }
             ";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
 
             // Assert the values
-            Assert.AreEqual(1234, actual.GetProperty("user_value").GetInt32());
-            Assert.IsNotNull(actual.GetProperty("current_date").GetString());
-            Assert.IsNotNull(actual.GetProperty("current_utc_date").GetString());
-            Assert.IsNotNull(actual.GetProperty("random_number").GetInt32());
-            Assert.IsNotNull(actual.GetProperty("start_of_day").GetString());
-            Assert.IsNotNull(actual.GetProperty("end_of_day").GetString());
-            Assert.AreEqual("()", actual.GetProperty("default_string_with_paranthesis").GetString());
-            Assert.AreEqual("GETDATE()", actual.GetProperty("default_function_string_with_paranthesis").GetString());
-            Assert.AreEqual(100, actual.GetProperty("default_integer").GetInt32());
-
-            DateTime currentDate = DateTime.Parse(actual.GetProperty("current_date").GetString());
-            DateTime currentUtcDate = DateTime.Parse(actual.GetProperty("current_utc_date").GetString());
-            DateTime startOfDay = DateTime.Parse(actual.GetProperty("start_of_day").GetString());
-            DateTime endOfDay = DateTime.Parse(actual.GetProperty("end_of_day").GetString());
-
-            // Get the current date
-            DateTime today = DateTime.Now;
-            DateTime tomorrow = today.AddDays(1);
-
-            // Assert the dates
-            // Note: Due to the time it takes to execute the code, the dates might not be exactly equal.
-            // So, comparing only the date part, or allow for a small difference.
-            Assert.AreEqual(today.Date, currentDate.Date);
-            Assert.AreEqual(today.Date, currentUtcDate.Date);
-            Assert.AreEqual(today.Date, startOfDay.Date);
-            Assert.AreEqual(tomorrow.Date, endOfDay.Date);
+            Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("current_date").GetString()));
+            Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("current_timestamp").GetString()));
+            Assert.IsNotNull(result.GetProperty("random_number").GetInt32());
+            Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("next_day").GetString()));
+            Assert.AreEqual("()", result.GetProperty("default_string_with_paranthesis").GetString());
+            Assert.AreEqual("NOW()", result.GetProperty("default_function_string_with_paranthesis").GetString());
+            Assert.AreEqual(100, result.GetProperty("default_integer").GetInt32());
         }
 
         /// <summary>

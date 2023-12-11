@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Inserts new row with random_number = 1234
+        /// <code>Do: </code> Inserts new row in a table containing default values as built_in methods.
         /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
         /// as graphQL response.
         /// </summary>

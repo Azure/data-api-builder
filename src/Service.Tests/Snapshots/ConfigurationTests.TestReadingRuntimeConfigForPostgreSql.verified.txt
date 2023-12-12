@@ -2060,6 +2060,32 @@
       }
     },
     {
+      DefaultBuiltInFunction: {
+        Source: {
+          Object: default_with_function_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: DefaultBuiltInFunction,
+          Plural: DefaultBuiltInFunctions,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       PublisherNF: {
         Source: {
           Object: publishers,
@@ -2229,32 +2255,6 @@
             TargetEntity: BookWebsitePlacement
           }
         }
-      }
-    },
-    {
-      DefaultBuiltInFunction: {
-        Source: {
-          Object: default_with_function_table,
-          Type: Table
-        },
-        GraphQL: {
-          Singular: DefaultBuiltInFunction,
-          Plural: DefaultBuiltInFunctions,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: true
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: *
-              }
-            ]
-          }
-        ]
       }
     },
     {

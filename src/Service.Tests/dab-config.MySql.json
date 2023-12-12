@@ -2075,12 +2075,6 @@
           "actions": [
             "*"
           ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [
-            "*"
-          ]
         }
       ]
     }

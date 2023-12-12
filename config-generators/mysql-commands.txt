@@ -28,6 +28,7 @@ add GQLmappings --config "dab-config.MySql.json" --source "GQLmappings" --permis
 add Bookmarks --config "dab-config.MySql.json" --source "bookmarks" --permissions "anonymous:*" --rest true --graphql true
 add MappedBookmarks --config "dab-config.MySql.json" --source "mappedbookmarks" --permissions "anonymous:*" --rest true --graphql true
 add BooksSold --config "dab-config.MySql.json" --source "books_sold" --rest true --graphql "books_sold:books_sold" --permissions "anonymous:*"
+add DefaultBuiltInFunction --config "dab-config.MsSql.json" --source "default_with_function_table" --rest true --graphql true --permissions "anonymous:*"
 update GQLmappings --config "dab-config.MySql.json" --map "__column1:column1,__column2:column2" --permissions "authenticated:*"
 update Publisher --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many
 update Publisher --config "dab-config.MySql.json" --permissions "policy_tester_01:create,delete"

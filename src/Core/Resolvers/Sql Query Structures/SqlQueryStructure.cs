@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -514,7 +515,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (value != null)
                 {
-                    parameterName = MakeDbConnectionParam(
+                    string parameterName = MakeDbConnectionParam(
                         GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn);
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),

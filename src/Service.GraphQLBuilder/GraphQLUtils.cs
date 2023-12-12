@@ -278,7 +278,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         /// <param name="context">Middleware context.</param>
         /// <returns></returns>
-        public static string GetDataSourceNameFromGraphQLContext(IMiddlewareContext context, RuntimeConfig runtimeConfig)
+        public static string GetDataSourceNameFromGraphQLContext(IPureResolverContext context, RuntimeConfig runtimeConfig)
         {
             string rootNode = context.Selection.Field.Coordinate.TypeName.Value;
             string dataSourceName;
@@ -325,7 +325,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return dataSourceName;
         }
 
-        private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
+        private static string GenerateDataSourceNameKeyFromPath(IPureResolverContext context)
         {
             return $"{context.Path.ToList()[0]}";
         }

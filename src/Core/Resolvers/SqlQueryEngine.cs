@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Auth;
@@ -170,7 +171,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonDocument? ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
@@ -180,22 +181,46 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
             }
-            else
-            {
-                //TODO: Try to avoid additional deserialization/serialization here.
-                return ResolverMiddleware.RepresentsNullValue(element) ? null : JsonDocument.Parse(element.ToString());
-            }
+
+            return element;
         }
 
         /// <inheritdoc />
-        public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public IReadOnlyList<JsonElement> ResolveList(
+                    JsonElement array,
+                    IObjectField fieldSchema,
+                    ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
             metadata = currentMetadata;
 
-            //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonSerializer.Deserialize<List<JsonElement>>(element.ToString());
+            List<JsonElement> list = new();
+
+            if (array.ValueKind is JsonValueKind.Array)
+            {
+                foreach (JsonElement element in array.EnumerateArray())
+                {
+                    list.Add(element);
+                }
+            }
+            else if (array.ValueKind is JsonValueKind.String)
+            {
+                using ArrayPoolWriter buffer = new();
+
+                string text = array.GetString()!;
+                int neededCapacity = Encoding.UTF8.GetMaxByteCount(text.Length);
+                int written = Encoding.UTF8.GetBytes(text, buffer.GetSpan(neededCapacity));
+                buffer.Advance(written);
+
+                Utf8JsonReader reader = new(buffer.GetWrittenSpan());
+                foreach (JsonElement element in JsonElement.ParseValue(ref reader).EnumerateArray())
+                {
+                    list.Add(element);
+                }
+            }
+
+            return list;
         }
 
         // <summary>

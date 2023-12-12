@@ -1,21 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Policy;
 using System.Text.Json;
-using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Resolvers;
-using HotChocolate;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using HotChocolate.Types;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -25,15 +22,18 @@ namespace Azure.DataApiBuilder.Service.Services
     /// </summary>
     internal sealed class ExecutionHelper
     {
-        internal readonly IQueryEngine _queryEngine;
-        internal readonly IMutationEngine _mutationEngine;
+        internal readonly IQueryEngineFactory _queryEngineFactory;
+        internal readonly IMutationEngineFactory _mutationEngineFactory;
+        internal readonly RuntimeConfigProvider _runtimeConfigProvider;
 
         public ExecutionHelper(
-            IQueryEngine queryEngine,
-            IMutationEngine mutationEngine)
+            IQueryEngineFactory queryEngineFactory,
+            IMutationEngineFactory mutationEngineFactory,
+            RuntimeConfigProvider runtimeConfigProvider)
         {
-            _queryEngine = queryEngine;
-            _mutationEngine = mutationEngine;
+            _queryEngineFactory = queryEngineFactory;
+            _mutationEngineFactory = mutationEngineFactory;
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         /// <summary>
@@ -44,12 +44,16 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </param>
         public async ValueTask ExecuteQueryAsync(IMiddlewareContext context)
         {
+            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+            DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
+
             IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
             if (context.Selection.Type.IsListType())
             {
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
-                    await _queryEngine.ExecuteListAsync(context, parameters);
+                    await queryEngine.ExecuteListAsync(context, parameters, dataSourceName);
 
                 // this will be run after the query / mutation has completed.
                 context.RegisterForCleanup(
@@ -67,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.Services
             else
             {
                 Tuple<JsonDocument?, IMetadata?> result =
-                    await _queryEngine.ExecuteAsync(context, parameters);
+                    await queryEngine.ExecuteAsync(context, parameters, dataSourceName);
                 SetContextResult(context, result.Item1);
                 SetNewMetadata(context, result.Item2);
             }
@@ -81,6 +85,10 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </param>
         public async ValueTask ExecuteMutateAsync(IMiddlewareContext context)
         {
+            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+            DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
+
             IDictionary<string, object?> parameters = GetParametersFromContext(context);
 
             // Only Stored-Procedure has ListType as returnType for Mutation
@@ -88,7 +96,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // Both Query and Mutation execute the same SQL statement for Stored Procedure.
                 Tuple<IEnumerable<JsonDocument>, IMetadata?> result =
-                    await _queryEngine.ExecuteListAsync(context, parameters);
+                    await queryEngine.ExecuteListAsync(context, parameters, dataSourceName);
 
                 // this will be run after the query / mutation has completed.
                 context.RegisterForCleanup(
@@ -105,8 +113,9 @@ namespace Azure.DataApiBuilder.Service.Services
             }
             else
             {
+                IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(ds.DatabaseType);
                 Tuple<JsonDocument?, IMetadata?> result =
-                    await _mutationEngine.ExecuteAsync(context, parameters);
+                    await mutationEngine.ExecuteAsync(context, parameters, dataSourceName);
                 SetContextResult(context, result.Item1);
                 SetNewMetadata(context, result.Item2);
             }
@@ -176,11 +185,15 @@ namespace Azure.DataApiBuilder.Service.Services
         /// </returns>
         public object? ExecuteObjectField(IPureResolverContext context)
         {
+            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+            DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
+
             if (TryGetPropertyFromParent(context, out JsonElement objectValue) &&
                 objectValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
                 IMetadata metadata = GetMetadata(context);
-                objectValue = _queryEngine.ResolveObject(objectValue, context.Selection.Field, ref metadata);
+                objectValue = queryEngine.ResolveObject(objectValue, context.Selection.Field, ref metadata);
 
                 // Since the query engine could null the object out we need to check again
                 // if its null.
@@ -198,11 +211,15 @@ namespace Azure.DataApiBuilder.Service.Services
 
         public object? ExecuteListField(IPureResolverContext context)
         {
+            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
+            DataSource ds = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName);
+            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(ds.DatabaseType);
+
             if (TryGetPropertyFromParent(context, out JsonElement listValue) &&
                 listValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
                 IMetadata metadata = GetMetadata(context);
-                IReadOnlyList<JsonElement> result = _queryEngine.ResolveList(listValue, context.Selection.Field, ref metadata);
+                IReadOnlyList<JsonElement> result = queryEngine.ResolveList(listValue, context.Selection.Field, ref metadata);
                 SetNewMetadata(context, metadata);
                 return result;
             }
@@ -277,13 +294,13 @@ namespace Azure.DataApiBuilder.Service.Services
 
             return argumentSchema.Type.TypeName().Value switch
             {
-                BYTE_TYPE => ((IntValueNode)value).ToByte(),
-                SHORT_TYPE => ((IntValueNode)value).ToInt16(),
-                INT_TYPE => ((IntValueNode)value).ToInt32(),
-                LONG_TYPE => ((IntValueNode)value).ToInt64(),
-                SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
-                FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
-                DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
+                SupportedHotChocolateTypes.BYTE_TYPE => ((IntValueNode)value).ToByte(),
+                SupportedHotChocolateTypes.SHORT_TYPE => ((IntValueNode)value).ToInt16(),
+                SupportedHotChocolateTypes.INT_TYPE => ((IntValueNode)value).ToInt32(),
+                SupportedHotChocolateTypes.LONG_TYPE => ((IntValueNode)value).ToInt64(),
+                SupportedHotChocolateTypes.SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
+                SupportedHotChocolateTypes.FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
+                SupportedHotChocolateTypes.DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
                 _ => value.Value
             };
         }
@@ -393,9 +410,9 @@ namespace Azure.DataApiBuilder.Service.Services
             return (IMetadata)context.ContextData[GetMetadataKey(context.Path)]!;
         }
 
-        private static string GetMetadataKey(Path path)
+        private static string GetMetadataKey(HotChocolate.Path path)
         {
-            Path current = path;
+            HotChocolate.Path current = path;
 
             if (current.Parent is RootPathSegment or null)
             {

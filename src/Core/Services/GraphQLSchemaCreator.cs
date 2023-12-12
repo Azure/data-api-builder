@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -100,7 +101,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
                 .ModifyOptions(o => o.EnableOneOf = true)
                 // Adds our type interceptor that will create the resolvers.
-                .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(_queryEngine, _mutationEngine)));
+                .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(_queryEngineFactory, _mutationEngineFactory, _runtimeConfigProvider)));
         }
 
         /// <summary>

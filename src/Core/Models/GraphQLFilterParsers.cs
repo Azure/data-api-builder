@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -64,12 +65,12 @@ public class GQLFilterParser
         string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
         ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
-        InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
+        InputObjectType filterArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(filterArgumentSchema);
 
         List<PredicateOperand> predicates = new();
         foreach (ObjectFieldNode field in fields)
         {
-            object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field.Value,
                 argumentSchema: filterArgumentObject.Fields[field.Name.Value],
                 variables: ctx.Variables);
@@ -84,7 +85,7 @@ public class GQLFilterParser
             bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
             bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
-            InputObjectType filterInputObjectType = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
+            InputObjectType filterInputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
             if (fieldIsAnd || fieldIsOr)
             {
                 PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
@@ -408,7 +409,7 @@ public class GQLFilterParser
         List<PredicateOperand> operands = new();
         foreach (IValueNode field in fields)
         {
-            object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field,
                 argumentSchema: argumentSchema,
                 ctx.Variables);
@@ -497,11 +498,11 @@ public static class FieldFilterParser
     {
         List<PredicateOperand> predicates = new();
 
-        InputObjectType argumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(argumentSchema);
+        InputObjectType argumentObject = ExecutionHelper.InputObjectTypeFromIInputField(argumentSchema);
         foreach (ObjectFieldNode field in fields)
         {
             string name = field.Name.ToString();
-            object? value = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? value = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field.Value,
                 argumentSchema: argumentObject.Fields[field.Name.Value],
                 variables: ctx.Variables);

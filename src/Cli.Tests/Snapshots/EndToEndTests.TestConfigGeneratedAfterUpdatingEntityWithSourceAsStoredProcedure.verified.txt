@@ -1,0 +1,33 @@
+﻿{
+  Source: {
+    Object: dbo.books,
+    Type: stored-procedure,
+    Parameters: {
+      param1: 123,
+      param2: hello,
+      param3: true
+    }
+  },
+  GraphQL: {
+    Singular: MyEntity,
+    Plural: MyEntities,
+    Enabled: true,
+    Operation: Mutation
+  },
+  Rest: {
+    Methods: [
+      Post
+    ],
+    Enabled: true
+  },
+  Permissions: [
+    {
+      Role: anonymous,
+      Actions: [
+        {
+          Action: Execute
+        }
+      ]
+    }
+  ]
+}

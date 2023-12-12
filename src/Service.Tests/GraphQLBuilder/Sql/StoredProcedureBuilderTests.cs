@@ -7,7 +7,8 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -15,7 +16,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 {
@@ -53,6 +54,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(DateTime), DATETIME_TYPE, "12/31/2030 12:00:00 AM", false, DisplayName = "DateTime")]
         [DataRow(typeof(DateTime), DATETIME_TYPE, "12/31/2030 12000 AM", true, DisplayName = "DateTime")]
         [DataRow(typeof(DateTimeOffset), DATETIME_TYPE, "11/19/2012 10:57:11 AM -08:00", false, DisplayName = "DateTimeOffset")]
+        [DataRow(typeof(TimeOnly), LOCALTIME_TYPE, "10:57:11.0000", false, DisplayName = "LocalTime")]
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE, "AgQGCAoMDhASFA==", false, DisplayName = "Byte[]")]
         public void StoredProcedure_ParameterValueTypeResolution(
             Type systemType,
@@ -71,7 +73,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Dictionary<string, ParameterDefinition> dbSourcedParameters = new() { { parameterName, new() { SystemType = systemType } } };
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
             {
-                SourceType = SourceType.StoredProcedure,
+                SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
                     Parameters = dbSourcedParameters
@@ -113,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             // Create permissions and entities collections used within the mutation and query builders.
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                 entityNames: new[] { spQueryEntityName, spMutationEntityName },
-                operations: new[] { Config.Operation.Execute },
+                operations: new[] { EntityActionOperation.Execute },
                 roles: SchemaConverterTests.GetRolesAllowedForEntity()
                 );
             Dictionary<string, Entity> entities = new()
@@ -124,13 +126,18 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             try
             {
+                Dictionary<string, DatabaseType> entityToDatabaseName = new()
+                {
+                    {"Foo", DatabaseType.MSSQL }
+                };
+
                 // Build GraphQL schema document for the mutation which hydrates parameter metadata and
                 // attempts to convert the parameter value provided in configuration
                 // to the value type denoted in the database schema (metadata supplied via DatabaseObject).
                 DocumentNode mutationRoot = MutationBuilder.Build(
                     root,
-                    DatabaseType.mssql,
-                    entities: entities,
+                    entityToDatabaseName,
+                    entities: new(entities),
                     entityPermissionsMap: _entityPermissions,
                     dbObjects: new Dictionary<string, DatabaseObject> { { spMutationEntityName, spDbObj } }
                 );
@@ -144,8 +151,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 // to the value type denoted in the database schema (metadata supplied via DatabaseObject).
                 DocumentNode queryRoot = QueryBuilder.Build(
                     root,
-                    DatabaseType.mssql,
-                    entities: entities,
+                    entityToDatabaseName,
+                    entities: new(entities),
                     inputTypes: null,
                     entityPermissionsMap: _entityPermissions,
                     dbObjects: new Dictionary<string, DatabaseObject> { { spQueryEntityName, spDbObj } }
@@ -192,7 +199,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 entityName: entityName,
                 spDbObj,
                 configEntity: spEntity,
-                entities: new(),
+                entities: new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: SchemaConverterTests.GetRolesAllowedForEntity(),
                 rolesAllowedForFields: SchemaConverterTests.GetFieldToRolesMap()
                 );

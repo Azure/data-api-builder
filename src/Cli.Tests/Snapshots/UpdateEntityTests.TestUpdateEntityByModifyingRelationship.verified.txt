@@ -1,0 +1,115 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps,
+        Jwt: {
+          Audience: ,
+          Issuer: 
+        }
+      }
+    }
+  },
+  Entities: [
+    {
+      FirstEntity: {
+        Source: {
+          Object: Table1,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: FirstEntity,
+          Plural: FirstEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          r1: {
+            TargetEntity: SecondEntity
+          }
+        }
+      }
+    },
+    {
+      SecondEntity: {
+        Source: {
+          Object: Table2,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: SecondEntity,
+          Plural: SecondEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          r2: {
+            Cardinality: Many,
+            TargetEntity: FirstEntity,
+            SourceFields: [
+              e1
+            ],
+            TargetFields: [
+              e2,
+              t2
+            ],
+            LinkingObject: entity_link,
+            LinkingSourceFields: [
+              eid1
+            ],
+            LinkingTargetFields: [
+              eid2,
+              fid2
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

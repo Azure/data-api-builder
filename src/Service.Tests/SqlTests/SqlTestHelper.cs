@@ -7,10 +7,13 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -19,7 +22,7 @@ using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationTests
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
-    public class SqlTestHelper : TestHelper
+    public static class SqlTestHelper
     {
         // This is is the key which holds all the rows in the response
         // for REST requests.
@@ -30,16 +33,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         private const string PROPERTY_STATUS = "status";
         private const string PROPERTY_CODE = "code";
 
-        public static void RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
+        public static RuntimeConfig RemoveAllRelationshipBetweenEntities(RuntimeConfig runtimeConfig)
         {
-            foreach ((string entityName, Entity entity) in runtimeConfig.Entities.ToList())
+            return runtimeConfig with
             {
-                Entity updatedEntity = new(entity.Source, entity.Rest,
-                                           entity.GraphQL, entity.Permissions,
-                                           Relationships: null, Mappings: entity.Mappings);
-                runtimeConfig.Entities.Remove(entityName);
-                runtimeConfig.Entities.Add(entityName, updatedEntity);
-            }
+                Entities = new(runtimeConfig.Entities.ToDictionary(item => item.Key, item => item.Value with { Relationships = null }))
+            };
         }
 
         /// <summary>
@@ -48,8 +47,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <remarks>
         /// This method of comparing JSON-s provides:
         /// <list type="number">
-        /// <item> Insesitivity to spaces in the JSON formatting </item>
-        /// <item> Insesitivity to order for elements in dictionaries. E.g. {"a": 1, "b": 2} = {"b": 2, "a": 1} </item>
+        /// <item> Insensitivity to spaces in the JSON formatting </item>
+        /// <item> Insensitivity to order for elements in dictionaries. E.g. {"a": 1, "b": 2} = {"b": 2, "a": 1} </item>
         /// <item> Sensitivity to order for elements in lists. E.g. [{"a": 1}, {"b": 2}] ~= [{"b": 2}, {"a": 1}] </item>
         /// </list>
         /// In contrast, string comparing does not provide 1 and 2.
@@ -64,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Adds a useful failure message around the excpeted == actual operation
+        /// Adds a useful failure message around the expected == actual operation.
         /// <summary>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
@@ -98,32 +97,46 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
+        /// Helper method to preprocess response to unescape unicode characters and remove all carriage returns/new lines.
+        /// </summary>
+        /// <param name="response">Raw response received from the API.</param>
+        /// <returns>Processed response containing unescaped unicode characters without new lines/carriage returns.</returns>
+        private static string PreprocessResponse(string response)
+        {
+            // Quote(") has to be treated differently than other unicode characters
+            // as it has to be added with a preceding backslash.
+            response = Regex.Replace(response, @"\\u0022", @"\\""");
+
+            // Remove all carriage returns and new lines from the response body.
+            response = Regex.Replace(response, @"\\n|\\r", "");
+
+            // Convert the escaped characters into their unescaped form.
+            response = Regex.Unescape(response);
+
+            return response;
+        }
+
+        /// <summary>
         /// Instantiate basic runtime config with no entity.
         /// </summary>
         /// <returns></returns>
         public static RuntimeConfig InitBasicRuntimeConfigWithNoEntity(
-            DatabaseType dbType = DatabaseType.mssql,
+            DatabaseType dbType = DatabaseType.MSSQL,
             string testCategory = TestCategory.MSSQL)
         {
-            Dictionary<GlobalSettingsType, object> settings = new()
-            {
-                { GlobalSettingsType.GraphQL, JsonSerializer.SerializeToElement(new GraphQLGlobalSettings(){ }) },
-                { GlobalSettingsType.Rest, JsonSerializer.SerializeToElement(new RestGlobalSettings(){ }) }
-            };
-
-            DataSource dataSource = new(dbType)
-            {
-                ConnectionString = GetConnectionStringFromEnvironmentConfig(environment: testCategory)
-            };
+            DataSource dataSource = new(dbType, GetConnectionStringFromEnvironmentConfig(environment: testCategory), new());
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
-                RuntimeSettings: settings,
-                Entities: new Dictionary<string, Entity>()
-                );
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(new Dictionary<string, Entity>())
+            );
 
-            runtimeConfig.DetermineGlobalSettings();
             return runtimeConfig;
         }
 
@@ -188,16 +201,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 JsonElement expectedErrorObj = JsonDocument.Parse(expected).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
                 string expectedStatusCode = expectedErrorObj.GetProperty(PROPERTY_STATUS).ToString();
                 string expectedSubStatusCode = expectedErrorObj.GetProperty(PROPERTY_CODE).ToString();
-
-                // Quote(") has to be treated differently than other unicode characters
-                // as it has to be added with a preceding backslash.
-                responseBody = Regex.Replace(responseBody, @"\\u0022", @"\\""");
-
-                // Remove all carriage returns and new lines from the response body.
-                responseBody = Regex.Replace(responseBody, @"\\n|\\r", "");
-
-                // Convert the escaped characters into their unescaped form.
-                responseBody = Regex.Unescape(responseBody);
+                responseBody = PreprocessResponse(responseBody);
 
                 // Generate actual error object
                 JsonElement actualErrorObj = JsonDocument.Parse(responseBody).RootElement.GetProperty(PARENT_PROPERTY_ERROR);
@@ -228,60 +232,43 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="operationType">The operation to be executed on the entity.</param>
         /// <returns>HttpMethod representing the passed in operationType.</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        public static HttpMethod GetHttpMethodFromOperation(Config.Operation operationType, Config.RestMethod? restMethod = null)
+        public static HttpMethod GetHttpMethodFromOperation(EntityActionOperation operationType, SupportedHttpVerb? restMethod = null) => operationType switch
         {
-            switch (operationType)
-            {
-                case Config.Operation.Read:
-                    return HttpMethod.Get;
-                case Config.Operation.Insert:
-                    return HttpMethod.Post;
-                case Config.Operation.Delete:
-                    return HttpMethod.Delete;
-                case Config.Operation.Upsert:
-                    return HttpMethod.Put;
-                case Config.Operation.UpsertIncremental:
-                    return HttpMethod.Patch;
-                case Config.Operation.Execute:
-                    return ConvertRestMethodToHttpMethod(restMethod);
-                default:
-                    throw new DataApiBuilderException(
-                        message: "Operation not supported for the request.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
-            }
-        }
+            EntityActionOperation.Read => HttpMethod.Get,
+            EntityActionOperation.Insert => HttpMethod.Post,
+            EntityActionOperation.Delete => HttpMethod.Delete,
+            EntityActionOperation.Upsert => HttpMethod.Put,
+            EntityActionOperation.UpsertIncremental => HttpMethod.Patch,
+            EntityActionOperation.Execute => ConvertRestMethodToHttpMethod(restMethod),
+            _ => throw new DataApiBuilderException(
+                                    message: "Operation not supported for the request.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported),
+        };
 
         /// <summary>
         /// Converts the provided RestMethod to the corresponding HttpMethod
         /// </summary>
         /// <param name="restMethod"></param>
         /// <returns>HttpMethod corresponding the RestMethod provided as input.</returns>
-        public static HttpMethod ConvertRestMethodToHttpMethod(RestMethod? restMethod)
+        public static HttpMethod ConvertRestMethodToHttpMethod(SupportedHttpVerb? restMethod) => restMethod switch
         {
-            switch (restMethod)
-            {
-                case RestMethod.Get:
-                    return HttpMethod.Get;
-                case RestMethod.Put:
-                    return HttpMethod.Put;
-                case RestMethod.Patch:
-                    return HttpMethod.Patch;
-                case RestMethod.Delete:
-                    return HttpMethod.Delete;
-                case RestMethod.Post:
-                default:
-                    return HttpMethod.Post;
-            }
-        }
+            SupportedHttpVerb.Get => HttpMethod.Get,
+            SupportedHttpVerb.Put => HttpMethod.Put,
+            SupportedHttpVerb.Patch => HttpMethod.Patch,
+            SupportedHttpVerb.Delete => HttpMethod.Delete,
+            _ => HttpMethod.Post,
+        };
 
         /// <summary>
         /// Helper function handles the loading of the runtime config.
         /// </summary>
-        public static RuntimeConfig SetupRuntimeConfig(string databaseEngine)
+        public static RuntimeConfig SetupRuntimeConfig()
         {
-            RuntimeConfigPath configPath = TestHelper.GetRuntimeConfigPath(databaseEngine);
-            return TestHelper.GetRuntimeConfig(TestHelper.GetRuntimeConfigProvider(configPath));
+            FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfigProvider provider = new(configPath);
+
+            return provider.GetConfig();
         }
 
         /// <summary>
@@ -328,6 +315,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     null)
                 as SqlException;
             return e;
+        }
+
+        /// <summary>
+        /// Helper method to construct GraphQL responses when only __typename is queried
+        /// </summary>
+        /// <param name="typename">A json string of the format { __typename : entity_typename }  </param>
+        /// <param name="times">Number of times to repeat typename in the response</param>
+        /// <returns>A string representation of an array of typename json strings</returns>
+        public static string ConstructGQLTypenameResponseNTimes(string typename, int times)
+        {
+            StringBuilder typenameResponseBuilder = new("[");
+            for (int i = 0; i < times; i++)
+            {
+                typenameResponseBuilder.Append(typename);
+                if (i != times - 1)
+                {
+                    typenameResponseBuilder.Append(",");
+                }
+
+            }
+
+            typenameResponseBuilder.Append("]");
+            return typenameResponseBuilder.ToString();
         }
 
         /// <summary>
@@ -592,6 +602,5 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
   }
 }";
         }
-
     }
 }

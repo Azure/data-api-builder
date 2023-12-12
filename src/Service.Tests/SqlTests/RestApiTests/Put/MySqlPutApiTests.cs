@@ -101,6 +101,30 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
+                "PutOneUpdateWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%d %H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on = '2023-09-12 05:30:30' AND last_sold_on_date = '2023-09-12 05:30:30'
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneInsertWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'New book' AND copies_sold = 101
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_With_Mapping_Test",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species,
@@ -246,6 +270,54 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         AND publisher_id = 1234
                     ) AS subq
                 "
+            },
+            {
+                "PutOne_Update_WithExcludeFields_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Update_WithNoReadAction_Test",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "PutInsert_NoReadTest",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'categoryName', categoryName,
+                                        'piecesAvailable',piecesAvailable,'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, categoryName,piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "Put_Insert_WithExcludeFieldsTest",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'piecesAvailable',piecesAvailable,
+                                        'piecesRequired',piecesRequired) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, piecesAvailable,piecesRequired
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND categoryName ='SciFi' AND piecesAvailable = 4
+                        AND piecesRequired = 4
+                    ) AS subq
+                "
             }
         };
 
@@ -253,7 +325,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
 
         [TestMethod]
         [Ignore]
-        public override Task PutOneUpdateAccessibleRowWithDatabasePolicy()
+        public override Task PutOneUpdateWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertWithDatabasePolicy()
         {
             throw new NotImplementedException();
         }
@@ -286,6 +365,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             throw new NotImplementedException();
         }
 
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         #region Test Fixture Setup
@@ -299,7 +391,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>

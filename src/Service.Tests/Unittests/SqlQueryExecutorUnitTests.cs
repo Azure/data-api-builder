@@ -3,14 +3,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
+using System.IO.Abstractions;
+using System.IO.Abstractions.TestingHelpers;
 using System.Net;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.Core;
-using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Resolvers;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
@@ -62,12 +67,25 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             bool expectManagedIdentityAccessToken,
             bool isDefaultAzureCredential)
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
-            runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, connectionString, new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<MsSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -85,17 +103,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    await runtimeConfigProvider.Initialize(
-                        JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
-                        schema: null,
+                    await provider.Initialize(
+                        provider.GetConfig().ToJson(),
+                        graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+                    msSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 
             using SqlConnection conn = new(connectionString);
-            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, string.Empty);
 
             if (expectManagedIdentityAccessToken)
             {
@@ -123,39 +141,58 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             int maxRetries = 5;
             int maxAttempts = maxRetries + 1; // 1 represents the original attempt to execute the query in addition to retries.
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader)
+            {
+                IsLateConfigured = true
+            };
+
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
-            queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
-                new SqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString));
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.Setup(x => x.ExecuteQueryAgainstDbAsync(
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
+                provider.GetConfig().GetDefaultDataSourceName(),
                 It.IsAny<List<string>>()))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT));
 
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
-                It.IsAny<List<string>>())).CallBase();
+                It.IsAny<List<string>>(),
+                It.IsAny<string>())).CallBase();
 
             DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
             {
                 await queryExecutor.Object.ExecuteQueryAsync<object>(
                     sqltext: string.Empty,
-                    parameters: new Dictionary<string, object>(),
+                    parameters: new Dictionary<string, DbConnectionParam>(),
                     dataReaderHandler: null,
                     httpContext: null,
                     args: null);
@@ -163,35 +200,38 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
 
-            // For each attempt logger is invoked twice. Currently we have hardcoded the number of attempts.
+            // For each attempt logger is invoked once. Currently we have hardcoded the number of attempts.
             // Once we have number of retry attempts specified in config, we will make it dynamic.
-            Assert.AreEqual(2 * maxAttempts, queryExecutorLogger.Invocations.Count);
+            Assert.AreEqual(maxAttempts, queryExecutorLogger.Invocations.Count);
         }
 
         /// <summary>
-        /// Test to validate that when a query succcessfully executes within allowed number of retries, we get back the result
-        /// without giving anymore retries.
+        /// Validates that a query successfully executes within two retries by checking that the SqlQueryExecutor logger
+        /// was invoked the expected number of times.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.MSSQL);
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            FileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
             Mock<MsSqlQueryExecutor> queryExecutor
-                = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
-            queryExecutor.Setup(x => x.ConnectionStringBuilder).Returns(
-                new SqlConnectionStringBuilder(runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString));
+            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
                 It.IsAny<SqlConnection>(),
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
+                provider.GetConfig().GetDefaultDataSourceName(),
                 It.IsAny<List<string>>()))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
@@ -200,22 +240,31 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Call the actual ExecuteQueryAsync method.
             queryExecutor.Setup(x => x.ExecuteQueryAsync(
                 It.IsAny<string>(),
-                It.IsAny<IDictionary<string, object>>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
-                It.IsAny<List<string>>())).CallBase();
+                It.IsAny<List<string>>(),
+                It.IsAny<string>())).CallBase();
 
             string sqltext = "SELECT * from books";
 
             await queryExecutor.Object.ExecuteQueryAsync<object>(
                     sqltext: sqltext,
-                    parameters: new Dictionary<string, object>(),
+                    parameters: new Dictionary<string, DbConnectionParam>(),
                     dataReaderHandler: null,
                     args: null);
 
-            // For each attempt logger is invoked twice. The query executes successfully in in 1st retry .i.e. 2nd attempt of execution.
-            // An additional information log is added when the query executes successfully in a retry attempt.
-            Assert.AreEqual(2 * 2 + 1, queryExecutorLogger.Invocations.Count);
+            // The logger is invoked three (3) times, once for each of the following events:
+            // The query fails on the first attempt (log event 1).
+            // The query fails on the second attempt/first retry (log event 2).
+            // The query succeeds on the third attempt/second retry (log event 3).
+            Assert.AreEqual(3, queryExecutorLogger.Invocations.Count);
+        }
+
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
     }
 }

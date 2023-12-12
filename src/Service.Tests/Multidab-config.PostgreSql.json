@@ -1,0 +1,120 @@
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "postgresql",
+    "connection-string": "Host=localhost;Database=datagatewaytest;username=REPLACEME;password=REPLACEME"
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "host": {
+      "cors": {
+        "origins": [
+          "http://localhost:5000"
+        ],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "StaticWebApps"
+      },
+      "mode": "development"
+    }
+  },
+  "entities": {
+    "AuthorNF": {
+      "source": {
+        "object": "authors",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "AuthorNF",
+          "plural": "AuthorNFs"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilter_EntityReadForbidden",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "name"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilter_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterChained_EntityReadForbidden",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterChained_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "BookNF",
+          "source.fields": [],
+          "target.fields": [],
+          "linking.object": "book_author_link",
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    }
+  }
+}

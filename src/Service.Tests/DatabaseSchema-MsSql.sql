@@ -47,6 +47,9 @@ DROP TABLE IF EXISTS graphql_incompatible;
 DROP TABLE IF EXISTS GQLmappings;
 DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
+DROP TABLE IF EXISTS fte_data;
+DROP TABLE IF EXISTS intern_data;
+DROP TABLE IF EXISTS books_sold;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -66,7 +69,7 @@ CREATE TABLE books(
 
 CREATE TABLE players(
     id int IDENTITY(5001, 1) PRIMARY KEY,
-    name varchar(max) NOT NULL,
+    [name] varchar(max) NOT NULL,
     current_club_id int NOT NULL,
     new_club_id int NOT NULL
 );
@@ -162,8 +165,9 @@ CREATE TABLE type_table(
     datetime2_types datetime2,
     datetimeoffset_types datetimeoffset,
     smalldatetime_types smalldatetime,
+    time_types time,
     bytearray_types varbinary(max),
-    guid_types uniqueidentifier DEFAULT newid()
+    uuid_types uniqueidentifier DEFAULT newid()
 );
 
 CREATE TABLE trees (
@@ -252,7 +256,34 @@ CREATE TABLE mappedbookmarks
 (
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(50) NOT NULL
-) 
+)
+
+create Table fte_data(
+id int IDENTITY(5001,1),
+u_id int DEFAULT 2,
+name varchar(50),
+position varchar(20),
+salary int default 20,
+PRIMARY KEY(id, u_id)
+);
+
+create Table intern_data(
+id int,
+months int default 2 NOT NULL,
+name varchar(50),
+salary int default 15,
+PRIMARY KEY(id, months)
+);
+
+create table books_sold
+(
+    id int PRIMARY KEY not null,
+    book_name varchar(50),
+    row_version rowversion,
+    copies_sold int default 0,
+    last_sold_on datetime2(7) DEFAULT '1999-01-08 10:23:54',
+    last_sold_on_date as last_sold_on,
+)
 
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
@@ -377,7 +408,7 @@ VALUES (1, 'Awesome book', 1234),
 SET IDENTITY_INSERT books OFF
 
 SET IDENTITY_INSERT players ON
-INSERT INTO players(id, name, current_club_id, new_club_id)
+INSERT INTO players(id, [name], current_club_id, new_club_id)
 VALUES (1, 'Cristiano Ronaldo', 1113, 1111),
 (2, 'Leonel Messi', 1112, 1113);
 SET IDENTITY_INSERT players OFF
@@ -398,22 +429,23 @@ byte_types, short_types, int_types, long_types,
 string_types,
 single_types, float_types, decimal_types,
 boolean_types,
-date_types, datetime_types, datetime2_types, datetimeoffset_types, smalldatetime_types,
+date_types, datetime_types, datetime2_types, datetimeoffset_types, smalldatetime_types, time_types,
 bytearray_types)
 VALUES
     (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1,
-    '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '1999-01-08 10:23:54.9999999-14:00', '1999-01-08 10:23:54',
+    '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '1999-01-08 10:23:54.9999999-14:00', '1999-01-08 10:23:54', '10:23:54.9999999',
     0xABCDEF0123),
     (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
-    '1999-01-08', '1999-01-08 10:23:00', '1999-01-08 10:23:00.9999999', '1999-01-08 10:23:00.9999999+13:00', '1999-01-08 10:23:00',
+    '1999-01-08', '1999-01-08 10:23:00', '1999-01-08 10:23:00.9999999', '1999-01-08 10:23:00.9999999+13:00', '1999-01-08 10:23:00', '10:23:00.9999999',
     0x98AB7511AABB1234),
     (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
-    '0001-01-01', '1753-01-01 00:00:00.000', '0001-01-01 00:00:00.0000000', '0001-01-01 00:00:00.0000000+0:00', '1900-01-01 00:00:00',
+    '0001-01-01', '1753-01-01 00:00:00.000', '0001-01-01 00:00:00.0000000', '0001-01-01 00:00:00.0000000+0:00', '1900-01-01 00:00:00', '00:00:00.0000000',
     0x00000000),
     (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
-    '9999-12-31', '9999-12-31 23:59:59', '9999-12-31 23:59:59.9999999', '9999-12-31 23:59:59.9999999+14:00', '2079-06-06',
+    '9999-12-31', '9999-12-31 23:59:59', '9999-12-31 23:59:59.9999999', '9999-12-31 23:59:59.9999999+14:00', '2079-06-06', '23:59:59.9999999',
     0xFFFFFFFF),
-    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 SET IDENTITY_INSERT type_table OFF
 
 SET IDENTITY_INSERT sales ON
@@ -436,6 +468,7 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 (5, 'Snow White', 'AnotherTales', 3001);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'Tales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, 1), (1, 1, 42.75, 0), (100, 99, NULL, NULL);
+INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100.57, 1);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
@@ -455,8 +488,17 @@ VALUES
 (10, 'Aaron', 'F.', 'Burtle', null, null)
 SET IDENTITY_INSERT authors_history OFF
 
+SET IDENTITY_INSERT fte_data ON
+insert into fte_data(id, name, position, salary) values(1, 'Ellie', 'Junior Dev', 20), (2, 'Chris', 'Senior Dev', 40);
+SET IDENTITY_INSERT fte_data OFF
+
+insert into intern_data(id, months, name) values(1, 3, 'Tess'), (2, 4, 'Frank');
+
+
 INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 5000, 'Anonymous'), (2, 'Comics', 10000, 'Anonymous'),
 (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
+
+INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GETDATE());
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
@@ -530,3 +572,63 @@ EXEC('CREATE FUNCTION dbo.revenuesPredicate(@accessible_role varchar(20))
 -- Adding a security policy which would restrict access to the rows in revenues table for
 -- SELECT,UPDATE,DELETE operations using the filter predicate dbo.revenuesPredicate.
 EXEC('CREATE SECURITY POLICY dbo.revenuesSecPolicy ADD FILTER PREDICATE dbo.revenuesPredicate(accessible_role) ON dbo.revenues;');
+
+-- Create an after insert trigger for the fte_data table.
+-- This trigger will ensure that no employee record can be inserted with a salary of more than 100 and less than 0.
+EXEC('CREATE OR ALTER TRIGGER fte_data_after_insert_trigger ON fte_data AFTER INSERT AS
+BEGIN
+    UPDATE fte_data
+    SET fte_data.salary =
+	case
+	when fte_data.salary > 100 then 100
+    when fte_data.salary < 0 then 0
+	else fte_data.salary
+	end
+    FROM fte_data
+    INNER JOIN inserted ON fte_data.id = inserted.id AND fte_data.u_id = inserted.u_id;
+END;');
+
+-- Create an after update trigger for the fte_data table.
+-- This trigger will ensure that no employee record can be updated to have a salary of more than 150 and less than 0.
+EXEC('CREATE OR ALTER TRIGGER fte_data_after_update_trigger ON fte_data AFTER UPDATE AS
+BEGIN
+    UPDATE fte_data
+    SET fte_data.salary =
+	case
+	when fte_data.salary > 150 then 150
+    when fte_data.salary < 0 then 0
+	else fte_data.salary
+	end
+    FROM fte_data
+    INNER JOIN inserted ON fte_data.id = inserted.id AND fte_data.u_id = inserted.u_id;
+END;');
+
+-- Create an after insert trigger for the intern_data table.
+-- This trigger will ensure that no intern record can be inserted with a salary of more than 30 and less than 0.
+EXEC('CREATE OR ALTER TRIGGER intern_data_after_insert_trigger ON intern_data AFTER INSERT AS
+BEGIN
+    UPDATE intern_data
+    SET intern_data.salary =
+	case
+	when intern_data.salary > 30 then 30
+    when intern_data.salary < 0 then 0
+	else intern_data.salary
+	end
+    FROM intern_data
+    INNER JOIN inserted ON intern_data.id = inserted.id AND intern_data.months = inserted.months;
+END;');
+
+-- Create an after update trigger for the intern_data table.
+-- This trigger will ensure that no intern record can be updated to have a salary of more than 50 and less than 0.
+EXEC('CREATE OR ALTER TRIGGER intern_data_after_update_trigger ON intern_data AFTER UPDATE AS
+BEGIN
+    UPDATE intern_data
+    SET intern_data.salary =
+	case
+	when intern_data.salary > 50 then 50
+    when intern_data.salary < 0 then 0
+	else intern_data.salary
+	end
+    FROM intern_data
+    INNER JOIN inserted ON intern_data.id = inserted.id AND intern_data.months = inserted.months;
+END;');

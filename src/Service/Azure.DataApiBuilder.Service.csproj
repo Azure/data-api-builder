@@ -6,8 +6,6 @@
         <OutputPath>$(BaseOutputPath)\engine</OutputPath>
         <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
-        <IncludeSymbols>true</IncludeSymbols>
-        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
@@ -54,42 +52,48 @@
 
 
     <ItemGroup>
+        <PackageReference Include="Azure.Identity" />
         <PackageReference Include="HotChocolate" />
         <PackageReference Include="HotChocolate.AspNetCore" />
         <PackageReference Include="HotChocolate.AspNetCore.Authorization" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+        <PackageReference Include="Microsoft.ApplicationInsights" />
+        <PackageReference Include="Microsoft.ApplicationInsights.AspNetCore" />
+        <PackageReference Include="Microsoft.Extensions.Logging.ApplicationInsights" />
         <PackageReference Include="Microsoft.Azure.Cosmos" />
         <PackageReference Include="Microsoft.Data.SqlClient" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
         <PackageReference Include="Microsoft.OData.Edm" />
         <PackageReference Include="Microsoft.OData.Core" />
-        <PackageReference Include="MSTest.TestFramework" />
+        <PackageReference Include="Microsoft.OpenApi" />
         <PackageReference Include="MySqlConnector" />
         <PackageReference Include="Newtonsoft.Json" />
         <PackageReference Include="Npgsql" />
         <PackageReference Include="Polly" />
+        <PackageReference Include="DotNetEnv" />
         <PackageReference Include="StyleCop.Analyzers">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
         <PackageReference Include="System.CommandLine" />
         <PackageReference Include="System.IO.Abstractions" />
         <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
+        <PackageReference Include="ZiggyCreatures.FusionCache" />
     </ItemGroup>
     <ItemGroup>
         <ProjectCapability Include="CSharp;Managed;ClassDesigner" />
-    </ItemGroup>
-    <ItemGroup>
-        <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
-        <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
-        <ProjectReference Include="..\Service.GraphQLBuilder\Azure.DataApiBuilder.Service.GraphQLBuilder.csproj" />
     </ItemGroup>
 
   <ItemGroup>
     <None Include="..\..\nuget\README.md" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\NOTICE.txt" Condition="Exists('..\..\NOTICE.txt')" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
   </ItemGroup>
 
 </Project>

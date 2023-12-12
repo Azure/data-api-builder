@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder;
@@ -36,14 +36,19 @@ type Foo @model(name: ""Foo""){
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { "Foo", DatabaseType.MSSQL }
+            };
+
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.mssql,
-                entities: new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                entityNameToDatabasetype,
+                entities: new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     entityNames: new string[] { "Foo" },
-                    operations: new Config.Operation[] { Config.Operation.Read },
+                    operations: new EntityActionOperation[] { EntityActionOperation.Read },
                     roles: rolesDefinedInPermissions)
                 );
 

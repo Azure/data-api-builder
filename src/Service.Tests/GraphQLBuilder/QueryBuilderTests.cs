@@ -4,7 +4,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
@@ -31,7 +32,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             _entityPermissions = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Config.Operation[] { Config.Operation.Read },
+                    new EntityActionOperation[] { EntityActionOperation.Read },
                     new string[] { "anonymous", "authenticated" }
                     );
         }
@@ -60,12 +61,17 @@ type Foo @model(name:""Foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "Foo" },
-                    new Config.Operation[] { Config.Operation.Read },
+                    new EntityActionOperation[] { EntityActionOperation.Read },
                     roles);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
+
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -91,11 +97,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -135,12 +144,16 @@ type foo @model(name:""foo"") {
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
                     new string[] { "foo" },
-                    new Config.Operation[] { Config.Operation.Read },
+                    new EntityActionOperation[] { EntityActionOperation.Read },
                     roles);
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "foo", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { "foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { "foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -166,11 +179,14 @@ type Foo @model(name:""Foo"") {
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -199,10 +215,15 @@ type Foo @model(name:""Foo"") {
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.MSSQL }
+            };
+
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.mssql,
-                new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions
                 );
@@ -223,11 +244,14 @@ type Foo @model(name:""Foo"") {
 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { "Foo", DatabaseType.CosmosDB_NoSQL }
+            };
             DocumentNode queryRoot = QueryBuilder.Build(
                             root,
-                            DatabaseType.cosmosdb_nosql,
-                            new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                            entityNameToDatabaseType,
+                            new(new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } }),
                             inputTypes: new(),
                             entityPermissionsMap: _entityPermissions
                             );
@@ -270,7 +294,7 @@ type Table @model(name: ""table"") {
         }
 
         [TestMethod]
-        public void RelationshipWithCardinalityOfOneIsntUpdated()
+        public void RelationshipWithCardinalityOfOneIsNotUpdated()
         {
             string gql =
                 @"
@@ -304,50 +328,62 @@ type Table @model(name: ""table"") {
         /// This test validates that this naming convention is followed for the queries when the schema is generated.
         /// </summary>
         /// <param name="gql">Type definition for the entity</param>
-        /// <param name="entityName">Name of the entity</param>
-        /// <param name="singularName">Singular name provided by the user</param>
-        /// <param name="pluralName">Plural name provided by the user</param>
-        /// <param name="expectedQueryNameForPK"> Expected name for the primary key query</param>
-        /// <param name="expectedQueryNameForList"> Expected name for the query to fetch all items </param>
-        /// <param name="expectedNameInDescription">Expected name in the description for both the queries</param>
+        /// <param name="entityNames">Names of the entities</param>
+        /// <param name="singularNames">Singular name provided by the user</param>
+        /// <param name="pluralNames">Plural names provided by the user</param>
+        /// <param name="expectedQueryNamesForPK"> Expected names for the primary key query</param>
+        /// <param name="expectedQueryNamesForList"> Expected names for the query to fetch all items </param>
+        /// <param name="expectedNameInDescription">Expected names in the description for both the queries</param>
         [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", null, null, "book_by_pk", "books", "Book",
+        [DataRow(GraphQLTestHelpers.BOOK_GQL, new string[] { "Book" }, null, null, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "Book" },
             DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
-        [DataRow(GraphQLTestHelpers.BOOK_GQL, "Book", "book", "books", "book_by_pk", "books", "book",
+        [DataRow(GraphQLTestHelpers.BOOK_GQL, new string[] { "Book" }, new string[] { "book" }, new string[] { "books" }, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "book" },
             DisplayName = "Query name and description validation for singular entity name with singular plural defined")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", null, null, "books_by_pk", "books", "Books",
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, new string[] { "Books" }, null, null, new string[] { "books_by_pk" }, new string[] { "books" }, new string[] { "Books" },
             DisplayName = "Query name and description validation for plural entity name with singular plural not defined")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "books", "book_by_pk", "books", "book",
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, new string[] { "Books" }, new string[] { "book" }, new string[] { "books" }, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "book" },
             DisplayName = "Query name and description validation for plural entity name with singular plural defined")]
-        [DataRow(GraphQLTestHelpers.BOOKS_GQL, "Books", "book", "", "book_by_pk", "books", "book",
+        [DataRow(GraphQLTestHelpers.BOOKS_GQL, new string[] { "Books" }, new string[] { "book" }, new string[] { "" }, new string[] { "book_by_pk" }, new string[] { "books" }, new string[] { "book" },
             DisplayName = "Query name and description validations for plural entity name with singular defined")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, "People", "Person", "People", "person_by_pk", "people", "Person",
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "person_by_pk" }, new string[] { "people" }, new string[] { "Person" },
             DisplayName = "Query name and description validation for indirect plural entity name with singular and plural name defined")]
+        [DataRow($"{GraphQLTestHelpers.BOOK_GQL}{GraphQLTestHelpers.PEOPLE_GQL}", new string[] { "Book", "People" }, null, null, new string[] { "book_by_pk", "people_by_pk" }, new string[] { "books", "peoples" }, new string[] { "Book", "People" },
+            DisplayName = "Query name and description validation for singular entity name with singular plural not defined")]
+        [DataRow($"{GraphQLTestHelpers.BOOK_GQL}{GraphQLTestHelpers.PEOPLE_GQL}", new string[] { "Book", "People" }, new string[] { "book", "Person" }, new string[] { "books", "People" }, new string[] { "book_by_pk", "person_by_pk" }, new string[] { "books", "people" }, new string[] { "book", "Person" },
+            DisplayName = "Query name and description validation for single and plural names defined not defined")]
         public void ValidateQueriesAreCreatedWithRightName(
             string gql,
-            string entityName,
-            string singularName,
-            string pluralName,
-            string expectedQueryNameForPK,
-            string expectedQueryNameForList,
-            string expectedNameInDescription
+            string[] entityNames,
+            string[] singularNames,
+            string[] pluralNames,
+            string[] expectedQueryNamesForPK,
+            string[] expectedQueryNamesForList,
+            string[] expectedNameInDescription
             )
         {
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
             Dictionary<string, EntityMetadata> entityPermissionsMap
                 = GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    new string[] { entityName },
-                    new Config.Operation[] { Config.Operation.Read },
+                    entityNames,
+                    new EntityActionOperation[] { EntityActionOperation.Read },
                     new string[] { "anonymous", "authenticated" });
 
-            Entity entity = (singularName is not null)
-                                ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularName, pluralName)
-                                : GraphQLTestHelpers.GenerateEmptyEntity();
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new();
+            Dictionary<string, Entity> entityNameToEntity = new();
+
+            for (int i = 0; i < entityNames.Length; i++)
+            {
+                Entity entity = (singularNames is not null)
+                    ? GraphQLTestHelpers.GenerateEntityWithSingularPlural(singularNames[i], pluralNames[i])
+                    : GraphQLTestHelpers.GenerateEmptyEntity();
+                entityNameToEntity.TryAdd(entityNames[i], entity);
+                entityNameToDatabaseType.TryAdd(entityNames[i], i % 2 == 0 ? DatabaseType.CosmosDB_NoSQL : DatabaseType.MSSQL);
+            }
 
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.cosmosdb_nosql,
-                new Dictionary<string, Entity> { { entityName, entity } },
+                entityNameToDatabaseType,
+                new(entityNameToEntity),
                 inputTypes: new(),
                 entityPermissionsMap: entityPermissionsMap
                 );
@@ -357,19 +393,22 @@ type Table @model(name: ""table"") {
 
             // Two queries - 1) Query for an item using PK 2) Query for all items should be created.
             // Check to validate the count of queries created.
-            Assert.AreEqual(2, query.Fields.Count);
+            Assert.AreEqual(2 * entityNames.Length, query.Fields.Count);
 
-            // Name and Description validations for the query for fetching by PK.
-            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForPK));
-            FieldDefinitionNode pkQueryFieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForPK);
-            string expectedPKQueryDescription = $"Get a {expectedNameInDescription} from the database by its ID/primary key";
-            Assert.AreEqual(expectedPKQueryDescription, pkQueryFieldNode.Description.Value);
+            for (int i = 0; i < entityNames.Length; i++)
+            {
+                // Name and Description validations for the query for fetching by PK.
+                Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNamesForPK[i]));
+                FieldDefinitionNode pkQueryFieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNamesForPK[i]);
+                string expectedPKQueryDescription = $"Get a {expectedNameInDescription[i]} from the database by its ID/primary key";
+                Assert.AreEqual(expectedPKQueryDescription, pkQueryFieldNode.Description.Value);
 
-            // Name and Description validations for the query for fetching all items.
-            Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNameForList));
-            FieldDefinitionNode allItemsQueryFieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNameForList);
-            string expectedAllQueryDescription = $"Get a list of all the {expectedNameInDescription} items from the database";
-            Assert.AreEqual(expectedAllQueryDescription, allItemsQueryFieldNode.Description.Value);
+                // Name and Description validations for the query for fetching all items.
+                Assert.AreEqual(1, query.Fields.Count(f => f.Name.Value == expectedQueryNamesForList[i]));
+                FieldDefinitionNode allItemsQueryFieldNode = query.Fields.First(f => f.Name.Value == expectedQueryNamesForList[i]);
+                string expectedAllQueryDescription = $"Get a list of all the {expectedNameInDescription[i]} items from the database";
+                Assert.AreEqual(expectedAllQueryDescription, allItemsQueryFieldNode.Description.Value);
+            }
         }
 
         /// <summary>
@@ -381,11 +420,11 @@ type Table @model(name: ""table"") {
         /// <param name="permissionOperations">CRUD + Execute -> for Entity.Permissions</param>
         /// <param name="expectsQueryField">Whether QueryBuilder will generate a query field for the GraphQL schema.</param>
         [DataTestMethod]
-        [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Execute }, new[] { "execute" }, true, DisplayName = "Query field generated since all metadata is valid")]
-        [DataRow(null, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated since default operation is mutation.")]
-        [DataRow(GraphQLOperation.Query, new[] { Config.Operation.Read }, new[] { "read" }, false, DisplayName = "Query field not generated because invalid permissions were supplied")]
-        [DataRow(GraphQLOperation.Mutation, new[] { Config.Operation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated because the configured operation is mutation.")]
-        public void StoredProcedureEntityAsQueryField(GraphQLOperation? graphQLOperation, Config.Operation[] operations, string[] permissionOperations, bool expectsQueryField)
+        [DataRow(GraphQLOperation.Query, new[] { EntityActionOperation.Execute }, new[] { "execute" }, true, DisplayName = "Query field generated since all metadata is valid")]
+        [DataRow(null, new[] { EntityActionOperation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated since default operation is mutation.")]
+        [DataRow(GraphQLOperation.Query, new[] { EntityActionOperation.Read }, new[] { "read" }, false, DisplayName = "Query field not generated because invalid permissions were supplied")]
+        [DataRow(GraphQLOperation.Mutation, new[] { EntityActionOperation.Execute }, new[] { "execute" }, false, DisplayName = "Query field not generated because the configured operation is mutation.")]
+        public void StoredProcedureEntityAsQueryField(GraphQLOperation? graphQLOperation, EntityActionOperation[] operations, string[] permissionOperations, bool expectsQueryField)
         {
             string entityName = "MyStoredProcedure";
             string gql =
@@ -405,7 +444,7 @@ type Table @model(name: ""table"") {
 
             DatabaseObject spDbObj = new DatabaseStoredProcedure(schemaName: "dbo", tableName: "dbObjectName")
             {
-                SourceType = SourceType.StoredProcedure,
+                SourceType = EntitySourceType.StoredProcedure,
                 StoredProcedureDefinition = new()
                 {
                     Parameters = new() {
@@ -414,10 +453,15 @@ type Table @model(name: ""table"") {
                 }
             };
 
+            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
+            {
+                { entityName, DatabaseType.MSSQL }
+            };
+
             DocumentNode queryRoot = QueryBuilder.Build(
                 root,
-                DatabaseType.mssql,
-                new Dictionary<string, Entity> { { entityName, entity } },
+                entityNameToDatabaseType,
+                new(new Dictionary<string, Entity> { { entityName, entity } }),
                 inputTypes: new(),
                 entityPermissionsMap: _entityPermissions,
                 dbObjects: new Dictionary<string, DatabaseObject> { { entityName, spDbObj } }

@@ -3,8 +3,9 @@
 
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
@@ -34,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(InsertOneTest)),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -53,7 +54,63 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("InsertOneInCompositeNonAutoGenPKTest"),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Perform insert test with bytearray column as NULL. This ensures that even though implicit conversion
+        /// between varchar to varbinary is not possible for MsSql (but it is possible for MySql & PgSql),
+        /// but since we are passing the DbType for the parameter, the database can explicitly convert it into varbinary.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithByteArrayTypeAsNull()
+        {
+            string requestBody = @"
+            {
+                ""bytearray_types"": null
+            }";
+
+            string expectedLocationHeader = $"typeid/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationTypeEntity,
+                sqlQuery: GetQuery("InsertOneInSupportedTypes"),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Test to validate successful execution of a request when a computed field is missing from the request body.
+        /// In such a case, we skip inserting the field. 
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithComputedFieldMissingInRequestBody()
+        {
+            // Validate successful execution of a POST request when a computed field (here 'last_sold_on_date')
+            // is missing from the request body. Successful execution of the POST request confirms that we did not
+            // attempt to provide a value for the 'last_sold_on_date' field.
+            string requestBody = @"
+            {
+                ""id"": 2,
+                ""book_name"": ""Harry Potter"",
+                ""copies_sold"": 50
+            }";
+
+            string expectedLocationHeader = $"id/2";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: GetQuery("InsertOneWithComputedFieldMissingInRequestBody"),
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -79,7 +136,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _simple_all_books,
                 sqlQuery: GetQuery("InsertOneInBooksViewAll"),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created
             );
@@ -99,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _simple_subset_stocks,
                 sqlQuery: GetQuery("InsertOneInStocksViewSelected"),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created
             );
@@ -126,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _integrationUniqueCharactersEntity,
                 sqlQuery: GetQuery(nameof(InsertOneUniqueCharactersTest)),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -153,7 +210,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _integrationMappingEntity,
                 sqlQuery: GetQuery(nameof(InsertOneWithMappingTest)),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -179,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(InsertOneInCompositeKeyTableTest)),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -196,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery("InsertOneInDefaultTestTable"),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -221,7 +278,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: null,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: GetQuery("InsertOneWithNullFieldValue"),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
@@ -252,10 +309,154 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(query),
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 expectedStatusCode: HttpStatusCode.Created,
                 expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that whenever a computed field is included in the request body, we throw an appropriate exception
+        /// as it is not allowed to provide value (to insert) for a computed field.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithComputedFieldInRequestBody()
+        {
+            // Validate that a BadRequest exception is thrown for a POST request when a computed field (here 'last_sold_on_date') is included in request body.
+            string requestBody = @"
+            {
+                ""id"": 2,
+                ""last_sold_on_date"": null
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: string.Empty,
+                entityNameOrPath: _entityWithReadOnlyFields,
+                sqlQuery: string.Empty,
+                operationType: EntityActionOperation.Insert,
+                exceptionExpected: true,
+                requestBody: requestBody,
+                expectedErrorMessage: "Field 'last_sold_on_date' cannot be included in the request body.",
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
+
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes
+        /// into account the fields configuration set for READ action of the role with which
+        /// the request was executed.
+        /// The role test_role_with_excluded_fields with which the POST request excludes the field 'publisher_id' from read action. So, the response returned
+        /// should not contain the 'publisher_id' field.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithExcludeFieldsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithExcludeFieldsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "test_role_with_excluded_fields"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes into account that no read action is configured for the role
+        /// and returns an empty response. Since, the role has no read permission defined, the primary key route computed and the
+        /// eventual location header returned in the response will be empty strings.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithNoReadPermissionsTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithNoReadPermissionsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: string.Empty,
+                clientRoleHeader: "test_role_with_noread"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes into account the database policies set up
+        /// for READ action of the role with which the request was executed.
+        /// The database policy configured for the read action does not allow the query to select any records when title = Test.
+        /// Since, this test updates the title to Test, the response returned will be empty.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithReadDatabasePolicyTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""Test"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithNoReadPermissionsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "test_role_with_policy_excluded_fields"
+            );
+        }
+
+        /// <summary>
+        /// Test to validate that for a successful POST API request, the response returned takes into account the database policy
+        /// and the include/exclude configuration set up for READ action of the role with which the request was executed.
+        /// The database policy configured for the read action does not allow the query to select any records when title = Test.
+        /// Since, this test updates the title to a different value, the response returned should be non-empty and should not contain
+        /// publisher_id field as it is excluded.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneWithReadDatabasePolicyUnsatisfiedTest()
+        {
+            string requestBody = @"
+            {
+                ""title"": ""My New Book"",
+                ""publisher_id"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery(nameof(InsertOneWithExcludeFieldsTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader,
+                clientRoleHeader: "test_role_with_policy_excluded_fields"
             );
         }
 
@@ -281,7 +482,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: "?$filter=id eq 5001",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: RequestValidator.QUERY_STRING_INVALID_USAGE_ERR_MESSAGE,
@@ -301,7 +502,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: RequestValidator.PRIMARY_KEY_INVALID_USAGE_ERR_MESSAGE,
@@ -326,7 +527,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: RequestValidator.BATCH_MUTATION_UNSUPPORTED_ERR_MESSAGE,
@@ -352,7 +553,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Parameter \"[1234,4321]\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
@@ -375,7 +576,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: title.",
@@ -400,10 +601,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
-                expectedErrorMessage: "Invalid request body. Field not allowed in body: id.",
+                expectedErrorMessage: "Field 'id' cannot be included in the request body.",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }
@@ -425,7 +626,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: id.",
@@ -452,7 +653,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: null,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Parameter \"StringFailsToCastToInt\" cannot be resolved as column \"publisher_id\" with type \"Int32\".",
@@ -478,7 +679,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integration_NonAutoGenPK_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: title.",
@@ -497,7 +698,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid request body. Missing field in body: categoryName.",
@@ -523,7 +724,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field piecesRequired in request body.",
@@ -544,7 +745,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid value for field categoryName in request body.",
@@ -553,15 +754,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
-        /// Verifies that we throw exception when field
-        /// provided to insert is an exposed name that
-        /// maps to a backing column name that does not
-        /// exist in the table.
+        /// Verifies that we throw an exception when an extraneous field that does not map to a backing column in the table
+        /// is provided in the request body for an INSERT operation. This test validates the behavior of rest.request-body-strict when it is:
+        /// 1. Included in runtime config (and set to true)
+        /// 2. Excluded from runtime config(defaults to true)
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
-        public async Task InsertTestWithInvalidMapping()
+        public async Task InsertOneTestWithExtraneousFieldsInRequestBody()
         {
+            // Non-existing field 'hazards' included in the request body for the table.
             string requestBody = @"
             {
                 ""speciesid"" : 3,
@@ -569,19 +770,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 ""region"": ""Pacific North West""
             }";
 
-            string expectedLocationHeader = $"speciedid/3";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _integrationBrokenMappingEntity,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: "Invalid request body. Contained unexpected fields in body: hazards",
                 expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: "BadRequest",
-                expectedLocationHeader: expectedLocationHeader
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
 
@@ -607,7 +806,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _composite_subset_bookPub,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 expectedErrorMessage: expectedErrorMessage,
@@ -634,11 +833,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _foreignKeyEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedStatusCode: HttpStatusCode.Forbidden,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure.ToString(),
                 expectedErrorMessage: "Could not insert row with given values.",
                 clientRoleHeader: "database_policy_tester"
             );
@@ -662,13 +861,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _entityWithSecurityPolicy,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 exceptionExpected: true,
                 requestBody: requestBody,
                 clientRoleHeader: "database_policy_tester",
                 expectedErrorMessage: "One or more fields referenced by the database policy are not present in the request body.",
-                expectedStatusCode: HttpStatusCode.BadRequest,
-                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                expectedStatusCode: HttpStatusCode.Forbidden,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString()
                 );
         }
 

@@ -18,11 +18,8 @@ strategy:
     linux:
       imageName: "ubuntu-latest"
       ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'
-    mac:
-      imageName: "macOS-latest"
-      ADDITIONAL_TEST_ARGS: ''
     windows:
-      imageName: "windows-2022"
+      imageName: "windows-latest"
       ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'
   maxParallel: 3
 pool:
@@ -32,6 +29,15 @@ variables:
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 steps:
+- task: PowerShell@2
+  displayName: Start CosmosDB Emulator
+  condition: eq( variables['Agent.OS'], 'Windows_NT' )
+  inputs:
+    targetType: 'inline'
+    script: |
+      Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
+      Start-CosmosDbEmulator
+
 - task: NuGetAuthenticate@0
   displayName: 'NuGet Authenticate'
 
@@ -54,10 +60,30 @@ steps:
   displayName: Build
   inputs:
     command: build
-    projects: '**/*.csproj'
+    projects: |
+        **/*.csproj
+        !**/*Tests*.csproj
     arguments: '-p:generateConfigFileForDbType=cosmosdb_nosql --configuration $(buildConfiguration)' # Update this to match your need
 
+- task: DotNetCoreCLI@2
+  displayName: Build Test Projects
+  inputs:
+    command: build
+    projects: '**/*Tests/*.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+- bash: |
+    echo "Waiting for CosmosDB Emulator to Start"
+    until [ "$(curl -k -s --connect-timeout 5 -o /dev/null -w "%{http_code}" https://localhost:8081/_explorer/index.html)" == "200" ]; do
+        sleep 5;
+        echo "Waiting for CosmosDB Emulator to Start"
+    done;
+    echo "CosmosDB Emulator is available"
+  condition: eq( variables['Agent.OS'], 'Windows_NT' )
+  displayName: Check CosmosDB Emulator is running
+
 - task: FileTransform@1.206.0
+  condition: eq( variables['Agent.OS'], 'Linux' )
   displayName: 'Generate dab-config.CosmosDb_NoSql.json'
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
@@ -70,6 +96,30 @@ steps:
     command: test
     arguments: '--filter "TestCategory=CosmosDb_NoSql" --no-build --configuration $(buildConfiguration) $(ADDITIONAL_TEST_ARGS)'
     projects: '**/*Tests/*.csproj'
+
+- task: CmdLine@2
+  displayName: 'Set flag to publish Verify *.received files when tests fail'
+  condition: failed()
+  inputs:
+    script: 'echo ##vso[task.setvariable variable=publishverify]Yes'
+
+- task: CopyFiles@2
+  condition: eq(variables['publishverify'], 'Yes')
+  displayName: 'Copy received files to Artifact Staging'
+  inputs:
+    contents: '**\*.received.*' 
+    targetFolder: '$(Build.ArtifactStagingDirectory)\Verify'
+    cleanTargetFolder: true
+    overWrite: true
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish received files as Artifacts'
+  name: 'verifypublish'
+  condition: eq(variables['publishverify'], 'Yes')
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)\Verify'
+    ArtifactName: 'Verify'
+    publishLocation: 'Container'
 
 # '/XPlat Code coverage --results-directory /home/vsts/work/1/s/TestResults/'
 - task: PublishCodeCoverageResults@1

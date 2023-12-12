@@ -8,6 +8,11 @@ namespace Cli.Tests
         // Config file name for tests
         public const string TEST_RUNTIME_CONFIG_FILE = "dab-config-test.json";
 
+        public const string TEST_CONNECTION_STRING = "testconnectionstring";
+        public const string TEST_ENV_CONN_STRING = "@env('connection-string')";
+
+        public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
+
         // test schema for cosmosDB
         public const string TEST_SCHEMA_FILE = "test-schema.gql";
         public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
@@ -39,6 +44,7 @@ namespace Cli.Tests
                 StartInfo =
                 {
                     FileName = @"./Microsoft.DataApiBuilder",
+                    CreateNoWindow = true,
                     Arguments = $"{command} {flags}",
                     WindowStyle = ProcessWindowStyle.Hidden,
                     UseShellExecute = false,
@@ -65,15 +71,12 @@ namespace Cli.Tests
 
         /// <summary>
         /// Data source property of the config json. This is used for constructing the required config json strings
-        /// for unit tests 
+        /// for unit tests
         /// </summary>
         public const string SAMPLE_SCHEMA_DATA_SOURCE = SCHEMA_PROPERTY + "," + @"
             ""data-source"": {
               ""database-type"": ""mssql"",
-              ""connection-string"": ""testconnectionstring"",
-              ""options"":{
-                ""set-session-context"": true
-                }
+              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
             }
         ";
 
@@ -91,66 +94,83 @@ namespace Cli.Tests
         ";
 
         /// <summary>
-        /// A minimal valid config json without any entities. This config string is used in unit tests.
+        /// Data source property of the config json with custom property `description`.
+        /// This is to test that custom properties are not allowed and fails during schema validation.
         /// </summary>
-        public const string INITIAL_CONFIG =
-          "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE + "," +
-            @"
-            ""runtime"": {
+        public const string SAMPLE_DATA_SOURCE_WITH_CUSTOM_PROPERTIES = @"
+            ""data-source"": {
+              ""database-type"": ""mssql"",
+              ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @""",
+              ""description"": ""This is a sample data source description""
+            }
+        ";
+
+        public const string RUNTIME_SECTION = @"
+          ""runtime"": {
               ""rest"": {
-                ""path"": ""/api"",
-                ""enabled"": true
+                  ""path"": ""/api"",
+                  ""enabled"": true
               },
               ""graphql"": {
-                ""path"": ""/graphql"",
-                ""enabled"": true,
-                ""allow-introspection"": true
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
               },
               ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [],
-                  ""allow-credentials"": false
-                },
-                ""authentication"": {
-                  ""provider"": ""StaticWebApps""
-                }
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""StaticWebApps""
+                  }
               }
-            },
-            ""entities"": {}" +
-          "}";
+          },
+          ""entities"": {}";
+
+        /// <summary>
+        /// Runtime section containing both rest and graphql disabled.
+        /// This is used for validating config to test that exceptions are thrown when both rest and graphql are disabled.
+        /// </summary>
+        public const string RUNTIME_SECTION_WITH_DISABLED_REST_GRAPHQL = @"
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": false
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": false,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""StaticWebApps""
+                  }
+              }
+          },
+          ""entities"": {}";
+
+        /// <summary>
+        /// A minimal valid config json without any entities. This config string is used in unit tests.
+        /// </summary>
+        public const string INITIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";
 
         /// <summary>
         /// A minimal config json without any entities. This config is invalid as it contains an empty connection
         /// string. This config is used in tests to verify validation failures.
         /// </summary>
-        public const string INVALID_INTIAL_CONFIG = "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING + "," +
-            @"
-            ""runtime"": {
-              ""rest"": {
-                ""path"": ""/api"",
-                ""enabled"": true
-              },
-              ""graphql"": {
-                ""path"": ""/graphql"",
-                ""enabled"": true,
-                ""allow-introspection"": true
-              },
-              ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [],
-                  ""allow-credentials"": false
-                },
-                ""authentication"": {
-                  ""provider"": ""StaticWebApps""
-                }
-              }
-            },
-            ""entities"": {}" +
-          "}";
+        public const string INVALID_INTIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE_WITH_INVALID_CONNSTRING},{RUNTIME_SECTION}}}";
+
+        public const string CONFIG_WITH_CUSTOM_PROPERTIES = $"{{{SAMPLE_DATA_SOURCE_WITH_CUSTOM_PROPERTIES},{RUNTIME_SECTION}}}";
+
+        public const string CONFIG_WITH_DISABLED_GLOBAL_REST_GRAPHQL = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION_WITH_DISABLED_REST_GRAPHQL}}}";
 
         public const string SINGLE_ENTITY = @"
           {
@@ -189,17 +209,17 @@ namespace Cli.Tests
         public const string SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION = @"
           {
               ""entities"": {
-                  ""MyEntity"": {
+                ""MyEntity"": {
                   ""source"": ""s001.book"",
                   ""permissions"": [
-                      {
+                    {
                       ""role"": ""anonymous"",
                       ""actions"": [
                           ""read""
                       ]
-                      }
+                    }
                   ]
-                  }
+                }
               }
           }";
 
@@ -275,11 +295,11 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -302,10 +322,10 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": true,
                     ""operation"": ""mutation""
@@ -330,10 +350,10 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": {
                         ""singular"": ""book"",
@@ -361,10 +381,10 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": true,
                      ""operation"": ""query""
@@ -389,10 +409,10 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": {
                       ""singular"": ""book"",
@@ -421,10 +441,10 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"":true,
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": true,
                      ""operation"": ""mutation""
@@ -448,7 +468,7 @@ namespace Cli.Tests
                     ]
                   }
                 ],
-                ""rest"": false,	
+                ""rest"": false,
                 ""graphql"": false
                 }
               }
@@ -471,10 +491,10 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"":true,
-                  ""methods"": [	
+                  ""methods"": [
                       ""get""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": true,
                      ""operation"": ""query""
@@ -500,12 +520,12 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"":""/book"",
-                  ""methods"": [	
+                  ""methods"": [
                       ""post"",
                       ""patch"",
                       ""put""
-                    ]	
-                },	
+                    ]
+                },
                 ""graphql"": {
                     ""type"": {
                       ""singular"":""book"",
@@ -534,11 +554,11 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"": true,
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -562,11 +582,11 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"": ""/book"",
-                  ""methods"": [	
+                  ""methods"": [
                       ""post""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -589,13 +609,13 @@ namespace Cli.Tests
                   }
                 ],
                 ""rest"": {
-                  ""methods"": [	
+                  ""methods"": [
                       ""get"",
                       ""post"",
                       ""patch""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -619,13 +639,13 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"": true,
-                  ""methods"": [	
+                  ""methods"": [
                       ""get"",
                       ""post"",
                       ""patch""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -649,13 +669,13 @@ namespace Cli.Tests
                 ],
                 ""rest"": {
                   ""path"": ""/book"",
-                  ""methods"": [	
+                  ""methods"": [
                       ""get"",
                       ""post"",
                       ""patch""
-                    ]	
-                },	
-                ""graphql"": {	
+                    ]
+                },
+                ""graphql"": {
                     ""operation"": ""mutation""
                       }
                     }
@@ -683,14 +703,14 @@ namespace Cli.Tests
                     ]
                   }
                 ],
-                ""rest"": {	
-                    ""methods"": [	
+                ""rest"": {
+                    ""methods"": [
                       ""post"",
                       ""put"",
-                      ""patch""	
-                    ]	
-                  },	
-                  ""graphql"": {	
+                      ""patch""
+                    ]
+                  },
+                  ""graphql"": {
                     ""operation"": ""query""
                       }
                     }
@@ -718,11 +738,11 @@ namespace Cli.Tests
                     ]
                   }
                 ],
-                ""rest"": {	
-                    ""methods"": [	
+                ""rest"": {
+                    ""methods"": [
                       ""get""
-                    ]	
-                  },	
+                    ]
+                  },
                   ""graphql"": false
                     }
                   }
@@ -849,12 +869,12 @@ namespace Cli.Tests
             }
         }";
 
-        public const string CONFIG_WITH_SINGLE_ENTITY =
-        @"{" +
-          @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
-          @"""data-source"": {
+        public const string BASE_CONFIG =
+          @"{" +
+            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+            @"""data-source"": {
           ""database-type"": ""mssql"",
-          ""connection-string"": ""localhost:5000"",
+          ""connection-string"": """",
           ""options"":{
             ""set-session-context"": true
           }
@@ -867,7 +887,7 @@ namespace Cli.Tests
           ""graphql"": {
             ""path"": ""/graphql"",
             ""enabled"": true,
-            ""allow-introspection"": true
+            ""allow-introspection"": false
           },
           ""host"": {
             ""mode"": ""production"",
@@ -891,46 +911,179 @@ namespace Cli.Tests
                 ]
               }
             ]
+          },
+          ""author"": {
+            ""source"": ""s001.authors"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          }
+        }
+      }";
+
+        public const string ENV_BASED_CONFIG =
+          @"{" +
+            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+            @"""data-source"": {
+          ""database-type"": ""mssql"",
+          ""connection-string"": ""localhost:5000;User ID={USER_NAME};Password={USER_PASSWORD};MultipleActiveResultSets=False;""
+        },
+        ""runtime"": {
+          ""host"": {
+            ""mode"": ""production"",
+            ""cors"": {
+              ""origins"": [ ""http://localhost:5000"" ],
+              ""allow-credentials"": false
+            },
+            ""authentication"": {
+              ""provider"": ""StaticWebApps""
+            }
+          }
+        },
+        ""entities"": {
+          ""source"":{
+            ""source"": ""src"",
+            ""rest"": ""true"",
+            ""permissions"": [
+              {
+                ""role"": ""authenticated"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""book"": {
+            ""source"": ""books"",
+            ""rest"": ""true"",
+            ""permissions"": [
+              {
+                ""role"": ""authenticated"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""publisher"": {
+            ""source"": ""publishers"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          }
+        }
+      }";
+
+        public const string MERGED_CONFIG =
+          @"{" +
+            @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
+            @"""data-source"": {
+          ""database-type"": ""mssql"",
+          ""connection-string"": ""localhost:5000;User ID={USER_NAME};Password={USER_PASSWORD};MultipleActiveResultSets=False;"",
+          ""options"":{
+            ""set-session-context"": true
+          }
+        },
+        ""runtime"": {
+          ""rest"": {
+            ""path"": ""/api"",
+            ""enabled"": true
+          },
+          ""graphql"": {
+            ""path"": ""/graphql"",
+            ""enabled"": true,
+            ""allow-introspection"": false
+          },
+          ""host"": {
+            ""mode"": ""production"",
+            ""cors"": {
+              ""origins"": [ ""http://localhost:5000"" ],
+              ""allow-credentials"": false
+            },
+            ""authentication"": {
+              ""provider"": ""StaticWebApps""
+            }
+          }
+        },
+        ""entities"": {
+          ""source"":{
+            ""source"": ""src"",
+            ""rest"": ""true"",
+            ""permissions"": [
+              {
+                ""role"": ""authenticated"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""book"": {
+            ""source"": ""books"",
+            ""rest"": ""true"",
+            ""permissions"": [
+              {
+                ""role"": ""authenticated"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""author"": {
+            ""source"": ""s001.authors"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
+          },
+          ""publisher"": {
+            ""source"": ""publishers"",
+            ""permissions"": [
+              {
+                ""role"": ""anonymous"",
+                ""actions"": [
+                  ""*""
+                ]
+              }
+            ]
           }
         }
       }";
 
         /// <summary>
-        /// Helper method to create json string for runtime settings
-        /// for json comparison in tests.
+        /// Creates basic initialization options for MS SQL config.
         /// </summary>
-        public static string GetDefaultTestRuntimeSettingString(
-            HostModeType hostModeType = HostModeType.Production,
-            IEnumerable<string>? corsOrigins = null,
-            string authenticationProvider = "StaticWebApps",
-            string? audience = null,
-            string? issuer = null,
-            string? restPath = GlobalSettings.REST_DEFAULT_PATH)
+        /// <param name="config">Optional config file name.</param>
+        /// <returns>InitOptions</returns>
+        public static InitOptions CreateBasicInitOptionsForMsSqlWithConfig(string? config = null)
         {
-            Dictionary<string, object> runtimeSettingDict = new();
-            Dictionary<GlobalSettingsType, object> defaultGlobalSetting = GetDefaultGlobalSettings(
-                hostMode: hostModeType,
-                corsOrigin: corsOrigins,
-                authenticationProvider: authenticationProvider,
-                audience: audience,
-                issuer: issuer,
-                restPath: restPath);
-
-            runtimeSettingDict.Add("runtime", defaultGlobalSetting);
-
-            return JsonSerializer.Serialize(runtimeSettingDict, GetSerializationOptions());
-        }
-
-        /// <summary>
-        /// Helper method to setup Logger factory
-        /// for CLI related classes.
-        /// </summary>
-        public static void SetupTestLoggerForCLI()
-        {
-            Mock<ILogger<ConfigGenerator>> configGeneratorLogger = new();
-            Mock<ILogger<Utils>> utilsLogger = new();
-            ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger.Object);
-            Utils.SetCliUtilsLogger(utilsLogger.Object);
+            return new(
+                databaseType: DatabaseType.MSSQL,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: true,
+                hostMode: HostMode.Development,
+                corsOrigin: new List<string>(),
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restRequestBodyStrict: CliBoolean.True,
+                config: config);
         }
     }
 }

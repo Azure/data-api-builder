@@ -9,15 +9,23 @@
 
   <ItemGroup>
     <None Remove="dab-config.CosmosDb_NoSql.json" />
+    <None Remove="dab-config.json" />
     <None Remove="dab-config.MsSql.json" />
     <None Remove="dab-config.MySql.json" />
     <None Remove="dab-config.PostgreSql.json" />
+    <None Remove="DatabaseSchema-DwSql.sql" />
+    <None Remove="Multidab-config.CosmosDb_NoSql.json" />
+    <None Remove="Multidab-config.MsSql.json" />
+    <None Remove="Multidab-config.MySql.json" />
+    <None Remove="Multidab-config.PostgreSql.json" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.AspNetCore.TestHost" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.OpenApi" />
+    <PackageReference Include="Microsoft.OpenApi.Readers" />
     <PackageReference Include="Moq" />
     <PackageReference Include="MSTest.TestAdapter" />
     <PackageReference Include="MSTest.TestFramework" />
@@ -32,11 +40,16 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="System.IO.Abstractions.TestingHelpers" />
+    <PackageReference Include="Verify.MSTest" />
+    <PackageReference Include="Verify.DiffPlex" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="**/*.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="DatabaseSchema-DwSql.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="schema.gql">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -75,7 +88,22 @@
   <ItemGroup>
     <ProjectReference Include="..\Auth\Azure.DataApiBuilder.Auth.csproj" />
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
+    <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
     <ProjectReference Include="..\Service\Azure.DataApiBuilder.Service.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="dab-config.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="MultiSourceTestSchema.gql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>

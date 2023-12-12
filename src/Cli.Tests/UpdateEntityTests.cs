@@ -1,58 +1,38 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.Converters;
+
 namespace Cli.Tests
 {
     /// <summary>
     /// Tests for Updating Entity.
     /// </summary>
     [TestClass]
-    public class UpdateEntityTests
+    public class UpdateEntityTests : VerifyBase
     {
-        /// <summary>
-        /// Setup the logger for CLI
-        /// </summary>
-        [ClassInitialize]
-        public static void SetupLoggerForCLI(TestContext context)
+        [TestInitialize]
+        public void TestInitialize()
         {
-            TestHelper.SetupTestLoggerForCLI();
+            ILoggerFactory loggerFactory = TestLoggerSupport.ProvisionLoggerFactory();
+            SetLoggerForCliConfigGenerator(loggerFactory.CreateLogger<ConfigGenerator>());
+            SetCliUtilsLogger(loggerFactory.CreateLogger<Utils>());
         }
 
-        #region  Positive Tests
         /// <summary>
         /// Simple test to update an entity permission by adding a new action.
         /// Initially it contained only "read" and "update". adding a new action "create"
         /// </summary>
         [TestMethod, Description("it should update the permission by adding a new action.")]
-        public void TestUpdateEntityPermission()
+        public Task TestUpdateEntityPermission()
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "create" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
-                fieldsToExclude: new string[] { "level" },
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null)
-                ;
+                fieldsToExclude: new string[] { "level" });
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -66,32 +46,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                        ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            {
-                                                ""action"": ""Create"",
-                                                ""fields"": {
-                                                    ""include"": [""id"", ""rating""],
-                                                    ""exclude"": [""level""]
-                                                }
-                                            },
-                                            ""Read"",
-                                            ""Update""
-                                        ],
-                                    }
-                                ]
-                            }
-                        }
-                    }";
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -99,36 +54,16 @@ namespace Cli.Tests
         /// Initially the role "authenticated" was not present, so it will create a new role.
         /// </summary>
         [TestMethod, Description("it should update the permission by adding a new role.")]
-        public void TestUpdateEntityPermissionByAddingNewRole()
+        public Task TestUpdateEntityPermissionByAddingNewRole()
         {
-
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
                 permissions: new string[] { "authenticated", "*" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
-                fieldsToExclude: new string[] { "level" },
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+                fieldsToExclude: new string[] { "level" }
+            );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -142,34 +77,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                        ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [""read"",""update""]
-                                    },
-                                    {
-                                        ""role"": ""authenticated"",
-                                        ""actions"": [
-                                            {
-                                                ""action"": ""*"",
-                                                ""fields"": {
-                                                    ""include"": [""id"", ""rating""],
-                                                    ""exclude"": [""level""]
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        }
-                    }";
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -177,35 +85,16 @@ namespace Cli.Tests
         /// Adding fields to Include/Exclude to update action.
         /// </summary>
         [TestMethod, Description("Should update the action which already exists in permissions.")]
-        public void TestUpdateEntityPermissionWithExistingAction()
+        public Task TestUpdateEntityPermissionWithExistingAction()
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "update" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
-                fieldsToExclude: new string[] { "level" },
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+                fieldsToExclude: new string[] { "level" }
                 );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -219,31 +108,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                        ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            {
-                                                ""action"": ""Update"",
-                                                ""fields"": {
-                                                    ""include"": [""id"", ""rating""],
-                                                    ""exclude"": [""level""]
-                                                }
-                                            },
-                                            ""Read""
-                                        ]
-                                    }
-                                ]
-                            }
-                        }
-                    }";
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -251,35 +116,16 @@ namespace Cli.Tests
         /// It will update only "read" and "delete".
         /// </summary>
         [TestMethod, Description("it should update the permission which has action as WILDCARD.")]
-        public void TestUpdateEntityPermissionHavingWildcardAction()
+        public Task TestUpdateEntityPermissionHavingWildcardAction()
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "read,delete" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
                 fieldsToInclude: new string[] { "id", "type", "quantity" },
-                fieldsToExclude: new string[] { },
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+                fieldsToExclude: new string[] { }
                 );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -300,52 +146,7 @@ namespace Cli.Tests
                             }
                         }
                     }";
-
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                        ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            {
-                                                ""action"": ""Read"",
-                                                ""fields"": {
-                                                    ""include"": [""id"", ""type"", ""quantity""],
-                                                    ""exclude"": []
-                                                }
-                                            },
-                                            {
-                                                ""action"": ""Delete"",
-                                                ""fields"": {
-                                                    ""include"": [""id"", ""type"", ""quantity""],
-                                                    ""exclude"": []
-                                                }
-                                            },
-                                            {
-                                                ""action"": ""Create"",
-                                                ""fields"": {
-                                                    ""include"": [""id"", ""rating""],
-                                                    ""exclude"": [""level""]
-                                                }
-                                            },
-                                            {
-                                                ""action"": ""Update"",
-                                                ""fields"": {
-                                                    ""include"": [""id"", ""rating""],
-                                                    ""exclude"": [""level""]
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        }
-                    }";
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -353,35 +154,16 @@ namespace Cli.Tests
         /// It will apply the update as WILDCARD.
         /// </summary>
         [TestMethod, Description("it should update the permission with \"*\".")]
-        public void TestUpdateEntityPermissionWithWildcardAction()
+        public Task TestUpdateEntityPermissionWithWildcardAction()
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "*" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
-                fieldsToExclude: new string[] { "level" },
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: null,
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+                fieldsToExclude: new string[] { "level" }
                 );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -395,65 +177,23 @@ namespace Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                        ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            {
-                                                ""action"": ""*"",
-                                                ""fields"": {
-                                                    ""include"": [""id"", ""rating""],
-                                                    ""exclude"": [""level""]
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
-                        }
-                    }";
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
         /// Simple test to update an entity by adding a new relationship.
         /// </summary>
         [TestMethod, Description("it should add a new relationship")]
-        public void TestUpdateEntityByAddingNewRelationship()
+        public Task TestUpdateEntityByAddingNewRelationship()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 entity: "SecondEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
                 relationship: "r2",
                 cardinality: "many",
-                targetEntity: "FirstEntity",
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+                targetEntity: "FirstEntity"
                 );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
                             ""FirstEntity"": {
                                 ""source"": ""Table1"",
@@ -487,52 +227,7 @@ namespace Cli.Tests
                             }
                         }
                     }";
-
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                        ""entities"": {
-                            ""FirstEntity"": {
-                                ""source"": ""Table1"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""create"",
-                                            ""read""
-                                        ]
-                                    }
-                                ],
-                                ""relationships"": {
-                                    ""r1"": {
-                                        ""cardinality"": ""one"",
-                                        ""target.entity"": ""SecondEntity""
-                                    }
-                                }
-                            },
-                            ""SecondEntity"": {
-                                ""source"": ""Table2"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""create"",
-                                            ""read""
-                                        ]
-                                    }
-                                ],
-                                ""relationships"": {
-                                    ""r2"": {
-                                        ""cardinality"": ""many"",
-                                        ""target.entity"": ""FirstEntity""
-                                    }
-                                }
-                            }
-                        }
-                    }";
-
-            bool isSuccess = ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig);
-
-            Assert.IsTrue(isSuccess);
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -540,35 +235,20 @@ namespace Cli.Tests
         /// It will add source.fields, target.fields, linking.object, linking.source.fields, linking.target.fields
         /// </summary>
         [TestMethod, Description("it should update an existing relationship")]
-        public void TestUpdateEntityByModifyingRelationship()
+        public Task TestUpdateEntityByModifyingRelationship()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 entity: "SecondEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
                 relationship: "r2",
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                relationshipFields: new string[] { "e1", "e2,t2" },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+                relationshipFields: new string[] { "e1", "e2,t2" }
                 );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                         ""entities"": {
                             ""FirstEntity"": {
                                 ""source"": ""Table1"",
@@ -609,55 +289,7 @@ namespace Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                        ""entities"": {
-                            ""FirstEntity"": {
-                                ""source"": ""Table1"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""create"",
-                                            ""read""
-                                        ]
-                                    }
-                                ],
-                                ""relationships"": {
-                                    ""r1"": {
-                                        ""cardinality"": ""one"",
-                                        ""target.entity"": ""SecondEntity""
-                                    }
-                                }
-                            },
-                            ""SecondEntity"": {
-                                ""source"": ""Table2"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [
-                                            ""create"",
-                                            ""read""
-                                        ]
-                                    }
-                                ],
-                                ""relationships"": {
-                                    ""r2"": {
-                                        ""cardinality"": ""many"",
-                                        ""target.entity"": ""FirstEntity"",
-                                        ""source.fields"": [""e1""],
-                                        ""target.fields"": [""e2"", ""t2""],
-                                        ""linking.object"": ""entity_link"",
-                                        ""linking.source.fields"": [""eid1""],
-                                        ""linking.target.fields"": [""eid2"", ""fid2""]
-                                    }
-                                }
-                            }
-                        }
-                    }";
-
-            bool isSuccess = TryUpdateExistingEntity(options, ref runtimeConfig);
-            Assert.IsTrue(isSuccess);
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -666,33 +298,16 @@ namespace Cli.Tests
         [TestMethod]
         public void TestCreateNewRelationship()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                relationship: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                relationshipFields: new string[] { "e1", "e2,t2" },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+                relationshipFields: new string[] { "e1", "e2,t2" }
                 );
 
-            Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
+            EntityRelationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
             Assert.IsNotNull(relationship);
             Assert.AreEqual(Cardinality.Many, relationship.Cardinality);
@@ -711,33 +326,16 @@ namespace Cli.Tests
         [TestMethod]
         public void TestCreateNewRelationshipWithMultipleLinkingFields()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                relationship: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1", "fid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                relationshipFields: new string[] { "e1", "e2,t2" },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+                relationshipFields: new string[] { "e1", "e2,t2" }
                 );
 
-            Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
+            EntityRelationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
             Assert.IsNotNull(relationship);
             Assert.AreEqual(Cardinality.Many, relationship.Cardinality);
@@ -756,33 +354,16 @@ namespace Cli.Tests
         [TestMethod]
         public void TestCreateNewRelationshipWithMultipleRelationshipFields()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                relationship: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                relationshipFields: new string[] { "e1,t1", "e2,t2" },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+                relationshipFields: new string[] { "e1,t1", "e2,t2" }
                 );
 
-            Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
+            EntityRelationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
             Assert.IsNotNull(relationship);
             Assert.AreEqual(Cardinality.Many, relationship.Cardinality);
@@ -802,56 +383,25 @@ namespace Cli.Tests
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "PolicyAndFields", DisplayName = "Check adding new Policy and Fields to Action")]
         [DataRow(new string[] { }, new string[] { }, "@claims.name eq 'dab'", "@claims.id eq @item.id", "Policy", DisplayName = "Check adding new Policy to Action")]
         [DataRow(new string[] { "*" }, new string[] { "level", "rating" }, null, null, "Fields", DisplayName = "Check adding new fieldsToInclude and FieldsToExclude to Action")]
-        public void TestUpdateEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
+        public Task TestUpdateEntityWithPolicyAndFieldProperties(IEnumerable<string>? fieldsToInclude,
                                                             IEnumerable<string>? fieldsToExclude,
                                                             string? policyRequest,
                                                             string? policyDatabase,
                                                             string check)
         {
-
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                source: "MyTable",
                permissions: new string[] { "anonymous", "delete" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: fieldsToInclude,
-                fieldsToExclude: fieldsToExclude,
-                policyRequest: policyRequest,
-                policyDatabase: policyDatabase,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-            );
+               fieldsToInclude: fieldsToInclude,
+               fieldsToExclude: fieldsToExclude,
+               policyRequest: policyRequest,
+               policyDatabase: policyDatabase);
 
-            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
-            string? expectedConfiguration = null;
-            switch (check)
-            {
-                case "PolicyAndFields":
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
-                    break;
-                case "Policy":
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLICY);
-                    break;
-                case "Fields":
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_ACTION_FIELDS);
-                    break;
-            }
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
 
-            Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
+            VerifySettings settings = new();
+            settings.UseHashedParameters(fieldsToInclude, fieldsToExclude, policyRequest, policyDatabase);
+            return ExecuteVerifyTest(initialConfig, options, settings);
         }
 
         /// <summary>
@@ -862,7 +412,7 @@ namespace Cli.Tests
         [DataRow(null, "view", null, null, new string[] { "col1", "col2" }, "ConvertToView", DisplayName = "Source KeyFields with View")]
         [DataRow(null, "table", null, null, new string[] { "id", "name" }, "ConvertToTable", DisplayName = "Source KeyFields with Table")]
         [DataRow(null, null, null, null, new string[] { "id", "name" }, "ConvertToDefaultType", DisplayName = "Source KeyFields with SourceType not provided")]
-        public void TestUpdateSourceStringToDatabaseSourceObject(
+        public Task TestUpdateSourceStringToDatabaseSourceObject(
             string? source,
             string? sourceType,
             string[]? permissions,
@@ -870,150 +420,56 @@ namespace Cli.Tests
             IEnumerable<string>? keyFields,
             string task)
         {
-
-            UpdateOptions options = new(
-                source: source,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 permissions: permissions,
-                entity: "MyEntity",
+                source: source,
                 sourceType: sourceType,
                 sourceParameters: parameters,
-                sourceKeyFields: keyFields,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-            );
+                sourceKeyFields: keyFields);
 
-            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
-            string? expectedConfiguration;
-            switch (task)
-            {
-                case "UpdateSourceName":
-                    actualConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY);
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
-                    break;
-                case "ConvertToView":
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_VIEW);
-                    break;
-                default:
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE);
-                    break;
-            }
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, BASIC_ENTITY_WITH_ANONYMOUS_ROLE);
 
-            Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
+            VerifySettings settings = new();
+            settings.UseHashedParameters(source, sourceType, permissions, parameters, keyFields);
+            return ExecuteVerifyTest(initialConfig, options, settings);
         }
 
-        /// <summary>
-        /// Validate behavior of updating a source's value type from string to object.
-        /// </summary>
-        /// <param name="source">Name of database object.</param>
-        /// <param name="parameters">Stored Procedure Parameters</param>
-        /// <param name="keyFields">Primary key fields</param>
-        /// <param name="permissionConfig">Permissions role:action</param>
-        /// <param name="task">Denotes which test/assertion is made on updated entity.</param>
-        [DataTestMethod]
-        [DataRow("newSourceName", null, null, new string[] { "anonymous", "execute" }, "UpdateSourceName", DisplayName = "Update Source Name of the source object.")]
-        [DataRow(null, new string[] { "param1:dab", "param2:false" }, null, new string[] { "anonymous", "execute" }, "UpdateParameters", DisplayName = "Update Parameters of stored procedure.")]
-        [DataRow(null, null, new string[] { "col1", "col2" }, new string[] { "anonymous", "read" }, "UpdateKeyFields", DisplayName = "Update KeyFields for table/view.")]
-        public void TestUpdateDatabaseSourceObject(
-            string? source,
-            IEnumerable<string>? parameters,
-            IEnumerable<string>? keyFields,
-            IEnumerable<string>? permissionConfig,
-            string task)
+        [TestMethod]
+        public Task UpdateDatabaseSourceName()
         {
-            UpdateOptions options = new(
-                source: source,
-                permissions: permissionConfig,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: parameters,
-                sourceKeyFields: keyFields,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                source: "newSourceName",
+                permissions: new string[] { "anonymous", "execute" },
+                entity: "MyEntity");
+
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+
+            return ExecuteVerifyTest(initialConfig, options);
+        }
+
+        [TestMethod]
+        public Task UpdateDatabaseSourceParameters()
+        {
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                permissions: new string[] { "anonymous", "execute" },
+                sourceParameters: new string[] { "param1:dab", "param2:false" }
             );
 
-            string? initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
-            switch (task)
-            {
-                case "UpdateSourceName":
-                    AssertUpdatedValuesForSourceObject(
-                        options,
-                        initialConfig,
-                        entityName: "MyEntity",
-                        oldSourceName: "s001.book",
-                        updatedSourceName: "newSourceName",
-                        oldSourceType: SourceType.StoredProcedure,
-                        updatedSourceType: SourceType.StoredProcedure,
-                        oldParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
-                        updatedParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
-                        oldKeyFields: null,
-                        updatedKeyFields: null
-                    );
-                    break;
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
-                case "UpdateParameters":
-                    AssertUpdatedValuesForSourceObject(
-                        options,
-                        initialConfig,
-                        entityName: "MyEntity",
-                        oldSourceName: "s001.book",
-                        updatedSourceName: "s001.book",
-                        oldSourceType: SourceType.StoredProcedure,
-                        updatedSourceType: SourceType.StoredProcedure,
-                        oldParameters: new Dictionary<string, object>() { { "param1", 123 }, { "param2", "hello" }, { "param3", true } },
-                        updatedParameters: new Dictionary<string, object>() { { "param1", "dab" }, { "param2", false } },
-                        oldKeyFields: null,
-                        updatedKeyFields: null
-                    );
-                    break;
+            return ExecuteVerifyTest(initialConfig, options);
+        }
 
-                case "UpdateKeyFields":
-                    initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE);
-                    AssertUpdatedValuesForSourceObject(
-                        options,
-                        initialConfig,
-                        entityName: "MyEntity",
-                        oldSourceName: "s001.book",
-                        updatedSourceName: "s001.book",
-                        oldSourceType: SourceType.Table,
-                        updatedSourceType: SourceType.Table,
-                        oldParameters: null,
-                        updatedParameters: null,
-                        oldKeyFields: new string[] { "id", "name" },
-                        updatedKeyFields: new string[] { "col1", "col2" }
-                    );
-                    break;
-            }
+        [TestMethod]
+        public Task UpdateDatabaseSourceKeyFields()
+        {
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                permissions: new string[] { "anonymous", "read" },
+                sourceKeyFields: new string[] { "col1", "col2" });
+
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE);
+
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -1025,30 +481,30 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(SINGLE_ENTITY_WITH_ONLY_READ_PERMISSION, "stored-procedure", new string[] { "param1:123", "param2:hello", "param3:true" },
             null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, true,
-            DisplayName = "PASS:Convert table to stored-procedure with valid parameters.")]
+            DisplayName = "PASS - Convert table to stored-procedure with valid parameters.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_STORED_PROCEDURE, new string[] { "anonymous", "execute" }, false, false,
-            DisplayName = "FAIL:Convert table to stored-procedure with invalid KeyFields.")]
+            DisplayName = "FAIL - Convert table to stored-procedure with invalid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "stored-procedure", null, null, SINGLE_ENTITY_WITH_STORED_PROCEDURE, null,
-            true, true, DisplayName = "PASS:Convert table with wildcard CRUD operation to stored-procedure.")]
+            true, true, DisplayName = "PASS - Convert table with wildcard CRUD operation to stored-procedure.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, new string[] { "id", "name" },
             SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, new string[] { "anonymous", "*" }, false, true,
-            DisplayName = "PASS:Convert stored-procedure to table with valid KeyFields.")]
+            DisplayName = "PASS - Convert stored-procedure to table with valid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "view", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, new string[] { "anonymous", "*" }, false, true,
-            DisplayName = "PASS:Convert stored-procedure to view with valid KeyFields.")]
+            DisplayName = "PASS - Convert stored-procedure to view with valid KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", new string[] { "param1:kind", "param2:true" },
             null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null, false, false,
-            DisplayName = "FAIL:Convert stored-procedure to table with parameters is not allowed.")]
+            DisplayName = "FAIL - Convert stored-procedure to table with parameters is not allowed.")]
         [DataRow(SINGLE_ENTITY_WITH_STORED_PROCEDURE, "table", null, null, SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, null,
-            true, true, DisplayName = "PASS:Convert stored-procedure to table with no parameters or KeyFields.")]
+            true, true, DisplayName = "PASS - Convert stored-procedure to table with no parameters or KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", null, new string[] { "col1", "col2" },
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, true,
-            DisplayName = "PASS:Convert table to view with KeyFields.")]
+            DisplayName = "PASS - Convert table to view with KeyFields.")]
         [DataRow(SINGLE_ENTITY_WITH_SOURCE_AS_TABLE, "view", new string[] { "param1:kind", "param2:true" }, null,
             SINGLE_ENTITY_WITH_SOURCE_AS_VIEW, null, false, false,
-            DisplayName = "FAIL:Convert table to view with parameters is not allowed.")]
-        public void TestConversionOfSourceObject(
+            DisplayName = "FAIL - Convert table to view with parameters is not allowed.")]
+        public Task TestConversionOfSourceObject(
             string initialSourceObjectEntity,
             string sourceType,
             IEnumerable<string>? parameters,
@@ -1058,163 +514,48 @@ namespace Cli.Tests
             bool expectNoKeyFieldsAndParameters,
             bool expectSuccess)
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "s001.book",
                 permissions: permissions,
-                entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,
-                sourceKeyFields: keyFields,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-            );
+                sourceKeyFields: keyFields);
 
-            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, initialSourceObjectEntity);
-            Assert.AreEqual(expectSuccess, ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, initialSourceObjectEntity);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+            Assert.AreEqual(expectSuccess, TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig updatedConfig));
 
             if (expectSuccess)
             {
-                string updatedConfig = AddPropertiesToJson(INITIAL_CONFIG, updatedSourceObjectEntity);
-                if (!expectNoKeyFieldsAndParameters)
-                {
-                    Assert.IsTrue(JToken.DeepEquals(JObject.Parse(runtimeConfig), JObject.Parse(updatedConfig)));
-                }
-                else
-                {
-                    Entity entity = GetEntityObjectFromRuntimeConfigJson(runtimeConfig, entityName: "MyEntity");
-                    entity.TryPopulateSourceFields();
-                    Assert.IsNull(entity.Parameters);
-                    Assert.IsNull(entity.KeyFields);
-                }
+                Assert.AreNotSame(runtimeConfig, updatedConfig);
+                VerifySettings settings = new();
+                settings.UseHashedParameters(sourceType, parameters, keyFields, permissions, expectNoKeyFieldsAndParameters);
+                return Verify(updatedConfig, settings);
             }
 
-        }
-
-        /// <summary>
-        /// Deserialize the given json config and return the entity object for the provided entityName if present.
-        /// </summary>
-        private static Entity GetEntityObjectFromRuntimeConfigJson(string runtimeConfigJson, string entityName)
-        {
-            RuntimeConfig? runtimeConfig = JsonSerializer.Deserialize<RuntimeConfig>(runtimeConfigJson, GetSerializationOptions());
-            Assert.IsTrue(runtimeConfig!.Entities.ContainsKey(entityName));
-            return runtimeConfig!.Entities[entityName];
-        }
-
-        /// <summary>
-        /// Contains Assert to check only the intended values of source object is updated.
-        /// </summary>
-        private static void AssertUpdatedValuesForSourceObject(
-            UpdateOptions options,
-            string initialConfig,
-            string entityName,
-            string oldSourceName, string updatedSourceName,
-            SourceType oldSourceType, SourceType updatedSourceType,
-            Dictionary<string, object>? oldParameters, Dictionary<string, object>? updatedParameters,
-            string[]? oldKeyFields, string[]? updatedKeyFields)
-        {
-            Entity entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
-            entity.TryPopulateSourceFields();
-            Assert.AreEqual(oldSourceName, entity.SourceName);
-            Assert.AreEqual(oldSourceType, entity.ObjectType);
-            Assert.IsTrue(JToken.DeepEquals(
-                JToken.FromObject(JsonSerializer.SerializeToElement(oldParameters)),
-                JToken.FromObject(JsonSerializer.SerializeToElement(entity.Parameters)))
-            );
-            CollectionAssert.AreEquivalent(oldKeyFields, entity.KeyFields);
-            Assert.IsTrue(TryUpdateExistingEntity(options, ref initialConfig));
-            entity = GetEntityObjectFromRuntimeConfigJson(initialConfig, entityName);
-            entity.TryPopulateSourceFields();
-            Assert.AreEqual(updatedSourceName, entity.SourceName);
-            Assert.AreEqual(updatedSourceType, entity.ObjectType);
-            Assert.IsTrue(JToken.DeepEquals(
-                JToken.FromObject(JsonSerializer.SerializeToElement(updatedParameters)),
-                JToken.FromObject(JsonSerializer.SerializeToElement(entity.Parameters)))
-            );
-            CollectionAssert.AreEquivalent(updatedKeyFields, entity.KeyFields);
+            return Task.CompletedTask;
         }
 
         /// <summary>
         /// Update Policy for an action
         /// </summary>
         [TestMethod]
-        public void TestUpdatePolicy()
+        public Task TestUpdatePolicy()
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                source: "MyTable",
                permissions: new string[] { "anonymous", "delete" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: "@claims.name eq 'api_builder'",
-                policyDatabase: "@claims.name eq @item.name",
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+               policyRequest: "@claims.name eq 'api_builder'",
+               policyDatabase: "@claims.name eq @item.name"
             );
 
-            string? actualConfig = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
-            string updatedEntityConfigurationWithPolicyAndFields = @"
-              {
-                ""entities"": {
-                    ""MyEntity"": {
-                      ""source"": ""MyTable"",
-                      ""permissions"": [
-                          {
-                          ""role"": ""anonymous"",
-                          ""actions"": [
-                                {
-                                    ""action"": ""Delete"",
-                                    ""policy"": {
-                                        ""request"": ""@claims.name eq 'api_builder'"",
-                                        ""database"": ""@claims.name eq @item.name""
-                                    },
-                                    ""fields"": {
-                                        ""include"": [ ""*"" ],
-                                        ""exclude"": [ ""level"", ""rating"" ]
-                                    }
-                                }
-                            ]
-                          }
-                        ]
-                    }
-                }
-            }";
-            string? expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, updatedEntityConfigurationWithPolicyAndFields);
-            Assert.IsTrue(TryUpdateExistingEntity(options, ref actualConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration!), JObject.Parse(actualConfig)));
+            string? initialConfig = AddPropertiesToJson(INITIAL_CONFIG, ENTITY_CONFIG_WITH_POLCIY_AND_ACTION_FIELDS);
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
         /// Test to verify updating permissions for stored-procedure.
-        /// Checks: 
+        /// Checks:
         /// 1. Updating a stored-procedure with WILDCARD/CRUD action should fail.
         /// 2. Adding a new role/Updating an existing role with execute action should succeeed.
         /// </summary>
@@ -1231,70 +572,26 @@ namespace Cli.Tests
             bool isSuccess
         )
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "my_sp",
                 permissions: new string[] { role, operations },
-                entity: "MyEntity",
-                sourceType: "stored-procedure",
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+                sourceType: "stored-procedure");
 
-            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
 
-            Assert.AreEqual(isSuccess, ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            Assert.AreEqual(isSuccess, TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
 
         /// <summary>
         /// Test to Update Entity with New mappings
         /// </summary>
         [TestMethod]
-        public void TestUpdateEntityWithMappings()
+        public Task TestUpdateEntityWithMappings()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: new string[] { "id:Identity", "name:Company Name" },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+            UpdateOptions options = GenerateBaseUpdateOptions(map: new string[] { "id:Identity", "name:Company Name" });
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -1308,62 +605,21 @@ namespace Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                    ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [""read"", ""update""]
-                                    }
-                                ],
-                                ""mappings"": {
-                                    ""id"": ""Identity"",
-                                    ""name"": ""Company Name""
-                                }
-                            }
-                        }
-                    }";
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
-        /// Test to Update stored procedure action. Stored procedures support only execute action. 
+        /// Test to Update stored procedure action. Stored procedures support only execute action.
         /// An attempt to update to another action should be unsuccessful.
         /// </summary>
         [TestMethod]
         public void TestUpdateActionOfStoredProcedureRole()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: new string[] { "authenticated", "create" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: null,
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                permissions: new string[] { "authenticated", "create" }
                 );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": {
@@ -1388,42 +644,22 @@ namespace Cli.Tests
                         }
                     }";
 
-            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+
+            Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
 
         /// <summary>
         /// Test to Update Entity with New mappings containing special unicode characters
         /// </summary>
         [TestMethod]
-        public void TestUpdateEntityWithSpecialCharacterInMappings()
+        public Task TestUpdateEntityWithSpecialCharacterInMappings()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                map: new string[] { "Macaroni:Mac & Cheese", "region:United State's Region", "russian:русский", "chinese:中文" }
+            );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -1437,65 +673,20 @@ namespace Cli.Tests
                         }
                     }";
 
-            string expectedConfig = GetInitialConfigString() + "," + @"
-                    ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [""read"", ""update""]
-                                    }
-                                ],
-                                ""mappings"": {
-                                    ""Macaroni"": ""Mac & Cheese"",
-                                    ""region"": ""United State's Region"",
-                                    ""russian"": ""русский"",
-                                    ""chinese"": ""中文""
-                                }
-                            }
-                        }
-                    }";
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
         /// Test to Update existing mappings of an entity
         /// </summary>
         [TestMethod]
-        public void TestUpdateExistingMappings()
+        public Task TestUpdateExistingMappings()
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                map: new string[] { "name:Company Name", "addr:Company Address", "number:Contact Details" }
+            );
 
-            string runtimeConfig = GetConfigWithMappings();
-
-            string expectedConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -1506,16 +697,14 @@ namespace Cli.Tests
                                     }
                                 ],
                                 ""mappings"": {
-                                    ""name"": ""Company Name"",
-                                    ""addr"": ""Company Address"",
-                                    ""number"": ""Contact Details""
+                                    ""id"": ""Identity"",
+                                    ""name"": ""Company Name""
                                 }
                             }
                         }
                     }";
 
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfig), JObject.Parse(runtimeConfig)));
+            return ExecuteVerifyTest(initialConfig, options);
         }
 
         /// <summary>
@@ -1529,7 +718,7 @@ namespace Cli.Tests
         /// <param name="testType">Scenario that is tested. It is also used to construct the expected JSON.</param>
         [DataTestMethod]
         [DataRow(null, null, "true", null, "RestEnabled", DisplayName = "Entity Update - REST enabled without any methods explicitly configured")]
-        [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Entity Update - Custom REST path defined without any methods explictly configured")]
+        [DataRow(null, null, "book", null, "CustomRestPath", DisplayName = "Entity Update - Custom REST path defined without any methods explicitly configured")]
         [DataRow(new string[] { "Get", "Post", "Patch" }, null, null, null, "RestMethods", DisplayName = "Entity Update - REST methods defined without REST Path explicitly configured")]
         [DataRow(new string[] { "Get", "Post", "Patch" }, null, "true", null, "RestEnabledWithMethods", DisplayName = "Entity Update - REST enabled along with some methods")]
         [DataRow(new string[] { "Get", "Post", "Patch" }, null, "book", null, "CustomRestPathWithMethods", DisplayName = "Entity Update - Custom REST path defined along with some methods")]
@@ -1543,115 +732,25 @@ namespace Cli.Tests
         [DataRow(null, null, "false", "false", "RestAndGQLDisabled", DisplayName = "Entity Update - Both REST and GraphQL disabled without any methods and operations configured explicitly")]
         [DataRow(new string[] { "Get" }, "Query", "true", "true", "CustomRestMethodAndGqlOperation", DisplayName = "Entity Update - Both REST and GraphQL enabled with custom REST methods and GraphQL operations")]
         [DataRow(new string[] { "Post", "Patch", "Put" }, "Query", "book", "book:books", "CustomRestAndGraphQLAll", DisplayName = "Entity Update - Configuration with REST Path, Methods and GraphQL Type, Operation")]
-        public void TestUpdateRestAndGraphQLSettingsForStoredProcedures(
+        public Task TestUpdateRestAndGraphQLSettingsForStoredProcedures(
             IEnumerable<string>? restMethods,
             string? graphQLOperation,
             string? restRoute,
             string? graphQLType,
             string testType)
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 restRoute: restRoute,
                 graphQLType: graphQLType,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: null,
-                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
                 graphQLOperationForStoredProcedure: graphQLOperation
-                );
+            );
 
-            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
 
-            string expectedConfiguration = "";
-            switch (testType)
-            {
-                case "RestEnabled":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_ENABLED);
-                    break;
-                }
-                case "CustomRestPath":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH);
-                    break;
-                }
-                case "RestMethods":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHODS);
-                    break;
-                }
-                case "RestEnabledWithMethods":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_ENABLED_WITH_CUSTOM_REST_METHODS);
-                    break;
-                }
-                case "CustomRestPathWithMethods":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_PATH_WITH_CUSTOM_REST_METHODS);
-                    break;
-                }
-                case "GQLEnabled":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED);
-                    break;
-                }
-                case "GQLCustomType":
-                case "GQLSingularPluralCustomType":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_CUSTOM_TYPE);
-                    break;
-                }
-                case "GQLEnabledWithCustomOperation":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_OPERATION);
-                    break;
-                }
-                case "GQLCustomTypeAndOperation":
-                case "GQLSingularPluralTypeAndOperation":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_GRAPHQL_ENABLED_WITH_CUSTOM_TYPE_OPERATION);
-                    break;
-                }
-                case "RestAndGQLEnabled":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_ENABLED);
-                    break;
-                }
-                case "RestAndGQLDisabled":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_REST_GRAPHQL_DISABLED);
-                    break;
-                }
-                case "CustomRestMethodAndGqlOperation":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_METHOD_GRAPHQL_OPERATION);
-                    break;
-                }
-                case "CustomRestAndGraphQLAll":
-                {
-                    expectedConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_CUSTOM_REST_GRAPHQL_ALL);
-                    break;
-                }
-            }
-
-            Assert.IsTrue(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(expectedConfiguration), JObject.Parse(runtimeConfig)));
+            VerifySettings settings = new();
+            settings.UseHashedParameters(restMethods, graphQLOperation, restRoute, graphQLType, testType);
+            return ExecuteVerifyTest(initialConfig, options, settings);
         }
 
         /// <summary>
@@ -1666,46 +765,24 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(null, "Mutation", "true", "false", DisplayName = "Conflicting configurations during update - GraphQL operation specified but entity is disabled for GraphQL")]
         [DataRow(new string[] { "Get" }, null, "false", "true", DisplayName = "Conflicting configurations during update - REST methods specified but entity is disabled for REST")]
-        public void TestUpdatetoredProcedureWithConflictingRestGraphQLOptions(
+        public void TestUpdateStoredProcedureWithConflictingRestGraphQLOptions(
             IEnumerable<string>? restMethods,
                 string? graphQLOperation,
-                string? restRoute,
-                string? graphQLType
+                string restRoute,
+                string graphQLType
                 )
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 restRoute: restRoute,
                 graphQLType: graphQLType,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: null,
-                config: TEST_RUNTIME_CONFIG_FILE,
                 restMethodsForStoredProcedure: restMethods,
-                graphQLOperationForStoredProcedure: graphQLOperation
-                );
+                graphQLOperationForStoredProcedure: graphQLOperation);
 
-            string initialConfiguration = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
-            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref initialConfiguration));
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SP_DEFAULT_REST_METHODS_GRAPHQL_OPERATION);
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+
+            Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
-
-        #endregion
-
-        #region  Negative Tests
 
         /// <summary>
         /// Simple test to update an entity permission with new action containing WILDCARD and other crud operation.
@@ -1715,33 +792,13 @@ namespace Cli.Tests
         [TestMethod, Description("update action should fail because of invalid action combination.")]
         public void TestUpdateEntityPermissionWithWildcardAndOtherCRUDAction()
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
                 permissions: new string[] { "anonymous", "*,create,read" },
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
                 fieldsToInclude: new string[] { "id", "rating" },
-                fieldsToExclude: new string[] { "level" },
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+                fieldsToExclude: new string[] { "level" });
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -1758,7 +815,9 @@ namespace Cli.Tests
                         }
                     }";
 
-            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+
+            Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
 
         /// <summary>
@@ -1783,35 +842,18 @@ namespace Cli.Tests
             string role,
             string operations)
         {
-            UpdateOptions options = new(
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 source: "MyTable",
                 permissions: new string[] { role, operations },
-                entity: "MyEntity",
                 sourceType: sourceType,
                 sourceParameters: parameters,
-                sourceKeyFields: keyFields,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: null,
-                fieldsToExclude: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                map: new string[] { },
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+                sourceKeyFields: keyFields);
 
-            string runtimeConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
+            string initialConfig = AddPropertiesToJson(INITIAL_CONFIG, SINGLE_ENTITY_WITH_STORED_PROCEDURE);
 
-            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+
+            Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
 
         /// <summary>
@@ -1835,37 +877,18 @@ namespace Cli.Tests
         [TestMethod]
         public void TestCreateNewRelationshipWithInvalidRelationshipFields()
         {
-
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                relationship: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 cardinality: "many",
                 targetEntity: "FirstEntity",
                 linkingObject: "entity_link",
                 linkingSourceFields: new string[] { "eid1" },
                 linkingTargetFields: new string[] { "eid2", "fid2" },
-                relationshipFields: new string[] { "e1,e2,t2" }, // Invalid value. Correct format uses ':' to separate source and target fields
-                policyRequest: null,
-                policyDatabase: null,
-                map: null,
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+                relationshipFields: new string[] { "e1,e2,t2" } // Invalid value. Correct format uses ':' to separate source and target fields
+            );
 
-            Relationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
+            EntityRelationship? relationship = CreateNewRelationshipWithUpdateOptions(options);
 
             Assert.IsNull(relationship);
-
         }
 
         /// <summary>
@@ -1876,33 +899,11 @@ namespace Cli.Tests
         [DataRow("id:identity:id,name:", DisplayName = "Invalid format for mappings value, required: 2, provided: 1.")]
         public void TestUpdateEntityWithInvalidMappings(string mappings)
         {
-            UpdateOptions options = new(
-                source: null,
-                permissions: null,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
-                fieldsToInclude: new string[] { },
-                fieldsToExclude: new string[] { },
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: mappings.Split(','),
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-                );
+            UpdateOptions options = GenerateBaseUpdateOptions(
+                map: mappings.Split(',')
+            );
 
-            string runtimeConfig = GetInitialConfigString() + "," + @"
+            string initialConfig = GetInitialConfigString() + "," + @"
                     ""entities"": {
                             ""MyEntity"": {
                                 ""source"": ""MyTable"",
@@ -1919,7 +920,9 @@ namespace Cli.Tests
                         }
                     }";
 
-            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+
+            Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
 
         /// <summary>
@@ -1928,44 +931,43 @@ namespace Cli.Tests
         [DataTestMethod]
         [DataRow(new string[] { }, new string[] { "field" }, new string[] { }, DisplayName = "Invalid command with fieldsToInclude but no permissions")]
         [DataRow(new string[] { }, new string[] { }, new string[] { "field1,field2" }, DisplayName = "Invalid command with fieldsToExclude but no permissions")]
-        public void TestUpdateEntityWithInvalidPermissionAndFields(IEnumerable<string> Permissions,
-        IEnumerable<string> FieldsToInclude, IEnumerable<string> FieldsToExclude)
+        public void TestUpdateEntityWithInvalidPermissionAndFields(
+            IEnumerable<string> Permissions,
+            IEnumerable<string> FieldsToInclude,
+            IEnumerable<string> FieldsToExclude)
         {
-            UpdateOptions options = new(
-                source: null,
+            UpdateOptions options = GenerateBaseUpdateOptions(
                 permissions: Permissions,
-                entity: "MyEntity",
-                sourceType: null,
-                sourceParameters: null,
-                sourceKeyFields: null,
-                restRoute: null,
-                graphQLType: null,
                 fieldsToInclude: FieldsToInclude,
-                fieldsToExclude: FieldsToExclude,
-                policyRequest: null,
-                policyDatabase: null,
-                relationship: null,
-                cardinality: null,
-                targetEntity: null,
-                linkingObject: null,
-                linkingSourceFields: new string[] { },
-                linkingTargetFields: new string[] { },
-                relationshipFields: new string[] { },
-                map: null,
-                config: TEST_RUNTIME_CONFIG_FILE,
-                restMethodsForStoredProcedure: null,
-                graphQLOperationForStoredProcedure: null
-            );
+                fieldsToExclude: FieldsToExclude);
 
-            string runtimeConfig = GetConfigWithMappings();
-            Assert.IsFalse(ConfigGenerator.TryUpdateExistingEntity(options, ref runtimeConfig));
+            string initialConfig = GetInitialConfigString() + "," + @"
+                    ""entities"": {
+                            ""MyEntity"": {
+                                ""source"": ""MyTable"",
+                                ""permissions"": [
+                                    {
+                                        ""role"": ""anonymous"",
+                                        ""actions"": [""read"",""update""]
+                                    }
+                                ],
+                                ""mappings"": {
+                                    ""id"": ""Identity"",
+                                    ""name"": ""Company Name""
+                                }
+                            }
+                        }
+                    }";
+            RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig);
+
+            Assert.IsFalse(TryUpdateExistingEntity(options, runtimeConfig!, out RuntimeConfig _));
         }
 
         /// <summary>
         /// Test to verify Invalid inputs to create a relationship
         /// </summary>
         [DataTestMethod]
-        [DataRow("cosmosdb_nosql", "one", "MyEntity", DisplayName = "CosmosDb does not support relationships")]
+        [DataRow("CosmosDB_NoSQL", "one", "MyEntity", DisplayName = "CosmosDb does not support relationships")]
         [DataRow("mssql", null, "MyEntity", DisplayName = "Cardinality should not be null")]
         [DataRow("mssql", "manyx", "MyEntity", DisplayName = "Cardinality should be one/many")]
         [DataRow("mssql", "one", null, DisplayName = "Target entity should not be null")]
@@ -1974,9 +976,9 @@ namespace Cli.Tests
         {
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
-                DataSource: new DataSource(Enum.Parse<DatabaseType>(db)),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: new Dictionary<string, Entity>()
+                DataSource: new DataSource(EnumExtensions.Deserialize<DatabaseType>(db), "", new()),
+                Runtime: new(Rest: new(), GraphQL: new(), Host: new(null, null)),
+                Entities: new(new Dictionary<string, Entity>())
             );
 
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: cardinality, targetEntity: targetEntity));
@@ -1990,49 +992,49 @@ namespace Cli.Tests
         [TestMethod]
         public void EnsureFailure_AddRelationshipToEntityWithDisabledGraphQL()
         {
-            PermissionOperation actionForRole = new(
-                Name: Operation.Create,
+            EntityAction actionForRole = new(
+                Action: EntityActionOperation.Create,
                 Fields: null,
-                Policy: null);
+                Policy: new(null, null));
 
-            PermissionSetting permissionForEntity = new(
-                role: "anonymous",
-                operations: new object[] { JsonSerializer.SerializeToElement(actionForRole) });
+            EntityPermission permissionForEntity = new(
+                Role: "anonymous",
+                Actions: new[] { actionForRole });
 
             Entity sampleEntity1 = new(
-                Source: JsonSerializer.SerializeToElement("SOURCE1"),
-                Rest: true,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                Source: new("SOURCE1", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: true),
+                GraphQL: new("SOURCE1", "SOURCE1s"),
+                Permissions: new[] { permissionForEntity },
                 Relationships: null,
                 Mappings: null
             );
 
             // entity with graphQL disabled
             Entity sampleEntity2 = new(
-                Source: JsonSerializer.SerializeToElement("SOURCE2"),
-                Rest: true,
-                GraphQL: false,
-                Permissions: new PermissionSetting[] { permissionForEntity },
+                Source: new("SOURCE2", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: true),
+                GraphQL: new("SOURCE2", "SOURCE2s", false),
+                Permissions: new[] { permissionForEntity },
                 Relationships: null,
                 Mappings: null
             );
 
-            Dictionary<string, Entity> entityMap = new();
-            entityMap.Add("SampleEntity1", sampleEntity1);
-            entityMap.Add("SampleEntity2", sampleEntity2);
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "SampleEntity1", sampleEntity1 },
+                { "SampleEntity2", sampleEntity2 }
+            };
 
             RuntimeConfig runtimeConfig = new(
                 Schema: "schema",
-                DataSource: new DataSource(DatabaseType.mssql),
-                RuntimeSettings: new Dictionary<GlobalSettingsType, object>(),
-                Entities: entityMap
+                DataSource: new DataSource(DatabaseType.MSSQL, "", new()),
+                Runtime: new(Rest: new(), GraphQL: new(), Host: new(null, null)),
+                Entities: new(entityMap)
             );
 
             Assert.IsFalse(VerifyCanUpdateRelationship(runtimeConfig, cardinality: "one", targetEntity: "SampleEntity2"));
         }
-
-        #endregion
 
         private static string GetInitialConfigString()
         {
@@ -2040,7 +1042,7 @@ namespace Cli.Tests
                         @"""$schema"": """ + DAB_DRAFT_SCHEMA_TEST_PATH + @"""" + "," +
                         @"""data-source"": {
                             ""database-type"": ""mssql"",
-                            ""connection-string"": ""testconnectionstring""
+                            ""connection-string"": """ + SAMPLE_TEST_CONN_STRING + @"""
                         },
                         ""runtime"": {
                             ""rest"": {
@@ -2069,25 +1071,67 @@ namespace Cli.Tests
                         }";
         }
 
-        private static string GetConfigWithMappings()
+        private static UpdateOptions GenerateBaseUpdateOptions(
+            string? source = null,
+            IEnumerable<string>? permissions = null,
+            string entity = "MyEntity",
+            string? sourceType = null,
+            IEnumerable<string>? sourceParameters = null,
+            IEnumerable<string>? sourceKeyFields = null,
+            string? restRoute = null,
+            string? graphQLType = null,
+            IEnumerable<string>? fieldsToInclude = null,
+            IEnumerable<string>? fieldsToExclude = null,
+            string? policyRequest = null,
+            string? policyDatabase = null,
+            string? relationship = null,
+            string? cardinality = null,
+            string? targetEntity = null,
+            string? linkingObject = null,
+            IEnumerable<string>? linkingSourceFields = null,
+            IEnumerable<string>? linkingTargetFields = null,
+            IEnumerable<string>? relationshipFields = null,
+            IEnumerable<string>? map = null,
+            IEnumerable<string>? restMethodsForStoredProcedure = null,
+            string? graphQLOperationForStoredProcedure = null
+            )
         {
-            return GetInitialConfigString() + "," + @"
-                    ""entities"": {
-                            ""MyEntity"": {
-                                ""source"": ""MyTable"",
-                                ""permissions"": [
-                                    {
-                                        ""role"": ""anonymous"",
-                                        ""actions"": [""read"",""update""]
-                                    }
-                                ],
-                                ""mappings"": {
-                                    ""id"": ""Identity"",
-                                    ""name"": ""Company Name""
-                                }
-                            }
-                        }
-                    }";
+            return new(
+                source: source,
+                permissions: permissions,
+                entity: entity,
+                sourceType: sourceType,
+                sourceParameters: sourceParameters,
+                sourceKeyFields: sourceKeyFields,
+                restRoute: restRoute,
+                graphQLType: graphQLType,
+                fieldsToInclude: fieldsToInclude,
+                fieldsToExclude: fieldsToExclude,
+                policyRequest: policyRequest,
+                policyDatabase: policyDatabase,
+                relationship: relationship,
+                cardinality: cardinality,
+                targetEntity: targetEntity,
+                linkingObject: linkingObject,
+                linkingSourceFields: linkingSourceFields,
+                linkingTargetFields: linkingTargetFields,
+                relationshipFields: relationshipFields,
+                map: map,
+                config: TEST_RUNTIME_CONFIG_FILE,
+                restMethodsForStoredProcedure: restMethodsForStoredProcedure,
+                graphQLOperationForStoredProcedure: graphQLOperationForStoredProcedure
+            );
+        }
+
+        private Task ExecuteVerifyTest(string initialConfig, UpdateOptions options, VerifySettings? settings = null)
+        {
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(initialConfig, out RuntimeConfig? runtimeConfig), "Parsed config file.");
+
+            Assert.IsTrue(TryUpdateExistingEntity(options, runtimeConfig, out RuntimeConfig updatedRuntimeConfig), "Successfully added entity to config.");
+
+            Assert.AreNotSame(runtimeConfig, updatedRuntimeConfig);
+
+            return Verify(updatedRuntimeConfig, settings);
         }
     }
 }

@@ -1,0 +1,41 @@
+﻿{
+  DataSource: {
+    Options: {
+      container: {
+        ValueKind: String
+      },
+      database: {
+        ValueKind: String
+      },
+      schema: {
+        ValueKind: String
+      }
+    }
+  },
+  Runtime: {
+    Rest: {
+      Enabled: false,
+      Path: /api,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        Origins: [
+          localhost:3000,
+          www.nolocalhost.com:80
+        ],
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      },
+      Mode: Production
+    }
+  },
+  Entities: []
+}

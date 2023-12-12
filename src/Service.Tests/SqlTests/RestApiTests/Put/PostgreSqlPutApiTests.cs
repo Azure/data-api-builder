@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -33,6 +34,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                         SELECT id, title, publisher_id
                         FROM " + _integrationTableName + @"
                         WHERE id = 1 AND title = 'The Return of the King'
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneUpdateWithDatabasePolicy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 100 AND pieceid = 99 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 5 AND pieceid != 1
                     ) AS subq
                 "
             },
@@ -107,6 +120,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                 "
             },
             {
+                "PutOneUpdateWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on = last_sold_on_date
+                    ) AS subq
+                "
+            },
+            {
+                "PutOneInsertWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'New book' AND copies_sold = 101 AND last_sold_on = '9999-12-31 23:59:59.997'
+                        AND last_sold_on_date = '9999-12-31 23:59:59.997'
+                    ) AS subq
+                "
+            },
+            {
                 "PutOne_Update_With_Mapping_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -115,18 +151,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AS ""United State's Region"", ""height""
                         FROM " + _integrationMappingTable + @"
                         WHERE ""treeId"" = 1
-                    ) AS subq
-                "
-            },
-            {
-                "PutOne_Insert_Test",
-                @"
-                    SELECT to_jsonb(subq) AS data
-                    FROM (
-                        SELECT id, title, issue_number
-                        FROM " + "foo." + _integration_NonAutoGenPK_TableName + @"
-                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND title = 'Batman Returns'
-                            AND issue_number = 1234
                     ) AS subq
                 "
             },
@@ -279,7 +303,66 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
                             AND publisher_id = 1234
                     ) AS subq
                 "
+            },
+            {
+                "PutOne_Update_WithNoReadAction_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Update_WithExcludeFields_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 7 AND title = 'The Hobbit Returns to The Shire'
+                        AND publisher_id = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutOne_Insert_Test",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, issue_number
+                        FROM " + "foo." + _integration_NonAutoGenPK_TableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND title = 'Batman Returns'
+                            AND issue_number = 1234
+                    ) AS subq
+                "
+            },
+            {
+                "PutInsert_NoReadTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "Put_Insert_WithExcludeFieldsTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 4
+                    ) AS subq
+                "
             }
+
         };
 
         [TestMethod]
@@ -309,9 +392,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
+        #endregion
+
+        #region overridden tests
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PutOneInsertInTableWithFieldsInDbPolicyNotPresentInBody()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         [TestCleanup]

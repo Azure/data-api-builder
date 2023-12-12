@@ -4,13 +4,18 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Resolvers;
-using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -44,13 +49,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// <param name="columnsRequested"></param>
         /// <param name="operation"></param>
         [DataTestMethod]
-        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization - Success, Columns Allowed")]
-        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Create, DisplayName = "Create Mutation Field Authorization - Failure, Columns Forbidden")]
-        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Success, Columns Allowed")]
-        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, Config.Operation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Failure, Columns Forbidden")]
-        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, Config.Operation.Delete, DisplayName = "Delete Mutation Field Authorization - Success, since authorization to perform the" +
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Create, DisplayName = "Create Mutation Field Authorization - Success, Columns Allowed")]
+        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Create, DisplayName = "Create Mutation Field Authorization - Failure, Columns Forbidden")]
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Success, Columns Allowed")]
+        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, EntityActionOperation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Failure, Columns Forbidden")]
+        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Delete, DisplayName = "Delete Mutation Field Authorization - Success, since authorization to perform the" +
             "delete mutation operation occurs prior to column evaluation in the request pipeline.")]
-        public void MutationFields_AuthorizationEvaluation(bool isAuthorized, string[] columnsAllowed, string[] columnsRequested, Config.Operation operation)
+        public void MutationFields_AuthorizationEvaluation(bool isAuthorized, string[] columnsAllowed, string[] columnsRequested, EntityActionOperation operation)
         {
             SqlMutationEngine engine = SetupTestFixture(isAuthorized);
 
@@ -104,13 +109,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         private static SqlMutationEngine SetupTestFixture(bool isAuthorized)
         {
             Mock<IQueryEngine> _queryEngine = new();
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
             Mock<IQueryExecutor> _queryExecutor = new();
             Mock<IQueryBuilder> _queryBuilder = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             Mock<ILogger<SqlMutationEngine>> _mutationEngineLogger = new();
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(string.Empty));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
             DefaultHttpContext context = new();
-            Mock<GQLFilterParser> _gQLFilterParser = new(_sqlMetadataProvider.Object);
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            Mock<GQLFilterParser> _gQLFilterParser = new(provider, _metadataProviderFactory.Object);
+            Mock<IAbstractQueryManagerFactory> _queryManagerFactory = new();
+            Mock<IQueryEngineFactory> _queryEngineFactory = new();
+
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
 
             // Creates Mock AuthorizationResolver to return a preset result based on [TestMethod] input.
@@ -118,19 +130,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             _authorizationResolver.Setup(x => x.AreColumnsAllowedForOperation(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<Config.Operation>(),
+                It.IsAny<EntityActionOperation>(),
                 It.IsAny<IEnumerable<string>>()
                 )).Returns(isAuthorized);
 
             return new SqlMutationEngine(
-                _queryEngine.Object,
-                _queryExecutor.Object,
-                _queryBuilder.Object,
-                _sqlMetadataProvider.Object,
+                _queryManagerFactory.Object,
+                _metadataProviderFactory.Object,
+                _queryEngineFactory.Object,
                 _authorizationResolver.Object,
                 _gQLFilterParser.Object,
-                httpContextAccessor.Object
-                );
+                httpContextAccessor.Object,
+                provider);
         }
     }
 }

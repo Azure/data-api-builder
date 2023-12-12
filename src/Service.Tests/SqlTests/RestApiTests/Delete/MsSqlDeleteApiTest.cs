@@ -4,6 +4,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
@@ -42,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MSSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>
@@ -77,7 +78,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
                     queryString: null,
                     entityNameOrPath: _integrationProcedureDeleteOne_EntityName,
                     sqlQuery: GetQuery(nameof(DeleteOneWithStoredProcedureTest)),
-                    operationType: Config.Operation.Execute,
+                    operationType: EntityActionOperation.Execute,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );

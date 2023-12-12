@@ -3,13 +3,19 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net;
 using System.Text;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Parsers;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -199,8 +205,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             PerformTest(findRequestContext,
                 _mockMetadataStore.Object,
                 expectsException: true,
-                statusCode: HttpStatusCode.NotFound,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField);
         }
 
         /// <summary>
@@ -252,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Simulated client request for composit primary key, however one of two columns do
+        /// Simulated client request for composite primary key, however one of two columns do
         /// not match DB schema.
         /// </summary>
         [TestMethod]
@@ -274,8 +280,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             PerformTest(findRequestContext, _mockMetadataStore.Object,
                         expectsException: true,
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField);
         }
 
         /// <summary>
@@ -343,7 +349,28 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             try
             {
-                RequestValidator.ValidatePrimaryKey(findRequestContext, _mockMetadataStore.Object);
+                EntitySource entitySource = new(findRequestContext.EntityName, EntitySourceType.Table, null, KeyFields: findRequestContext.PrimaryKeyValuePairs.Keys.ToArray());
+                RuntimeConfig mockConfig = new(
+                    Schema: "",
+                    DataSource: new(DatabaseType.PostgreSQL, "", new()),
+                    Runtime: new(
+                        Rest: new(Path: "/api"),
+                        GraphQL: new(),
+                        Host: new(Cors: null, Authentication: null)
+                        ),
+                    Entities: new(new Dictionary<string, Entity>()
+                    {
+                        { DEFAULT_NAME, new Entity(entitySource, new EntityGraphQLOptions(findRequestContext.EntityName, findRequestContext.EntityName), new EntityRestOptions(new SupportedHttpVerb[0]), null, null, null) }
+                    })
+                    );
+                MockFileSystem fileSystem = new();
+                fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+                FileSystemRuntimeConfigLoader loader = new(fileSystem);
+                RuntimeConfigProvider provider = new(loader);
+                Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+                metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<String>())).Returns(_mockMetadataStore.Object);
+                RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
+                requestValidator.ValidatePrimaryKey(findRequestContext);
 
                 //If expecting an exception, the code should not reach this point.
                 if (expectsException)

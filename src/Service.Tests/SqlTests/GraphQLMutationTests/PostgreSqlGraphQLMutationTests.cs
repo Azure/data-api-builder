@@ -12,8 +12,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
     public class PostgreSqlGraphQLMutationTests : GraphQLMutationTestBase
     {
         private static string _invalidForeignKeyError =
-            "23503: insert or update on table \\u0022books\\u0022 " +
-            "violates foreign key constraint \\u0022book_publisher_fk\\u0022";
+            "23503: insert or update on table \\\"books\\\" " +
+            "violates foreign key constraint \\\"book_publisher_fk\\\"";
 
         #region Test Fixture Setup
         /// <summary>
@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>
@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing.
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing.
         /// </summary>
         [TestMethod]
         public async Task InsertMutationWithVariablesAndMappings()
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
         /// of the column2 value update for the record where column1 = $id.
         /// </summary>
         [TestMethod]
@@ -256,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
         /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
         /// </summary>
         [TestMethod]
@@ -577,6 +577,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             await InsertIntoInsertableComplexView(postgresQuery);
         }
 
+        /// <inheritdoc/>
+        [TestMethod]
+        [Ignore]
+        public override Task ExecuteMutationWithOnlyTypenameInSelectionSet()
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         #region Negative Tests
@@ -642,11 +650,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// placement
         /// </summary>
         [TestMethod]
-        public async Task TestViolatingOneToOneRelashionShip()
+        public async Task TestViolatingOneToOneRelationship()
         {
             string errorMessage = "23505: duplicate key value violates unique constraint " +
-                                  "\\u0022book_website_placements_book_id_key\\u0022";
-            await TestViolatingOneToOneRelashionShip(errorMessage);
+                                  "\\\"book_website_placements_book_id_key\\\"";
+            await TestViolatingOneToOneRelationship(errorMessage);
         }
 
         [TestMethod]

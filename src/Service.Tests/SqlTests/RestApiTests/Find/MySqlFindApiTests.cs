@@ -27,6 +27,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindByDateTimePKTest",
+                @"
+                  SELECT JSON_OBJECT('categoryid', categoryid, 'pieceid', pieceid, 'instant', instant,
+                                        'price', price, 'is_wholesale_price', is_wholesale_price) AS data
+                  FROM (
+                      SELECT categoryid, pieceid, instant, price, if(is_wholesale_price = 1, cast(TRUE as json), cast(FALSE as json)) AS is_wholesale_price
+                      FROM " + _tableWithDateTimePK + @"
+                       WHERE categoryid = 2 AND pieceid = 1 AND instant = '2023-08-21 15:11:04'
+                      LIMIT 1
+                  ) AS subq"
+            },
+            {
                 "FindEmptyTable",
                 @"
                     SELECT JSON_OBJECT('id', id) AS data
@@ -59,13 +71,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindViewAll",
                 @"
-                  SELECT JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title, 'publisher_id', publisher_id)) AS data
                   FROM (
                       SELECT *
                       FROM " + _simple_all_books + @"
-                      WHERE id = 2
                       ORDER BY id asc
-                      LIMIT 1
                   ) AS subq"
             },
             {
@@ -116,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
-                "FindByIdTestWithQueryStringFieldsOnView",
+                "FindByIdTestWithSelectFieldsOnView",
                 @"
                   SELECT JSON_OBJECT('id', id, 'title', title) AS data
                   FROM (
@@ -414,9 +424,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithPrimaryKeyContainingForeignKey",
                 @"
-                    SELECT JSON_OBJECT('id', id, 'book_id', book_id, 'content', content) AS data
+                    SELECT JSON_OBJECT('id', id, 'content', content) AS data
                     FROM (
-                        SELECT id, book_id, content
+                        SELECT id, content
                         FROM reviews" + @"
                         WHERE id = 567 AND book_id = 1
                         ORDER BY id asc
@@ -737,9 +747,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithSingleMappedFieldsToBeReturned",
                 @"
-                  SELECT JSON_ARRAYAGG(JSON_OBJECT('treeId', treeId, 'Scientific Name', species)) AS data
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('Scientific Name', species)) AS data
                   FROM (
-                      SELECT treeId, species
+                      SELECT species
                       FROM " + _integrationMappingTable + @"
                   ) AS subq"
             },
@@ -819,6 +829,151 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                       ORDER BY id asc
                       LIMIT 101
                   ) AS subq"
+            },
+            {
+                "FindByIdTestWithSelectFieldsOnViewWithoutKeyFields",
+                @"
+                  SELECT JSON_OBJECT('title', title) AS data
+                  FROM (
+                      SELECT title
+                      FROM " + _simple_all_books + @"
+                      WHERE id = 1
+                  ) AS subq
+                "
+            },
+            {
+                "FindTestWithSelectFieldsWithoutKeyFieldsOnView",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('title', title)) AS data
+                  FROM (
+                      SELECT title
+                      FROM " + _simple_all_books + @"
+                      ORDER BY id asc
+                  ) AS subq
+                "
+            },
+            {
+                "FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
+                 @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName) AS data
+                    FROM (
+                        SELECT categoryid, categoryName
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 1 AND pieceid = 1
+                    ) AS subq
+                 "
+            },
+            {
+                "FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
+                    FROM (
+                        SELECT categoryid, categoryName, ROW_NUMBER() OVER(ORDER BY categoryid asc, pieceid asc)
+                        FROM " + _simple_subset_stocks + @"    
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
+                @"
+                    SELECT JSON_OBJECT('categoryName', categoryName) AS data
+                    FROM (
+                        SELECT categoryName
+                        FROM " + _simple_subset_stocks + @"
+                        WHERE categoryid = 1 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryName', categoryName)) AS data
+                    FROM (
+                        SELECT categoryName, ROW_NUMBER() OVER(ORDER BY categoryid asc, pieceid asc)
+                        FROM " + _simple_subset_stocks + @"
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdWithSelectFieldsWithoutPKOnTable",
+                @"
+                  SELECT JSON_OBJECT('title', title) AS data
+                  FROM (
+                      SELECT title FROM " + _integrationTableName + @"
+                      WHERE id = 1
+                  ) AS subq
+                "
+            },
+            {
+                "FindWithSelectFieldsWithoutPKOnTable",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('title', title)) AS data
+                  FROM (
+                      SELECT title FROM " + _integrationTableName + @"
+                  ) AS subq
+                "
+            },
+            {
+                "FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK",
+                @"
+                    SELECT JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName) AS data
+                    FROM (
+                        SELECT categoryid, categoryName
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectFieldsWithSomePKOnTableWithCompositePK",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
+                    FROM (
+                        SELECT categoryid, categoryName, ROW_NUMBER() OVER (order by categoryid, pieceid)
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                    ) AS subq
+                "
+            },
+            {
+                "FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK",
+                @"
+                    SELECT JSON_OBJECT('categoryName', categoryName) AS data
+                    FROM (
+                        SELECT categoryName
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 1 AND pieceid = 1     
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectFieldsWithoutPKOnTableWithCompositePK",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryName', categoryName)) AS data
+                    FROM (
+                        SELECT categoryName, ROW_NUMBER() OVER (order by categoryid, pieceid)
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"  
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectAndOrderbyQueryStringsOnViews",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('categoryid', categoryid, 'categoryName', categoryName)) AS data
+                    FROM (
+                        SELECT categoryid, categoryName, ROW_NUMBER() OVER (ORDER BY piecesAvailable asc, categoryid asc, pieceid asc)
+                        FROM " + _simple_subset_stocks + @"     
+                    ) AS subq
+                "
+            },
+            {
+                "FindWithSelectAndOrderbyQueryStringsOnTables",
+                @"
+                    SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'title', title)) AS data
+                    FROM (
+                        SELECT id, title, ROW_NUMBER() OVER (ORDER BY publisher_id asc, id asc)" + @"
+                        FROM " + _integrationTableName + @" 
+                    ) AS subq
+                "
             }
         };
 
@@ -833,7 +988,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>

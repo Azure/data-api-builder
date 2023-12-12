@@ -3,8 +3,9 @@
 
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
@@ -34,7 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: null,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
@@ -57,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _integrationMappingEntity,
                     sqlQuery: null,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
@@ -81,7 +82,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _integrationUniqueCharactersEntity,
                     sqlQuery: null,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
@@ -101,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _simple_all_books,
                     sqlQuery: null,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
@@ -112,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _simple_subset_stocks,
                     sqlQuery: null,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: null,
                     expectedStatusCode: HttpStatusCode.NoContent
                 );
@@ -136,12 +137,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: string.Empty,
                     exceptionExpected: true,
-                    expectedErrorMessage: "Not Found",
+                    expectedErrorMessage: "Could not find item with <id: 1000>",
                     expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound.ToString()
                 );
         }
 
@@ -160,12 +161,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: string.Empty,
                     exceptionExpected: true,
                     expectedErrorMessage: "The request is invalid since the primary keys: title requested were not found in the entity definition.",
-                    expectedStatusCode: HttpStatusCode.NotFound,
-                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound.ToString()
+                    expectedStatusCode: HttpStatusCode.BadRequest,
+                    expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
         }
 
@@ -183,7 +184,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: string.Empty,
                     exceptionExpected: true,
                     expectedErrorMessage: RequestValidator.PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE,
@@ -204,7 +205,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Delete,
+                operationType: EntityActionOperation.Delete,
                 requestBody: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "Parameter \"{}\" cannot be resolved as column \"id\" with type \"Int32\".",
@@ -235,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: string.Empty,
                     entityNameOrPath: _integrationEntityName,
                     sqlQuery: string.Empty,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: string.Empty,
                     exceptionExpected: true,
                     expectedErrorMessage: message,
@@ -260,7 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     queryString: null,
                     entityNameOrPath: _composite_subset_bookPub,
                     sqlQuery: null,
-                    operationType: Config.Operation.Delete,
+                    operationType: EntityActionOperation.Delete,
                     requestBody: null,
                     exceptionExpected: true,
                     expectedErrorMessage: expectedErrorMessage,

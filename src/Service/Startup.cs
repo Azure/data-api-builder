@@ -8,18 +8,27 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.AuthenticationHelpers;
-using Azure.DataApiBuilder.Service.AuthenticationHelpers.AuthenticationSimulator;
-using Azure.DataApiBuilder.Service.Authorization;
-using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers;
+using Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulator;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
+using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Parsers;
-using Azure.DataApiBuilder.Service.Resolvers;
-using Azure.DataApiBuilder.Service.Services;
-using Azure.DataApiBuilder.Service.Services.MetadataProviders;
 using HotChocolate.AspNetCore;
+using HotChocolate.Types;
+using Microsoft.ApplicationInsights;
+using Microsoft.ApplicationInsights.Channel;
+using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
@@ -30,39 +39,63 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
+using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
 {
     public class Startup
     {
         private ILogger<Startup> _logger;
-        private ILogger<RuntimeConfigProvider> _configProviderLogger;
 
         public static LogLevel MinimumLogLevel = LogLevel.Error;
 
         public static bool IsLogLevelOverriddenByCli;
 
+        public static ApplicationInsightsOptions AppInsightsOptions = new();
         public const string NO_HTTPS_REDIRECT_FLAG = "--no-https-redirect";
 
-        public Startup(IConfiguration configuration,
-            ILogger<Startup> logger,
-            ILogger<RuntimeConfigProvider> configProviderLogger)
+        public Startup(IConfiguration configuration, ILogger<Startup> logger)
         {
             Configuration = configuration;
             _logger = logger;
-            _configProviderLogger = configProviderLogger;
         }
 
         public IConfiguration Configuration { get; }
 
+        /// <summary>
+        /// Useful in cases where we need to:
+        /// Send telemetry data to a custom endpoint that is not supported by the default telemetry channel.
+        /// Modify the telemetry data before it is sent, such as adding custom properties or filtering out sensitive data.
+        /// Implement custom retry logic or error handling for telemetry data that fails to send.
+        /// For testing purposes.
+        /// </summary>
+        public static ITelemetryChannel? CustomTelemetryChannel { get; set; }
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            RuntimeConfigPath runtimeConfigPath = new();
-            Configuration.Bind(runtimeConfigPath);
+            string configFileName = Configuration.GetValue<string>("ConfigFileName", FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            string? connectionString = Configuration.GetValue<string?>(
+                FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
+                null);
+            IFileSystem fileSystem = new FileSystem();
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
+            RuntimeConfigProvider configProvider = new(configLoader);
 
-            RuntimeConfigProvider runtimeConfigurationProvider = new(runtimeConfigPath, _configProviderLogger);
-            services.AddSingleton(runtimeConfigurationProvider);
+            services.AddSingleton(fileSystem);
+            services.AddSingleton(configProvider);
+            services.AddSingleton(configLoader);
+
+            if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
+                && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
+            {
+                // Add ApplicationTelemetry service and register
+                // custom ITelemetryInitializer implementation with the dependency injection
+                services.AddApplicationInsightsTelemetry();
+                services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            }
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
@@ -80,86 +113,10 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<SqlQueryEngine>();
             });
 
-            services.AddSingleton<IQueryEngine>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
-
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmosdb_nosql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosQueryEngine>(serviceProvider);
-                    case DatabaseType.mssql:
-                    case DatabaseType.postgresql:
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlQueryEngine>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
-            });
-
-            services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
-
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmosdb_nosql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosMutationEngine>(serviceProvider);
-                    case DatabaseType.mssql:
-                    case DatabaseType.postgresql:
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<SqlMutationEngine>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
-            });
-
             services.AddSingleton<ILogger<IQueryExecutor>>(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<IQueryExecutor>();
-            });
-            services.AddSingleton<IQueryExecutor>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
-
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmosdb_nosql:
-                        return null!;
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryExecutor>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlQueryExecutor>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryExecutor>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(
-                            runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
-            });
-
-            services.AddSingleton<IQueryBuilder>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
-
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmosdb_nosql:
-                        return null!;
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlQueryBuilder>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgresQueryBuilder>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlQueryBuilder>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
             });
 
             services.AddSingleton<ILogger<ISqlMetadataProvider>>(implementationFactory: (serviceProvider) =>
@@ -168,50 +125,20 @@ namespace Azure.DataApiBuilder.Service
                 return loggerFactory.CreateLogger<ISqlMetadataProvider>();
             });
 
-            services.AddSingleton<ISqlMetadataProvider>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+            // Below are the factory registrations that will enable multiple databases scenario.
+            // within these factories the various instances will be created based on the database type and datasourceName.
+            services.AddSingleton<IAbstractQueryManagerFactory, QueryManagerFactory>();
 
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmosdb_nosql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<CosmosSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlMetadataProvider>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlMetadataProvider>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
-            });
+            services.AddSingleton<IQueryEngineFactory, QueryEngineFactory>();
 
-            services.AddSingleton<DbExceptionParser>(implementationFactory: (serviceProvider) =>
-            {
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                RuntimeConfig runtimeConfig = configProvider.GetRuntimeConfiguration();
+            services.AddSingleton<IMutationEngineFactory, MutationEngineFactory>();
 
-                switch (runtimeConfig.DatabaseType)
-                {
-                    case DatabaseType.cosmosdb_nosql:
-                        return null!;
-                    case DatabaseType.mssql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MsSqlDbExceptionParser>(serviceProvider);
-                    case DatabaseType.postgresql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<PostgreSqlDbExceptionParser>(serviceProvider);
-                    case DatabaseType.mysql:
-                        return ActivatorUtilities.GetServiceOrCreateInstance<MySqlDbExceptionParser>(serviceProvider);
-                    default:
-                        throw new NotSupportedException(runtimeConfig.DatabaseTypeNotSupportedMessage);
-                }
-            });
+            services.AddSingleton<IMetadataProviderFactory, MetadataProviderFactory>();
 
             services.AddSingleton<GraphQLSchemaCreator>();
             services.AddSingleton<GQLFilterParser>();
+            services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
-            services.AddSingleton<IFileSystem, FileSystem>();
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
             {
@@ -234,7 +161,7 @@ namespace Azure.DataApiBuilder.Service
             //Enable accessing HttpContext in RestService to get ClaimsPrincipal.
             services.AddHttpContextAccessor();
 
-            ConfigureAuthentication(services, runtimeConfigurationProvider);
+            ConfigureAuthentication(services, configProvider);
 
             services.AddAuthorization();
             services.AddSingleton<ILogger<IAuthorizationHandler>>(implementationFactory: (serviceProvider) =>
@@ -247,11 +174,24 @@ namespace Azure.DataApiBuilder.Service
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<IAuthorizationResolver>();
             });
+
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
+            services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
-            AddGraphQL(services);
+            AddGraphQLService(services);
+            services.AddFusionCache()
+                .WithOptions(options =>
+                {
+                    options.FactoryErrorsLogLevel = LogLevel.Debug;
+                    options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                })
+                .WithDefaultEntryOptions(new FusionCacheEntryOptions
+                {
+                    Duration = TimeSpan.FromSeconds(5)
+                });
 
+            services.AddSingleton<DabCacheService>();
             services.AddControllers();
         }
 
@@ -263,7 +203,7 @@ namespace Azure.DataApiBuilder.Service
         /// when determining whether to allow introspection requests to proceed.
         /// </summary>
         /// <param name="services">Service Collection</param>
-        private void AddGraphQL(IServiceCollection services)
+        private void AddGraphQLService(IServiceCollection services)
         {
             services.AddGraphQLServer()
                     .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
@@ -280,15 +220,13 @@ namespace Azure.DataApiBuilder.Service
                     {
                         if (error.Exception is not null)
                         {
-                            _logger.LogError(error.Exception.Message);
-                            _logger.LogError(error.Exception.StackTrace);
+                            _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
                             return error.WithMessage(error.Exception.Message);
                         }
 
                         if (error.Code is not null)
                         {
-                            _logger.LogError(error.Code);
-                            _logger.LogError(error.Message);
+                            _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
                             return error.WithMessage(error.Message);
                         }
 
@@ -312,29 +250,30 @@ namespace Azure.DataApiBuilder.Service
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
-            if (runtimeConfigProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+            FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
+
+            if (runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
             {
+                // Configure Application Insights Telemetry
+                ConfigureApplicationInsightsTelemetry(app, runtimeConfig);
+
                 // Config provided before starting the engine.
                 isRuntimeReady = PerformOnConfigChangeAsync(app).Result;
-                if (_logger is not null && runtimeConfigProvider.RuntimeConfigPath is not null)
-                {
-                    _logger.LogInformation($"Loading config file: {runtimeConfigProvider.RuntimeConfigPath.ConfigFileName}");
-                }
 
                 if (!isRuntimeReady)
                 {
                     // Exiting if config provided is Invalid.
                     if (_logger is not null)
                     {
-                        _logger.LogError("Exiting the runtime engine...");
+                        _logger.LogError(
+                            message: "Could not initialize the engine with the runtime config file: {configFilePath}",
+                            fileSystemRuntimeConfigLoader.ConfigFilePath);
                     }
 
-                    throw new ApplicationException(
-                        "Could not initialize the engine with the runtime config file: " +
-                        $"{runtimeConfigProvider.RuntimeConfigPath?.ConfigFileName}");
+                    hostLifetime.StopApplication();
                 }
             }
             else
@@ -352,7 +291,7 @@ namespace Azure.DataApiBuilder.Service
                 app.UseDeveloperExceptionPage();
             }
 
-            if (!RuntimeConfigProvider.IsHttpsRedirectionDisabled)
+            if (!Program.IsHttpsRedirectionDisabled)
             {
                 app.UseHttpsRedirection();
             }
@@ -361,14 +300,26 @@ namespace Azure.DataApiBuilder.Service
             // https://andrewlock.net/understanding-pathbase-in-aspnetcore/#placing-usepathbase-in-the-correct-location
             app.UseCorrelationIdMiddleware();
             app.UsePathRewriteMiddleware();
+
+            // SwaggerUI visualization of the OpenAPI description document is only available
+            // in developer mode in alignment with the restriction placed on ChilliCream's BananaCakePop IDE.
+            // Consequently, SwaggerUI is not presented in a StaticWebApps (late-bound config) environment.
+            if (IsUIEnabled(runtimeConfig, env))
+            {
+                app.UseSwaggerUI(c =>
+                {
+                    c.ConfigObject.Urls = new SwaggerEndpointMapper(app.ApplicationServices.GetService<RuntimeConfigProvider?>());
+                });
+            }
+
             app.UseRouting();
 
             // Adding CORS Middleware
-            if (runtimeConfig is not null && runtimeConfig.HostGlobalSettings.Cors is not null)
+            if (runtimeConfig is not null && runtimeConfig.Runtime?.Host?.Cors is not null)
             {
                 app.UseCors(CORSPolicyBuilder =>
                 {
-                    Cors corsConfig = runtimeConfig.HostGlobalSettings.Cors;
+                    CorsOptions corsConfig = runtimeConfig.Runtime.Host.Cors;
                     ConfigureCors(CORSPolicyBuilder, corsConfig);
                 });
             }
@@ -419,12 +370,12 @@ namespace Azure.DataApiBuilder.Service
             {
                 endpoints.MapControllers();
 
-                endpoints.MapGraphQL(GlobalSettings.GRAPHQL_DEFAULT_PATH).WithOptions(new GraphQLServerOptions
+                endpoints.MapGraphQL(GraphQLRuntimeOptions.DEFAULT_PATH).WithOptions(new GraphQLServerOptions
                 {
                     Tool = {
                         // Determines if accessing the endpoint from a browser
                         // will load the GraphQL Banana Cake Pop IDE.
-                        Enable = runtimeConfigProvider.IsDeveloperMode() || env.IsDevelopment()
+                        Enable = IsUIEnabled(runtimeConfig, env)
                     }
                 });
 
@@ -447,7 +398,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         public static LogLevel GetLogLevelBasedOnMode(RuntimeConfig runtimeConfig)
         {
-            if (runtimeConfig.HostGlobalSettings.Mode == HostModeType.Development)
+            if (runtimeConfig.IsDevelopmentMode())
             {
                 return LogLevel.Debug;
             }
@@ -469,13 +420,15 @@ namespace Azure.DataApiBuilder.Service
                 // If runtime config is available, set the loglevel to Error if host.mode is Production,
                 // Debug if it is Development.
                 RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
-                if (configProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig))
+                if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
                     MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
                 }
             }
 
-            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel);
+            TelemetryClient? appTelemetryClient = serviceProvider.GetService<TelemetryClient>();
+
+            return Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
         }
 
         /// <summary>
@@ -489,27 +442,30 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
         private void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
         {
-            if (runtimeConfigurationProvider.TryGetRuntimeConfiguration(out RuntimeConfig? runtimeConfig) && runtimeConfig.AuthNConfig != null)
+            if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) &&
+                runtimeConfig.Runtime?.Host?.Authentication is not null)
             {
-                if (runtimeConfig.IsJwtConfiguredIdentityProvider())
+                AuthenticationOptions authOptions = runtimeConfig.Runtime.Host.Authentication;
+                HostMode mode = runtimeConfig.Runtime.Host.Mode;
+                if (!authOptions.IsAuthenticationSimulatorEnabled() && !authOptions.IsEasyAuthAuthenticationProvider())
                 {
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
                     {
-                        options.Audience = runtimeConfig.AuthNConfig.Jwt!.Audience;
-                        options.Authority = runtimeConfig.AuthNConfig.Jwt!.Issuer;
+                        options.Audience = authOptions.Jwt!.Audience;
+                        options.Authority = authOptions.Jwt!.Issuer;
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
                         {
-                            // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInrole()
+                            // Instructs the asp.net core middleware to use the data in the "roles" claim for User.IsInRole()
                             // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
-                            RoleClaimType = AuthenticationConfig.ROLE_CLAIM_TYPE
+                            RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                         };
                     });
                 }
-                else if (runtimeConfig.IsEasyAuthAuthenticationProvider())
+                else if (authOptions.IsEasyAuthAuthenticationProvider())
                 {
-                    EasyAuthType easyAuthType = (EasyAuthType)Enum.Parse(typeof(EasyAuthType), runtimeConfig.AuthNConfig.Provider, ignoreCase: true);
-                    bool isProductionMode = !runtimeConfigurationProvider.IsDeveloperMode();
+                    EasyAuthType easyAuthType = EnumExtensions.Deserialize<EasyAuthType>(runtimeConfig.Runtime.Host.Authentication.Provider);
+                    bool isProductionMode = mode != HostMode.Development;
                     bool appServiceEnvironmentDetected = AppServiceAuthenticationInfo.AreExpectedAppServiceEnvVarsPresent();
 
                     if (easyAuthType == EasyAuthType.AppService && !appServiceEnvironmentDetected)
@@ -530,7 +486,7 @@ namespace Azure.DataApiBuilder.Service
                     services.AddAuthentication(EasyAuthAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddEasyAuthAuthentication(easyAuthAuthenticationProvider: easyAuthType);
                 }
-                else if (runtimeConfigurationProvider.IsDeveloperMode() && runtimeConfig.IsAuthenticationSimulatorEnabled())
+                else if (mode == HostMode.Development && authOptions.IsAuthenticationSimulatorEnabled())
                 {
                     services.AddAuthentication(SimulatorAuthenticationDefaults.AUTHENTICATIONSCHEME)
                         .AddSimulatorAuthentication();
@@ -550,6 +506,55 @@ namespace Azure.DataApiBuilder.Service
                 // Sets EasyAuth as the default authentication scheme when runtime configuration
                 // is not present.
                 SetStaticWebAppsAuthentication(services);
+            }
+        }
+
+        /// <summary>
+        /// Configure Application Insights Telemetry based on the loaded runtime configuration. If Application Insights
+        /// is enabled, we can track different events and metrics.
+        /// </summary>
+        /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
+        /// <seealso cref="https://docs.microsoft.com/en-us/azure/azure-monitor/app/asp-net-core#enable-application-insights-telemetry-collection"/>
+        private void ConfigureApplicationInsightsTelemetry(IApplicationBuilder app, RuntimeConfig runtimeConfig)
+        {
+            if (runtimeConfig?.Runtime?.Telemetry is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights is not null)
+            {
+                AppInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
+
+                if (!AppInsightsOptions.Enabled)
+                {
+                    _logger.LogInformation("Application Insights are disabled.");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(AppInsightsOptions.ConnectionString))
+                {
+                    _logger.LogWarning("Logs won't be sent to Application Insights because an Application Insights connection string is not available in the runtime config.");
+                    return;
+                }
+
+                TelemetryClient? appTelemetryClient = app.ApplicationServices.GetService<TelemetryClient>();
+
+                if (appTelemetryClient is null)
+                {
+                    _logger.LogError("Telemetry client is not initialized.");
+                    return;
+                }
+
+                // Update the TelemetryConfiguration object
+                TelemetryConfiguration telemetryConfiguration = appTelemetryClient.TelemetryConfiguration;
+                telemetryConfiguration.ConnectionString = AppInsightsOptions.ConnectionString;
+
+                // Update default telemetry channel to custom provided telemetry channel
+                if (CustomTelemetryChannel is not null)
+                {
+                    telemetryConfiguration.TelemetryChannel = CustomTelemetryChannel;
+                }
+
+                // Updating Startup Logger to Log from Startup Class.
+                ILoggerFactory? loggerFactory = Program.GetLoggerFactoryForLogLevel(MinimumLogLevel, appTelemetryClient);
+                _logger = loggerFactory.CreateLogger<Startup>();
             }
         }
 
@@ -574,28 +579,26 @@ namespace Azure.DataApiBuilder.Service
             try
             {
                 RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
-                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetRuntimeConfiguration();
+                RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
 
-                runtimeConfigValidator.ValidateConfig();
+                runtimeConfigValidator.ValidateConfigProperties();
 
-                if (runtimeConfigProvider.IsDeveloperMode())
+                if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
-                // Pre-process the permissions section in the runtime config.
-                runtimeConfigValidator.ProcessPermissionsInConfig(runtimeConfig);
+                IMetadataProviderFactory sqlMetadataProviderFactory =
+                    app.ApplicationServices.GetRequiredService<IMetadataProviderFactory>();
 
-                ISqlMetadataProvider sqlMetadataProvider =
-                    app.ApplicationServices.GetRequiredService<ISqlMetadataProvider>();
-
-                if (sqlMetadataProvider is not null)
+                if (sqlMetadataProviderFactory is not null)
                 {
-                    await sqlMetadataProvider.InitializeAsync();
+                    await sqlMetadataProviderFactory.InitializeAsync();
                 }
 
                 // Manually trigger DI service instantiation of GraphQLSchemaCreator and RestService
@@ -612,23 +615,35 @@ namespace Azure.DataApiBuilder.Service
 
                 if (graphQLSchemaCreator is null || restService is null)
                 {
-                    _logger.LogError($"Endpoint service initialization failed");
+                    _logger.LogError("Endpoint service initialization failed.");
                 }
 
-                if (runtimeConfigProvider.IsDeveloperMode())
+                if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProvider!);
+                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProviderFactory!);
                 }
 
-                runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProvider!);
+                // Attempt to create OpenAPI document.
+                // Errors must not crash nor halt the intialization of the engine
+                // because OpenAPI document creation is not required for the engine to operate.
+                // Errors will be logged.
+                try
+                {
+                    IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
+                    openApiDocumentor.CreateDocument();
+                }
+                catch (DataApiBuilderException dabException)
+                {
+                    _logger.LogError(exception: dabException, message: "OpenAPI Documentor initialization failed.");
+                }
 
-                _logger.LogInformation($"Successfully completed runtime initialization.");
+                _logger.LogInformation("Successfully completed runtime initialization.");
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Unable to complete runtime initialization. Refer to exception for error details.");
+                _logger.LogError(exception: ex, message: "Unable to complete runtime initialization. Refer to exception for error details.");
                 return false;
             }
         }
@@ -640,7 +655,7 @@ namespace Azure.DataApiBuilder.Service
         /// <param name="builder"> The CorsPolicyBuilder that will be used to build the policy </param>
         /// <param name="corsConfig"> The cors runtime configuration specifying the allowed origins and whether credentials can be included in requests </param>
         /// <returns> The built cors policy </returns>
-        public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, Cors corsConfig)
+        public static CorsPolicy ConfigureCors(CorsPolicyBuilder builder, CorsOptions corsConfig)
         {
             string[] Origins = corsConfig.Origins is not null ? corsConfig.Origins : Array.Empty<string>();
             if (corsConfig.AllowCredentials)
@@ -662,6 +677,14 @@ namespace Azure.DataApiBuilder.Service
                     .SetIsOriginAllowedToAllowWildcardSubdomains()
                     .Build();
             }
+        }
+
+        /// <summary>
+        /// Indicates whether to provide UI visualization of REST(via Swagger) or GraphQL (via Banana CakePop).
+        /// </summary>
+        private static bool IsUIEnabled(RuntimeConfig? runtimeConfig, IWebHostEnvironment env)
+        {
+            return (runtimeConfig is not null && runtimeConfig.IsDevelopmentMode()) || env.IsDevelopment();
         }
     }
 }

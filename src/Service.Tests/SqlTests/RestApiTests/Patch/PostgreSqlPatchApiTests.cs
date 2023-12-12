@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -118,6 +119,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                 "
             },
             {
+                "PatchOneUpdateWithDatabasePolicy",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 100 AND pieceid = 99 AND ""categoryName"" = 'Historical'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 0 AND pieceid != 1
+                    ) AS subq
+                "
+            },
+            {
                 "PatchOne_Update_Default_Test",
                 @"
                     SELECT to_jsonb(subq) AS data
@@ -149,6 +162,41 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         FROM " + _Composite_NonAutoGenPK_TableName + @"
                         WHERE categoryid = 1 AND pieceid = 1 AND ""categoryName"" = ''
                             AND ""piecesAvailable"" = 10 AND ""piecesRequired"" = 0
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneUpdateWithReadOnlyFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, item_name, subtotal, tax, total
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND item_name = 'Shoes' AND subtotal = 100
+                            AND tax = 50 AND total = 150
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneUpdateWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 1 AND book_name = 'New book' AND copies_sold = 50
+                    ) AS subq
+                "
+            },
+            {
+                "PatchOneInsertWithComputedFieldMissingFromRequestBody",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, last_sold_on, last_sold_on_date
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'New book' AND copies_sold = 50 AND last_sold_on = '9999-12-31 23:59:59.997'
+                        AND last_sold_on_date = '9999-12-31 23:59:59.997'
                     ) AS subq
                 "
             },
@@ -193,6 +241,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
                         LIMIT 1
                     ) AS subq
                 "
+            },
+            {
+                "PatchOne_Update_NoReadTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title, publisher_id
+                        FROM " + _integrationTableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "Patch_Update_WithExcludeFieldsTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE id = 8 AND title = 'Heart of Darkness' AND publisher_id = 2324
+                    ) AS subq
+                "
+            },
+            {
+                "PatchInsert_NoReadTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""categoryName"", ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE 0 = 1
+                    ) AS subq
+                "
+            },
+            {
+                "Patch_Insert_WithExcludeFieldsTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT categoryid, pieceid, ""piecesAvailable"", ""piecesRequired""
+                        FROM " + _Composite_NonAutoGenPK_TableName + @"
+                        WHERE categoryid = 0 AND pieceid = 7 AND ""categoryName"" = 'SciFi'
+                            AND ""piecesAvailable"" = 4 AND ""piecesRequired"" = 4
+                    ) AS subq
+                "
             }
         };
 
@@ -207,6 +300,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
 
         #region overridden tests
 
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneUpdateWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneInsertWithUnsatisfiedDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task PatchOneInsertWithDatabasePolicy()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
         #region Test Fixture Setup
@@ -220,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Patch
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         #endregion

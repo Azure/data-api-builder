@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 result.ToString(),
                 message: errorMessage,
-                statusCode: $"{DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed}"
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure}"
             );
 
             string dbResponse = await GetDatabaseResultAsync(dbQuery);
@@ -206,6 +206,100 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual(updatedResult.RootElement.GetProperty("maxId").GetInt64(), 13);
         }
 
+        public async Task InsertMutationOnTableWithTriggerWithNonAutoGenPK(string dbQuery)
+        {
+            // Given input item { id: 4, name: ""Tommy"", salary: 45 }, this test verifies that the selection would return salary = 30.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(30,salary)).
+            string graphQLMutationName = "createInternData";
+            string graphQLMutation = @"
+                mutation{
+                    createInternData(item: { id: 4, name: ""Tommy"", salary: 45 }) {
+                        id
+                        months
+                        name
+                        salary
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        public async Task InsertMutationOnTableWithTriggerWithAutoGenPK(string dbQuery)
+        {
+            // Given input item { name: ""Joel"", salary: 102 }, this test verifies that the selection would return salary = 100.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(100,salary)).
+            string graphQLMutationName = "createFteData";
+            string graphQLMutation = @"
+                mutation{
+                    createFteData(item: { name: ""Joel"", salary: 102 }) {
+                        id
+                        u_id
+                        name
+                        position
+                        salary
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        public async Task UpdateMutationOnTableWithTriggerWithNonAutoGenPK(string dbQuery)
+        {
+            // Given input item { salary: 100 }, this test verifies that the selection would return salary = 50.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(50,salary)).
+            string graphQLMutationName = "updateInternData";
+            string graphQLMutation = @"
+                mutation{
+                    updateInternData(id: 1, months: 3, item: { salary: 100 }) {
+                        id
+                        months
+                        name
+                        salary
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        public async Task UpdateMutationOnTableWithTriggerWithAutoGenPK(string dbQuery)
+        {
+            // Given input item { salary: -9 }, this test verifies that the selection would return salary = 0.
+            // Thus confirming that we return the data being updated by the trigger where,
+            // the trigger behavior is that it updates the salary to max(0,min(150,salary)).
+            string graphQLMutationName = "updateFteData";
+            string graphQLMutation = @"
+                mutation{
+                    updateFteData(id: 1, u_id: 2, item: { salary: -9 }) {
+                        id
+                        u_id
+                        name
+                        position
+                        salary
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
         /// <summary>
         /// <code>Do: </code> Insert a new book with a given title and publisher name.
         /// and returns all the books under the given publisher.
@@ -299,6 +393,111 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Update book in database and return the typename of the entity
+        /// <code>Check: </code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        [TestMethod]
+        public async Task UpdateMutationWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLMutationName = "updatebook";
+            string graphQLMutation = @"
+                mutation {
+                    updatebook(id: 1, item: { title: ""Even Better Title"", publisher_id: 2345} ) {
+                        __typename
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = @"
+              {
+                ""__typename"": ""book""
+              }
+            ";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do :</code> Delete a book from database and return the typename of the book entity
+        /// <code>Check :</code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        [TestMethod]
+        public async Task DeleteMutationWithOnlyTypename()
+        {
+            string graphQLMutationName = "deletebook";
+            string graphQLMutation = @"
+                mutation {
+                    deletebook(id: 1) {
+                        __typename
+                    }
+                }
+            ";
+
+            string expected = @"
+              {
+                ""__typename"": ""book""
+              }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code>Inserts a new book in database and returns the typename of the book entity
+        /// <code>Check: </code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLMutationName = "createbook";
+            string graphQLMutation = @"
+                mutation {
+                    createbook(item: { title: ""Awesome Book"", publisher_id: 1234 }) {
+                        __typename
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = @"
+              {
+                ""__typename"": ""book""
+              }
+            ";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Execute a stored procedure and return the typename of the SP entity
+        /// <code>Check :</code>if the mutation executed successfully and returned the correct typename
+        /// </summary>
+        public virtual async Task ExecuteMutationWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLMutationName = "executeCountBooks";
+            string graphQLMutation = @"
+                mutation {
+                    executeCountBooks{
+                        __typename
+                    }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = @"
+              [
+                {
+                  ""__typename"": ""CountBooks""
+                }
+              ]
+            ";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
@@ -608,7 +807,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing.
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing.
         /// </summary>
         public async Task InsertMutationWithVariablesAndMappings(string dbQuery)
         {
@@ -629,7 +828,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
         /// of the column2 value update for the record where column1 = $id.
         /// </summary>
         public async Task UpdateMutationWithVariablesAndMappings(string dbQuery)
@@ -651,7 +850,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
-        /// Demonstrates that using mapped column names for fields within the GraphQL mutatation results in successful engine processing
+        /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
         /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
         /// </summary>
         public async Task DeleteMutationWithVariablesAndMappings(string dbQuery, string dbQueryToVerifyDeletion)
@@ -675,6 +874,185 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
             using JsonDocument result = JsonDocument.Parse(dbResponse);
             Assert.AreEqual(result.RootElement.GetProperty("count").GetInt64(), 0);
+        }
+
+        /// <summary>
+        /// Performs concurrent update mutations on the same item and validates that the responses
+        /// returned are consistent
+        /// gQLMutation1 : Updates the title column of Book table to New Title
+        /// gQLMutation2 : Updates the title column of Book table to Updated Title
+        /// The title field in the responses returned for each of the mutations should be
+        /// the same value it had written to the table.
+        /// </summary>
+        [TestMethod]
+        public async Task TestParallelUpdateMutations()
+        {
+            string graphQLMutationName = "updatebook";
+            string gQLMutation1 = @"
+                mutation {
+                    updatebook(id : 1, item: { title: ""New Title"" })
+                    {
+                        title
+                    }
+                }";
+
+            string gQLMutation2 = @"
+                mutation {
+                    updatebook(id : 1, item: { title: ""Updated Title"" })
+                    {
+                        title
+                    }
+                }";
+
+            Task<JsonElement> responeTask1 = ExecuteGraphQLRequestAsync(gQLMutation1, graphQLMutationName, isAuthenticated: true);
+            Task<JsonElement> responseTask2 = ExecuteGraphQLRequestAsync(gQLMutation2, graphQLMutationName, isAuthenticated: true);
+
+            JsonElement response1 = await responeTask1;
+            JsonElement response2 = await responseTask2;
+
+            Assert.AreEqual("{\"title\":\"New Title\"}", response1.ToString());
+            Assert.AreEqual("{\"title\":\"Updated Title\"}", response2.ToString());
+        }
+
+        /// <summary>
+        /// Performs concurrent insert mutation on a table where the PK is auto-generated.
+        /// Since, PK is auto-generated, essentially both the mutations are operating on
+        /// different items. Therefore, both the mutations should succeed.
+        /// </summary>
+        [TestMethod]
+        public async Task TestParallelInsertMutationPKAutoGenerated()
+        {
+            string graphQLMutationName = "createbook";
+            string graphQLMutation1 = @"
+                mutation {
+                    createbook(item: { title: ""Awesome Book"", publisher_id: 1234 }) {
+                        title
+                    }
+                }
+            ";
+
+            string graphQLMutation2 = @"
+                mutation {
+                    createbook(item: { title: ""Another Awesome Book"", publisher_id: 1234 }) {
+                        title
+                    }
+                }
+            ";
+
+            Task<JsonElement> responeTask1 = ExecuteGraphQLRequestAsync(graphQLMutation1, graphQLMutationName, isAuthenticated: true);
+            Task<JsonElement> responseTask2 = ExecuteGraphQLRequestAsync(graphQLMutation2, graphQLMutationName, isAuthenticated: true);
+
+            JsonElement response1 = await responeTask1;
+            JsonElement response2 = await responseTask2;
+
+            Assert.AreEqual("{\"title\":\"Awesome Book\"}", response1.ToString());
+            Assert.AreEqual("{\"title\":\"Another Awesome Book\"}", response2.ToString());
+
+        }
+
+        /// <summary>
+        /// Performs concurrent insert mutation on a table where the PK is not auto-generated and
+        /// validates that only one of the mutations is successful.
+        /// Both the mutations attempt to create an item with the same primary key. The mutation request
+        /// that runs first at the database layer should succeed and the other request should fail with
+        /// primary key violation constraint.
+        /// </summary>
+        [TestMethod]
+        public async Task TestParallelInsertMutationPKNonAutoGenerated()
+        {
+            string graphQLMutationName = "createComic";
+
+            string graphQLMutation1 = @"
+                mutation {
+                    createComic (item: { id : 5001, categoryName: ""Fantasy"", title: ""Harry Potter""}){
+                    id
+                    title    
+                }
+                }
+            ";
+
+            string graphQLMutation2 = @"
+                mutation {
+                    createComic (item: { id : 5001, categoryName: ""Fantasy"", title: ""Lord of the Rings""}){
+                    id
+                    title    
+                }
+                }
+            ";
+
+            Task<JsonElement> responeTask1 = ExecuteGraphQLRequestAsync(graphQLMutation1, graphQLMutationName, isAuthenticated: true);
+            Task<JsonElement> responseTask2 = ExecuteGraphQLRequestAsync(graphQLMutation2, graphQLMutationName, isAuthenticated: true);
+
+            JsonElement response1 = await responeTask1;
+            JsonElement response2 = await responseTask2;
+
+            string responseString1 = response1.ToString();
+            string responseString2 = response2.ToString();
+            string expectedStatusCode = $"{DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed}";
+
+            // It is not possible to know beforehand which mutation created the new item. So, validations
+            // are performed for the cases where either mutation could have succeeded. In each case,
+            // one of the mutation's reponse will contain a valid repsonse and the other mutation's
+            // response would contain DatabaseOperationFailed sub-status code as it would've failed at
+            // the database layer due to primary key violation constraint.
+            if (responseString1.Contains($"\"code\":\"{expectedStatusCode}\""))
+            {
+                Assert.AreEqual("{\"id\":5001,\"title\":\"Lord of the Rings\"}", responseString2);
+            }
+            else if (responseString2.Contains($"\"code\":\"{expectedStatusCode}\""))
+            {
+                Assert.AreEqual("{\"id\":5001,\"title\":\"Harry Potter\"}", responseString1);
+            }
+            else
+            {
+                Assert.Fail("Unexpected error. Atleast one of the mutations should've succeeded");
+            }
+        }
+
+        /// <summary>
+        /// Performs concurrent delete mutations on the same item and validates that only one of the
+        /// requests is successful.
+        /// </summary>
+        [TestMethod]
+        public async Task TestParallelDeleteMutations()
+        {
+            string graphQLMutationName = "deletebook";
+
+            string graphQLMutation1 = @"
+                mutation {
+                  deletebook (id: 1){
+                    id
+                    title
+                  }
+                }
+            ";
+
+            Task<JsonElement> responeTask1 = ExecuteGraphQLRequestAsync(graphQLMutation1, graphQLMutationName, isAuthenticated: true);
+            Task<JsonElement> responseTask2 = ExecuteGraphQLRequestAsync(graphQLMutation1, graphQLMutationName, isAuthenticated: true);
+
+            JsonElement response1 = await responeTask1;
+            JsonElement response2 = await responseTask2;
+
+            string responseString1 = response1.ToString();
+            string responseString2 = response2.ToString();
+            string expectedResponse = "{\"id\":1,\"title\":\"Awesome book\"}";
+
+            // The mutation request that deletes the item is expected to have a valid response
+            // and the other mutation is expected to receive an empty response as it
+            // won't see the item in the table.
+            if (responseString1.Length == 0)
+            {
+                Assert.AreEqual(expectedResponse, responseString2);
+            }
+            else if (responseString2.Length == 0)
+            {
+                Assert.AreEqual(expectedResponse, responseString1);
+            }
+            else
+            {
+                Assert.Fail("Unexpected failure. Atleast one of the delete mutations should've succeeded");
+            }
+
         }
 
         #endregion
@@ -803,14 +1181,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.EntityNotFound}");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.ItemNotFound}");
         }
 
         /// <summary>
         /// Test adding a website placement to a book which already has a website
         /// placement
         /// </summary>
-        public async Task TestViolatingOneToOneRelashionShip(string errorMessage)
+        public async Task TestViolatingOneToOneRelationship(string errorMessage)
         {
             string graphQLMutationName = "createBookWebsitePlacement";
             string graphQLMutation = @"
@@ -873,7 +1251,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             SqlTestHelper.TestForErrorInGraphQLResponse(
                 actual.ToString(),
                 message: "One or more fields referenced by the database policy are not present in the request body.",
-                statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
+                statusCode: $"{DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed}");
         }
 
         #endregion

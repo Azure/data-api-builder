@@ -2,11 +2,12 @@
 // Licensed under the MIT License.
 
 using System;
-using System.Text.Json;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.Core;
-using Azure.DataApiBuilder.Service.Configurations;
-using Azure.DataApiBuilder.Service.Resolvers;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -19,6 +20,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     [TestClass, TestCategory(TestCategory.POSTGRESQL)]
     public class PostgreSqlQueryExecutorUnitTests
     {
+        [TestInitialize]
+        public void TestInitialize()
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.POSTGRESQL);
+        }
+
+        [TestCleanup]
+        public void TestCleanup()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
         /// <summary>
         /// Validates managed identity token issued ONLY when connection string does not specify password
         /// </summary>
@@ -38,12 +51,22 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             bool expectManagedIdentityAccessToken,
             bool isDefaultAzureCredential)
         {
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestCategory.POSTGRESQL);
-            runtimeConfigProvider.GetRuntimeConfiguration().ConnectionString = connectionString;
-            Mock<DbExceptionParser> dbExceptionParser = new(runtimeConfigProvider);
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.PostgreSQL, connectionString, new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+            );
+
+            RuntimeConfigProvider provider = TestHelper.GenerateInMemoryRuntimeConfigProvider(mockConfig);
+            Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            PostgreSqlQueryExecutor postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+            PostgreSqlQueryExecutor postgreSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             const string DEFAULT_TOKEN = "Default access token";
             const string CONFIG_TOKEN = "Configuration controller access token";
@@ -61,17 +84,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
                 else
                 {
-                    await runtimeConfigProvider.Initialize(
-                        JsonSerializer.Serialize(runtimeConfigProvider.GetRuntimeConfiguration()),
-                        schema: null,
+                    await provider.Initialize(
+                        provider.GetConfig().ToJson(),
+                        graphQLSchema: null,
                         connectionString: connectionString,
                         accessToken: CONFIG_TOKEN);
-                    postgreSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
+                    postgreSqlQueryExecutor = new(provider, dbExceptionParser.Object, queryExecutorLogger.Object, httpContextAccessor.Object);
                 }
             }
 
             using NpgsqlConnection conn = new(connectionString);
-            await postgreSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await postgreSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, string.Empty);
             NpgsqlConnectionStringBuilder connStringBuilder = new(conn.ConnectionString);
 
             if (expectManagedIdentityAccessToken)

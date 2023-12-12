@@ -1,13 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using System.Web;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Resolvers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
@@ -28,13 +28,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// Tests the REST Api for FindById operation without a query string.
         /// </summary>
         [TestMethod]
-        public async Task FindByIdTest()
+        public async Task FindByPKTest()
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "id/2",
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
-                sqlQuery: GetQuery(nameof(FindByIdTest))
+                sqlQuery: GetQuery("FindByIdTest")
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for FindByDateTimePk operation without a query string.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task FindByDateTimePKTest()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/2/pieceid/1/instant/2023-08-21T15:11:04",
+                queryString: string.Empty,
+                entityNameOrPath: _tableWithDateTimePK,
+                sqlQuery: GetQuery("FindByDateTimePKTest")
             );
         }
 
@@ -49,8 +63,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
-                operationType: Config.Operation.Execute,
-                restHttpVerb: Config.RestMethod.Get,
+                operationType: EntityActionOperation.Execute,
+                restHttpVerb: SupportedHttpVerb.Get,
                 sqlQuery: GetQuery("FindManyStoredProcedureTest"),
                 expectJson: false
                 );
@@ -67,8 +81,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 primaryKeyRoute: string.Empty,
                 queryString: "?id=1",
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
-                operationType: Config.Operation.Execute,
-                restHttpVerb: Config.RestMethod.Get,
+                operationType: EntityActionOperation.Execute,
+                restHttpVerb: SupportedHttpVerb.Get,
                 sqlQuery: GetQuery("FindOneStoredProcedureTestUsingParameter"),
                 expectJson: false
                 );
@@ -113,39 +127,291 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: GetQuery("FindOnTableWithUniqueCharacters"));
         }
 
-        ///<summary>
-        /// Tests the Rest Api for GET operations on Database Views,
-        /// either simple or composite.
-        ///</summary>
+        /// <summary>
+        /// Validates that a Find request on a single item with $select with only non-PK fields
+        /// returns only the selected fields and does not contain PK fields.
+        /// </summary>
         [TestMethod]
-        public virtual async Task FindOnViews()
+        public async Task FindByIdTestWithSelectFieldsWithoutPKOnATable()
         {
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2",
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=title",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTable")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request on a list of items with $select with only non-PK fields
+        /// returns only those fields and does not contain PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithoutPKOnATable()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=title",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTable")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a table with a composite PK on a single item
+        /// with $select containing some PK fields returns only the selected fields
+        /// and does not contain all the PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldWithSomePKFieldsOnATableWithCompositePK()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithSomePKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a table with a composite PK on a list of items
+        /// with $select containing some PK fields returns only the selected fields
+        /// and does not contain all the PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsContainingSomePKOnATableWithCompositePK()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithSomePKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a table with a composite PK on a single item
+        /// with $select containing no PK fields returns only the selected fields
+        /// and does not contain any PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsWithoutPKOnATableWithCompositePK()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("FindByIdWithSelectFieldsWithoutPKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a table with a composite PK on a list of items
+        /// with $select containing no PK fields returns only the selected fields
+        /// and does not contain any PK fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithoutPKOnATableWithCompositePK()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
+                sqlQuery: GetQuery("FindWithSelectFieldsWithoutPKOnTableWithCompositePK")
+            );
+        }
+
+        /// <summary>
+        /// Validates the repsonse when both $select and $orderby query strings are
+        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// fields requested in $select clause.
+        /// This test is executed against a table.
+        /// </summary>
+        [TestMethod]
+        public async Task FindWithSelectAndOrderByQueryStringsOnATable()
+        {
+            // Validates that a Find request on a table with $select and $orderby query strings
+            // returns only the fields selected in $select query string and does not contain
+            // $orderby fields.
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=id,title&$orderby=publisher_id",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: GetQuery("FindWithSelectAndOrderbyQueryStringsOnTables")
+            );
+        }
+
+        /// <summary>
+        /// Validates the repsonse when both $select and $orderby query strings are
+        /// used with Find API reqeusts. The response is expected to contain only the 
+        /// fields requested in $select clause.
+        /// This test is executed against a view.
+        /// </summary>
+        [TestMethod]
+        public async Task FindWithSelectAndOrderByQueryStringsOnAView()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName&$orderby=piecesAvailable",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindWithSelectAndOrderbyQueryStringsOnViews")
+            );
+        }
+
+        /// <summary>
+        /// Validates the response when a Find request to select all items is executed
+        /// against a view.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestOnAView()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _simple_all_books,
                 sqlQuery: GetQuery("FindViewAll")
             );
+        }
 
+        /// <summary>
+        /// Validates the response when a Find request is executed against a view
+        /// which has mapping defined on the key field.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestOnAViewWithMappingDefinedOnKeyField()
+        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=book_id",
                 entityNameOrPath: _book_view_with_key_and_mapping,
                 sqlQuery: GetQuery("FindViewWithKeyAndMapping")
             );
+        }
 
+        /// <summary>
+        /// Validates the response when a Find request to select a single item is
+        /// executed against a view with multiple key-fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestOnAViewWithMultipleKeyFields()
+        {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: "categoryid/2/pieceid/1",
                 queryString: string.Empty,
                 entityNameOrPath: _simple_subset_stocks,
                 sqlQuery: GetQuery("FindViewSelected")
             );
+        }
 
+        /// <summary>
+        /// Validates that a Find request against a view on a list of items with
+        /// $select with only non-key fields
+        /// returns only the selected fields and does not contain key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithoutKeyFieldsOnView()
+        {
             await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/2/pub_id/1234",
-                queryString: string.Empty,
-                entityNameOrPath: _composite_subset_bookPub,
-                sqlQuery: GetQuery("FindBooksPubViewComposite")
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithoutKeyFieldsOnView")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view with multiple key-fields on a list of items with
+        /// $select with some key fields
+        /// returns only the selected fields and does not contain all the key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view with multiple key fields on a list of items with
+        /// $select with no key fields returns only the selected fields and
+        /// does not contain any key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view on a single item with
+        /// $select with key and non-key fields
+        /// returns only the selected fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsOnView()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=id,title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsOnView")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view on a single item with
+        /// $select with only non-key fields returns only the selected fields
+        /// and does not contain key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsOnViewWithoutKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "id/1",
+                queryString: "?$select=title",
+                entityNameOrPath: _simple_all_books,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsOnViewWithoutKeyFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view with multiple key-fields on a single item with
+        /// $select with some key fields returns only the selected fields
+        /// and does not contain all the key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryid,categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithSomeKeyFieldsOnViewWithMultipleKeyFields")
+            );
+        }
+
+        /// <summary>
+        /// Validates that a Find request against a view with multiple key fields on a single item with
+        /// $select with no key fields
+        /// returns only the selected fields and does not contain any key fields.
+        /// </summary>
+        [TestMethod]
+        public async Task FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: "categoryid/1/pieceid/1",
+                queryString: "?$select=categoryName",
+                entityNameOrPath: _simple_subset_stocks,
+                sqlQuery: GetQuery("FindByIdTestWithSelectFieldsWithoutKeyFieldsOnViewWithMultipleKeyFields")
             );
         }
 
@@ -161,13 +427,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?$filter=id ge 4",
                 entityNameOrPath: _simple_all_books,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneGeFilterOnView")
-            );
-
-            await SetupAndRunRestApiTest(
-                primaryKeyRoute: "id/1",
-                queryString: "?$select=id,title",
-                entityNameOrPath: _simple_all_books,
-                sqlQuery: GetQuery("FindByIdTestWithQueryStringFieldsOnView")
             );
 
             await SetupAndRunRestApiTest(
@@ -436,13 +695,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -456,13 +715,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTest_NoQueryParams_PaginationNextLink()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":100,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"bookmarks\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _integrationPaginationEntityName,
                 sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink)),
-                expectedAfterQueryString: $"?$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"?$after={after}",
                 paginated: true
             );
         }
@@ -478,13 +737,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTest_OrderByNotFirstQueryParam_PaginationNextLink()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":100,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"bookmarks\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$select=id",
                 entityNameOrPath: _integrationPaginationEntityName,
                 sqlQuery: GetQuery(nameof(FindTest_OrderByNotFirstQueryParam_PaginationNextLink)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -497,14 +756,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPagination()
         {
-            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -516,10 +775,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithAfterSingleKeyPagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":7,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Books\",\"FieldName\":\"id\",\"FieldValue\":7,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={Uri.EscapeDataString(after)}",
+                queryString: $"?$after={after}",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterSingleKeyPagination))
             );
@@ -532,12 +791,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithAfterMultiKeyPagination()
         {
-            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Reviews\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Reviews\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
 
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                queryString: $"?$after={SqlPaginationUtil.Base64Encode(after)}",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithAfterMultiKeyPagination))
             );
@@ -551,13 +810,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithPaginationVerifSinglePrimaryKeyInAfter()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=1",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifSinglePrimaryKeyInAfter)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -570,14 +829,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithPaginationVerifMultiplePrimaryKeysInAfter()
         {
-            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=1",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithPaginationVerifMultiplePrimaryKeysInAfter)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -606,14 +865,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindMany_MappedColumn_NoOrderByQueryParameter()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":100,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"mappedbookmarks\",\"ColumnName\":\"bkid\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"MappedBookmarks\",\"FieldName\":\"bkid\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: string.Empty,
                 entityNameOrPath: _integrationMappedPaginationEntityName,
                 sqlQuery: GetQuery(nameof(FindMany_MappedColumn_NoOrderByQueryParameter)),
                 paginated: true,
-                expectedAfterQueryString: $"?$after={Uri.EscapeDataString(after)}"
+                expectedAfterQueryString: $"?$after={after}"
             );
         }
 
@@ -672,14 +931,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstAndSpacedColumnOrderBy()
         {
-            string after = $"[{{\"Value\":\"Belfort\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"brokers\",\"ColumnName\":\"Last Name\"}}," +
-                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"brokers\",\"ColumnName\":\"ID Number\"}}]";
+            string after = $"[{{\"EntityName\":\"Broker\",\"FieldName\":\"Last Name\",\"FieldValue\":\"Belfort\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Broker\",\"FieldName\":\"ID Number\",\"FieldValue\":2,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby='Last Name'",
                 entityNameOrPath: _integrationEntityHasColumnWithSpace,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndSpacedColumnOrderBy)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
 
             );
@@ -708,14 +967,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"Value\":\"Also Awesome book\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"title\"}}," +
-                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"Also Awesome book\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":2,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=title",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyPaginationAndOrderBy)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -728,13 +987,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstSingleKeyIncludedInOrderByAndPagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":1,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=id",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstSingleKeyIncludedInOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -747,13 +1006,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstTwoOrderByAndPagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]");
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":2,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=2&$orderby=id",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstTwoOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(after)}",
+                expectedAfterQueryString: $"&$after={after}",
                 paginated: true
             );
         }
@@ -766,10 +1025,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstTwoVerifyAfterFormedCorrectlyWithOrderBy()
         {
-            string after = $"[{{\"Value\":\"2001-01-01\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"birthdate\"}}," +
-                            $"{{\"Value\":\"Aniruddh\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"name\"}}," +
-                            $"{{\"Value\":125,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"authors\",\"ColumnName\":\"id\"}}]";
-            after = $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}";
+            string after = $"[{{\"EntityName\":\"Author\",\"FieldName\":\"birthdate\",\"FieldValue\":\"2001-01-01\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Author\",\"FieldName\":\"name\",\"FieldValue\":\"Aniruddh\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Author\",\"FieldName\":\"id\",\"FieldValue\":125,\"Direction\":1}}]";
+            after = $"&$after={SqlPaginationUtil.Base64Encode(after)}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=2&$orderby=birthdate, name, id desc",
@@ -789,10 +1048,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstTwoVerifyAfterBreaksTieCorrectlyWithOrderBy()
         {
-            string after = "[{\"Value\":\"2001-01-01\",\"Direction\":0,\"ColumnName\":\"birthdate\"}," +
-                            "{\"Value\":\"Aniruddh\",\"Direction\":0,\"ColumnName\":\"name\"}," +
-                            "{\"Value\":125,\"Direction\":0,\"ColumnName\":\"id\"}]";
-            after = $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}";
+            string after = $"[{{\"EntityName\":\"Authors\",\"FieldName\":\"birthdate\",\"FieldValue\":\"2001-01-01\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Authors\",\"FieldName\":\"name\",\"FieldValue\":\"Aniruddh\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Authors\",\"FieldName\":\"id\",\"FieldValue\":125,\"Direction\":0}}]";
+            after = $"&$after={SqlPaginationUtil.Base64Encode(after)}";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: $"?$first=2&$orderby=birthdate, name, id{after}",
@@ -811,14 +1070,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination()
         {
-            string after = $"[{{\"Value\":569,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}," +
-                            $"{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":569,\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=id desc, book_id",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeAllInOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -832,14 +1091,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination()
         {
-            string after = $"[{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=book_id",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyIncludeOneInOrderByAndPagination)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -854,15 +1113,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstAndMultiColumnOrderBy()
         {
-            string after = $"[{{\"Value\":2345,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"publisher_id\"}}," +
-                            $"{{\"Value\":\"US history in a nutshell\",\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"title\"}}," +
-                            $"{{\"Value\":4,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"FieldValue\":2345,\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"title\",\"FieldValue\":\"US history in a nutshell\",\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":4,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=publisher_id desc, title desc",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndMultiColumnOrderBy)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -876,14 +1135,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstAndTiedColumnOrderBy()
         {
-            string after = $"[{{\"Value\":2345,\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"publisher_id\"}}," +
-                            $"{{\"Value\":3,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"books\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Book\",\"FieldName\":\"publisher_id\",\"FieldValue\":2345,\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":3,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=publisher_id desc",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstAndTiedColumnOrderBy)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -919,15 +1178,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithFirstMultiKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"Value\":\"Indeed a great book\",\"Direction\":1,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"content\"}}," +
-                            $"{{\"Value\":1,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"book_id\"}}," +
-                            $"{{\"Value\":567,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"reviews\",\"ColumnName\":\"id\"}}]";
+            string after = $"[{{\"EntityName\":\"Review\",\"FieldName\":\"content\",\"FieldValue\":\"Indeed a great book\",\"Direction\":1}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":567,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=1&$orderby=content desc",
                 entityNameOrPath: _entityWithCompositePrimaryKey,
                 sqlQuery: GetQuery(nameof(FindTestWithFirstMultiKeyPaginationAndOrderBy)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -1031,15 +1290,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
-                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            string after = $"[{{\"EntityName\":\"Shrub\",\"FieldName\":\"fancyName\",\"FieldValue\":\"Pseudotsuga menziesii\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Shrub\",\"FieldName\":\"treeId\",\"FieldValue\":2,\"Direction\":0}}]";
             string queryStringBase = "?$first=1&$orderby=fancyName";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: queryStringBase,
                 entityNameOrPath: _integrationMappingDifferentEntityPath,
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingFirstSingleKeyPaginationAndOrderBy)),
-                expectedAfterQueryString: $"&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                expectedAfterQueryString: $"&$after={SqlPaginationUtil.Base64Encode(after)}",
                 paginated: true
             );
         }
@@ -1054,11 +1313,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         [TestMethod]
         public async Task FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy()
         {
-            string after = $"[{{\"Value\":\"Pseudotsuga menziesii\",\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"fancyName\"}}," +
-                            $"{{\"Value\":2,\"Direction\":0,\"TableSchema\":\"{GetDefaultSchema()}\",\"TableName\":\"trees\",\"ColumnName\":\"treeId\"}}]";
+            string after = $"[{{\"EntityName\":\"Trees\",\"FieldName\":\"fancyName\",\"FieldValue\":\"Pseudotsuga menziesii\",\"Direction\":0}}," +
+                           $"{{\"EntityName\":\"Trees\",\"FieldName\":\"treeId\",\"FieldValue\":2,\"Direction\":0}}]";
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: $"?$orderby=fancyName,treeId&$after={Uri.EscapeDataString(SqlPaginationUtil.Base64Encode(after))}",
+                queryString: $"?$orderby=fancyName,treeId&$after={SqlPaginationUtil.Base64Encode(after)}",
                 entityNameOrPath: _integrationMappingDifferentEntity,
                 sqlQuery: GetQuery(nameof(FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy))
             );
@@ -1156,8 +1415,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Execute,
-                restHttpVerb: Config.RestMethod.Get,
+                operationType: EntityActionOperation.Execute,
+                restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: "Primary key route not supported for this entity.",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1182,8 +1441,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 requestBody: requestBody,
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Execute,
-                restHttpVerb: Config.RestMethod.Get,
+                operationType: EntityActionOperation.Execute,
+                restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1202,8 +1461,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: string.Empty,
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Execute,
-                restHttpVerb: Config.RestMethod.Get,
+                operationType: EntityActionOperation.Execute,
+                restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Missing required procedure parameters: id for entity: {_integrationProcedureFindOne_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1223,8 +1482,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?param=value",
                 entityNameOrPath: _integrationProcedureFindMany_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Execute,
-                restHttpVerb: Config.RestMethod.Get,
+                operationType: EntityActionOperation.Execute,
+                restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Contained unexpected fields: param for entity: {_integrationProcedureFindMany_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1236,8 +1495,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 queryString: "?id=1&param=value",
                 entityNameOrPath: _integrationProcedureFindOne_EntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Execute,
-                restHttpVerb: Config.RestMethod.Get,
+                operationType: EntityActionOperation.Execute,
+                restHttpVerb: SupportedHttpVerb.Get,
                 exceptionExpected: true,
                 expectedErrorMessage: $"Invalid request. Contained unexpected fields: param for entity: {_integrationProcedureFindOne_EntityName}",
                 expectedStatusCode: HttpStatusCode.BadRequest
@@ -1578,8 +1837,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "The request is invalid since the primary keys: spores requested were not found in the entity definition.",
-                expectedStatusCode: HttpStatusCode.NotFound,
-                expectedSubStatusCode: "EntityNotFound"
+                expectedStatusCode: HttpStatusCode.BadRequest,
+                expectedSubStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField.ToString()
                 );
         }
 

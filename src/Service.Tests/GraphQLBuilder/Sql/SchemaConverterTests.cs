@@ -4,14 +4,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 {
@@ -42,8 +43,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 entityName,
                 dbObject,
-                GenerateEmptyEntity(),
-                new(),
+                GenerateEmptyEntity(entityName),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -72,8 +73,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
                 dbObject,
-                GenerateEmptyEntity(),
-                new(),
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap(columnName: table.Columns.First().Key)
                 );
@@ -109,13 +110,13 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            Entity configEntity = GenerateEmptyEntity() with { Mappings = mappings };
+            Entity configEntity = GenerateEmptyEntity("table") with { Mappings = mappings };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
                 dbObject,
                 configEntity,
-                entities: new(),
+                entities: new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap(columnName: table.Columns.First().Key));
 
@@ -147,8 +148,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
                 dbObject,
-                GenerateEmptyEntity(),
-                new(),
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -176,8 +177,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
                 dbObject,
-                GenerateEmptyEntity(),
-                new(),
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -206,8 +207,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
                 dbObject,
-                GenerateEmptyEntity(),
-                new(),
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap(additionalColumns: customColumnCount)
                 );
@@ -228,7 +229,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [DataRow(typeof(DateTime), DATETIME_TYPE)]
         [DataRow(typeof(DateTimeOffset), DATETIME_TYPE)]
         [DataRow(typeof(byte[]), BYTEARRAY_TYPE)]
-        [DataRow(typeof(Guid), STRING_TYPE)]
+        [DataRow(typeof(Guid), UUID_TYPE)]
+        [DataRow(typeof(TimeOnly), LOCALTIME_TYPE)]
         public void SystemTypeMapsToCorrectGraphQLType(Type systemType, string graphQLType)
         {
             SourceDefinition table = new();
@@ -244,8 +246,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
                 dbObject,
-                GenerateEmptyEntity(),
-                new(),
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -271,8 +273,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
                 dbObject,
-                GenerateEmptyEntity(),
-                new(),
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -298,8 +300,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "table",
                 dbObject,
-                GenerateEmptyEntity(),
-                new(),
+                GenerateEmptyEntity("table"),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -360,8 +362,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             SourceDefinition table = GenerateTableWithForeignKeyDefinition();
 
-            Entity configEntity = GenerateEmptyEntity() with { Relationships = new() };
-            Entity relationshipEntity = GenerateEmptyEntity();
+            Entity configEntity = GenerateEmptyEntity(SOURCE_ENTITY) with { Relationships = new() };
+            Entity relationshipEntity = GenerateEmptyEntity(TARGET_ENTITY);
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
@@ -370,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                     SOURCE_ENTITY,
                     dbObject,
                     configEntity,
-                    new() { { TARGET_ENTITY, relationshipEntity } },
+                    new(new Dictionary<string, Entity>() { { TARGET_ENTITY, relationshipEntity } }),
                     rolesAllowedForEntity: GetRolesAllowedForEntity(),
                     rolesAllowedForFields: GetFieldToRolesMap()
                     );
@@ -399,7 +401,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             SourceDefinition table = new();
 
-            Entity configEntity = GenerateEmptyEntity() with { GraphQL = new GraphQLEntitySettings(new SingularPlural(singular, null)) };
+            Entity configEntity = GenerateEmptyEntity(string.IsNullOrEmpty(singular) ? entityName : singular);
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
@@ -407,7 +409,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 entityName,
                 dbObject,
                 configEntity,
-                new(),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -430,16 +432,17 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 SystemType = typeof(string),
                 IsNullable = false,
                 IsAutoGenerated = true,
+                IsReadOnly = true
             });
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            Entity configEntity = GenerateEmptyEntity();
+            Entity configEntity = GenerateEmptyEntity("entity");
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
-                new(),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -485,12 +488,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            Entity configEntity = GenerateEmptyEntity();
+            Entity configEntity = GenerateEmptyEntity("entity");
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
-                new(),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -529,12 +532,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            Entity configEntity = GenerateEmptyEntity();
+            Entity configEntity = GenerateEmptyEntity("entity");
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
-                new(),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForField)
                 );
@@ -567,14 +570,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 IsAutoGenerated = true,
             });
 
-            Entity configEntity = GenerateEmptyEntity();
+            Entity configEntity = GenerateEmptyEntity("entity");
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
-                new(),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForField)
                 );
@@ -611,12 +614,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            Entity configEntity = GenerateEmptyEntity();
+            Entity configEntity = GenerateEmptyEntity("entity");
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
-                new(),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: roles,
                 rolesAllowedForFields: GetFieldToRolesMap(rolesForField: roles)
                 );
@@ -657,14 +660,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 IsAutoGenerated = true,
             });
 
-            Entity configEntity = GenerateEmptyEntity();
+            Entity configEntity = GenerateEmptyEntity("entity");
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
-                new(),
+                new(new Dictionary<string, Entity>()),
                 rolesAllowedForEntity: rolesForEntity,
                 rolesAllowedForFields: GetFieldToRolesMap(rolesForField: rolesForFields)
                 );
@@ -736,21 +739,28 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             return fieldToRolesMap;
         }
 
-        public static Entity GenerateEmptyEntity()
+        public static Entity GenerateEmptyEntity(string entityName)
         {
-            return new Entity($"{SCHEMA_NAME}.{TABLE_NAME}", Rest: null, GraphQL: null, Array.Empty<PermissionSetting>(), Relationships: new(), Mappings: new());
+            return new Entity(
+                Source: new($"{SCHEMA_NAME}.{TABLE_NAME}", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: true),
+                GraphQL: new(entityName, ""),
+                Permissions: Array.Empty<EntityPermission>(),
+                Relationships: new(),
+                Mappings: new()
+            );
         }
 
         private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false)
         {
             SourceDefinition table = GenerateTableWithForeignKeyDefinition(isNullableRelationship);
 
-            Dictionary<string, Relationship> relationships =
+            Dictionary<string, EntityRelationship> relationships =
                 new()
                 {
                     {
                         FIELD_NAME_FOR_TARGET,
-                        new Relationship(
+                        new EntityRelationship(
                           cardinality,
                           TARGET_ENTITY,
                           SourceFields: null,
@@ -760,8 +770,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                           LinkingTargetFields: null)
                     }
                 };
-            Entity configEntity = GenerateEmptyEntity() with { Relationships = relationships };
-            Entity relationshipEntity = GenerateEmptyEntity();
+            Entity configEntity = GenerateEmptyEntity(SOURCE_ENTITY) with { Relationships = relationships };
+            Entity relationshipEntity = GenerateEmptyEntity(TARGET_ENTITY);
 
             DatabaseObject dbObject = new DatabaseTable()
             { SchemaName = SCHEMA_NAME, Name = TABLE_NAME, TableDefinition = table };
@@ -769,7 +779,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             return SchemaConverter.FromDatabaseObject(
                 SOURCE_ENTITY,
                 dbObject,
-                configEntity, new() { { TARGET_ENTITY, relationshipEntity } },
+                configEntity, new(new Dictionary<string, Entity>() { { TARGET_ENTITY, relationshipEntity } }),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
                 rolesAllowedForFields: GetFieldToRolesMap()
                 );
@@ -793,17 +803,19 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 relationshipMetadata = new();
 
             table.SourceEntityRelationshipMap.Add(SOURCE_ENTITY, relationshipMetadata);
-            List<ForeignKeyDefinition> fkDefinitions = new();
-            fkDefinitions.Add(new ForeignKeyDefinition()
+            List<ForeignKeyDefinition> fkDefinitions = new()
             {
-                Pair = new()
+                new ForeignKeyDefinition()
                 {
-                    ReferencingDbTable = new DatabaseTable(SCHEMA_NAME, TABLE_NAME),
-                    ReferencedDbTable = new DatabaseTable(SCHEMA_NAME, REFERENCED_TABLE)
-                },
-                ReferencingColumns = new List<string> { REF_COLNAME },
-                ReferencedColumns = new List<string> { REFD_COLNAME }
-            });
+                    Pair = new()
+                    {
+                        ReferencingDbTable = new DatabaseTable(SCHEMA_NAME, TABLE_NAME),
+                        ReferencedDbTable = new DatabaseTable(SCHEMA_NAME, REFERENCED_TABLE)
+                    },
+                    ReferencingColumns = new List<string> { REF_COLNAME },
+                    ReferencedColumns = new List<string> { REFD_COLNAME }
+                }
+            };
             relationshipMetadata.TargetEntityToFkDefinitionMap.Add(TARGET_ENTITY, fkDefinitions);
 
             table.Columns.Add(REF_COLNAME, new ColumnDefinition

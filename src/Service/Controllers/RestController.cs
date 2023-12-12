@@ -3,12 +3,13 @@
 
 using System;
 using System.Net;
+using System.Net.Mime;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.Models;
-using Azure.DataApiBuilder.Service.Services;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -27,6 +28,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// Service providing REST Api executions.
         /// </summary>
         private readonly RestService _restService;
+
+        /// <summary>
+        /// OpenAPI description document creation service.
+        /// </summary>
+        private readonly IOpenApiDocumentor _openApiDocumentor;
         /// <summary>
         /// String representing the value associated with "code" for a server error
         /// </summary>
@@ -44,9 +50,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <summary>
         /// Constructor.
         /// </summary>
-        public RestController(RestService restService, ILogger<RestController> logger)
+        public RestController(RestService restService, IOpenApiDocumentor openApiDocumentor, ILogger<RestController> logger)
         {
             _restService = restService;
+            _openApiDocumentor = openApiDocumentor;
             _logger = logger;
         }
 
@@ -88,7 +95,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Config.Operation.Read);
+                EntityActionOperation.Read);
         }
 
         /// <summary>
@@ -106,7 +113,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Config.Operation.Insert);
+                EntityActionOperation.Insert);
         }
 
         /// <summary>
@@ -126,7 +133,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                Config.Operation.Delete);
+                EntityActionOperation.Delete);
         }
 
         /// <summary>
@@ -146,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(Config.Operation.Upsert));
+                DeterminePatchPutSemantics(EntityActionOperation.Upsert));
         }
 
         /// <summary>
@@ -166,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         {
             return await HandleOperation(
                 route,
-                DeterminePatchPutSemantics(Config.Operation.UpsertIncremental));
+                DeterminePatchPutSemantics(EntityActionOperation.UpsertIncremental));
         }
 
         /// <summary>
@@ -176,7 +183,7 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// <param name="operationType">The kind of operation to handle.</param>
         private async Task<IActionResult> HandleOperation(
             string route,
-            Config.Operation operationType)
+            EntityActionOperation operationType)
         {
             try
             {
@@ -188,7 +195,21 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(route);
+                // Validate the PathBase matches the configured REST path.
+                string routeAfterPathBase = _restService.GetRouteAfterPathBase(route);
+
+                // Explicitly handle OpenAPI description document retrieval requests.
+                if (string.Equals(routeAfterPathBase, OpenApiDocumentor.OPENAPI_ROUTE, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (_openApiDocumentor.TryGetDocument(out string? document))
+                    {
+                        return Content(document, MediaTypeNames.Application.Json);
+                    }
+
+                    return NotFound();
+                }
+
+                (string entityName, string primaryKeyRoute) = _restService.GetEntityNameAndPrimaryKeyRouteFromRoute(routeAfterPathBase);
 
                 IActionResult? result = await _restService.ExecuteAsync(entityName, operationType, primaryKeyRoute);
 
@@ -200,34 +221,25 @@ namespace Azure.DataApiBuilder.Service.Controllers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
                 }
 
-                if (result is CreatedResult)
-                {
-                    // Location is made up of two parts, the first being constructed
-                    // from the HttpRequest found in the HttpContext. The other part
-                    // is the primary key route, which has already been saved in the
-                    // Location of the created result. So we form the entire location
-                    // from appending the primary key route  already stored in the
-                    // created result to the url constructed from the HttpRequest. We
-                    // then update the Location of the created result to this value.
-                    CreatedResult createdResult = (result as CreatedResult)!;
-                    string location = UriHelper.GetEncodedUrl(HttpContext.Request) + "/" + createdResult.Location;
-                    createdResult.Location = location;
-                    result = createdResult;
-                }
-
                 return result;
             }
             catch (DataApiBuilderException ex)
             {
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
+                _logger.LogError(
+                    exception: ex,
+                    message: "{correlationId} Error handling REST request.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
+
                 Response.StatusCode = (int)ex.StatusCode;
                 return ErrorResponse(ex.SubStatusCode.ToString(), ex.Message, ex.StatusCode);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.Message}");
-                _logger.LogError($"{HttpContextExtensions.GetLoggerCorrelationId(HttpContext)}{ex.StackTrace}");
+                _logger.LogError(
+                    exception: ex,
+                    message: "{correlationId} Internal server error occured during REST request processing.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
+
                 Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 return ErrorResponse(
                     DataApiBuilderException.SubStatusCodes.UnexpectedError.ToString(),
@@ -243,25 +255,26 @@ namespace Azure.DataApiBuilder.Service.Controllers
         /// </summary>
         /// <param name="operation">opertion to be used.</param>
         /// <returns>correct opertion based on headers.</returns>
-        private Config.Operation DeterminePatchPutSemantics(Config.Operation operation)
+        private EntityActionOperation DeterminePatchPutSemantics(EntityActionOperation operation)
         {
 
             if (HttpContext.Request.Headers.ContainsKey("If-Match"))
             {
                 if (!string.Equals(HttpContext.Request.Headers["If-Match"], "*"))
                 {
-                    throw new DataApiBuilderException(message: "Etags not supported, use '*'",
-                                                   statusCode: HttpStatusCode.BadRequest,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: "Etags not supported, use '*'",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 switch (operation)
                 {
-                    case Config.Operation.Upsert:
-                        operation = Config.Operation.Update;
+                    case EntityActionOperation.Upsert:
+                        operation = EntityActionOperation.Update;
                         break;
-                    case Config.Operation.UpsertIncremental:
-                        operation = Config.Operation.UpdateIncremental;
+                    case EntityActionOperation.UpsertIncremental:
+                        operation = EntityActionOperation.UpdateIncremental;
                         break;
                 }
             }

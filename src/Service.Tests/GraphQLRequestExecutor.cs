@@ -6,14 +6,25 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Authorization;
-using Azure.DataApiBuilder.Service.Configurations;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 
 namespace Azure.DataApiBuilder.Service.Tests
 {
     internal static class GraphQLRequestExecutor
     {
+        /// <summary>
+        /// Executes a GraphQL request for a single query node
+        /// </summary>
+        /// <param name="client">http client.</param>
+        /// <param name="configProvider">configProvider</param>
+        /// <param name="queryName">queryName.</param>
+        /// <param name="query">query</param>
+        /// <param name="variables">variables</param>
+        /// <param name="authToken">authToken</param>
+        /// <param name="clientRoleHeader">clientRoleHeader</param>
+        /// <returns>JsonResult</returns>
         public static async Task<JsonElement> PostGraphQLRequestAsync(
             HttpClient client,
             RuntimeConfigProvider configProvider,
@@ -31,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests
                     variables
                 };
 
-            string graphQLEndpoint = configProvider.GetRuntimeConfiguration().GraphQLGlobalSettings.Path;
+            string graphQLEndpoint = configProvider.GetConfig().GraphQLPath;
 
             HttpRequestMessage request = new(HttpMethod.Post, graphQLEndpoint)
             {
@@ -40,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests
 
             if (!string.IsNullOrEmpty(authToken))
             {
-                request.Headers.Add(AuthenticationConfig.CLIENT_PRINCIPAL_HEADER, authToken);
+                request.Headers.Add(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, authToken);
             }
 
             if (!string.IsNullOrEmpty(clientRoleHeader))

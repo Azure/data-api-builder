@@ -8,8 +8,8 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Service.Authorization;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.Configuration;
@@ -159,34 +159,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
     ""title"": ""Awesome book"",
     ""publisher_id"": 1234,
     ""publishers"": {
-                ""id"": 1234,
+      ""id"": 1234,
       ""name"": ""Big Company""
     },
     ""reviews"": {
-                ""items"": [
-                  {
-                    ""id"": 567,
-          ""content"": ""Indeed a great book""
-                  },
+      ""items"": [
         {
-                    ""id"": 568,
+          ""id"": 567,
+          ""content"": ""Indeed a great book""
+        },
+        {
+          ""id"": 568,
           ""content"": ""I loved it""
         },
         {
-                    ""id"": 569,
+          ""id"": 569,
           ""content"": ""best book I read in years""
         }
       ]
     },
     ""authors"": {
-                ""items"": [
-                  {
-                    ""id"": 123,
+      ""items"": [
+        {
+          ""id"": 123,
           ""name"": ""Jelte""
-                  }
+        }
       ]
     }
-        },
+  },
   {
     ""id"": 2,
     ""title"": ""Also Awesome book"",
@@ -212,179 +212,341 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
     ""title"": ""Great wall of china explained"",
     ""publisher_id"": 2345,
     ""publishers"": {
-        ""id"": 2345,
+      ""id"": 2345,
       ""name"": ""Small Town Publisher""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": [
-          {
-            ""id"": 123,
-          ""name"": ""Jelte""
-          },
+      ""items"": [
         {
-            ""id"": 124,
+          ""id"": 123,
+          ""name"": ""Jelte""
+        },
+        {
+          ""id"": 124,
           ""name"": ""Aniruddh""
         }
       ]
     }
-},
+  },
   {
     ""id"": 4,
     ""title"": ""US history in a nutshell"",
     ""publisher_id"": 2345,
     ""publishers"": {
-        ""id"": 2345,
+      ""id"": 2345,
       ""name"": ""Small Town Publisher""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": [
-          {
-            ""id"": 123,
-          ""name"": ""Jelte""
-          },
+      ""items"": [
         {
-            ""id"": 124,
+          ""id"": 123,
+          ""name"": ""Jelte""
+        },
+        {
+          ""id"": 124,
           ""name"": ""Aniruddh""
         }
       ]
     }
-},
+  },
   {
     ""id"": 5,
     ""title"": ""Chernobyl Diaries"",
     ""publisher_id"": 2323,
     ""publishers"": {
-        ""id"": 2323,
+      ""id"": 2323,
       ""name"": ""TBD Publishing One""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": [
-              {
-                ""id"": 126,
-                ""name"": ""Aaron""
-              }
-        ]
+      ""items"": [
+        {
+          ""id"": 126,
+          ""name"": ""Aaron""
+        }
+      ]
     }
-},
+  },
   {
     ""id"": 6,
     ""title"": ""The Palace Door"",
     ""publisher_id"": 2324,
     ""publishers"": {
-        ""id"": 2324,
+      ""id"": 2324,
       ""name"": ""TBD Publishing Two Ltd""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 7,
     ""title"": ""The Groovy Bar"",
     ""publisher_id"": 2324,
     ""publishers"": {
-        ""id"": 2324,
+      ""id"": 2324,
       ""name"": ""TBD Publishing Two Ltd""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 8,
     ""title"": ""Time to Eat"",
     ""publisher_id"": 2324,
     ""publishers"": {
-        ""id"": 2324,
+      ""id"": 2324,
       ""name"": ""TBD Publishing Two Ltd""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 9,
     ""title"": ""Policy-Test-01"",
     ""publisher_id"": 1940,
     ""publishers"": {
-        ""id"": 1940,
+      ""id"": 1940,
       ""name"": ""Policy Publisher 01""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 10,
     ""title"": ""Policy-Test-02"",
     ""publisher_id"": 1940,
     ""publishers"": {
-        ""id"": 1940,
+      ""id"": 1940,
       ""name"": ""Policy Publisher 01""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 11,
     ""title"": ""Policy-Test-04"",
     ""publisher_id"": 1941,
     ""publishers"": {
-        ""id"": 1941,
+      ""id"": 1941,
       ""name"": ""Policy Publisher 02""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
-{
+  },
+  {
     ""id"": 12,
     ""title"": ""Time to Eat 2"",
     ""publisher_id"": 1941,
     ""publishers"": {
-        ""id"": 1941,
+      ""id"": 1941,
       ""name"": ""Policy Publisher 02""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-}
+  }
 ]";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Validates that a list query with only __typename in the selection set
+        /// returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithoutItemSelectionButWithTypename()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books{
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""bookConnection""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates that a list query against a table with composite Pk
+        /// with only __typename in the selection set returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithoutItemSelectionButOnlyTypenameAgainstTableWithCompositePK()
+        {
+            string graphQLQueryName = "stocks";
+            string graphQLQuery = @"{
+                stocks{
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""StockConnection""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates that a point query with only __typename field in the selection set
+        /// returns the right type
+        /// </summary>
+        [TestMethod]
+        public async Task PointQueryWithTypenameInSelectionSet()
+        {
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"{
+                book_by_pk(id: 3) {
+                    __typename
+                }
+            }";
+
+            string expected = @"
+                {
+                    ""__typename"": ""book""
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates that a list query with only __typename field in the items section returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task ListQueryWithOnlyTypenameInSelectionSet()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 3) {
+                    items {
+                        __typename
+                    }
+                }
+            }";
+
+            string typename = @"
+                {
+                    ""__typename"": ""book""
+                }
+            ";
+
+            // Since the first 3 elements are fetched, we expect the response to contain 3 items
+            // with just the __typename field.
+            string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: 3);
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Validates that a nested point query with only __typename field in each selection set
+        /// returns the right types
+        /// </summary>
+        [TestMethod]
+        public async Task NestedPointQueryWithOnlyTypenameInEachSelectionSet()
+        {
+            string graphQLQueryName = "book_by_pk";
+            string graphQLQuery = @"{
+                book_by_pk(id: 3) {
+                    __typename
+                    publishers {
+                      __typename
+                      books {
+                        __typename
+                      }
+                    }
+                }     
+            }";
+
+            string expected = @"
+                {
+                  ""__typename"": ""book"",
+                  ""publishers"": {
+                    ""__typename"": ""Publisher"",
+                    ""books"": {
+                      ""__typename"": ""bookConnection""
+                    }
+                  }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Validates that querying a SP with only __typename field in the selection set
+        /// returns the right type(s)
+        /// </summary>
+        public async Task QueryAgainstSPWithOnlyTypenameInSelectionSet(string dbQuery)
+        {
+            string graphQLQueryName = "executeGetBooks";
+            string graphQLQuery = @"{
+                executeGetBooks{
+                    __typename
+                }     
+            }";
+
+            string typename = @"
+                {
+                    ""__typename"": ""GetBooks""
+                }";
+
+            string bookCountFromDB = await GetDatabaseResultAsync(dbQuery, expectJson: false);
+            int expectedCount = JsonSerializer.Deserialize<List<Dictionary<string, int>>>(bookCountFromDB)[0]["count"];
+            string expected = SqlTestHelper.ConstructGQLTypenameResponseNTimes(typename: typename, times: expectedCount);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
         }
 
         /// <summary>
@@ -1033,11 +1195,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
         /// <summary>
         /// Simple Stored Procedure to check SELECT query returning single row
+        /// This test ensures if a value is specified in the query, it is used
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
             string graphQLQueryName = "executeGetPublisher";
-            string graphQLQuery = @"mutation {
+            string graphQLQuery = @"query {
                 executeGetPublisher(id: 1234) {
                     id
                     name
@@ -1464,7 +1627,7 @@ query {
         /// In this Test the result changes when we override the source and target fields in the config.
         /// </summary>
         [TestMethod]
-        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+        public virtual async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
             string[] sourceFields,
             string[] targetFields,
             int club_id,
@@ -1475,22 +1638,20 @@ query {
             RuntimeConfig configuration = SqlTestHelper.InitBasicRuntimeConfigWithNoEntity(dbType, testEnvironment);
 
             Entity clubEntity = new(
-                Source: JsonSerializer.SerializeToElement("clubs"),
-                Rest: true,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Source: new("clubs", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: true),
+                GraphQL: new("club", "clubs"),
+                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
                 Relationships: null,
                 Mappings: null
             );
 
-            configuration.Entities.Add("Club", clubEntity);
-
             Entity playerEntity = new(
-                Source: JsonSerializer.SerializeToElement("players"),
-                Rest: true,
-                GraphQL: true,
-                Permissions: new PermissionSetting[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: new Dictionary<string, Relationship>() { {"clubs", new (
+                Source: new("players", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: true),
+                GraphQL: new("player", "players"),
+                Permissions: new[] { ConfigurationTests.GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: new Dictionary<string, EntityRelationship>() { {"clubs", new (
                     Cardinality: Cardinality.One,
                     TargetEntity: "Club",
                     SourceFields: sourceFields,
@@ -1502,12 +1663,17 @@ query {
                 Mappings: null
             );
 
-            configuration.Entities.Add("Player", playerEntity);
+            Dictionary<string, Entity> entities = new(configuration.Entities) {
+                { "Club", clubEntity },
+                { "Player", playerEntity }
+            };
+
+            RuntimeConfig updatedConfig = configuration
+                with
+            { Entities = new(entities) };
 
             const string CUSTOM_CONFIG = "custom-config.json";
-            File.WriteAllText(
-                CUSTOM_CONFIG,
-                JsonSerializer.Serialize(configuration, RuntimeConfig.SerializerOptions));
+            File.WriteAllText(CUSTOM_CONFIG, updatedConfig.ToJson());
 
             string[] args = new[]
             {

@@ -2,7 +2,8 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
@@ -29,15 +30,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         /// Also populates the DocumentNode with return types.
         /// </summary>
         /// <param name="root">Root of GraphQL schema</param>
-        /// <param name="databaseType">i.e. MSSQL, MySQL, Postgres, Cosmos</param>
+        /// <param name="databaseTypes">EnitityName to database Type of entity.</param>
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
         /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
         /// <param name="dbObjects">Database object metadata</param>
         /// <returns>Queries DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
-            DatabaseType databaseType,
-            IDictionary<string, Entity> entities,
+            Dictionary<string, DatabaseType> databaseTypes,
+            RuntimeEntities entities,
             Dictionary<string, InputObjectTypeDefinitionNode> inputTypes,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
             Dictionary<string, DatabaseObject>? dbObjects = null
@@ -54,12 +55,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[entityName];
 
-                    if (entity.ObjectType is SourceType.StoredProcedure)
+                    if (entity.Source.Type is EntitySourceType.StoredProcedure)
                     {
                         // Check runtime configuration of the stored procedure entity to check that the GraphQL operation type was overridden to 'query' from the default 'mutation.'
-                        bool isSPDefinedAsQuery = entity.FetchConfiguredGraphQLOperation() is GraphQLOperation.Query;
+                        bool isSPDefinedAsQuery = entity.GraphQL.Operation is GraphQLOperation.Query;
 
-                        IEnumerable<string> rolesAllowedForExecute = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Execute, entityPermissionsMap);
+                        IEnumerable<string> rolesAllowedForExecute = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Execute, entityPermissionsMap);
 
                         if (isSPDefinedAsQuery && rolesAllowedForExecute.Any())
                         {
@@ -71,13 +72,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     }
                     else
                     {
-                        IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: Operation.Read, entityPermissionsMap);
+                        IEnumerable<string> rolesAllowedForRead = IAuthorizationResolver.GetRolesForOperation(entityName, operation: EntityActionOperation.Read, entityPermissionsMap);
                         ObjectTypeDefinitionNode paginationReturnType = GenerateReturnType(name);
 
-                        if (rolesAllowedForRead.Count() > 0)
+                        if (rolesAllowedForRead.Any())
                         {
                             queryFields.Add(GenerateGetAllQuery(objectTypeDefinitionNode, name, paginationReturnType, inputTypes, entity, rolesAllowedForRead));
-                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseType, entity, rolesAllowedForRead));
+                            queryFields.Add(GenerateByPKQuery(objectTypeDefinitionNode, name, databaseTypes[entityName], entity, rolesAllowedForRead));
                         }
 
                         if (paginationReturnType is not null)

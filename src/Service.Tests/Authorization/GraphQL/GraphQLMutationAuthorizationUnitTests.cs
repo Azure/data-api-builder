@@ -3,7 +3,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder;
@@ -23,15 +23,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// <param name="operationType"></param>
         /// <param name="rolesDefinedInPermissions"></param>
         /// <param name="expectedAuthorizeDirective"></param>
-        [DataRow(Config.Operation.Create, new string[] { }, "",
+        [DataRow(EntityActionOperation.Create, new string[] { }, "",
             DisplayName = "No Roles -> Expects no objectTypeDefinition created")]
-        [DataRow(Config.Operation.Create, new string[] { "role1" }, @"@authorize(roles: [""role1""])",
+        [DataRow(EntityActionOperation.Create, new string[] { "role1" }, @"@authorize(roles: [""role1""])",
             DisplayName = "One Role added to Authorize Directive")]
-        [DataRow(Config.Operation.Create, new string[] { "role1", "role2" }, @"@authorize(roles: [""role1"",""role2""])",
+        [DataRow(EntityActionOperation.Create, new string[] { "role1", "role2" }, @"@authorize(roles: [""role1"",""role2""])",
             DisplayName = "Two Roles added to Authorize Directive")]
         [DataTestMethod]
-        public void AuthorizeDirectiveAddedForMutation(Config.Operation operationType, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
+        public void AuthorizeDirectiveAddedForMutation(EntityActionOperation operationType, string[] rolesDefinedInPermissions, string expectedAuthorizeDirective)
         {
+            string entityName = "Foo";
+
             string gql =
 @"
 type Foo @model(name: ""Foo""){
@@ -40,13 +42,18 @@ type Foo @model(name: ""Foo""){
                 ";
 
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
+            Dictionary<string, DatabaseType> entityNameToDatabasetype = new()
+            {
+                { entityName, DatabaseType.MSSQL }
+            };
+
             DocumentNode mutationRoot = MutationBuilder.Build(
                 root,
-                DatabaseType.mssql,
-                entities: new Dictionary<string, Entity> { { "Foo", GraphQLTestHelpers.GenerateEmptyEntity() } },
+                entityNameToDatabasetype,
+                entities: new(new Dictionary<string, Entity> { { entityName, GraphQLTestHelpers.GenerateEmptyEntity() } }),
                 entityPermissionsMap: GraphQLTestHelpers.CreateStubEntityPermissionsMap(
-                    entityNames: new string[] { "Foo" },
-                    operations: new Config.Operation[] { operationType },
+                    entityNames: new string[] { entityName },
+                    operations: new EntityActionOperation[] { operationType },
                     roles: rolesDefinedInPermissions)
                 );
 

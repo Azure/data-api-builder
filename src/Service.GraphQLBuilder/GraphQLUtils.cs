@@ -2,15 +2,21 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Net;
-using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
+using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
+using HotChocolate.Types.NodaTime;
+using NodaTime.Text;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 {
@@ -41,6 +47,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             HashSet<string> inBuiltTypes = new()
             {
                 "ID",
+                UUID_TYPE,
                 BYTE_TYPE,
                 SHORT_TYPE,
                 INT_TYPE,
@@ -51,7 +58,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 STRING_TYPE,
                 BOOLEAN_TYPE,
                 DATETIME_TYPE,
-                BYTEARRAY_TYPE
+                BYTEARRAY_TYPE,
+                LOCALTIME_TYPE
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);
@@ -67,7 +75,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             List<FieldDefinitionNode> fieldDefinitionNodes = new();
 
-            if (databaseType is DatabaseType.cosmosdb_nosql)
+            if (databaseType is DatabaseType.CosmosDB_NoSQL)
             {
                 fieldDefinitionNodes.Add(
                     new FieldDefinitionNode(
@@ -107,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         throw new DataApiBuilderException(
                                message: "No primary key defined and conventions couldn't locate a fallback",
                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
-                               statusCode: System.Net.HttpStatusCode.ServiceUnavailable);
+                               statusCode: HttpStatusCode.ServiceUnavailable);
                     }
 
                 }
@@ -180,10 +188,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 if (dir.Name.Value == ModelDirectiveType.DirectiveName)
                 {
-                    dir.ToObject<ModelDirectiveType>();
-                    modelName = dir.GetArgument<string>(ModelDirectiveType.ModelNameArgument).ToString();
+                    ModelDirectiveType modelDirectiveType = dir.ToObject<ModelDirectiveType>();
 
-                    return modelName is not null;
+                    if (modelDirectiveType.Name.HasValue)
+                    {
+                        modelName = dir.GetArgument<string>(ModelDirectiveType.ModelNameArgument).ToString();
+                        return modelName is not null;
+                    }
+
                 }
             }
 
@@ -238,8 +250,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                     SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
                     FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
                     DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
-                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(DateTime.Parse(defaultValueFromConfig))),
+                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
+                        DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
                     BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
+                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
                     _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
                 };
 
@@ -257,6 +271,63 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                         subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
                         innerException: error);
             }
+        }
+
+        /// <summary>
+        /// Generates the entity name from the GraphQL context.
+        /// </summary>
+        /// <param name="context">Middleware context.</param>
+        /// <returns></returns>
+        public static string GetDataSourceNameFromGraphQLContext(IMiddlewareContext context, RuntimeConfig runtimeConfig)
+        {
+            string rootNode = context.Selection.Field.Coordinate.TypeName.Value;
+            string dataSourceName;
+
+            if (string.Equals(rootNode, "mutation", StringComparison.OrdinalIgnoreCase) || string.Equals(rootNode, "query", StringComparison.OrdinalIgnoreCase))
+            {
+                // we are at the root query node - need to determine return type and store on context.
+                // Output type below would be the graphql object return type - Books,BooksConnectionObject.
+                IOutputType outputType = context.Selection.Field.Type;
+                string entityName = outputType.TypeName();
+
+                // Below is only needed if say we have an Array return type or items object for plural case.
+                ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+
+                // Example: CustomersConnectionObject - for get all scenarios.
+                if (QueryBuilder.IsPaginationType(underlyingFieldType))
+                {
+                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+                    outputType = subField.Type;
+                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+                    entityName = underlyingFieldType.Name;
+                }
+
+                // if name on schema is different from name in config.
+                // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
+                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
+                {
+                    entityName = modelName;
+                }
+
+                dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+
+                // Store dataSourceName on context for later use.
+                context.ContextData.TryAdd(GenerateDataSourceNameKeyFromPath(context), dataSourceName);
+            }
+            else
+            {
+                // Derive node from path - e.g. /books/{id} - node would be books.
+                // for this queryNode path we have stored the datasourceName needed to retrieve query and mutation engine of inner objects
+                object? obj = context.ContextData[GenerateDataSourceNameKeyFromPath(context)];
+                dataSourceName = obj?.ToString()!;
+            }
+
+            return dataSourceName;
+        }
+
+        private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
+        {
+            return $"{context.Path.ToList()[0]}";
         }
     }
 }

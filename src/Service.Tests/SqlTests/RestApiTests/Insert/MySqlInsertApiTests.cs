@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -23,6 +24,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         SELECT id, title, publisher_id
                         FROM " + _integrationTableName + @"
                         WHERE id = 5001
+                    ) AS subq
+                "
+            },
+            {
+                "InsertOneInSupportedTypes",
+                @"
+                    SELECT JSON_OBJECT('typeid', typeid,'bytearray_types', bytearray_types) AS data
+                    FROM (
+                        SELECT id as typeid, bytearray_types 
+                        FROM " + _integrationTypeTable + @"
+                        WHERE id = 5001 AND bytearray_types is NULL 
+                    ) AS subq
+                "
+            },
+            {
+                "InsertOneWithComputedFieldMissingInRequestBody",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'book_name', book_name, 'copies_sold', copies_sold,
+                                        'last_sold_on',last_sold_on) AS data
+                    FROM (
+                        SELECT id, book_name, copies_sold, DATE_FORMAT(last_sold_on, '%Y-%m-%dT%H:%i:%s') AS last_sold_on
+                        FROM " + _tableWithReadOnlyFields + @"
+                        WHERE id = 2 AND book_name = 'Harry Potter' AND copies_sold = 50
                     ) AS subq
                 "
             },
@@ -160,6 +184,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         AND title = ' '' UNION SELECT * FROM books/*'
                     ) AS subq
                 "
+            },
+            {
+                "InsertOneWithExcludeFieldsTest",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                    ) AS subq
+                "
+            },
+            {
+                "InsertOneWithNoReadPermissionsTest",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'title', title) AS data
+                    FROM (
+                        SELECT id, title
+                        FROM " + _integrationTableName + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND 0 = 1 
+                    ) AS subq
+                "
             }
         };
 
@@ -190,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
@@ -218,7 +264,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 queryString: string.Empty,
                 entityNameOrPath: _Composite_NonAutoGenPK_EntityPath,
                 sqlQuery: string.Empty,
-                operationType: Config.Operation.Insert,
+                operationType: EntityActionOperation.Insert,
                 requestBody: requestBody,
                 exceptionExpected: true,
                 expectedErrorMessage: expectedErrorMessage,
@@ -263,7 +309,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         public static async Task SetupAsync(TestContext context)
         {
             DatabaseEngine = TestCategory.MYSQL;
-            await InitializeTestFixture(context);
+            await InitializeTestFixture();
         }
 
         /// <summary>

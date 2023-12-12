@@ -1,0 +1,57 @@
+﻿{
+  DataSource: {
+    DatabaseType: MSSQL
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /api,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      }
+    }
+  },
+  Entities: [
+    {
+      MyEntity: {
+        Source: {
+          Object: s001.book,
+          Type: stored-procedure
+        },
+        GraphQL: {
+          Singular: MyEntity,
+          Plural: MyEntities,
+          Enabled: false,
+          Operation: Mutation
+        },
+        Rest: {
+          Methods: [
+            Post
+          ],
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Execute
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -126,11 +126,28 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 defaultValue = value.Fields[0].Value;
             }
 
+            ITypeNode type;
+            if (defaultValue is not null)
+            {
+                type = f.Type.NullableType();
+            }
+            else
+            {
+                if (f.Type.NamedType().Name.Value != "ID")
+                {
+                    type = f.Type.NullableType();
+                }
+                else
+                {
+                    type = f.Type;
+                }
+            }
+
             return new(
                 location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
-                defaultValue is not null ? f.Type.NullableType() : (f.Type.IsNonNullType() ? f.Type.NullableType() : f.Type),
+                type,
                 defaultValue,
                 new List<DirectiveNode>()
             );

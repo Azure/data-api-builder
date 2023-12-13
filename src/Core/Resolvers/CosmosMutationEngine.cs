@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
             // READ permission is inherited by other roles from Anonymous role when present.
             bool isReadPermissionConfigured = _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, roleName, EntityActionOperation.Read)
-                                              || _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, AuthorizationType.Anonymous.ToString(), EntityActionOperation.Read);
+                                              || _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, AuthorizationResolver.ROLE_ANONYMOUS, EntityActionOperation.Read);
 
             // Check read permission before returning the response to prevent unauthorized users from viewing the response.
             if (!isReadPermissionConfigured)

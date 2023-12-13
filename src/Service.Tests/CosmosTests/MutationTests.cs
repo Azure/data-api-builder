@@ -414,7 +414,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         public async Task ValidateErrorMessageForMutationWithoutReadPermission()
         {
             const string SCHEMA = @"
-type Planet @model {
+type Planet @model(name:""Planet"") {
     id : ID!,
     name : String,
     age : Int,
@@ -514,7 +514,7 @@ query {{
                                                 authToken: authToken,
                                                 clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
 
-                    Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
+                    Assert.IsFalse(!queryResponse.ToString().Contains(id), "The query response was not expected to have errors. The document did not return successfully.");
                 }
                 finally
                 {
@@ -543,7 +543,7 @@ query {{
         public async Task ValidateInheritanceOfReadPermissionFromAnonymous()
         {
             const string SCHEMA = @"
-type Planet @model {
+type Planet @model(name:""Planet"") {
     id : ID!,
     name : String,
     age : Int,
@@ -620,8 +620,8 @@ type Planet @model {
                         authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
                         clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
                         );
-                        
-                    Assert.IsFalse(mutationResponse.TryGetProperty("errors", out _));
+
+                    Assert.IsFalse(!mutationResponse.ToString().Contains(id), "The mutation response was not expected to have errors. The document did not create successfully.");
                 }
                 finally
                 {

@@ -99,19 +99,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName,
             EntityActionOperation mutationOperation)
         {
-            string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
-            {
-                role = stringVals.ToString();
-            }
-
-            if (string.IsNullOrEmpty(role))
-            {
-                throw new DataApiBuilderException(
-                    message: "No ClientRoleHeader available to perform authorization.",
-                    statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
+            string role = GetRoleOfGraphQLRequest(context);
 
             List<string> inputArgumentKeys;
             if (mutationOperation != EntityActionOperation.Delete)

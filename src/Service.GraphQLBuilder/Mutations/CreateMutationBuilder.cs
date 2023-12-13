@@ -133,6 +133,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
             else
             {
+                // ID field cannot be nullable.
                 if (f.Type.NamedType().Name.Value != "ID")
                 {
                     type = f.Type.NullableType();

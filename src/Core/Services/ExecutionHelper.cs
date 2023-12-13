@@ -26,6 +26,8 @@ namespace Azure.DataApiBuilder.Service.Services
         internal readonly IMutationEngineFactory _mutationEngineFactory;
         internal readonly RuntimeConfigProvider _runtimeConfigProvider;
 
+        private const string PURE_RESOLVER_CONTEXT_SUFFIX = "_PURE_RESOLVER_CTX";
+
         public ExecutionHelper(
             IQueryEngineFactory queryEngineFactory,
             IMutationEngineFactory mutationEngineFactory,
@@ -196,8 +198,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 objectValue = queryEngine.ResolveObject(objectValue, context.Selection.Field, ref metadata);
 
                 // Since the query engine could null the object out we need to check again
-                // if its null.
-                if (objectValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
+                // if it's null.
+                if (objectValue.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
                 {
                     return null;
                 }
@@ -407,7 +409,8 @@ namespace Azure.DataApiBuilder.Service.Services
             // The pure resolver context has no access to the scoped context data,
             // I will change that for version 14. The following code is a workaround
             // and stores the metadata per root field on the global context.
-            return (IMetadata)context.ContextData[GetMetadataKey(context.Path)]!;
+            string metadataKey = GetMetadataKey(context.Path) + PURE_RESOLVER_CONTEXT_SUFFIX;
+            return (IMetadata)context.ContextData[metadataKey]!;
         }
 
         private static string GetMetadataKey(HotChocolate.Path path)
@@ -432,17 +435,17 @@ namespace Azure.DataApiBuilder.Service.Services
             throw new InvalidOperationException("The path is not rooted.");
         }
 
-        private static string GetMetadataKey(IFieldSelection rootSelection)
-        {
-            return rootSelection.ResponseName;
-        }
-
         /// <summary>
         /// Set new metadata and reset the depth that the metadata has persisted
         /// </summary>
         private static void SetNewMetadata(IPureResolverContext context, IMetadata? metadata)
         {
-            context.ContextData.Add(GetMetadataKey(context.Selection), metadata);
+            string metadataKey = GetMetadataKey(context.Path) + PURE_RESOLVER_CONTEXT_SUFFIX;
+
+            if (!context.ContextData.TryAdd(metadataKey, metadata))
+            {
+                context.ContextData[metadataKey] = metadata;
+            }
         }
     }
 }

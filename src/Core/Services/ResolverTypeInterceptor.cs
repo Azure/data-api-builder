@@ -39,7 +39,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
         _objectFieldResolver = ctx => executionHelper.ExecuteObjectField(ctx);
         _listFieldResolver = ctx => executionHelper.ExecuteListField(ctx);
     }
-    
+
     public override void OnBeforeCompleteType(
         ITypeCompletionContext completionContext,
         DefinitionBase? definition,
@@ -74,11 +74,17 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
             foreach (ObjectFieldDefinition field in objectTypeDef.Fields)
             {
                 // In order to inspect the type we need to resolve the type reference on the definition.
-                // If its null or cannot be resolved something is wrong, but we skip over this and let
+                // If it's null or cannot be resolved something is wrong, but we skip over this and let
                 // the type validation deal with schema errors.
                 if (field.Type is not null &&
                     completionContext.TryGetType(field.Type, out IType? type))
                 {
+                    // Do not override a PureResolver when one is already set.
+                    if (field.PureResolver is not null)
+                    {
+                        continue;
+                    }
+
                     if (type.IsLeafType())
                     {
                         field.PureResolver = _leafFieldResolver;
@@ -91,8 +97,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
                     {
                         field.PureResolver = _listFieldResolver;
                     }
-                }
-                
+                }               
             }
         }
     }

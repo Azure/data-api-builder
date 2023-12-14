@@ -243,25 +243,21 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// This method returns whether the given value is a built_in function or not.
-        /// built_in funtions are surrounded by single paranthesis,i.e. (getdate())
-        /// string will be with paranthesis and single quotes, i.e. ('value')
-        /// int/float will be with double paranthesis, i.e. ((20))
+        /// built_in funtions are surrounded by single parenthesis,i.e. (getdate())
+        /// string will be with parenthesis and single quotes, i.e. ('value')
+        /// int/float will be with double parenthesis, i.e. ((20))
         /// </summary>
-        /// <param name="value">given value for database column</param>
+        /// <param name="columnDefinitionDefaultValue">given value for database column</param>
         /// <returns>true if given value is a built-in function</returns>
-        private static bool IsBuiltInFunction(string value)
+        private static bool IsBuiltInFunction(string columnDefinitionDefaultValue)
         {
-            if (value.StartsWith("(") && value.EndsWith(")"))
+            if ((columnDefinitionDefaultValue.StartsWith("('") && columnDefinitionDefaultValue.EndsWith("')"))
+                || (columnDefinitionDefaultValue.StartsWith("((") && columnDefinitionDefaultValue.EndsWith("))")))
             {
-                // remove starting and ending paranthesis
-                value = value.Substring(1, value.Length - 2);
-                if (!(value.StartsWith("'") && value.EndsWith("'")) && !(value.StartsWith("(") && value.EndsWith(")")))
-                {
-                    return true;
-                }
+                return false;
             }
 
-            return false;
+            return true;
         }
     }
 }

@@ -45,8 +45,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <code>Do: </code> Inserts new row and return all its columns
         /// <code>Check: </code> A row is inserted in the table that has rows with default values as built_in methods.
         /// it should insert it correctly with default values correctly handled by database.
-        /// current_date, current_timestamp, random_number, next_day have default value as built_in methods like GETDATE(), NOW(), RAND().
-        /// default_string_with_paranthesis has default value "()", default_function_string_with_paranthesis has default value "NOW()".
+        /// current_date, current_timestamp, random_number, next_day have default value as built_in methods GETDATE(), NOW(), RAND(), DATEADD(), resp.
+        /// default_string_with_parenthesis has default value "()", default_function_string_with_parenthesis has default value "NOW()".
         /// default_integer has default value 100.
         /// </summary>
         public virtual async Task InsertMutationWithDefaultBuiltInFunctions()
@@ -59,8 +59,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                         current_timestamp
                         random_number
                         next_day
-                        default_string_with_paranthesis
-                        default_function_string_with_paranthesis
+                        default_string_with_parenthesis
+                        default_function_string_with_parenthesis
                         default_integer
                     }
                 }
@@ -74,8 +74,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("current_timestamp").GetString()));
             Assert.IsNotNull(result.GetProperty("random_number").GetInt32());
             Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("next_day").GetString()));
-            Assert.AreEqual("()", result.GetProperty("default_string_with_paranthesis").GetString());
-            Assert.AreEqual("NOW()", result.GetProperty("default_function_string_with_paranthesis").GetString());
+            Assert.AreEqual("()", result.GetProperty("default_string_with_parenthesis").GetString());
+            Assert.AreEqual("NOW()", result.GetProperty("default_function_string_with_parenthesis").GetString());
             Assert.AreEqual(100, result.GetProperty("default_integer").GetInt32());
         }
 

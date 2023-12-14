@@ -298,7 +298,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                // For Unary predicates, there is always a paranthesis around the operand.
+                // For Unary predicates, there is always a parenthesis around the operand.
                 predicateString.Append($"{Build(predicate.Op)} ({ResolveOperand(predicate.Right)})");
             }
 

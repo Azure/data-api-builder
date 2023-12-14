@@ -466,39 +466,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public void AddPaginationPredicate(IEnumerable<PaginationColumn> afterJsonValues)
         {
-            IEnumerator<PaginationColumn> enumerator = afterJsonValues.GetEnumerator();
-
-            if (!enumerator.MoveNext())
+            if (!afterJsonValues.Any())
             {
                 // no need to create a predicate for pagination
                 return;
             }
 
-            List<PaginationColumn>? columns = null;
-            
-            try
+            foreach (PaginationColumn column in afterJsonValues)
             {
-                do
-                {
-                    PaginationColumn column = enumerator.Current;
-                    column.TableAlias = SourceAlias;
-                    column.ParamName = column.Value is not null ?
-                        MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
-                        MakeDbConnectionParam(null, column.ColumnName);
-                    (columns ??= new List<PaginationColumn>()).Add(column);
-                }while(enumerator.MoveNext());
-                
-            }
-            catch (ArgumentException ex)
-            {
-                throw new DataApiBuilderException(
-                      message: ex.Message,
-                      statusCode: HttpStatusCode.BadRequest,
-                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                      innerException: ex);
+                column.TableAlias = SourceAlias;
+                column.ParamName = column.Value is not null ?
+                     MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName)), column.ColumnName) :
+                     MakeDbConnectionParam(null, column.ColumnName);
             }
 
-            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(columns);
+            PaginationMetadata.PaginationPredicate = new KeysetPaginationPredicate(afterJsonValues.ToList());
         }
 
         /// <summary>
@@ -513,9 +495,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             try
             {
+                string parameterName;
                 if (value != null)
                 {
-                    string parameterName = MakeDbConnectionParam(
+                    parameterName = MakeDbConnectionParam(
                         GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn);
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),

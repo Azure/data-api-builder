@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 jsonDocument = JsonDocument.Parse("[]");
             }
 
-            JsonElement root = jsonDocument.RootElement;
+            JsonElement root = jsonDocument.RootElement.Clone();
             
             // create the connection object.
             return CreatePaginationConnection(root, paginationMetadata).ToJsonDocument();
@@ -60,7 +60,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (root.ValueKind is JsonValueKind.String)
             {
                 JsonDocument document = JsonDocument.Parse(root.GetString()!);
-                root = document.RootElement;
+                root = document.RootElement.Clone();
             }
 
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();

@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -174,6 +175,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
+            if (parentMetadata.Subqueries.TryGetValue(QueryBuilder.PAGINATION_FIELD_NAME, out PaginationMetadata? paginationObjectMetadata))
+            {
+                parentMetadata = paginationObjectMetadata;
+            }
+
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
             metadata = currentMetadata;
 

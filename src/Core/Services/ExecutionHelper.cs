@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
@@ -125,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Represents a pure resolver for a leaf field.
-        /// This resolver extracts the field value form the json object.
+        /// This resolver extracts the field value from the json object.
         /// </summary>
         /// <param name="context">
         /// The pure resolver context.
@@ -194,7 +195,7 @@ namespace Azure.DataApiBuilder.Service.Services
             if (TryGetPropertyFromParent(context, out JsonElement objectValue) &&
                 objectValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
-                IMetadata metadata = GetMetadata(context);
+                IMetadata metadata = GetMetadataObjectField(context);
                 objectValue = queryEngine.ResolveObject(objectValue, context.Selection.Field, ref metadata);
 
                 // Since the query engine could null the object out we need to check again
@@ -204,7 +205,7 @@ namespace Azure.DataApiBuilder.Service.Services
                     return null;
                 }
 
-                SetNewMetadata(context, metadata);
+                SetNewMetadataChildren(context, metadata);
                 return objectValue;
             }
 
@@ -222,7 +223,7 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 IMetadata metadata = GetMetadata(context);
                 IReadOnlyList<JsonElement> result = queryEngine.ResolveList(listValue, context.Selection.Field, ref metadata);
-                SetNewMetadata(context, metadata);
+                SetNewMetadataChildren(context, metadata);
                 return result;
             }
 
@@ -252,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Services
             IPureResolverContext context,
             out JsonElement propertyValue)
         {
-            JsonElement parent = context.Parent<JsonElement>();
+            JsonElement parent = context.Parent<JsonElement>().Clone();
 
             if (parent.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
             {
@@ -402,14 +403,46 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Get metadata from context
+        /// Get metadata from context.
+        /// The metadata key is the root field name + _PURE_RESOLVER_CTX + :: + PathDepth.
         /// </summary>
         private static IMetadata GetMetadata(IPureResolverContext context)
         {
-            // The pure resolver context has no access to the scoped context data,
-            // I will change that for version 14. The following code is a workaround
-            // and stores the metadata per root field on the global context.
-            string metadataKey = GetMetadataKey(context.Path) + PURE_RESOLVER_CONTEXT_SUFFIX;
+            if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Parent is not null)
+            {
+                string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth;
+                return (IMetadata)context.ContextData[paginationObjectParentName]!;
+            }
+
+            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
+            return (IMetadata)context.ContextData[metadataKey]!;
+        }
+
+        private static IMetadata GetMetadataObjectField(IPureResolverContext context)
+        {
+            // Depth Levels:  / 0   /  1  /   2    /   3
+            // Example Path: /books/items/items[0]/publishers
+            // Depth of 1 should have key in context.ContextData
+            // Depth of 2 will not have context.ContextData entry because non-Indexer path is the path that is cached.
+            // PaginationMetadata for items will be consistent across each subitem. So we can use the same metadata for each subitem.
+            // An indexer path segment is a segment that looks like -> items[n]
+            if (context.Path.Parent is IndexerPathSegment)
+            {
+                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent!.Parent!.Depth;
+                return (IMetadata)context.ContextData[objectParentName]!;
+            }
+            else if (context.Path.Parent is not null && ((NamePathSegment)context.Path.Parent).Name != PURE_RESOLVER_CONTEXT_SUFFIX)
+            {
+                // This check handles when the current selection is a relationship field because in that case,
+                // there will be no context data entry.
+                // e.g. metadata for index 4 will not exist. only 3. 
+                // Depth: /  0   / 1  /   2    /   3      /   4
+                // Path:  /books/items/items[0]/publishers/books
+                string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent!.Depth;
+                return (IMetadata)context.ContextData[objectParentName]!;
+            }
+
+            string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
             return (IMetadata)context.ContextData[metadataKey]!;
         }
 
@@ -419,7 +452,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
             if (current.Parent is RootPathSegment or null)
             {
-                return ((NamePathSegment)current).Name;
+                return ((NamePathSegment)current).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
             }
 
             while (current.Parent is not null)
@@ -428,23 +461,43 @@ namespace Azure.DataApiBuilder.Service.Services
 
                 if (current.Parent is RootPathSegment or null)
                 {
-                    return ((NamePathSegment)current).Name;
+                    return ((NamePathSegment)current).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
                 }
             }
 
             throw new InvalidOperationException("The path is not rooted.");
         }
 
+        private static string GetMetadataKey(IFieldSelection rootSelection)
+        {
+            return rootSelection.ResponseName + PURE_RESOLVER_CONTEXT_SUFFIX;
+        }
+
         /// <summary>
         /// Set new metadata and reset the depth that the metadata has persisted
+        /// The pagination metadata persisted here aligns with the top-level object type.
+        /// e.g. /books/items/... -> pagination metadata for /books.
         /// </summary>
         private static void SetNewMetadata(IPureResolverContext context, IMetadata? metadata)
         {
-            string metadataKey = GetMetadataKey(context.Path) + PURE_RESOLVER_CONTEXT_SUFFIX;
+            string metadataKey = GetMetadataKey(context.Selection) + "::" + context.Path.Depth;
+            context.ContextData.Add(metadataKey, metadata);
+        }
 
-            if (!context.ContextData.TryAdd(metadataKey, metadata))
+        /// <summary>
+        /// Sets the pagination metadata for child fields.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="metadata"></param>
+        private static void SetNewMetadataChildren(IPureResolverContext context, IMetadata? metadata)
+        {
+            string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
+
+            // it's okay to reset the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
+            // context for books/items/item[0]/publishers processing is done and that context isn't needed anymore.
+            if (!context.ContextData.TryAdd(contextKey, metadata))
             {
-                context.ContextData[metadataKey] = metadata;
+                context.ContextData[contextKey] = metadata;
             }
         }
     }

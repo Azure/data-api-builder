@@ -156,7 +156,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""last_sold_on"": ""2023-08-28 12:36:08.8666667"",
                 ""row_version"": ""AAAAAAAHgqw=""
             }";
-            string expectedLocationHeader = $"id/2";
 
             await SetupAndRunRestApiTest(
                     primaryKeyRoute: null,
@@ -166,7 +165,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                     operationType: EntityActionOperation.Insert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedLocationHeader: string.Empty
                 );
         }
 
@@ -189,10 +188,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""last_sold_on"": null,
                 ""row_version"": ""AAAAAAAHgqw=""
             }";
-            string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneUpdateWithRowversionFieldInRequestBody"),
@@ -211,17 +209,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""row_version"": ""AAAAAAAHgqw=""
             }";
 
-            expectedLocationHeader = $"id/2";
-
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/2",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PatchOneInsertWithRowversionFieldInRequestBody"),
                     operationType: EntityActionOperation.UpsertIncremental,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedLocationHeader: string.Empty
                 );
         }
 
@@ -244,10 +240,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""last_sold_on"": null,
                 ""row_version"": ""AAAAAAAHgqw=""
             }";
-            string expectedLocationHeader = $"id/1";
 
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/1",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneUpdateWithRowversionFieldInRequestBody"),
@@ -266,17 +261,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
                 ""last_sold_on"": null
             }";
 
-            expectedLocationHeader = $"id/2";
-
             await SetupAndRunRestApiTest(
-                    primaryKeyRoute: expectedLocationHeader,
+                    primaryKeyRoute: $"id/2",
                     queryString: null,
                     entityNameOrPath: _entityWithReadOnlyFields,
                     sqlQuery: GetQuery("PutOneInsertWithRowversionFieldInRequestBody"),
                     operationType: EntityActionOperation.Upsert,
                     requestBody: requestBody,
                     expectedStatusCode: HttpStatusCode.Created,
-                    expectedLocationHeader: expectedLocationHeader
+                    expectedLocationHeader: string.Empty
                 );
         }
 

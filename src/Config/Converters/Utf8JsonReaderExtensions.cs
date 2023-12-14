@@ -15,9 +15,12 @@ static internal class Utf8JsonReaderExtensions
     /// <param name="reader">The reader that we want to pull the string from.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
+    /// <param name="replacementFailureMode">The failure mode to use when replacing environment variables.</param>
     /// <returns>The result of deserialization.</returns>
     /// <exception cref="JsonException">Thrown if the <see cref="JsonTokenType"/> is not String.</exception>
-    public static string? DeserializeString(this Utf8JsonReader reader, bool replaceEnvVar)
+    public static string? DeserializeString(this Utf8JsonReader reader,
+        bool replaceEnvVar,
+        EnvironmentVariableReplacementFailureMode replacementFailureMode = EnvironmentVariableReplacementFailureMode.Throw)
     {
         if (reader.TokenType is JsonTokenType.Null)
         {
@@ -33,7 +36,7 @@ static internal class Utf8JsonReaderExtensions
         JsonSerializerOptions options = new();
         if (replaceEnvVar)
         {
-            options.Converters.Add(new StringJsonConverterFactory());
+            options.Converters.Add(new StringJsonConverterFactory(replacementFailureMode));
         }
 
         return JsonSerializer.Deserialize<string>(ref reader, options);

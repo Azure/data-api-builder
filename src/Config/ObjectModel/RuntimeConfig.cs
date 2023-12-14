@@ -14,9 +14,11 @@ public record RuntimeConfig
     [JsonPropertyName("$schema")]
     public string Schema { get; init; }
 
+    public const string DEFAULT_CONFIG_SCHEMA_LINK = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
+
     public DataSource DataSource { get; init; }
 
-    public RuntimeOptions Runtime { get; init; }
+    public RuntimeOptions? Runtime { get; init; }
 
     public RuntimeEntities Entities { get; init; }
 
@@ -27,6 +29,106 @@ public record RuntimeConfig
 
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool SqlDataSourceUsed { get; private set; }
+
+    /// <summary>
+    /// Retrieves the value of runtime.CacheEnabled property if present, default is false.
+    /// Caching is enabled only when explicitly set to true.
+    /// </summary>
+    /// <returns>Whether caching is globally enabled.</returns>
+    [JsonIgnore]
+    public bool IsCachingEnabled =>
+        Runtime is not null &&
+        Runtime.IsCachingEnabled;
+
+    /// <summary>
+    /// Retrieves the value of runtime.rest.request-body-strict property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsRequestBodyStrict =>
+        Runtime is null ||
+        Runtime.Rest is null ||
+        Runtime.Rest.RequestBodyStrict;
+
+    /// <summary>
+    /// Retrieves the value of runtime.graphql.enabled property if present, default is true.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsGraphQLEnabled => Runtime is null ||
+        Runtime.GraphQL is null ||
+        Runtime.GraphQL.Enabled;
+
+    /// <summary>
+    /// Retrieves the value of runtime.rest.enabled property if present, default is true if its not cosmosdb.
+    /// </summary>
+    [JsonIgnore]
+    public bool IsRestEnabled =>
+        (Runtime is null ||
+         Runtime.Rest is null ||
+         Runtime.Rest.Enabled) &&
+         DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL;
+
+    /// <summary>
+    /// A shorthand method to determine whether Static Web Apps is configured for the current authentication provider.
+    /// </summary>
+    /// <returns>True if the authentication provider is enabled for Static Web Apps, otherwise false.</returns>
+    [JsonIgnore]
+    public bool IsStaticWebAppsIdentityProvider =>
+        Runtime is null ||
+        Runtime.Host is null ||
+        Runtime.Host.Authentication is null ||
+        EasyAuthType.StaticWebApps.ToString().Equals(Runtime.Host.Authentication.Provider, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The path at which Rest APIs are available
+    /// </summary>
+    [JsonIgnore]
+    public string RestPath
+    {
+        get
+        {
+            if (Runtime is null || Runtime.Rest is null)
+            {
+                return RestRuntimeOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.Rest.Path;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The path at which GraphQL API is available
+    /// </summary>
+    [JsonIgnore]
+    public string GraphQLPath
+    {
+        get
+        {
+            if (Runtime is null || Runtime.GraphQL is null)
+            {
+                return GraphQLRuntimeOptions.DEFAULT_PATH;
+            }
+            else
+            {
+                return Runtime.GraphQL.Path;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Indicates whether introspection is allowed or not.
+    /// </summary>
+    [JsonIgnore]
+    public bool AllowIntrospection
+    {
+        get
+        {
+            return Runtime is null ||
+                Runtime.GraphQL is null ||
+                Runtime.GraphQL.AllowIntrospection;
+        }
+    }
 
     private string _defaultDataSourceName;
 
@@ -57,13 +159,13 @@ public record RuntimeConfig
     /// </summary>
     /// <param name="Schema">schema for config.</param>
     /// <param name="DataSource">Default datasource.</param>
-    /// <param name="Runtime">Runtime settings.</param>
     /// <param name="Entities">Entities</param>
+    /// <param name="Runtime">Runtime settings.</param>
     /// <param name="DataSourceFiles">List of datasource files for multiple db scenario. Null for single db scenario.</param>
     [JsonConstructor]
-    public RuntimeConfig(string Schema, DataSource DataSource, RuntimeOptions Runtime, RuntimeEntities Entities, DataSourceFiles? DataSourceFiles = null)
+    public RuntimeConfig(string? Schema, DataSource DataSource, RuntimeEntities Entities, RuntimeOptions? Runtime = null, DataSourceFiles? DataSourceFiles = null)
     {
-        this.Schema = Schema;
+        this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
@@ -223,6 +325,70 @@ public record RuntimeConfig
         return JsonSerializer.Serialize(this, jsonSerializerOptions);
     }
 
+    public bool IsDevelopmentMode() =>
+        Runtime is not null && Runtime.Host is not null
+        && Runtime.Host.Mode is HostMode.Development;
+
+    /// <summary>
+    /// Returns the ttl-seconds value for a given entity.
+    /// If the property is not set, returns the global default value set in the runtime config.
+    /// If the global default value is not set, the default value is used (5 seconds).
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    public int GetEntityCacheEntryTtl(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        if (!entityConfig.IsCachingEnabled)
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} does not have caching enabled.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+        }
+
+        if (entityConfig.Cache.UserProvidedTtlOptions)
+        {
+            return entityConfig.Cache.TtlSeconds.Value;
+        }
+        else
+        {
+            return GlobalCacheEntryTtl();
+        }
+    }
+
+    /// <summary>
+    /// Whether the caching service should be used for a given operation. This is determined by
+    /// - whether caching is enabled globally
+    /// - whether the datasource is SQL and session context is disabled.
+    /// </summary>
+    /// <returns>Whether cache operations should proceed.</returns>
+    public bool CanUseCache()
+    {
+        bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
+        return IsCachingEnabled && SqlDataSourceUsed && !setSessionContextEnabled;
+    }
+
+    /// <summary>
+    /// Returns the ttl-seconds value for the global cache entry.
+    /// If no value is explicitly set, returns the global default value.
+    /// </summary>
+    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
+    public int GlobalCacheEntryTtl()
+    {
+        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
+            ? Runtime.Cache.TtlSeconds.Value
+            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
+    }
+
     private void CheckDataSourceNamePresent(string dataSourceName)
     {
         if (!_dataSourceNameToDataSource.ContainsKey(dataSourceName))
@@ -245,7 +411,7 @@ public record RuntimeConfig
     private void SetupDataSourcesUsed()
     {
         SqlDataSourceUsed = _dataSourceNameToDataSource.Values.Any
-            (x => x.DatabaseType is DatabaseType.MSSQL || x.DatabaseType is DatabaseType.PostgreSQL || x.DatabaseType is DatabaseType.MySQL);
+            (x => x.DatabaseType is DatabaseType.MSSQL || x.DatabaseType is DatabaseType.PostgreSQL || x.DatabaseType is DatabaseType.MySQL || x.DatabaseType is DatabaseType.DWSQL);
 
         CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
             (x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL);

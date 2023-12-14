@@ -16,7 +16,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 {

@@ -159,34 +159,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
     ""title"": ""Awesome book"",
     ""publisher_id"": 1234,
     ""publishers"": {
-                ""id"": 1234,
+      ""id"": 1234,
       ""name"": ""Big Company""
     },
     ""reviews"": {
-                ""items"": [
-                  {
-                    ""id"": 567,
-          ""content"": ""Indeed a great book""
-                  },
+      ""items"": [
         {
-                    ""id"": 568,
+          ""id"": 567,
+          ""content"": ""Indeed a great book""
+        },
+        {
+          ""id"": 568,
           ""content"": ""I loved it""
         },
         {
-                    ""id"": 569,
+          ""id"": 569,
           ""content"": ""best book I read in years""
         }
       ]
     },
     ""authors"": {
-                ""items"": [
-                  {
-                    ""id"": 123,
+      ""items"": [
+        {
+          ""id"": 123,
           ""name"": ""Jelte""
-                  }
+        }
       ]
     }
-        },
+  },
   {
     ""id"": 2,
     ""title"": ""Also Awesome book"",
@@ -212,174 +212,174 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
     ""title"": ""Great wall of china explained"",
     ""publisher_id"": 2345,
     ""publishers"": {
-        ""id"": 2345,
+      ""id"": 2345,
       ""name"": ""Small Town Publisher""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": [
-          {
-            ""id"": 123,
-          ""name"": ""Jelte""
-          },
+      ""items"": [
         {
-            ""id"": 124,
+          ""id"": 123,
+          ""name"": ""Jelte""
+        },
+        {
+          ""id"": 124,
           ""name"": ""Aniruddh""
         }
       ]
     }
-},
+  },
   {
     ""id"": 4,
     ""title"": ""US history in a nutshell"",
     ""publisher_id"": 2345,
     ""publishers"": {
-        ""id"": 2345,
+      ""id"": 2345,
       ""name"": ""Small Town Publisher""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": [
-          {
-            ""id"": 123,
-          ""name"": ""Jelte""
-          },
+      ""items"": [
         {
-            ""id"": 124,
+          ""id"": 123,
+          ""name"": ""Jelte""
+        },
+        {
+          ""id"": 124,
           ""name"": ""Aniruddh""
         }
       ]
     }
-},
+  },
   {
     ""id"": 5,
     ""title"": ""Chernobyl Diaries"",
     ""publisher_id"": 2323,
     ""publishers"": {
-        ""id"": 2323,
+      ""id"": 2323,
       ""name"": ""TBD Publishing One""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": [
-              {
-                ""id"": 126,
-                ""name"": ""Aaron""
-              }
-        ]
+      ""items"": [
+        {
+          ""id"": 126,
+          ""name"": ""Aaron""
+        }
+      ]
     }
-},
+  },
   {
     ""id"": 6,
     ""title"": ""The Palace Door"",
     ""publisher_id"": 2324,
     ""publishers"": {
-        ""id"": 2324,
+      ""id"": 2324,
       ""name"": ""TBD Publishing Two Ltd""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 7,
     ""title"": ""The Groovy Bar"",
     ""publisher_id"": 2324,
     ""publishers"": {
-        ""id"": 2324,
+      ""id"": 2324,
       ""name"": ""TBD Publishing Two Ltd""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 8,
     ""title"": ""Time to Eat"",
     ""publisher_id"": 2324,
     ""publishers"": {
-        ""id"": 2324,
+      ""id"": 2324,
       ""name"": ""TBD Publishing Two Ltd""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 9,
     ""title"": ""Policy-Test-01"",
     ""publisher_id"": 1940,
     ""publishers"": {
-        ""id"": 1940,
+      ""id"": 1940,
       ""name"": ""Policy Publisher 01""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 10,
     ""title"": ""Policy-Test-02"",
     ""publisher_id"": 1940,
     ""publishers"": {
-        ""id"": 1940,
+      ""id"": 1940,
       ""name"": ""Policy Publisher 01""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
+  },
   {
     ""id"": 11,
     ""title"": ""Policy-Test-04"",
     ""publisher_id"": 1941,
     ""publishers"": {
-        ""id"": 1941,
+      ""id"": 1941,
       ""name"": ""Policy Publisher 02""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-},
-{
+  },
+  {
     ""id"": 12,
     ""title"": ""Time to Eat 2"",
     ""publisher_id"": 1941,
     ""publishers"": {
-        ""id"": 1941,
+      ""id"": 1941,
       ""name"": ""Policy Publisher 02""
     },
     ""reviews"": {
-        ""items"": []
+      ""items"": []
     },
     ""authors"": {
-        ""items"": []
+      ""items"": []
     }
-}
+  }
 ]";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
@@ -1195,11 +1195,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
 
         /// <summary>
         /// Simple Stored Procedure to check SELECT query returning single row
+        /// This test ensures if a value is specified in the query, it is used
         /// </summary>
         public async Task TestStoredProcedureQueryForGettingSingleRow(string dbQuery)
         {
             string graphQLQueryName = "executeGetPublisher";
-            string graphQLQuery = @"mutation {
+            string graphQLQuery = @"query {
                 executeGetPublisher(id: 1234) {
                     id
                     name
@@ -1626,7 +1627,7 @@ query {
         /// In this Test the result changes when we override the source and target fields in the config.
         /// </summary>
         [TestMethod]
-        public async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
+        public virtual async Task TestConfigTakesPrecedenceForRelationshipFieldsOverDB(
             string[] sourceFields,
             string[] targetFields,
             int club_id,

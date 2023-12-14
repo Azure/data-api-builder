@@ -205,8 +205,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             PerformTest(findRequestContext,
                 _mockMetadataStore.Object,
                 expectsException: true,
-                statusCode: HttpStatusCode.NotFound,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField);
         }
 
         /// <summary>
@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Simulated client request for composit primary key, however one of two columns do
+        /// Simulated client request for composite primary key, however one of two columns do
         /// not match DB schema.
         /// </summary>
         [TestMethod]
@@ -280,8 +280,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             PerformTest(findRequestContext, _mockMetadataStore.Object,
                         expectsException: true,
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.InvalidIdentifierField);
         }
 
         /// <summary>

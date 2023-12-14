@@ -2,12 +2,14 @@
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "data-source": {
     "database-type": "mysql",
-    "connection-string": "server=localhost;database=datagatewaytest;uid=root;pwd=REPLACEME"
+    "connection-string": "server=localhost;database=datagatewaytest;uid=root;pwd=REPLACEME",
+    "options": {}
   },
   "runtime": {
     "rest": {
       "enabled": true,
-      "path": "/api"
+      "path": "/api",
+      "request-body-strict": true
     },
     "graphql": {
       "enabled": true,
@@ -289,6 +291,9 @@
             },
             {
               "action": "update"
+            },
+            {
+              "action": "delete"
             }
           ]
         },
@@ -300,6 +305,67 @@
             },
             {
               "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_noread",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_policy_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              },
+              "policy": {
+                "database": "@item.piecesAvailable ne 0"
+              }
+            },
+            {
+              "action": "create"
             },
             {
               "action": "update"
@@ -383,7 +449,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title eq \u0027Policy-Test-01\u0027"
+                "database": "@item.title eq 'Policy-Test-01'"
               }
             },
             {
@@ -415,7 +481,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title ne \u0027Policy-Test-01\u0027"
+                "database": "@item.title ne 'Policy-Test-01'"
               }
             },
             {
@@ -447,7 +513,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title eq \u0027Policy-Test-01\u0027"
+                "database": "@item.title eq 'Policy-Test-01'"
               }
             },
             {
@@ -479,7 +545,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title ne \u0027Policy-Test-01\u0027"
+                "database": "@item.title ne 'Policy-Test-01'"
               }
             },
             {
@@ -642,6 +708,67 @@
             },
             {
               "action": "create"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_noread",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_policy_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              },
+              "policy": {
+                "database": "@item.title ne 'Test'"
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
             }
           ]
         }
@@ -1084,7 +1211,7 @@
         }
       },
       "rest": {
-        "enabled": false
+        "enabled": true
       },
       "permissions": [
         {
@@ -1167,7 +1294,7 @@
       ],
       "mappings": {
         "species": "Scientific Name",
-        "region": "United State\u0027s Region"
+        "region": "United State's Region"
       }
     },
     "Shrub": {
@@ -1288,7 +1415,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.region ne \u0027northeast\u0027"
+                "database": "@item.region ne 'northeast'"
               }
             }
           ]
@@ -1487,14 +1614,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": [
-          "get",
-          "post",
-          "put",
-          "patch",
-          "delete"
-        ]
+        "enabled": true
       },
       "permissions": [
         {
@@ -1726,10 +1846,10 @@
         }
       ],
       "mappings": {
-        "DetailAssessmentAndPlanning": "\u59CB\u8A08",
-        "WagingWar": "\u4F5C\u6230",
-        "StrategicAttack": "\u8B00\u653B",
-        "NoteNum": "\u252C\u2500\u252C\u30CE( \u00BA _ \u00BA\u30CE)"
+        "DetailAssessmentAndPlanning": "始計",
+        "WagingWar": "作戰",
+        "StrategicAttack": "謀攻",
+        "NoteNum": "┬─┬ノ( º _ ºノ)"
       }
     },
     "series": {
@@ -1925,8 +2045,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {

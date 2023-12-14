@@ -29,6 +29,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     public const string CLAIM_PREFIX = "@claims.";
     public const string FIELD_PREFIX = "@item.";
     public const string CLIENT_ROLE_HEADER = "X-MS-API-ROLE";
+    public const string AUTHORIZATION_HEADER = "Authorization";
     public const string ROLE_ANONYMOUS = "anonymous";
     public const string ROLE_AUTHENTICATED = "authenticated";
 
@@ -160,7 +161,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                         return false;
                     }
                 }
-                else if (runtimeConfig is not null && runtimeConfig.Runtime.Rest.RequestBodyStrict)
+                else if (runtimeConfig is not null && runtimeConfig.IsRequestBodyStrict)
                 {
                     // Throw exception when we are not allowed extraneous fields in the rest request body,
                     // and no mapping exists for the given exposed field to a backing column.
@@ -192,20 +193,8 @@ public class AuthorizationResolver : IAuthorizationResolver
         return GetPolicyWithClaimValues(dBpolicyWithClaimTypes, GetAllUserClaims(httpContext));
     }
 
-    /// <summary>
-    /// Helper function to fetch the database policy associated with the current request based on the entity under
-    /// action, the role defined in the the request and the operation to be executed.
-    /// When no database policy is found, no database query predicates need to be added.
-    /// 1) _entityPermissionMap[entityName] finds the entityMetaData for the current entityName
-    /// 2) entityMetaData.RoleToOperationMap[roleName] finds the roleMetaData for the current roleName
-    /// 3) roleMetaData.OperationToColumnMap[operation] finds the operationMetadata for the current operation
-    /// 4) operationMetaData.databasePolicy finds the required database policy
-    /// </summary>
-    /// <param name="entityName">Entity from request.</param>
-    /// <param name="roleName">Role defined in client role header.</param>
-    /// <param name="operation">Operation type: create, read, update, delete.</param>
-    /// <returns>Policy string if a policy exists in config.</returns>
-    private string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
+    /// <inheritdoc />
+    public string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
     {
         if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
         {

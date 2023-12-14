@@ -10,7 +10,8 @@
   "runtime": {
     "rest": {
       "enabled": true,
-      "path": "/api"
+      "path": "/api",
+      "request-body-strict": true
     },
     "graphql": {
       "enabled": true,
@@ -238,7 +239,7 @@
             {
               "action": "create",
               "policy": {
-                "database": "@item.name ne \u0027New publisher\u0027"
+                "database": "@item.name ne 'New publisher'"
               }
             },
             {
@@ -338,6 +339,9 @@
           "role": "database_policy_tester",
           "actions": [
             {
+              "action": "read"
+            },
+            {
               "action": "create",
               "policy": {
                 "database": "@item.pieceid ne 6 and @item.piecesAvailable gt 0"
@@ -348,6 +352,67 @@
               "policy": {
                 "database": "@item.pieceid ne 1"
               }
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_noread",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_policy_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "categoryName"
+                ]
+              },
+              "policy": {
+                "database": "@item.piecesAvailable ne 0"
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
             }
           ]
         }
@@ -425,7 +490,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title eq \u0027Policy-Test-01\u0027"
+                "database": "@item.title eq 'Policy-Test-01'"
               }
             },
             {
@@ -457,7 +522,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title ne \u0027Policy-Test-01\u0027"
+                "database": "@item.title ne 'Policy-Test-01'"
               }
             },
             {
@@ -489,7 +554,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title eq \u0027Policy-Test-01\u0027"
+                "database": "@item.title eq 'Policy-Test-01'"
               }
             },
             {
@@ -521,7 +586,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.title ne \u0027Policy-Test-01\u0027"
+                "database": "@item.title ne 'Policy-Test-01'"
               }
             },
             {
@@ -684,6 +749,67 @@
             },
             {
               "action": "create"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_noread",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_policy_excluded_fields",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "publisher_id"
+                ]
+              },
+              "policy": {
+                "database": "@item.title ne 'Test'"
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
             }
           ]
         }
@@ -1193,52 +1319,6 @@
         "id": "typeid"
       }
     },
-    "FteData": {
-      "source": {
-        "object": "fte_data",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true
-      },
-      "rest": {
-        "enabled": true,
-        "methods": []
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ]
-    },
-    "InternData": {
-      "source": {
-        "object": "intern_data",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true
-      },
-      "rest": {
-        "enabled": true,
-        "methods": []
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ]
-    },
     "stocks_price": {
       "source": {
         "object": "stocks_price",
@@ -1255,6 +1335,14 @@
         "enabled": true
       },
       "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
         {
           "role": "authenticated",
           "actions": [
@@ -1348,7 +1436,7 @@
       ],
       "mappings": {
         "species": "Scientific Name",
-        "region": "United State\u0027s Region"
+        "region": "United State's Region"
       }
     },
     "Shrub": {
@@ -1469,7 +1557,7 @@
                 ]
               },
               "policy": {
-                "database": "@item.region ne \u0027northeast\u0027"
+                "database": "@item.region ne 'northeast'"
               }
             }
           ]
@@ -1900,10 +1988,10 @@
         }
       ],
       "mappings": {
-        "DetailAssessmentAndPlanning": "\u59CB\u8A08",
-        "WagingWar": "\u4F5C\u6230",
-        "StrategicAttack": "\u8B00\u653B",
-        "NoteNum": "\u252C\u2500\u252C\u30CE( \u00BA _ \u00BA\u30CE)"
+        "DetailAssessmentAndPlanning": "始計",
+        "WagingWar": "作戰",
+        "StrategicAttack": "謀攻",
+        "NoteNum": "┬─┬ノ( º _ ºノ)"
       }
     },
     "series": {
@@ -2098,14 +2186,11 @@
     "GetPublisher": {
       "source": {
         "object": "get_publisher_by_id",
-        "type": "stored-procedure",
-        "parameters": {
-          "id": 1
-        }
+        "type": "stored-procedure"
       },
       "graphql": {
         "enabled": true,
-        "operation": "mutation",
+        "operation": "query",
         "type": {
           "singular": "GetPublisher",
           "plural": "GetPublishers"
@@ -2489,6 +2574,58 @@
         "bkname": "name"
       }
     },
+    "FteData": {
+      "source": {
+        "object": "fte_data",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "FteData",
+          "plural": "FteData"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "InternData": {
+      "source": {
+        "object": "intern_data",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "InternData",
+          "plural": "InternData"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
     "BooksSold": {
       "source": {
         "object": "books_sold",
@@ -2502,8 +2639,7 @@
         }
       },
       "rest": {
-        "enabled": true,
-        "methods": []
+        "enabled": true
       },
       "permissions": [
         {

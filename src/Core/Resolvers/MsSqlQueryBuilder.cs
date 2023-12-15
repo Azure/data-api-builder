@@ -495,7 +495,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             // For 'timestamp' columns sc.is_computed = 0.
             string query = "SELECT ifsc.COLUMN_NAME from sys.columns as sc INNER JOIN INFORMATION_SCHEMA.COLUMNS as ifsc " +
-                "ON ( sc.is_computed = 1 or ifsc.DATA_TYPE = 'timestamp' ) " +
+                "ON (sc.is_computed = 1 or ifsc.DATA_TYPE = 'timestamp') " +
                 $"AND sc.object_id = object_id({schemaParamName}+'.'+{tableParamName}) AND ifsc.TABLE_SCHEMA = {schemaParamName} " +
 				$"AND ifsc.TABLE_NAME = {tableParamName} AND ifsc.COLUMN_NAME = sc.name;";
 

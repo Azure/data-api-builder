@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -14,6 +15,8 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types.NodaTime;
+using NodaTime.Text;
 
 namespace Azure.DataApiBuilder.Service.Services
 {
@@ -162,8 +165,9 @@ namespace Azure.DataApiBuilder.Service.Services
                     FloatType => fieldValue.GetDouble(), // spec
                     SingleType => fieldValue.GetSingle(),
                     DecimalType => fieldValue.GetDecimal(),
-                    DateTimeType => DateTimeOffset.Parse(fieldValue.GetString()!),
+                    DateTimeType => DateTimeOffset.Parse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                     DateType => DateTimeOffset.Parse(fieldValue.GetString()!),
+                    LocalTimeType => LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
                     ByteArrayType => fieldValue.GetBytesFromBase64(),
                     BooleanType => fieldValue.GetBoolean(), // spec
                     UrlType => new Uri(fieldValue.GetString()!),
@@ -304,6 +308,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 SupportedHotChocolateTypes.SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
                 SupportedHotChocolateTypes.FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
                 SupportedHotChocolateTypes.DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
+                SupportedHotChocolateTypes.UUID_TYPE => Guid.TryParse(value.Value!.ToString(), out Guid guidValue) ? guidValue : value.Value,
                 _ => value.Value
             };
         }

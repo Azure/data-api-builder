@@ -1,6 +1,7 @@
 init --config "dab-config.DwSql.json" --database-type dwsql --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
 add Publisher --config "dab-config.DwSql.json" --source publishers --permissions "anonymous:read" --source.key-fields "id"
 add Stock --config "dab-config.DwSql.json" --source stocks --permissions "anonymous:create,read,update,delete" --source.key-fields "categoryid,pieceid"
+add stocks_price --config "dab-config.DwSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete" --source.key-fields "categoryid,pieceid,instant"
 add Book --config "dab-config.DwSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books" --source.key-fields "id"
 add BookWebsitePlacement --config "dab-config.DwSql.json" --source book_website_placements --permissions "anonymous:read" --source.key-fields "id"
 add Author --config "dab-config.DwSql.json" --source authors --permissions "anonymous:read" --source.key-fields "id"
@@ -25,6 +26,10 @@ add Notebook --config "dab-config.DwSql.json" --source "notebooks" --permissions
 add Journal --config "dab-config.DwSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete" --source.key-fields "id"
 add ArtOfWar --config "dab-config.DwSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*" --source.key-fields "NoteNum"
 add stocks_view_selected --config "dab-config.DwSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
+add stocks_price --config "dab-config.DwSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
+update stocks_price --config "dab-config.DwSql.json" --permissions "anonymous:read"
+update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
+update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"
 update Publisher --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship books --target.entity Book --cardinality many --relationship.fields "id:publisher_id"
 update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_01:create,delete"
 update Publisher --config "dab-config.DwSql.json" --permissions "policy_tester_01:update" --fields.include "*"

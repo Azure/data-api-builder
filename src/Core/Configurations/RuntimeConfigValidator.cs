@@ -651,6 +651,10 @@ public class RuntimeConfigValidator : IConfigValidator
 
             string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
             ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(databaseName);
+
+            // Dictionary to store mapping from target entity's name to relationship name. Whenever we encounter that we
+            // are getting more than 1 entry for a target entity, we throw a validation error as it indicates the user has
+            // defined multiple relationships between the same source and target entities.
             Dictionary<string, string> targetEntityNameToRelationshipName = new();
             foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
             {
@@ -665,6 +669,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
                 // Add entry for this relationship to the dictionary tracking all the relationships for this entity.
                 targetEntityNameToRelationshipName[targetEntityName] = relationshipName;
+
                 // Validate if entity referenced in relationship is defined in the config.
                 if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
                 {

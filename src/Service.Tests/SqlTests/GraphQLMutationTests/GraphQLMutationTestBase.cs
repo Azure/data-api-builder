@@ -48,6 +48,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// current_date, current_timestamp, random_number, next_day have default value as built_in methods GETDATE(), NOW(), RAND(), DATEADD(), resp.
         /// default_string_with_parenthesis has default value "()", default_function_string_with_parenthesis has default value "NOW()".
         /// default_integer has default value 100.
+        /// Returned response would look like:
+        /// "createDefaultBuiltInFunction": {
+        ///   "current_date": "2023-12-15T16:24:48.267Z",
+        ///   "current_timestamp": "2023-12-15T16:24:48.267Z",
+        ///   "random_number": 0,
+        ///   "next_day": "2023-12-16T00:00:00.000Z",
+        ///   "default_string_with_paranthesis": "()",
+        ///   "default_function_string_with_paranthesis": "NOW()",
+        ///   "default_integer": 100
+        /// }
         /// </summary>
         public virtual async Task InsertMutationWithDefaultBuiltInFunctions()
         {

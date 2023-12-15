@@ -2,10 +2,6 @@
 // Licensed under the MIT License.
 
 # nullable disable
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
@@ -207,6 +203,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 list.Add(element);
             }
+
             return list;
         }
 

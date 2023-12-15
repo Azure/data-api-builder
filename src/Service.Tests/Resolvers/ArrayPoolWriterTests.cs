@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
         public void GetSpan_ShouldReturnSpanWithCorrectSizeHint()
         {
             // Arrange
-            using ArrayPoolWriter writer = new ArrayPoolWriter();
+            using ArrayPoolWriter writer = new();
 
             // Act
             Span<byte> span = writer.GetSpan(10);
@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
         public void Dispose_ShouldDisposeCorrectly()
         {
             // Arrange
-            ArrayPoolWriter writer = new ArrayPoolWriter();
+            ArrayPoolWriter writer = new();
 
             // Act
             writer.Dispose();
@@ -105,7 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
         public void Advance_ShouldThrowWhenDisposed()
         {
             // Arrange
-            ArrayPoolWriter writer = new ArrayPoolWriter();
+            ArrayPoolWriter writer = new();
             writer.Dispose();
 
             // Act & Assert
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
         public void Advance_ShouldThrowWhenNegativeCount()
         {
             // Arrange
-            using ArrayPoolWriter writer = new ArrayPoolWriter();
+            using ArrayPoolWriter writer = new();
 
             // Act & Assert
             Assert.ThrowsException<ArgumentOutOfRangeException>(() => writer.Advance(-1));
@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Resolvers
         public void Advance_ShouldThrowWhenCountGreaterThanCapacity()
         {
             // Arrange
-            using ArrayPoolWriter writer = new ArrayPoolWriter();
+            using ArrayPoolWriter writer = new();
 
             // Act & Assert
             Assert.ThrowsException<ArgumentOutOfRangeException>(

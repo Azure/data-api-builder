@@ -46,11 +46,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             JsonElement root = jsonDocument.RootElement.Clone();
-            
+
             // create the connection object.
             return CreatePaginationConnection(root, paginationMetadata).ToJsonDocument();
         }
-        
+
         private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata)
         {
             // Maintains the connection JSON object *Connection

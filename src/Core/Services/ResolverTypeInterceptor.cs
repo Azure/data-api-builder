@@ -1,12 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Configuration;
 using HotChocolate.Resolvers;
-using HotChocolate.Types;
 using HotChocolate.Types.Descriptors.Definitions;
 
 internal sealed class ResolverTypeInterceptor : TypeInterceptor
@@ -16,18 +13,18 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
     private readonly PureFieldDelegate _leafFieldResolver;
     private readonly PureFieldDelegate _objectFieldResolver;
     private readonly PureFieldDelegate _listFieldResolver;
-    
+
     public ResolverTypeInterceptor(ExecutionHelper executionHelper)
     {
-        _queryMiddleware = 
+        _queryMiddleware =
             new FieldMiddlewareDefinition(
                 next => async context =>
                 {
                     await executionHelper.ExecuteQueryAsync(context).ConfigureAwait(false);
                     await next(context).ConfigureAwait(false);
                 });
-        
-        _mutationMiddleware = 
+
+        _mutationMiddleware =
             new FieldMiddlewareDefinition(
                 next => async context =>
                 {
@@ -97,7 +94,7 @@ internal sealed class ResolverTypeInterceptor : TypeInterceptor
                     {
                         field.PureResolver = _listFieldResolver;
                     }
-                }               
+                }
             }
         }
     }

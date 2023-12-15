@@ -651,9 +651,20 @@ public class RuntimeConfigValidator : IConfigValidator
 
             string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
             ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(databaseName);
-
+            Dictionary<string, string> targetEntityNameToRelationshipName = new();
             foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
             {
+                string targetEntityName = relationship.TargetEntity;
+                if (targetEntityNameToRelationshipName.TryGetValue(targetEntityName, out string? duplicateRelationshipName))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Found multiple relationships: {duplicateRelationshipName}, {relationshipName} between source entity: {entityName} and target entity: {targetEntityName}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
+                // Add entry for this relationship to the dictionary tracking all the relationships for this entity.
+                targetEntityNameToRelationshipName[targetEntityName] = relationshipName;
                 // Validate if entity referenced in relationship is defined in the config.
                 if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
                 {

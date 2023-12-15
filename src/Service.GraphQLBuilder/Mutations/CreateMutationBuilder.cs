@@ -15,6 +15,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
     public static class CreateMutationBuilder
     {
+        private const string INSERT_MULTIPLE_MUTATION_SUFFIX = "_Multiple";
         public const string INPUT_ARGUMENT_NAME = "item";
         public const string ARRAY_INPUT_ARGUMENT_NAME = "items";
 
@@ -355,10 +356,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinitionNodeDirectives
             );
 
-            // Batch insertion node.
+            // Multiple insertion node.
             FieldDefinitionNode createMultipleNode = new(
                 location: null,
-                new NameNode($"create{singularName}_Multiple"),
+                new NameNode($"create{GetInsertMultipleMutationName(singularName, GetDefinedPluralName(name.Value, entity))}"),
                 new StringValueNode($"Creates multiple new {singularName}"),
                 new List<InputValueDefinitionNode> {
                 new(
@@ -374,6 +375,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             );
 
             return new(createOneNode, createMultipleNode);
+        }
+
+        /// <summary>
+        /// Helper method to determine the name of the insert multiple mutation.
+        /// If the singular and plural graphql names for the entity match, we suffix the name with the insert multiple mutation suffix.
+        /// However if the plural and singular names are different, we use the plural name to construct the mutation.
+        /// </summary>
+        /// <param name="singularName">Singular name of the entity to be used for GraphQL.</param>
+        /// <param name="pluralName">Plural name of the entity to be used for GraphQL.</param>
+        /// <returns>Name of the insert multiple mutation.</returns>
+        private static string GetInsertMultipleMutationName(string singularName, string pluralName)
+        {
+            return singularName.Equals(pluralName) ? $"{singularName}{INSERT_MULTIPLE_MUTATION_SUFFIX}" : pluralName;
         }
     }
 }

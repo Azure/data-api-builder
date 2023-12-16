@@ -427,7 +427,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 // Assert for expected exception.
                 DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                    configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
                 Assert.AreEqual($"Found multiple relationships: {relationshipName}, {duplicateRelationshipName} between source entity: {sourceEntityName} and target entity: {targetEntityName}", ex.Message);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             }

@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // need to wrap datetime in quotes to ensure correct deserialization.
                         stringAgg.Append($"N\'\"{escapedLabel}\":\"\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null') + \'\"\'+");
                     }
-                    else if(col_type == typeof(Boolean))
+                    else if (col_type == typeof(Boolean))
                     {
                         stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(IIF({col_value} = 1, 'true', 'false'),'null')");
                     }

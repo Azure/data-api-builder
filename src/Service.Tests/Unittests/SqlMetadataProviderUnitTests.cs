@@ -252,8 +252,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MsSqlMetadataProvider metadataProvider = (MsSqlMetadataProvider)_sqlMetadataProvider;
             Assert.IsFalse(metadataProvider.TryGetColumnToEntityMappings("InvalidEntity", out _), "Column to entity mappings should not exist for invalid entity.");
             Assert.IsFalse(metadataProvider.TryGetEntityToColumnMappings("invalidEntity", out _), "Entity to column mappings should not exist for invalid entity.");
-            Assert.IsTrue(metadataProvider.TryGetEntityToColumnMappings("publishers", out IReadOnlyDictionary<string, string> _), "Entity to column mappings should exist for valid entity.");
-            Assert.IsTrue(metadataProvider.TryGetColumnToEntityMappings("publishers", out IReadOnlyDictionary<string, string> _), "Column to entity mappings should exist for valid entity.");
+            Assert.IsTrue(metadataProvider.TryGetEntityToColumnMappings("Publisher", out IReadOnlyDictionary<string, string> _), "Entity to column mappings should exist for valid entity.");
+            Assert.IsTrue(metadataProvider.TryGetColumnToEntityMappings("Publisher", out IReadOnlyDictionary<string, string> _), "Column to entity mappings should exist for valid entity.");
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }

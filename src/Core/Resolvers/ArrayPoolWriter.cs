@@ -8,7 +8,7 @@ using System.Buffers;
 /// </summary>
 internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
 {
-    private const int _initialBufferSize = 512;
+    private const int INITIAL_BUFFER_SIZE = 512;
     private byte[] _buffer;
     private int _capacity;
     private int _start;
@@ -19,7 +19,7 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
     /// </summary>
     public ArrayPoolWriter()
     {
-        _buffer = ArrayPool<byte>.Shared.Rent(_initialBufferSize);
+        _buffer = ArrayPool<byte>.Shared.Rent(INITIAL_BUFFER_SIZE);
         _capacity = _buffer.Length;
         _start = 0;
     }
@@ -98,7 +98,7 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
             throw new ArgumentOutOfRangeException(nameof(sizeHint));
         }
 
-        int size = sizeHint < 1 ? _initialBufferSize : sizeHint;
+        int size = sizeHint < 1 ? INITIAL_BUFFER_SIZE : sizeHint;
         EnsureBufferCapacity(size);
         return _buffer.AsMemory().Slice(_start, size);
     }
@@ -127,7 +127,7 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
             throw new ArgumentOutOfRangeException(nameof(sizeHint));
         }
 
-        int size = sizeHint < 1 ? _initialBufferSize : sizeHint;
+        int size = sizeHint < 1 ? INITIAL_BUFFER_SIZE : sizeHint;
         EnsureBufferCapacity(size);
         return _buffer.AsSpan().Slice(_start, size);
     }
@@ -152,7 +152,7 @@ internal sealed class ArrayPoolWriter : IBufferWriter<byte>, IDisposable
 
             // if that new buffer size is not enough to satisfy the needed capacity
             // we add the needed capacity to the doubled buffer capacity.
-            if (neededCapacity > newSize)
+            if (neededCapacity > newSize - _start)
             {
                 newSize += neededCapacity;
             }

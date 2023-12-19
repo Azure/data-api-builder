@@ -26,7 +26,6 @@ add Notebook --config "dab-config.DwSql.json" --source "notebooks" --permissions
 add Journal --config "dab-config.DwSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete" --source.key-fields "id"
 add ArtOfWar --config "dab-config.DwSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*" --source.key-fields "NoteNum"
 add stocks_view_selected --config "dab-config.DwSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
-add stocks_price --config "dab-config.DwSql.json" --source stocks_price --permissions "authenticated:create,read,update,delete"
 update stocks_price --config "dab-config.DwSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
 update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"

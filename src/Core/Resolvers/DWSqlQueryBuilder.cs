@@ -108,8 +108,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (!subQueryColumn && structure.GetColumnSystemType(column.ColumnName) != typeof(string))
                 {
                     col_value = $"CAST([{col_value}] AS NVARCHAR(MAX))";
-                    // Create json. Example: "book.id": 1 would be a sample output.
-                    stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null')");
+
+                    Type col_type = structure.GetColumnSystemType(column.ColumnName);
+
+                    if (col_type == typeof(DateTime))
+                    {
+                        // Need to wrap datetime in quotes to ensure correct deserialization.
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\"\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null') + \'\"\'+");
+                    }
+                    else if (col_type == typeof(Boolean))
+                    {
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(IIF({col_value} = 1, 'true', 'false'),'null')");
+                    }
+                    else
+                    {
+                        // Create json. Example: "book.id": 1 would be a sample output.
+                        stringAgg.Append($"N\'\"{escapedLabel}\":\' + ISNULL(STRING_ESCAPE({col_value},'json'),'null')");
+                    }
                 }
                 else
                 {

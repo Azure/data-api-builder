@@ -20,7 +20,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// The item field's metadata is of type OperationEntityInput
         /// i.e. CreateBookInput
         /// </summary>
-        public const string INPUT_ARGUMENT_NAME = "item";
+        public const string ITEM_INPUT_ARGUMENT_NAME = "item";
+        public const string ARRAY_INPUT_ARGUMENT_NAME = "items";
 
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing mutations

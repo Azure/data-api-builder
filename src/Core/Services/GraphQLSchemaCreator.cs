@@ -261,13 +261,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 objectTypes[entityName] = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
             }
 
-            // Create ObjectTypeDefinitionNode for linking entities. These object definitions are not exposed in the schema
-            // but are used to generate the object definitions of directional linking entities for (source, target) and (target, source) entities.
-            Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities(linkingEntityNames, entities);
-
             // 2. Generate and store object types for directional linking entities using the linkingObjectTypes generated in the previous step.
-            if (linkingObjectTypes.Count > 0)
+            // The count of linkingEntityNames can only be non-zero for MsSql.
+            if (linkingEntityNames.Count > 0)
             {
+                // Create ObjectTypeDefinitionNode for linking entities. These object definitions are not exposed in the schema
+                // but are used to generate the object definitions of directional linking entities for (source, target) and (target, source) entities.
+                Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities(linkingEntityNames, entities);
                 GenerateObjectDefinitionsForDirectionalLinkingEntities(objectTypes, linkingObjectTypes, entitiesWithmanyToManyRelationships);
             }
 
@@ -290,20 +290,15 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             foreach ((string sourceEntityName, string targetEntityName) in manyToManyRelationships)
             {
-                string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
-                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(sourceEntityName);
+                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(targetEntityName);
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                if (sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
+                if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbo))
                 {
-                    // We support nested mutations only for MsSql as of now.
-                    continue;
-                }
-
-                ObjectTypeDefinitionNode linkingNode = linkingObjectTypes[linkingEntityName];
-                ObjectTypeDefinitionNode targetNode = objectTypes[targetEntityName]; 
-                if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? databaseObject))
-                {
-                    List<ForeignKeyDefinition> foreignKeyDefinitions = databaseObject.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+                    string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
+                    ObjectTypeDefinitionNode linkingNode = linkingObjectTypes[linkingEntityName];
+                    ObjectTypeDefinitionNode targetNode = objectTypes[targetEntityName];
+                    HashSet<string> fieldNamesInTarget = targetNode.Fields.Select(field => field.Name.Value).ToHashSet();
+                    IEnumerable <ForeignKeyDefinition> foreignKeyDefinitions = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
 
                     // Get list of all referencing columns in the linking entity.
                     List<string> referencingColumnNames = foreignKeyDefinitions.SelectMany(foreignKeyDefinition => foreignKeyDefinition.ReferencingColumns).ToList();
@@ -317,8 +312,31 @@ namespace Azure.DataApiBuilder.Core.Services
                     // 1. All the fields from the target node to perform insertion on the target entity,
                     // 2. Fields from the linking node which are not a foreign key reference to source or target node. This is required to get all the
                     // values in the linking entity other than FK references so that insertion can be performed on the linking entity.
-                    fieldsInDirectionalLinkingNode = fieldsInDirectionalLinkingNode.Union(fieldsInLinkingNode.Where(field => !referencingColumnNames.Contains(field.Name.Value.Substring(LINKING_OBJECT_FIELD_PREFIX.Length)))).ToList();
-
+                    foreach (FieldDefinitionNode fieldInLinkingNode in fieldsInLinkingNode)
+                    {
+                        string fieldName = fieldInLinkingNode.Name.Value;
+                        if (!referencingColumnNames.Contains(fieldName)){
+                            if (fieldNamesInTarget.Contains(fieldName))
+                            {
+                                // The fieldName can represent a column in the targetEntity or a relationship.
+                                // The fieldName in the linking node cannot conflict with any of the
+                                // existing field names (either column name or relationship name) in the target node.
+                                bool doesFieldRepresentAColumn = sqlMetadataProvider.TryGetBackingColumn(targetEntityName, fieldName, out string? _);
+                                string infoMsg = $"Cannot use field name '{fieldName}' as it conflicts with one of the other field's name in the entity: {targetEntityName}. ";
+                                string actionableMsg = doesFieldRepresentAColumn ?
+                                    $"Consider using the 'mappings' section of the {targetEntityName} entity configuration to provide some other name for the field: '{fieldName}'." :
+                                    $"Consider using the 'relationships' section of the {targetEntityName} entity configuration to provide some other name for the relationship: '{fieldName}'.";
+                                throw new DataApiBuilderException(
+                                    message: infoMsg + actionableMsg,
+                                    statusCode: HttpStatusCode.Conflict,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                            }
+                            else
+                            {
+                                fieldsInDirectionalLinkingNode.Add(fieldInLinkingNode);
+                            }
+                        }
+                    }
                     // We don't need the model/authorization directives for the linking node as it will not be exposed via query/mutation.
                     // Removing the model directive ensures that we treat these object definitions as helper objects only and do not try to expose
                     // them via query/mutation.

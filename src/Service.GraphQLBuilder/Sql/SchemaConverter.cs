@@ -116,11 +116,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             exposedColumnName = columnAlias;
                         }
 
-                        // For linking entity, the fields are only used to generate directional objects for entities with N:N relationship.
-                        // The field names in linking entity can clash with the field name in the target entity. Hence, we prefix the field names
-                        // in linking entity with a linking object field prefix.
-                        exposedColumnName = configEntity.IsLinkingEntity ? LINKING_OBJECT_FIELD_PREFIX + exposedColumnName : exposedColumnName;
-
                         NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
                         FieldDefinitionNode field = new(
                             location: null,
@@ -203,11 +198,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         {
                             Tuple<string, string> sourceToTarget = new(entityName, targetEntityName);
                             Tuple<string, string> targetToSource = new(targetEntityName, entityName);
-                            if (relationshipsWithRightCardinalityMany.Contains(sourceToTarget))
-                            {
-                                throw new Exception("relationship present");
-                            }
-
                             relationshipsWithRightCardinalityMany.Add(sourceToTarget);
                             if (relationshipsWithRightCardinalityMany.Contains(targetToSource))
                             {

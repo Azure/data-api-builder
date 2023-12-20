@@ -5,7 +5,6 @@ using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -16,7 +15,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -64,7 +62,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
             string entityName = metadataProvider.GetEntityName(graphQLType);
-            AuthorizeMutationFields(context, queryArgs, entityName, resolver.OperationType);
+            AuthorizeMutationFields(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, context, IMutationEngine.GetClientRoleFromMiddlewareContext(context), queryArgs, entityName, resolver.OperationType);
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
@@ -79,29 +77,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <inheritdoc/>
         public void AuthorizeMutationFields(
+            string inputArgumentName,
             IMiddlewareContext context,
+            string clientRole,
             IDictionary<string, object?> parameters,
             string entityName,
             EntityActionOperation mutationOperation)
         {
-            string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
-            {
-                role = stringVals.ToString();
-            }
-
-            if (string.IsNullOrEmpty(role))
-            {
-                throw new DataApiBuilderException(
-                    message: "No ClientRoleHeader available to perform authorization.",
-                    statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
-
             List<string> inputArgumentKeys;
             if (mutationOperation != EntityActionOperation.Delete)
             {
-                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(inputArgumentName, parameters);
             }
             else
             {
@@ -111,9 +97,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             bool isAuthorized = mutationOperation switch
             {
                 EntityActionOperation.UpdateGraphQL =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: EntityActionOperation.Update, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: EntityActionOperation.Update, inputArgumentKeys),
                 EntityActionOperation.Create =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: mutationOperation, inputArgumentKeys),
                 EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
                                                      // to perform the delete operation on the entity to reach this point.
                 _ => throw new DataApiBuilderException(

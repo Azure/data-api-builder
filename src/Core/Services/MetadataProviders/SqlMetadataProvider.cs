@@ -1518,7 +1518,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
         /// whose definition has to be populated with foreign key information.</param>
-        private void FillInferredFkInfo(
+        protected virtual void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
             // For each table definition that has to be populated with the inferred

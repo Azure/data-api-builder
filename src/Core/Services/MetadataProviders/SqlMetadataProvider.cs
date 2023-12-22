@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc />
-        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
+        public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             return EntityToDatabaseObject;
         }
@@ -282,6 +282,38 @@ namespace Azure.DataApiBuilder.Core.Services
             InitODataParser();
             timer.Stop();
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        /// <summary>
+        /// Given entity name, gets the entity to column mappings if present.
+        /// </summary>
+        public bool TryGetEntityToColumnMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            Dictionary<string, string>? entityToColumnMappings;
+            mappings = null;
+            if (EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out entityToColumnMappings))
+            {
+                mappings = entityToColumnMappings;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Given entity name, gets the column to entity mappings if present.
+        /// </summary>
+        public bool TryGetColumnToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            Dictionary<string, string>? columntoEntityMappings;
+            mappings = null;
+            if (EntityBackingColumnsToExposedNames.TryGetValue(entityName, out columntoEntityMappings))
+            {
+                mappings = columntoEntityMappings;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>

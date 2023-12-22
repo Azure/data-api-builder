@@ -276,7 +276,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return true;
         }
 
-        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
+        public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             throw new NotImplementedException();
         }

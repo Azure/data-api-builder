@@ -399,6 +399,75 @@
         }
       ]
     },
+    "stocks_price": {
+      "source": {
+        "object": "stocks_price",
+        "type": "table",
+        "key-fields": [
+          "categoryid",
+          "pieceid",
+          "instant"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "stocks_price",
+          "plural": "stocks_prices"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "price"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "TestNestedFilterFieldIsNull_EntityReadForbidden",
+          "actions": [
+            {
+              "action": "create"
+            }
+          ]
+        }
+      ]
+    },
     "Book": {
       "source": {
         "object": "books",

@@ -314,12 +314,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Parse Results into Json and return
             if (dbDataReader.HasRows)
             {
-                // Make sure to get the complete json string in case of large document.
-                jsonResult =
-                    JsonSerializer.Deserialize<TResult>(
-                        await GetJsonStringFromDbReader(dbDataReader));
+                string jsonString = await GetJsonStringFromDbReader(dbDataReader);
+
+                ///Json string can be null or empty when the returned result from the db is NULL.
+                ///In dw case when the entire result is a null, a single row with an empty string is returned, owing to the isnullcheck that is done while constructing the json in the query.
+                if (!string.IsNullOrEmpty(jsonString))
+                {
+                    // Make sure to get the complete json string in case of large document.
+                    jsonResult = JsonSerializer.Deserialize<TResult>(jsonString);
+                }
             }
-            else
+
+            if (jsonResult is null)
             {
                 QueryExecutorLogger.LogInformation("Did not return any rows in the JSON result.");
             }

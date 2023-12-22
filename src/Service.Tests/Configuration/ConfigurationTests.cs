@@ -21,6 +21,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
@@ -89,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// A config file with SP entity with no REST section defined.
-        /// This config string is used for validating the REST HTTP methods that are enabled. 
+        /// This config string is used for validating the REST HTTP methods that are enabled.
         /// </summary>
         public const string SP_CONFIG_WITH_NO_REST_SETTINGS = @"
         {
@@ -316,6 +317,72 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 }
             }";
 
+        /// <summary>
+        /// Invalid properties:
+        /// `data-source-file` instead of `data-source-files`
+        /// `GraphQL` instead of `graphql` in the global runtime section.
+        /// `rst` instead of `rest` in the entity section.
+        /// </summary>
+        public const string CONFIG_WITH_INVALID_SCHEMA = @"
+        {
+            ""data-source"": {
+                ""database-type"": ""mssql"",
+                ""connection-string"": ""test-connection-string""
+            },
+            ""data-source-file"": [],
+            ""runtime"": {
+                ""rest"": {
+                    ""enabled"": true,
+                    ""path"": ""/api""
+                },
+                ""Graphql"": {
+                    ""enabled"": true,
+                    ""path"": ""/graphql"",
+                    ""allow-introspection"": true
+                },
+                ""host"": {
+                ""cors"": {
+                    ""origins"": [
+                    ""http://localhost:5000""
+                    ],
+                    ""allow-credentials"": false
+                },
+                ""authentication"": {
+                    ""provider"": ""StaticWebApps""
+                },
+                ""mode"": ""development""
+                }
+            },
+            ""entities"": {
+                ""Publisher"": {
+                    ""source"": {
+                        ""object"": ""publishers"",
+                        ""type"": ""table""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""type"": {
+                            ""singular"": ""Publisher"",
+                            ""plural"": ""Publishers""
+                        }
+                    },
+                    ""rst"": {
+                        ""enabled"": true
+                    },
+                    ""permissions"": [
+                        {
+                            ""role"": ""anonymous"",
+                            ""actions"": [
+                                {
+                                    ""action"": ""create""
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        }";
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
@@ -502,11 +569,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
 
-            // SourceLink appends the commit ID to the assembly metadata. The application name is extracted from the
-            // assembly metadata. So, the connection string after appending the application name will be of the form
-            // dab_oss_1.0.0+<commit-id> or dab_hosted_1.0.0+<commit-id> depending on oss or hosted scenario respectively.
-            // So, the updated connection string is validated to check if it starts with dab_oss_1.0.0 or dab_hosted_1.0.0.
-            Assert.IsTrue(actualUpdatedConnectionString.StartsWith(expectedUpdatedConnectionString));
+            Assert.AreEqual(actualUpdatedConnectionString, expectedUpdatedConnectionString);
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
@@ -977,22 +1040,244 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             ValidateCosmosDbSetup(server);
         }
 
-        [TestMethod("Validates the runtime configuration file."), TestCategory(TestCategory.MSSQL)]
-        public void TestConfigIsValid()
+        /// <summary>
+        /// This method tests the config properties like data-source, runtime settings and entities.
+        /// </summary>
+        [TestMethod("Validates the runtime configuration file properties."), TestCategory(TestCategory.MSSQL)]
+        public void TestConfigPropertiesAreValid()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
-            IConfigValidator configValidator =
-                new RuntimeConfigValidator(
+            RuntimeConfigValidator configValidator =
+                new(
                     configProvider,
                     new MockFileSystem(),
                     configValidatorLogger.Object);
 
-            configValidator.ValidateConfig();
-            TestHelper.UnsetAllDABEnvironmentVariables();
+            configValidator.ValidateConfigProperties();
+        }
+
+        /// <summary> 
+        /// This test method checks a valid config's entities against 
+        /// the database and ensures they are valid. 
+        /// </summary> 
+        [TestMethod("Validation passes for valid entities against database."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestSqlMetadataForValidConfigEntities()
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
+
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object,
+                    isValidateOnly: true);
+
+            await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+            Assert.IsTrue(configValidator.ConfigValidationExceptions.IsNullOrEmpty());
+        }
+
+        /// <summary> 
+        /// This test method checks a valid config's entities against 
+        /// the database and ensures they are valid. 
+        /// The config contains an entity source object not present in the database.
+        /// It also contains an entity whose source is incorrectly specified as a stored procedure.
+        /// </summary> 
+        [TestMethod("Validation fails for invalid entities against database."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestSqlMetadataForInvalidConfigEntities()
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+
+            // creating an entity with invalid table name
+            Entity entityWithInvalidSourceName = new(
+                Source: new("bokos", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "book", Plural: "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+                );
+
+            Entity entityWithInvalidSourceType = new(
+                Source: new("publishers", EntitySourceType.StoredProcedure, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_AUTHENTICATED) },
+                Relationships: null,
+                Mappings: null
+                );
+
+            configuration = configuration with
+            {
+                Entities = new RuntimeEntities(new Dictionary<string, Entity>()
+                    {
+                        { "Book", entityWithInvalidSourceName },
+                        { "Publisher", entityWithInvalidSourceType}
+                    })
+            };
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object,
+                    isValidateOnly: true);
+
+            ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
+
+            await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+
+            Assert.IsTrue(configValidator.ConfigValidationExceptions.Any());
+            Assert.AreEqual(2, configValidator.ConfigValidationExceptions.Count);
+            List<Exception> exceptionsList = configValidator.ConfigValidationExceptions;
+            Assert.AreEqual("Cannot obtain Schema for entity Book with underlying database "
+                + "object source: dbo.bokos due to: Invalid object name 'master.dbo.bokos'.", exceptionsList[0].Message);
+            Assert.AreEqual("No stored procedure definition found for the given database object publishers", exceptionsList[1].Message);
+        }
+
+        /// <summary>
+        /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
+        /// It asserts that the validation is successful and there are no validation failures. 
+        /// It also verifies that the expected log message is logged.
+        /// </summary>
+        [TestMethod("Validates the config file schema."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestConfigSchemaIsValid()
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
+
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+            string jsonData = File.ReadAllText(configLoader.ConfigFilePath);
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+            Assert.IsTrue(result.IsValid);
+            Assert.IsTrue(result.ValidationErrors.IsNullOrEmpty());
+            schemaValidatorLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((o, t) => o.ToString()!.Contains($"The config satisfies the schema requirements.")),
+                    It.IsAny<Exception>(),
+                    (Func<It.IsAnyType, Exception, string>)It.IsAny<object>()),
+                Times.Once);
+        }
+
+        /// <summary>
+        /// This test tries to validate a runtime config file that is not compliant with the runtime config JSON schema.
+        /// It validates no additional properties are defined in the config file.
+        /// The config file used here contains `data-source-file` instead of `data-source-files`,
+        /// and `graphql` property in runtime is written as `GraphQL` in the Global runtime section.
+        /// It also contains an entity where `rest` property is written as `rst`.
+        /// </summary>
+        [TestMethod("Validates the invalid config file schema."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestConfigSchemaIsInvalid()
+        {
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, CONFIG_WITH_INVALID_SCHEMA);
+            Assert.IsFalse(result.IsValid);
+            Assert.AreEqual(3, result.ValidationErrors.Count);
+
+            string errorMessage = result.ErrorMessage;
+            Assert.IsTrue(errorMessage.Contains("Total schema validation errors: 3"));
+            Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/data-source-file at 7:31"));
+            Assert.IsTrue(errorMessage.Contains("NoAdditionalPropertiesAllowed: #/runtime.Graphql at 13:26"));
+            Assert.IsTrue(errorMessage.Contains("AdditionalPropertiesNotValid: #/entities.Publisher\n"
+                    + "{\n  NoAdditionalPropertiesAllowed: #/entities.Publisher.rst\n}\n at 32:30"));
+        }
+
+        /// <summary>
+        /// DAB config doesn't support additional properties in it's config. This test validates that
+        /// a config file with additional properties fails the schema validation but still has no effect on engine startup.
+        /// </summary>
+        [TestMethod("Validates the config with custom properties works with the engine."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestEngineCanStartConfigWithCustomProperties()
+        {
+            const string CUSTOM_CONFIG = "custom-config.json";
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            loader.TryLoadKnownConfig(out RuntimeConfig config);
+
+            string customProperty = @"
+                {
+                    ""description"": ""This is a custom property""
+                }
+            ";
+
+            string combinedJson = TestHelper.AddPropertiesToJson(config.ToJson(), customProperty);
+
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+
+            string jsonSchema = File.ReadAllText("dab.draft.schema.json");
+
+            JsonConfigSchemaValidator jsonSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem());
+            JsonSchemaValidationResult result = await jsonSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, combinedJson);
+            Assert.IsFalse(result.IsValid);
+            Assert.IsTrue(result.ErrorMessage.Contains("Total schema validation errors: 1"));
+            Assert.IsTrue(result.ErrorMessage.Contains("NoAdditionalPropertiesAllowed: #/description"));
+
+            File.WriteAllText(CUSTOM_CONFIG, combinedJson);
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            // Non-Hosted Scenario
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    book_by_pk(id: 1) {
+                       id,
+                       title,
+                       publisher_id
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+
+                HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/Book");
+                HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+            }
         }
 
         /// <summary>
@@ -1117,8 +1402,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.AreEqual(expectedStatusCode, response.StatusCode);
                 string actualBody = await response.Content.ReadAsStringAsync();
                 Assert.IsTrue(actualBody.Contains(expectedContent));
-
-                TestHelper.UnsetAllDABEnvironmentVariables();
             }
         }
 
@@ -1425,6 +1708,270 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// For mutation operations, both the respective operation(create/update/delete) + read permissions are needed to receive a valid response.
+        /// In this test, Anonymous role is configured with only create permission.
+        /// So, a create mutation executed in the context of Anonymous role is expected to result in
+        /// 1) Creation of a new item in the database
+        /// 2) An error response containing the error message : "The mutation operation {operation_name} was successful but the current user is unauthorized to view the response due to lack of read permissions"
+        ///
+        /// A create mutation operation in the context of Anonymous role is executed and the expected error message is validated.
+        /// Authenticated role has read permission configured. A pk query is executed in the context of Authenticated role to validate that a new
+        /// record was created in the database.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateErrorMessageForMutationWithoutReadPermission()
+        {
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityAction deleteAction = new(
+                Action: EntityActionOperation.Delete,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] {new EntityPermission( Role: AuthorizationResolver.ROLE_ANONYMOUS , Actions: new[] { createAction }),
+                       new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { readAction, createAction, deleteAction })};
+
+            Entity entity = new(Source: new("stocks", EntitySourceType.Table, null, null),
+                                  Rest: null,
+                                  GraphQL: new(Singular: "Stock", Plural: "Stocks"),
+                                  Permissions: permissions,
+                                  Relationships: null,
+                                  Mappings: null);
+
+            string entityName = "Stock";
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken();
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try
+                {
+                    // A create mutation operation is executed in the context of Anonymous role. The Anonymous role has create action configured but lacks
+                    // read action. As a result, a new record should be created in the database but the mutation operation should return an error message.
+                    string graphQLMutation = @"
+                            mutation {
+                              createStock(
+                                item: {
+                                  categoryid: 5001
+                                  pieceid: 5001
+                                  categoryName: ""SciFi""
+                                  piecesAvailable: 100
+                                  piecesRequired: 50
+                                }
+                              ) {
+                                categoryid
+                                pieceid
+                              }
+                            }";
+
+                    JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: graphQLMutation,
+                        queryName: "createStock",
+                        variables: null,
+                        clientRoleHeader: null
+                        );
+
+                    Assert.IsNotNull(mutationResponse);
+                    Assert.IsTrue(mutationResponse.ToString().Contains("The mutation operation createStock was successful but the current user is unauthorized to view the response due to lack of read permissions"));
+
+                    // pk_query is executed in the context of Authenticated role to validate that the create mutation executed in the context of Anonymous role
+                    // resulted in the creation of a new record in the database.
+                    string graphQLQuery = @"
+                        {
+                          stock_by_pk(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            categoryName
+                          }
+                        }";
+                    string queryName = "stock_by_pk";
+
+                    ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
+                }
+                finally
+                {
+                    // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
+                    // back to its original state.
+                    string deleteMutation = @"
+                        mutation {
+                            deleteStock(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            }
+                        }";
+
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: deleteMutation,
+                        queryName: "deleteStock",
+                        variables: null,
+                        authToken: authToken,
+                        clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
+                }
+            }
+        }
+
+        /// <summary>
+        /// For mutation operations, the respective mutation operation type(create/update/delete) + read permissions are needed to receive a valid response.
+        /// For graphQL requests, if read permission is configured for Anonymous role, then it is inherited by other roles.
+        /// In this test, Anonymous role has read permission configured. Authenticated role has only create permission configured.
+        /// A create mutation operation is executed in the context of Authenticated role and the response is expected to have no errors because
+        /// the read permission is inherited from Anonymous role.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateInheritanceOfReadPermissionFromAnonymous()
+        {
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityAction deleteAction = new(
+                Action: EntityActionOperation.Delete,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] {new EntityPermission( Role: AuthorizationResolver.ROLE_ANONYMOUS , Actions: new[] { createAction, readAction, deleteAction }),
+                       new EntityPermission( Role: AuthorizationResolver.ROLE_AUTHENTICATED , Actions: new[] { createAction })};
+
+            Entity entity = new(Source: new("stocks", EntitySourceType.Table, null, null),
+                                  Rest: null,
+                                  GraphQL: new(Singular: "Stock", Plural: "Stocks"),
+                                  Permissions: permissions,
+                                  Relationships: null,
+                                  Mappings: null);
+
+            string entityName = "Stock";
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try
+                {
+                    // A create mutation operation is executed in the context of Authenticated role and the response is expected to be a valid
+                    // response without any errors.
+                    string graphQLMutation = @"
+                        mutation {
+                          createStock(
+                            item: {
+                              categoryid: 5001
+                              pieceid: 5001
+                              categoryName: ""SciFi""
+                              piecesAvailable: 100
+                              piecesRequired: 50
+                            }
+                          ) {
+                            categoryid
+                            pieceid
+                          }
+                        }";
+
+                    JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: graphQLMutation,
+                        queryName: "createStock",
+                        variables: null,
+                        authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                        clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
+                        );
+
+                    Assert.IsNotNull(mutationResponse);
+                    Assert.IsFalse(mutationResponse.TryGetProperty("errors", out _));
+                }
+                finally
+                {
+                    // Clean-up steps. The record created by the create mutation operation is deleted to reset the database
+                    // back to its original state.
+                    string deleteMutation = @"
+                        mutation {
+                            deleteStock(categoryid: 5001, pieceid: 5001) {
+                            categoryid
+                            pieceid
+                            }
+                        }";
+
+                    _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                        client,
+                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        query: deleteMutation,
+                        queryName: "deleteStock",
+                        variables: null,
+                        clientRoleHeader: null);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to validate that the mutation operation succeded at the database layer by executing a graphQL pk query.
+        /// </summary>
+        /// <param name="server">Test server created for the test</param>
+        /// <param name="client">HTTP client</param>
+        /// <param name="query">GraphQL query/mutation text</param>
+        /// <param name="queryName">GraphQL query/mutation name</param>
+        /// <param name="authToken">Auth token for the graphQL request</param>
+        private static async void ValidateMutationSucceededAtDbLayer(TestServer server, HttpClient client, string query, string queryName, string authToken, string clientRoleHeader)
+        {
+            JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                                client,
+                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                query: query,
+                                                queryName: queryName,
+                                                variables: null,
+                                                authToken: authToken,
+                                                clientRoleHeader: clientRoleHeader);
+
+            Assert.IsNotNull(queryResponse);
+            Assert.IsFalse(queryResponse.TryGetProperty("errors", out _));
+        }
+
+        /// <summary>
         /// Validates the Location header field returned for a POST request when a 201 response is returned. The idea behind returning
         /// a Location header is to provide a URL against which a GET request can be performed to fetch the details of the new item.
         /// Base Route is not configured in the config file used for this test. If base-route is configured, the Location header URL should contain the base-route.
@@ -1693,7 +2240,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 if (includeExtraneousFieldInRequestBody)
                 {
                     string responseBody = await response.Content.ReadAsStringAsync();
-                    // Assert that including an extraneous field in request body while operating in strict mode leads to a bad request exception. 
+                    // Assert that including an extraneous field in request body while operating in strict mode leads to a bad request exception.
                     Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
                     Assert.IsTrue(responseBody.Contains("Invalid request body. Contained unexpected fields in body: extraField"));
                 }

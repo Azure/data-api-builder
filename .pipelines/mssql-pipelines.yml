@@ -3,7 +3,7 @@
 
 # MsSql Integration Testing Pipeline config is split into two jobs:
 # 1) LinuxTests -> Run SQL Server 2019 in Linux Docker Image
-# 2) WindowsTests -> Run LocalDB preinstalled on
+# 2) WindowsTests -> Run LocalDB preinstalled on machine
 
 trigger:
   batch: true
@@ -24,6 +24,8 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
+      dbPassword: ''
+      data-source.connection-string: ''
 
   steps:
   - task: NuGetAuthenticate@0
@@ -51,18 +53,46 @@ jobs:
       releaseType: stable
 
   - task: Bash@3
+    displayName: 'Generate password'
+    inputs:
+      targetType: 'inline'
+      script: |
+        password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9' | head -c24)
+        echo "##vso[task.setvariable variable=dbPassword;]$password"
+  
+  - task: PowerShell@2
+    displayName: 'Set Connection String'
+    inputs:
+      targetType: 'inline'
+      script: |
+        $connectionString="Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=SA;Password=$(dbPassword);MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;Encrypt=False;"
+        Write-Host "##vso[task.setvariable variable=data-source.connection-string]$connectionString"
+
+  - task: Bash@3
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu SQL Server Image Docker with SSL enabled
     inputs:
-      filePath: scripts/start-mssql-server.bash
-      arguments: $(DockerSQLPass)
+      targetType: 'inline'
+      script: |
+        echo "Executing script with arguments."
+        chmod +x ./scripts/start-mssql-server.bash
+        ./scripts/start-mssql-server.bash $(dbPassword)
 
   - task: DotNetCoreCLI@2
     displayName: Build
     inputs:
       command: build
-      projects: '**/*.csproj'
+      projects: |
+        **/*.csproj
+        !**/*Tests*.csproj
       arguments: '-p:generateConfigFileForDbType=mssql --configuration $(buildConfiguration)' # Update this to match your need
+
+  - task: DotNetCoreCLI@2
+    displayName: Build Test Projects
+    inputs:
+      command: build
+      projects: '**/*Tests/*.csproj'
+      arguments: '--configuration $(buildConfiguration)'
 
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'
@@ -120,7 +150,7 @@ jobs:
       # since windows needs a different string.
       # The variable setting on the pipeline UI sets the connection string
       # for the linux job above.
-      data-source.connection-string: $(ConnectionStringLocalDBVariable)
+      data-source.connection-string: Server=(localdb)\MSSQLLocalDB;Persist Security Info=False;Integrated Security=True;MultipleActiveResultSets=False;Connection Timeout=5;TrustServerCertificate=True;
       InstallerUrl: https://download.microsoft.com/download/7/c/1/7c14e92e-bdcb-4f89-b7cf-93543e7112d1/SqlLocalDB.msi
       SqlVersionCode: '15.0'
 
@@ -176,9 +206,18 @@ jobs:
     displayName: Build
     inputs:
       command: build
-      projects: '**/*.csproj'
+      projects: |
+        **/*.csproj
+        !**/*Tests*.csproj
       arguments: '-p:generateConfigFileForDbType=MsSql --configuration $(buildConfiguration)' # Update this to match your need
-    
+  
+  - task: DotNetCoreCLI@2
+    displayName: Build Test Projects
+    inputs:
+      command: build
+      projects: '**/*Tests/*.csproj'
+      arguments: '--configuration $(buildConfiguration)'
+
   - task: FileTransform@1.206.0
     displayName: 'Generate dab-config.MsSql.json'
     inputs:

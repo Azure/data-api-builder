@@ -74,6 +74,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
+            string roleName = GetRoleOfGraphQLRequest(context);
+
+            // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
+            // READ permission is inherited by other roles from Anonymous role when present.
+            bool isReadPermissionConfigured = _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, roleName, EntityActionOperation.Read)
+                                              || _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, AuthorizationResolver.ROLE_ANONYMOUS, EntityActionOperation.Read);
+
+            // Check read permission before returning the response to prevent unauthorized users from viewing the response.
+            if (!isReadPermissionConfigured)
+            {
+                throw new DataApiBuilderException(message: $"The mutation operation {context.Selection.Field.Name} was successful but the current user is unauthorized to view the response due to lack of read permissions",
+                                                  statusCode: HttpStatusCode.Forbidden,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
             return response.Resource;
         }
 
@@ -84,19 +99,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName,
             EntityActionOperation mutationOperation)
         {
-            string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
-            {
-                role = stringVals.ToString();
-            }
-
-            if (string.IsNullOrEmpty(role))
-            {
-                throw new DataApiBuilderException(
-                    message: "No ClientRoleHeader available to perform authorization.",
-                    statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
+            string role = GetRoleOfGraphQLRequest(context);
 
             List<string> inputArgumentKeys;
             if (mutationOperation != EntityActionOperation.Delete)
@@ -256,6 +259,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return item;
+        }
+
+        /// <summary>
+        /// Helper method to get the role with which the GraphQL API request was executed.
+        /// </summary>
+        /// <param name="context">HotChocolate context for the GraphQL request</param>
+        private static string GetRoleOfGraphQLRequest(IMiddlewareContext context)
+        {
+            string role = string.Empty;
+            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
+            {
+                role = stringVals.ToString();
+            }
+
+            if (string.IsNullOrEmpty(role))
+            {
+                throw new DataApiBuilderException(
+                    message: "No ClientRoleHeader available to perform authorization.",
+                    statusCode: HttpStatusCode.Unauthorized,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            return role;
         }
 
         /// <summary>

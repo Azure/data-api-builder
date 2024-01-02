@@ -303,9 +303,9 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Get list of all referencing columns in the linking entity.
                     List<string> referencingColumnNames = foreignKeyDefinitions.SelectMany(foreignKeyDefinition => foreignKeyDefinition.ReferencingColumns).ToList();
 
-                    NameNode directionalLinkingNodeName = new(LINKING_OBJECT_PREFIX + objectTypes[sourceEntityName].Name.Value + objectTypes[targetEntityName].Name.Value);
-                    ObjectTypeDefinitionNode directionalLinkingNode = targetNode.WithName(directionalLinkingNodeName);
-                    List<FieldDefinitionNode> fieldsInDirectionalLinkingNode = targetNode.Fields.ToList();
+                    NameNode sourceTargetLinkingNodeName = new(LINKING_OBJECT_PREFIX + objectTypes[sourceEntityName].Name.Value + objectTypes[targetEntityName].Name.Value);
+                    ObjectTypeDefinitionNode sourceTargetLinkingNode = targetNode.WithName(sourceTargetLinkingNodeName);
+                    List<FieldDefinitionNode> fieldsInSourceTargetLinkingNode = targetNode.Fields.ToList();
                     List<FieldDefinitionNode> fieldsInLinkingNode = linkingNode.Fields.ToList();
 
                     // The directional linking node will contain:
@@ -333,18 +333,18 @@ namespace Azure.DataApiBuilder.Core.Services
                             }
                             else
                             {
-                                fieldsInDirectionalLinkingNode.Add(fieldInLinkingNode);
+                                fieldsInSourceTargetLinkingNode.Add(fieldInLinkingNode);
                             }
                         }
                     }
                     // We don't need the model/authorization directives for the linking node as it will not be exposed via query/mutation.
                     // Removing the model directive ensures that we treat these object definitions as helper objects only and do not try to expose
                     // them via query/mutation.
-                    directionalLinkingNode = directionalLinkingNode.WithFields(fieldsInDirectionalLinkingNode).WithDirectives(new List<DirectiveNode>() { });
+                    sourceTargetLinkingNode = sourceTargetLinkingNode.WithFields(fieldsInSourceTargetLinkingNode).WithDirectives(new List<DirectiveNode>() { });
 
                     // Store object type of the directional linking node from (sourceEntityName, targetEntityName).
                     // A similar object type will be created later for a linking node from (targetEntityName, sourceEntityName).
-                    objectTypes[directionalLinkingNodeName.Value] = directionalLinkingNode;
+                    objectTypes[sourceTargetLinkingNodeName.Value] = sourceTargetLinkingNode;
                 }
             }
         }

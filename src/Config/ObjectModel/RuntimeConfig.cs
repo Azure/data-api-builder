@@ -231,7 +231,9 @@ public record RuntimeConfig
 
                 string targetEntityName = entityRelationship.TargetEntity;
                 string linkingEntityName = GenerateLinkingEntityName(sourceEntityName, targetEntityName);
-                Entity linkingEntity = new(
+                if (!linkingEntities.ContainsKey(linkingEntityName))
+                {
+                    Entity linkingEntity = new(
                     Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),
                     Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
                     GraphQL: new(Singular: "", Plural: "", Enabled: false),
@@ -239,7 +241,8 @@ public record RuntimeConfig
                     Relationships: null,
                     Mappings: new(),
                     IsLinkingEntity: true);
-                linkingEntities.TryAdd(linkingEntityName, linkingEntity);
+                    linkingEntities.Add(linkingEntityName, linkingEntity);
+                }
             }
         }
 
@@ -375,11 +378,6 @@ public record RuntimeConfig
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
-    }
-
-    public void AddEntityNameToDataSourceNameMapping(string entityName, string dataSourceName)
-    {
-        _entityNameToDataSourceName.TryAdd(entityName, dataSourceName);
     }
 
     private void SetupDataSourcesUsed()

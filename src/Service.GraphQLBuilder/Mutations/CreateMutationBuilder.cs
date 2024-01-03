@@ -106,12 +106,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     // Recurse for evaluating input objects for related entities.
                     return GetComplexInputType(inputs, definitions, f, typeName, (ObjectTypeDefinitionNode)def, databaseType);
                 });
-
-            foreach (InputValueDefinitionNode inputValueDefinitionNode in complexInputFields)
-            {
-                inputFields.Add(inputValueDefinitionNode);
-            }
-
+            // Append relationship fields to the input fields.
+            inputFields.AddRange(complexInputFields);
             return input;
         }
 

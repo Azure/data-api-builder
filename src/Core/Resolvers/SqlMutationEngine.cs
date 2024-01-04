@@ -1153,6 +1153,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 values.ForEach(value => PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schema, entityName, context, value, runtimeConfig));
             }
+            else if(parameters is ListValueNode listValue)
+            {
+                listValue.GetNodes().ToList().ForEach(value => PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schema, entityName, context, value, runtimeConfig));
+            }
         }
 
         private void ProcessObjectFieldNodesForAuthZ(Dictionary<string, HashSet<string>> fieldsToAuthorize, string entityName, IMiddlewareContext context, RuntimeConfig runtimeConfig, InputObjectType schemaObject, IReadOnlyList<ObjectFieldNode> fieldNodes)

@@ -134,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         // Get the point/batch fields for the create mutation.
                         Tuple<FieldDefinitionNode, FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, rolesAllowedForMutation);
                         mutationFields.Add(createMutationNodes.Item1); // Add field corresponding to point insertion.
-                        mutationFields.Add(createMutationNodes.Item2); // Add field corresponding to batch insertion.
+                        mutationFields.Add(createMutationNodes.Item2); // Add field corresponding to multiple insertion.
                         break;
                     case EntityActionOperation.Update:
                         mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, rolesAllowedForMutation));

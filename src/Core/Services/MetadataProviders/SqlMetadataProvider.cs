@@ -1529,34 +1529,34 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // For each source entities, which maps to this table definition
                 // and has a relationship metadata to be filled.
-                foreach ((_, RelationshipMetadata relationshipData)
+                foreach ((string entityName, RelationshipMetadata relationshipData)
                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
-                    // Enumerate all the foreign keys required for all the target entities
-                    // that this source is related to.
-                    IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities =
-                        relationshipData.TargetEntityToFkDefinitionMap.Values;
-                    // For each target, loop through each foreign key
-                    foreach (List<ForeignKeyDefinition> foreignKeysForTarget in foreignKeysForAllTargetEntities)
+
+                    foreach(KeyValuePair<string, List<ForeignKeyDefinition> > entry in relationshipData.TargetEntityToFkDefinitionMap)
                     {
+                        string targetEntityName = entry.Key;
+                        List<ForeignKeyDefinition> foreignKeys = entry.Value;
+
                         // For each foreign key between this pair of source and target entities
                         // which needs the referencing columns,
                         // find the fk inferred for this pair the backend and
                         // equate the referencing columns and referenced columns.
-                        foreach (ForeignKeyDefinition fk in foreignKeysForTarget)
+                        foreach (ForeignKeyDefinition fk in foreignKeys)
                         {
-                            // if the referencing and referenced columns count > 0,
-                            // we have already gathered this information from the runtime config.
-                            if (fk.ReferencingColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
-                            {
-                                continue;
-                            }
-
                             // Add the referencing and referenced columns for this foreign key definition
                             // for the target.
                             if (PairToFkDefinition is not null && PairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
+                                //For insert operations, the foreign keys inferred from the database is given preference over the one declared in config file.
+                                relationshipData.TargetEntityToFkDefinitionMapForInsertOperation[targetEntityName] = inferredDefinition;
+
+                                if(fk.ReferencedColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
+                                {
+                                    continue;
+                                }
+
                                 // Only add the referencing columns if they have not been
                                 // specified in the configuration file.
                                 if (fk.ReferencingColumns.Count == 0)
@@ -1571,7 +1571,7 @@ namespace Azure.DataApiBuilder.Core.Services
                                     fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
                                 }
                             }
-                        }
+                        }    
                     }
                 }
             }

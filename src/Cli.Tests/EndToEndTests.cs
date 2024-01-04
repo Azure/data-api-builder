@@ -168,7 +168,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to verify adding a new Entity.
+    /// Test to verify telemetry details are added to the config.
     /// </summary>
     [TestMethod]
     public void TestAddTelemetry()

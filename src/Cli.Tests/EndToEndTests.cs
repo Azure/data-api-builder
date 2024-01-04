@@ -168,6 +168,35 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to verify adding a new Entity.
+    /// </summary>
+    [TestMethod]
+    public void TestAddTelemetry()
+    {
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+
+        // Perform assertions on various properties.
+        Assert.IsNotNull(runtimeConfig);
+        Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.IsNull(runtimeConfig.Runtime.Telemetry);
+
+        string[] addTelemetryArgs = { "add-telemetry", "-c", TEST_RUNTIME_CONFIG_FILE, "--app-insights-enabled", "true", "--app-insights-conn-string", "InstrumentationKey=00000000" };
+        Program.Execute(addTelemetryArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedConfig));
+        Assert.IsNotNull(updatedConfig);
+        Assert.IsNotNull(updatedConfig.Runtime);
+        Assert.IsNotNull(updatedConfig.Runtime.Telemetry);
+        Assert.IsNotNull(updatedConfig.Runtime.Telemetry.ApplicationInsights);
+        Assert.IsTrue(updatedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
+        Assert.AreEqual("InstrumentationKey=00000000", updatedConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString);
+    }
+
+    /// <summary>
     /// Test to verify authentication options with init command containing
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.

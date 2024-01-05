@@ -243,9 +243,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// This method returns whether the given value is a built_in function or not.
-        /// built_in funtions are surrounded by single parenthesis,i.e. (getdate())
-        /// string will be with parenthesis and single quotes, i.e. ('value')
-        /// int/float will be with double parenthesis, i.e. ((20))
+        /// ColmnDefinitiondefault value can be in one of the below formats.
+        /// 1. built_in funtions are surrounded by single parenthesis,i.e. (getdate())
+        /// 2. string will be with parenthesis and single quotes, i.e. ('value')
+        /// 3. int/float will be with double parenthesis, i.e. ((20))
         /// </summary>
         /// <param name="columnDefinitionDefaultValue">given value for database column</param>
         /// <returns>true if given value is a built-in function</returns>

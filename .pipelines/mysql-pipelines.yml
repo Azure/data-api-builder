@@ -24,7 +24,7 @@ jobs:
       buildConfiguration: 'Release'
 
   steps:
-  - task: NuGetAuthenticate@0
+  - task: NuGetAuthenticate@1
     displayName: 'NuGet Authenticate'
 
   - task: UseDotNet@2

@@ -28,7 +28,7 @@ jobs:
       data-source.connection-string: ''
 
   steps:
-  - task: NuGetAuthenticate@0
+  - task: NuGetAuthenticate@1
     displayName: 'NuGet Authenticate'
 
   - task: UseDotNet@2
@@ -158,7 +158,7 @@ jobs:
     inputs:
       script: 'echo ##vso[task.setvariable variable=publishverify]Yes'
 
-  - task: NuGetAuthenticate@0
+  - task: NuGetAuthenticate@1
     displayName: 'NuGet Authenticate'
 
   - task: UseDotNet@2

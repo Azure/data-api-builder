@@ -13,7 +13,7 @@ namespace Cli.Commands
     /// <summary>
     /// Telemetry command options
     /// </summary>
-    [Verb("add-telemetry", isDefault: false, HelpText = "Add telemtry for Data Api Builder Application", Hidden = false)]
+    [Verb("add-telemetry", isDefault: false, HelpText = "Add telemtry for Data Api builder Application", Hidden = false)]
     public class AddTelemetryOptions : Options
     {
         public AddTelemetryOptions(bool appInsightsEnabled, string appInsightsConnString, string? config) : base(config)

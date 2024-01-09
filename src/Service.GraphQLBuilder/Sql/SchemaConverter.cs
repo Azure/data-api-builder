@@ -130,7 +130,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                             out List<ForeignKeyDefinition>? listOfForeignKeys))
                     {
-                        ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
+                        ForeignKeyDefinition? foreignKeyInfo =
+                            listOfForeignKeys.Where(fk => fk.ReferencingColumns.Count > 0
+                                && fk.ReferencedColumns.Count > 0).FirstOrDefault();
 
                         // Determine whether the relationship should be nullable by obtaining the nullability
                         // of the referencing(if source entity is the referencing object in the pair)
@@ -146,7 +148,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             }
                             else
                             {
-                                isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
+                                // if the entity is "referenced", it may or may not have a relationship with the referencing
+                                // entity irrespective of nullability of the referenced columns.
+                                // Setting the relationship field to nullable ensures even those records
+                                // that are not related are considered while querying.
+                                isNullableRelationship = true;
                             }
                         }
                         else

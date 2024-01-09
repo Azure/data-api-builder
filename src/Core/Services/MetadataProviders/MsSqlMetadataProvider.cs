@@ -243,7 +243,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// This method returns whether the given value is a built_in function or not.
-        /// ColmnDefinitiondefault value can be in one of the below formats.
+        /// colmnDefinitionDefaultValue can be in one of the below formats.
         /// 1. built_in funtions are surrounded by single parenthesis,i.e. (getdate())
         /// 2. string will be with parenthesis and single quotes, i.e. ('value')
         /// 3. int/float will be with double parenthesis, i.e. ((20))

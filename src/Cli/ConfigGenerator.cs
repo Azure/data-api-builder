@@ -1357,7 +1357,9 @@ namespace Cli
             {
                 Runtime = runtimeConfig.Runtime with
                 {
-                    Telemetry = new TelemetryOptions(applicationInsightsOptions)
+                    Telemetry = runtimeConfig.Runtime.Telemetry is null
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
                 }
             };
 

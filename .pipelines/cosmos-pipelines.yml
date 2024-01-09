@@ -38,7 +38,7 @@ steps:
       Import-Module "$env:ProgramFiles\Azure Cosmos DB Emulator\PSModules\Microsoft.Azure.CosmosDB.Emulator"
       Start-CosmosDbEmulator
 
-- task: NuGetAuthenticate@0
+- task: NuGetAuthenticate@1
   displayName: 'NuGet Authenticate'
 
 - task: UseDotNet@2

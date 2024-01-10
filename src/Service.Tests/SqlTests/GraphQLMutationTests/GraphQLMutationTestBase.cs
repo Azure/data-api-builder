@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -47,7 +46,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// it should insert it correctly with default values correctly handled by database.
         /// current_date, current_timestamp, random_number, next_day have default value as built_in methods GETDATE(), NOW(), RAND(), DATEADD(), resp.
         /// default_string_with_parenthesis has default value "()", default_function_string_with_parenthesis has default value "NOW()".
-        /// default_integer has default value 100.
+        /// default_integer has default value 100, default_date_string has default value "1999-01-08 10:23:54".
         /// Returned response would look like:
         /// "createDefaultBuiltInFunction": {
         ///   "current_date": "2023-12-15T16:24:48.267Z",
@@ -56,7 +55,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         ///   "next_day": "2023-12-16T00:00:00.000Z",
         ///   "default_string_with_paranthesis": "()",
         ///   "default_function_string_with_paranthesis": "NOW()",
-        ///   "default_integer": 100
+        ///   "default_integer": 100,
+        ///   "default_date_string": "1999-01-08T10:23:54.000Z"
         /// }
         /// </summary>
         public virtual async Task InsertMutationWithDefaultBuiltInFunctions()
@@ -72,12 +72,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
                         default_string_with_parenthesis
                         default_function_string_with_parenthesis
                         default_integer
+                        default_date_string
                     }
                 }
             ";
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            Console.WriteLine(result.ToString());
 
             // Assert the values
             Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("current_date").GetString()));
@@ -87,6 +87,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             Assert.AreEqual("()", result.GetProperty("default_string_with_parenthesis").GetString());
             Assert.AreEqual("NOW()", result.GetProperty("default_function_string_with_parenthesis").GetString());
             Assert.AreEqual(100, result.GetProperty("default_integer").GetInt32());
+            Assert.AreEqual("1999-01-08T10:23:54.000Z", result.GetProperty("default_date_string").GetString());
         }
 
         /// <summary>

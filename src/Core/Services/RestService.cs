@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationService _authorizationService;
         private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
         private readonly RequestValidator _requestValidator;
 
         public RestService(
@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Core.Services
             IMetadataProviderFactory sqlMetadataProviderFactory,
             IHttpContextAccessor httpContextAccessor,
             IAuthorizationService authorizationService,
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             RequestValidator requestValidator
             )
         {

@@ -648,7 +648,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
-            RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
+            IRuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<IRuntimeConfigProvider>();
             runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((_, _) =>
             {
                 return Task.FromResult(false);
@@ -670,7 +670,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             JsonContent content = GetJsonContentForCosmosConfigRequest(configurationEndpoint);
 
-            RuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<RuntimeConfigProvider>();
+            IRuntimeConfigProvider runtimeConfigProvider = server.Services.GetService<IRuntimeConfigProvider>();
             bool taskHasCompleted = false;
             runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add(async (_, _) =>
             {
@@ -790,7 +790,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             HttpResponseMessage postResult = await httpClient.PostAsync(configurationEndpoint, content);
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
-            RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
+            IRuntimeConfigProvider configProvider = server.Services.GetService<IRuntimeConfigProvider>();
 
             Assert.IsNotNull(configProvider, "Configuration Provider shouldn't be null after setting the configuration at runtime.");
             Assert.IsTrue(configProvider.TryGetConfig(out RuntimeConfig configuration), "TryGetConfig should return true when the config is set.");
@@ -917,7 +917,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
             ValidateCosmosDbSetup(server);
-            RuntimeConfigProvider configProvider = server.Services.GetService<RuntimeConfigProvider>();
+            IRuntimeConfigProvider configProvider = server.Services.GetService<IRuntimeConfigProvider>();
 
             Assert.IsNotNull(configProvider, "Configuration Provider shouldn't be null after setting the configuration at runtime.");
             Assert.IsTrue(configProvider.TryGetConfig(out RuntimeConfig configuration), "TryGetConfig should return true when the config is set.");
@@ -1048,7 +1048,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
+            IRuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
             RuntimeConfigValidator configValidator =
@@ -1069,7 +1069,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
+            IRuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configPath);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
             ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
@@ -1135,7 +1135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
             configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+            IRuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
             RuntimeConfigValidator configValidator =
@@ -1789,7 +1789,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                     JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                         client,
-                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        server.Services.GetRequiredService<IRuntimeConfigProvider>(),
                         query: graphQLMutation,
                         queryName: "createStock",
                         variables: null,
@@ -1827,7 +1827,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                     _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                         client,
-                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        server.Services.GetRequiredService<IRuntimeConfigProvider>(),
                         query: deleteMutation,
                         queryName: "deleteStock",
                         variables: null,
@@ -1914,7 +1914,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                     JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                         client,
-                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        server.Services.GetRequiredService<IRuntimeConfigProvider>(),
                         query: graphQLMutation,
                         queryName: "createStock",
                         variables: null,
@@ -1939,7 +1939,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                     _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                         client,
-                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                        server.Services.GetRequiredService<IRuntimeConfigProvider>(),
                         query: deleteMutation,
                         queryName: "deleteStock",
                         variables: null,
@@ -1960,7 +1960,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                                                 client,
-                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                server.Services.GetRequiredService<IRuntimeConfigProvider>(),
                                                 query: query,
                                                 queryName: queryName,
                                                 variables: null,
@@ -2349,7 +2349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             FileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(loader);
+            IRuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(loader);
             RuntimeConfig config = configProvider.GetConfig();
 
             // Setup configuration
@@ -2775,7 +2775,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             try
             {
-                RuntimeConfigProvider configProvider = server.Services.GetRequiredService<RuntimeConfigProvider>();
+                IRuntimeConfigProvider configProvider = server.Services.GetRequiredService<IRuntimeConfigProvider>();
 
                 JsonElement actual = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                     client,

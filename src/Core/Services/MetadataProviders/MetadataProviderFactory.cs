@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private readonly IDictionary<string, ISqlMetadataProvider> _metadataProviders;
 
         public MetadataProviderFactory(
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             IFileSystem fileSystem,

@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         protected DataSet EntitiesDataSet { get; init; }
 
-        private RuntimeConfigProvider _runtimeConfigProvider;
+        private IRuntimeConfigProvider _runtimeConfigProvider;
 
         private Dictionary<string, Dictionary<string, string>> EntityBackingColumnsToExposedNames { get; } = new();
 
@@ -92,7 +92,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         public SqlMetadataProvider(
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory engineFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,

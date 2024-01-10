@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly ILogger<IQueryEngine> _logger;
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
 
         // <summary>
@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
-            RuntimeConfigProvider runtimeConfigProvider)
+            IRuntimeConfigProvider runtimeConfigProvider)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;

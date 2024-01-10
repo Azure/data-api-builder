@@ -247,7 +247,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             PaginationMetadata paginationMetadata,
             ISqlMetadataProvider sqlMetadataProvider,
             string EntityName,
-            RuntimeConfigProvider runtimeConfigProvider)
+            IRuntimeConfigProvider runtimeConfigProvider)
         {
             if (queryParams.TryGetValue(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME, out object? continuationObject))
             {
@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             PaginationMetadata paginationMetadata,
             ISqlMetadataProvider sqlMetadataProvider,
             string entityName,
-            RuntimeConfigProvider runtimeConfigProvider
+            IRuntimeConfigProvider runtimeConfigProvider
             )
         {
             List<PaginationColumn>? paginationCursorColumnsForQuery = new();

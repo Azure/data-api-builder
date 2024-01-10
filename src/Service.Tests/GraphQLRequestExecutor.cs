@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <returns>JsonResult</returns>
         public static async Task<JsonElement> PostGraphQLRequestAsync(
             HttpClient client,
-            RuntimeConfigProvider configProvider,
+            IRuntimeConfigProvider configProvider,
             string queryName,
             string query,
             Dictionary<string, object> variables = null,

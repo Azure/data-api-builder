@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         protected HashSet<string> TransientExceptionCodes;
         protected HashSet<string> ConflictExceptionCodes;
 
-        public DbExceptionParser(RuntimeConfigProvider configProvider)
+        public DbExceptionParser(IRuntimeConfigProvider configProvider)
         {
             _developerMode = configProvider.GetConfig().IsDevelopmentMode();
             BadRequestExceptionCodes = new();

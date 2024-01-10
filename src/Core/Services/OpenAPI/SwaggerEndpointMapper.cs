@@ -15,14 +15,14 @@ namespace Azure.DataApiBuilder.Core.Services.OpenAPI
     /// </summary>
     public class SwaggerEndpointMapper : IEnumerable<UrlDescriptor>
     {
-        private readonly RuntimeConfigProvider? _runtimeConfigProvider;
+        private readonly IRuntimeConfigProvider? _runtimeConfigProvider;
 
         /// <summary>
         /// Constructor to setup required services
         /// </summary>
         /// <param name="runtimeConfigProvider">RuntimeConfigProvider contains the reference to the
         /// configured REST path. Will be empty during late bound config, so returns default REST path for SwaggerUI.</param>
-        public SwaggerEndpointMapper(RuntimeConfigProvider? runtimeConfigProvider)
+        public SwaggerEndpointMapper(IRuntimeConfigProvider? runtimeConfigProvider)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
         }

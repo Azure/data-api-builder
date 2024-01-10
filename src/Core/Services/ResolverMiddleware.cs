@@ -32,12 +32,12 @@ namespace Azure.DataApiBuilder.Core.Services
         internal readonly FieldDelegate _next;
         internal readonly IQueryEngineFactory _queryEngineFactory;
         internal readonly IMutationEngineFactory _mutationEngineFactory;
-        internal readonly RuntimeConfigProvider _runtimeConfigProvider;
+        internal readonly IRuntimeConfigProvider _runtimeConfigProvider;
 
         public ResolverMiddleware(FieldDelegate next,
             IQueryEngineFactory queryEngineFactory,
             IMutationEngineFactory mutationEngineFactory,
-            RuntimeConfigProvider runtimeConfigProvider)
+            IRuntimeConfigProvider runtimeConfigProvider)
         {
             _next = next;
             _queryEngineFactory = queryEngineFactory;

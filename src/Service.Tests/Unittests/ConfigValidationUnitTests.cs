@@ -380,7 +380,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking EntityToDatabaseObject
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            LocalRuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
@@ -489,7 +489,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Mocking EntityToDatabaseObject
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            LocalRuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
@@ -582,7 +582,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            LocalRuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
@@ -1767,7 +1767,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigLoader.TryParseConfig(runtimeConfigString, out RuntimeConfig runtimeConfig);
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            LocalRuntimeConfigProvider provider = new(loader);
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
 
             // Perform validation on the permissions in the config and assert the expected results.
@@ -1826,7 +1826,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            LocalRuntimeConfigProvider provider = new(loader);
             Mock<ILogger<RuntimeConfigValidator>> loggerMock = new();
             RuntimeConfigValidator configValidator = new(provider, fileSystem, loggerMock.Object);
 
@@ -2183,7 +2183,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            LocalRuntimeConfigProvider provider = new(loader);
             return new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
         }
     }

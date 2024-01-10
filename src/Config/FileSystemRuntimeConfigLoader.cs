@@ -104,7 +104,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         {
             Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
-            return TryParseConfig(json, out config, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
+            bool res = TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
+            config = RuntimeConfig;
+            return res;
         }
         else
         {

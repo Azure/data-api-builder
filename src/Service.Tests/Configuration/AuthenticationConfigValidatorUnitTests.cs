@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private MockFileSystem _mockFileSystem;
         private FileSystemRuntimeConfigLoader _runtimeConfigLoader;
-        private RuntimeConfigProvider _runtimeConfigProvider;
+        private IRuntimeConfigProvider _runtimeConfigProvider;
         private RuntimeConfigValidator _runtimeConfigValidator;
 
         [TestInitialize]
@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             _mockFileSystem = new MockFileSystem();
             _runtimeConfigLoader = new FileSystemRuntimeConfigLoader(_mockFileSystem);
-            _runtimeConfigProvider = new RuntimeConfigProvider(_runtimeConfigLoader);
+            _runtimeConfigProvider = new LocalRuntimeConfigProvider(_runtimeConfigLoader);
             Mock<ILogger<RuntimeConfigValidator>> logger = new();
             _runtimeConfigValidator = new RuntimeConfigValidator(_runtimeConfigProvider, _mockFileSystem, logger.Object);
         }

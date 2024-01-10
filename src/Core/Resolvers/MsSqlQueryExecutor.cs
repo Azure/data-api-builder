@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private Dictionary<string, bool> _dataSourceToSessionContextUsage;
 
         public MsSqlQueryExecutor(
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor)

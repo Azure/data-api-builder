@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         private readonly Dictionary<DatabaseType, IQueryEngine> _queryEngines;
 
         /// <inheritdoc/>
-        public QueryEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
+        public QueryEngineFactory(IRuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             IMetadataProviderFactory metadataProviderFactory,
             CosmosClientProvider cosmosClientProvider,

@@ -169,7 +169,7 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        _defaultDataSourceName = Guid.NewGuid().ToString();
+        _defaultDataSourceName = DataSource.ConnectionString.GetHashCode().ToString();
 
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>

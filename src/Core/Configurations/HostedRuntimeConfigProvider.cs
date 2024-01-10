@@ -24,9 +24,9 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 /// should not load the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
 /// the config that is available from this type.
 /// </remarks>
-public class RuntimeConfigProvider
+public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
 {
-    public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
+    public delegate Task<bool> RuntimeConfigLoadedHandler(HostedRuntimeConfigProvider sender, RuntimeConfig config);
 
     public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
 
@@ -40,15 +40,15 @@ public class RuntimeConfigProvider
     /// The access tokens representing a Managed Identity to connect to the database.
     /// The key is the unique datasource name and the value is the access token.
     /// </summary>
-    public Dictionary<string, string?> ManagedIdentityAccessToken { get; private set; } = new Dictionary<string, string?>();
+    public Dictionary<string, string?> ManagedIdentityAccessToken { get; set; } = new Dictionary<string, string?>();
 
-    public RuntimeConfigLoader ConfigLoader { get; private set; }
+    public RuntimeConfigLoader ConfigLoader { get; set; }
 
     private ConfigFileWatcher? _configFileWatcher;
 
     private RuntimeConfig? _runtimeConfig;
 
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
+    public HostedRuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
         ConfigLoader = runtimeConfigLoader;
     }
@@ -62,56 +62,7 @@ public class RuntimeConfigProvider
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
     public RuntimeConfig GetConfig()
     {
-        if (_runtimeConfig is not null)
-        {
-            return _runtimeConfig;
-        }
-
-        // While loading the config file, replace all the environment variables with their values.
-        if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
-        {
-            _runtimeConfig = config;
-            TrySetupConfigFileWatcher();
-        }
-
-        if (_runtimeConfig is null)
-        {
-            throw new DataApiBuilderException(
-                message: "Runtime config isn't setup.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-        }
-
-        return _runtimeConfig;
-    }
-
-    /// <summary>
-    /// Checks if we have already attempted to configure the file watcher, if not
-    /// instantiate the file watcher if we are in the correct scenario. If we
-    /// are not in the correct scenario, do not setup a file watcher but remember
-    /// that we have attempted to do so to avoid repeat checks in future calls.
-    /// Returns true if we instantiate a file watcher.
-    /// </summary>
-    private bool TrySetupConfigFileWatcher()
-    {
-        if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
-        {
-            try
-            {
-                FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
-                _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
-            }
-            catch (Exception ex)
-            {
-                // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                // before we can have an ILogger here.
-                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
-            }
-
-            return _configFileWatcher is not null;
-        }
-
-        return false;
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -121,38 +72,12 @@ public class RuntimeConfigProvider
     /// <returns>True when runtime config is provided, otherwise false.</returns>
     public bool TryGetConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
-        if (_runtimeConfig is null)
-        {
-            if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? config, replaceEnvVar: true))
-            {
-                _runtimeConfig = config;
-                TrySetupConfigFileWatcher();
-            }
-        }
-
-        runtimeConfig = _runtimeConfig;
-        return _runtimeConfig is not null;
+        throw new NotImplementedException();
     }
 
-    /// <summary>
-    /// Attempt to acquire runtime configuration metadata from a previously loaded one.
-    /// This method will not load the config if it hasn't been loaded yet.
-    /// </summary>
-    /// <param name="runtimeConfig">Populated runtime configuration, if present.</param>
-    /// <returns>True when runtime config is provided, otherwise false.</returns>
     public bool TryGetLoadedConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
-        runtimeConfig = _runtimeConfig;
-        return _runtimeConfig is not null;
-    }
-
-    /// <summary>
-    /// Hot Reloads the runtime config when the file watcher
-    /// is active and detects a change to the underlying config file.
-    /// </summary>
-    public void HotReloadConfig()
-    {
-        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true);
+        throw new NotImplementedException();
     }
 
     /// <summary>
@@ -278,7 +203,7 @@ public class RuntimeConfigProvider
         return false;
     }
 
-    private async Task<bool> InvokeConfigLoadedHandlersAsync()
+    public async Task<bool> InvokeConfigLoadedHandlersAsync()
     {
         List<Task<bool>> configLoadedTasks = new();
         if (_runtimeConfig is not null)

@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public class MsSqlDbExceptionParser : DbExceptionParser
     {
-        public MsSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
+        public MsSqlDbExceptionParser(IRuntimeConfigProvider configProvider) : base(configProvider)
         {
             // HashSet of Error codes ('Number') which are to be considered as bad requests.
             BadRequestExceptionCodes.UnionWith(new List<string>

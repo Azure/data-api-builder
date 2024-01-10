@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="metadataProviderFactory">MetadataProviderFactory to get metadata provider used when generating the SQL-based GraphQL schema. Ignored if the runtime is Cosmos.</param>
         /// <param name="authorizationResolver">Authorization information for the runtime, to be applied to the GraphQL schema.</param>
         public GraphQLSchemaCreator(
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             IQueryEngineFactory queryEngineFactory,
             IMutationEngineFactory mutationEngineFactory,
             IMetadataProviderFactory metadataProviderFactory,

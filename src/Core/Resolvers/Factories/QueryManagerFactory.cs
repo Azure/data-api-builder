@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <param name="runtimeConfigProvider">runtimeconfigprovider.</param>
         /// <param name="logger">logger.</param>
         /// <param name="contextAccessor">httpcontextaccessor.</param>
-        public QueryManagerFactory(RuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor)
+        public QueryManagerFactory(IRuntimeConfigProvider runtimeConfigProvider, ILogger<IQueryExecutor> logger, IHttpContextAccessor contextAccessor)
         {
             _queryBuilders = new Dictionary<DatabaseType, IQueryBuilder>();
             _queryExecutors = new Dictionary<DatabaseType, IQueryExecutor>();

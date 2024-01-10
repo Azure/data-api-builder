@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly GQLFilterParser _gQLFilterParser;
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
 
@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IHttpContextAccessor httpContextAccessor,
-            RuntimeConfigProvider runtimeConfigProvider)
+            IRuntimeConfigProvider runtimeConfigProvider)
         {
             _queryManagerFactory = queryManagerFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;

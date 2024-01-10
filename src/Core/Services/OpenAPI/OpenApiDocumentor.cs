@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider)
+        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, IRuntimeConfigProvider runtimeConfigProvider)
         {
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     },
                     Servers = new List<OpenApiServer>
                     {
-                        new OpenApiServer { Url = url }
+                        new() { Url = url }
                     },
                     Paths = BuildPaths(),
                     Components = components

@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 /// </summary>
 public class RuntimeConfigValidator : IConfigValidator
 {
-    private readonly RuntimeConfigProvider _runtimeConfigProvider;
+    private readonly IRuntimeConfigProvider _runtimeConfigProvider;
     private readonly IFileSystem _fileSystem;
     private readonly ILogger<RuntimeConfigValidator> _logger;
 
@@ -55,7 +55,7 @@ public class RuntimeConfigValidator : IConfigValidator
     public const string URI_COMPONENT_WITH_RESERVED_CHARS_ERR_MSG = "contains one or more reserved characters.";
 
     public RuntimeConfigValidator(
-        RuntimeConfigProvider runtimeConfigProvider,
+        IRuntimeConfigProvider runtimeConfigProvider,
         IFileSystem fileSystem,
         ILogger<RuntimeConfigValidator> logger,
         bool isValidateOnly = false)

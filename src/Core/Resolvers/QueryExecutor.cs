@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
-        protected RuntimeConfigProvider ConfigProvider { get; }
+        protected IRuntimeConfigProvider ConfigProvider { get; }
         protected IHttpContextAccessor HttpContextAccessor { get; }
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public QueryExecutor(DbExceptionParser dbExceptionParser,
                              ILogger<IQueryExecutor> logger,
-                             RuntimeConfigProvider configProvider,
+                             IRuntimeConfigProvider configProvider,
                              IHttpContextAccessor httpContextAccessor)
         {
             DbExceptionParser = dbExceptionParser;

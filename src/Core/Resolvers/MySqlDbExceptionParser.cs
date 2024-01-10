@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public class MySqlDbExceptionParser : DbExceptionParser
     {
-        public MySqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
+        public MySqlDbExceptionParser(IRuntimeConfigProvider configProvider) : base(configProvider)
         {
             // HashSet of 'SqlState'(s) which are to be considered as bad requests.
             BadRequestExceptionCodes.UnionWith(new List<string>

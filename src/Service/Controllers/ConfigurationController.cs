@@ -15,10 +15,10 @@ namespace Azure.DataApiBuilder.Service.Controllers
     [Route("[controller]")]
     public class ConfigurationController : Controller
     {
-        RuntimeConfigProvider _configurationProvider;
+        HostedRuntimeConfigProvider _configurationProvider;
         private readonly ILogger<ConfigurationController> _logger;
 
-        public ConfigurationController(RuntimeConfigProvider configurationProvider, ILogger<ConfigurationController> logger)
+        public ConfigurationController(HostedRuntimeConfigProvider configurationProvider, ILogger<ConfigurationController> logger)
         {
             _configurationProvider = configurationProvider;
             _logger = logger;

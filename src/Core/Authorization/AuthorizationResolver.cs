@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Authorization;
 /// </summary>
 public class AuthorizationResolver : IAuthorizationResolver
 {
-    private readonly RuntimeConfigProvider _runtimeConfigProvider;
+    private readonly IRuntimeConfigProvider _runtimeConfigProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
     public const string WILDCARD = "*";
     public const string CLAIM_PREFIX = "@claims.";
@@ -36,7 +36,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
     public AuthorizationResolver(
-        RuntimeConfigProvider runtimeConfigProvider,
+        IRuntimeConfigProvider runtimeConfigProvider,
         IMetadataProviderFactory metadataProviderFactory
         )
     {
@@ -48,7 +48,7 @@ public class AuthorizationResolver : IAuthorizationResolver
         }
         else
         {
-            runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((RuntimeConfigProvider sender, RuntimeConfig config) =>
+            runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((HostedRuntimeConfigProvider sender, RuntimeConfig config) =>
             {
                 SetEntityPermissionMap(config);
                 return Task.FromResult(true);

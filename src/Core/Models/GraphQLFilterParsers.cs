@@ -25,7 +25,7 @@ public class GQLFilterParser
 {
     public static readonly string NullStringValue = "NULL";
 
-    private readonly RuntimeConfigProvider _configProvider;
+    private readonly IRuntimeConfigProvider _configProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
 
     /// <summary>
@@ -33,7 +33,7 @@ public class GQLFilterParser
     /// </summary>
     /// <param name="runtimeConfigProvider">runtimeConfig provider</param>
     /// <param name="metadataProviderFactory">metadataProvider factory.</param>
-    public GQLFilterParser(RuntimeConfigProvider runtimeConfigProvider, IMetadataProviderFactory metadataProviderFactory)
+    public GQLFilterParser(IRuntimeConfigProvider runtimeConfigProvider, IMetadataProviderFactory metadataProviderFactory)
     {
         _configProvider = runtimeConfigProvider;
         _metadataProviderFactory = metadataProviderFactory;

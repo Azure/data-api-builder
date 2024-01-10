@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// </summary>
     public class PostgreSqlDbExceptionParser : DbExceptionParser
     {
-        public PostgreSqlDbExceptionParser(RuntimeConfigProvider configProvider) : base(configProvider)
+        public PostgreSqlDbExceptionParser(IRuntimeConfigProvider configProvider) : base(configProvider)
         {
             // HashSet of 'SqlState'(s) to be considered as bad requests.
             BadRequestExceptionCodes.UnionWith(new List<string>

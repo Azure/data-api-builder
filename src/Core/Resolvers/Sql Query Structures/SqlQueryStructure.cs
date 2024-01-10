@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object?> queryParams,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             GQLFilterParser gQLFilterParser)
             // This constructor simply forwards to the more general constructor
             // that is used to create GraphQL queries. We give it some values
@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             RestRequestContext context,
             ISqlMetadataProvider sqlMetadataProvider,
             IAuthorizationResolver authorizationResolver,
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             GQLFilterParser gQLFilterParser,
             HttpContext httpContext)
             : this(sqlMetadataProvider,
@@ -252,7 +252,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IObjectField schemaField,
                 FieldNode? queryField,
                 IncrementingInteger counter,
-                RuntimeConfigProvider runtimeConfigProvider,
+                IRuntimeConfigProvider runtimeConfigProvider,
                 GQLFilterParser gQLFilterParser,
                 string entityName = "")
             : this(sqlMetadataProvider,
@@ -560,7 +560,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// takes place which is required to fetch nested data.
         /// </summary>
         /// <param name="selections">Fields selection in the GraphQL Query.</param>
-        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections, RuntimeConfigProvider runtimeConfigProvider)
+        private void AddGraphQLFields(IReadOnlyList<ISelectionNode> selections, IRuntimeConfigProvider runtimeConfigProvider)
         {
             foreach (ISelectionNode node in selections)
             {

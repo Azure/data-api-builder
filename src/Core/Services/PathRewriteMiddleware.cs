@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Services
     public class PathRewriteMiddleware
     {
         private readonly RequestDelegate _nextMiddleware;
-        private readonly RuntimeConfigProvider _runtimeConfigurationProvider;
+        private readonly IRuntimeConfigProvider _runtimeConfigurationProvider;
 
         // Default configured GraphQL endpoint path used when
         // not defined or customized in runtime configuration.
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="next">Reference to next middleware in the request pipeline.</param>
         /// <param name="runtimeConfigurationProvider">Runtime configuration provider.</param>
-        public PathRewriteMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
+        public PathRewriteMiddleware(RequestDelegate next, IRuntimeConfigProvider runtimeConfigurationProvider)
         {
             _nextMiddleware = next;
             _runtimeConfigurationProvider = runtimeConfigurationProvider;

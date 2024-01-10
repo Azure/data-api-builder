@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly string _databaseName = "mysql";
 
         public MySqlMetadataProvider(
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,

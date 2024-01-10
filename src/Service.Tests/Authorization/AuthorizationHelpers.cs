@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new(runtimeConfig.ToJson()));
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(loader);
+            IRuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(loader);
             Mock<ISqlMetadataProvider> metadataProvider = new();
             Mock<ILogger<AuthorizationResolver>> logger = new();
             SourceDefinition sampleTable = CreateSampleTable();

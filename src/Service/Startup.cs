@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
-            RuntimeConfigProvider configProvider = new(configLoader);
+            LocalRuntimeConfigProvider configProvider = new(configLoader);
 
             services.AddSingleton(fileSystem);
             services.AddSingleton(configProvider);
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IRuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
             FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
@@ -292,7 +292,7 @@ namespace Azure.DataApiBuilder.Service
             {
                 app.UseSwaggerUI(c =>
                 {
-                    c.ConfigObject.Urls = new SwaggerEndpointMapper(app.ApplicationServices.GetService<RuntimeConfigProvider?>());
+                    c.ConfigObject.Urls = new SwaggerEndpointMapper(app.ApplicationServices.GetService<IRuntimeConfigProvider?>());
                 });
             }
 
@@ -403,7 +403,7 @@ namespace Azure.DataApiBuilder.Service
                 // attempt to get the runtime config to determine the loglevel based on host.mode.
                 // If runtime config is available, set the loglevel to Error if host.mode is Production,
                 // Debug if it is Development.
-                RuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<RuntimeConfigProvider>();
+                IRuntimeConfigProvider configProvider = serviceProvider.GetRequiredService<IRuntimeConfigProvider>();
                 if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig))
                 {
                     MinimumLogLevel = GetLogLevelBasedOnMode(runtimeConfig);
@@ -424,7 +424,7 @@ namespace Azure.DataApiBuilder.Service
         /// </summary>
         /// <param name="services">The service collection where authentication services are added.</param>
         /// <param name="runtimeConfigurationProvider">The provider used to load runtime configuration.</param>
-        private void ConfigureAuthentication(IServiceCollection services, RuntimeConfigProvider runtimeConfigurationProvider)
+        private void ConfigureAuthentication(IServiceCollection services, IRuntimeConfigProvider runtimeConfigurationProvider)
         {
             if (runtimeConfigurationProvider.TryGetConfig(out RuntimeConfig? runtimeConfig) &&
                 runtimeConfig.Runtime?.Host?.Authentication is not null)
@@ -562,7 +562,7 @@ namespace Azure.DataApiBuilder.Service
         {
             try
             {
-                RuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<RuntimeConfigProvider>()!;
+                IRuntimeConfigProvider runtimeConfigProvider = app.ApplicationServices.GetService<IRuntimeConfigProvider>()!;
                 RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
                 RuntimeConfigValidator runtimeConfigValidator = app.ApplicationServices.GetService<RuntimeConfigValidator>()!;

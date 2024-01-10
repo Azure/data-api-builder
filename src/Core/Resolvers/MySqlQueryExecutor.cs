@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private Dictionary<string, bool> _dataSourceAccessTokenUsage;
 
         public MySqlQueryExecutor(
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor)

@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private Dictionary<string, bool> _dataSourceAccessTokenUsage;
 
         public PostgreSqlQueryExecutor(
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             DbExceptionParser dbExceptionParser,
             ILogger<IQueryExecutor> logger,
             IHttpContextAccessor httpContextAccessor)

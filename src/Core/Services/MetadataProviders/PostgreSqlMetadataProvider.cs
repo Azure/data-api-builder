@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Core.Services
     {
 
         public PostgreSqlMetadataProvider(
-            RuntimeConfigProvider runtimeConfigProvider,
+            IRuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             string dataSourceName,

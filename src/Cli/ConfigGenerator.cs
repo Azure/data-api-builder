@@ -1104,7 +1104,7 @@ namespace Cli
                 _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
             }
 
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            LocalRuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);

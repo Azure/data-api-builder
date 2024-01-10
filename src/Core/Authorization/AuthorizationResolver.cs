@@ -438,8 +438,23 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
-    /// Helper method to extract all claims available in the HttpContext's user object and add the claims
-    /// to the claimsInRequestContext dictionary to be used for claimType -> claim lookups.
+    /// Returns a dictionary (claim name -> claim) populated from claims within a ClaimsPrincipal's ClaimsIdentity object.
+    /// Collect all unique token claims.
+    /// Claims with a value whose data type is one of the following may result in duplicate claim types which are not supported:
+    /// 1. JSON object
+    /// 2. JSON array: e.g. roles and groups claim, which are arrays of strings and are flattened to: roles: role1, roles: role2, groups: group1, groups: group2
+    /// 3. String delimited with spaces -> e.g. scp claim, which is a space delimited string of scopes and is flattened to: scp: scope1, scp: scope2. scp: scope3
+    /// claims
+    /// Background:
+    /// Claims are name valued pairs and nothing more. https://github.com/dotnet/aspnetcore/issues/13647#issuecomment-527523224
+    /// The library that parses the jwt token into claims is the one that decides *how* to resolve the claims from the token's JSON payload.
+    /// DotNet flattens the claims into a list: https://github.com/dotnet/aspnetcore/blob/282bfc1b486ae235a3395150a8d53073a57b7f43/src/Security/Authentication/OAuth/src/JsonKeyClaimAction.cs#L39-L53
+    /// Constraints
+    /// Only ignore duplicates because to ingore specific claim types (besides the role claim) is a breaking change.
+    /// e.g. When only one scope exists in a JWT token, one scp claim will be resolved: scp: scope1
+    /// However, a delimited scp claim will result in multiple claims -> scp: scope1 , scp: scope2.
+    /// We can't know which scp the user intends to use in a database policy or session context variable, so we remove all scp claims when duplicates exist.
+    /// Because claims are resolved into a dictionary by DAB, dupes have been and continue to be unsupported.
     /// </summary>
     /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
     /// <returns>Dictionary with claimType -> claim mappings.</returns>
@@ -453,22 +468,22 @@ public class AuthorizationResolver : IAuthorizationResolver
 
         string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
 
+        HashSet<string> duplicateClaimNames = new();
         // Iterate through all the identities to populate claims in request context.
         foreach (ClaimsIdentity identity in context.User.Identities)
         {
+            // If identity is not authenticated, we don't honor any claims present in this identity.
+            if (!identity.IsAuthenticated)
+            {
+                continue;
+            }
 
-            // Only add a role claim which represents the role context evaluated for the request,
-            // as this can be via the virtue of an identity added by DAB.
+            // From the authenticated identity, find and extract the role claim matching the role designated
+            // in the client role header. This claim will be added to the claimsInRequestContext dictionary.
             if (!claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
                 identity.HasClaim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader))
             {
                 claimsInRequestContext.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
-            }
-
-            // If identity is not authenticated, we don't honor any other claims present in this identity.
-            if (!identity.IsAuthenticated)
-            {
-                continue;
             }
 
             foreach (Claim claim in identity.Claims)
@@ -479,17 +494,21 @@ public class AuthorizationResolver : IAuthorizationResolver
                  * claim.Value: "authz@microsoft.com"
                  * claim.ValueType: "string"
                  */
-                // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
+                // Ignore role claims because they have already been processed.
+                // Only the role claim designated in the client role header is added to the claimsInRequestContext dictionary.
                 if (!claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE) && !claimsInRequestContext.TryAdd(claim.Type, claim))
                 {
-                    // If there are duplicate claims present in the request, return an exception.
-                    throw new DataApiBuilderException(
-                        message: "Duplicate claims are not allowed within a request.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                        );
+                    duplicateClaimNames.Add(claim.Type);
                 }
             }
+        }
+
+        // Remove any claimType detected to have more than one instance.
+        // For example: scp claim is a json array of strings. If the user has multiple scopes,
+        // the claimType will be present multiple times.
+        foreach (string claimType in duplicateClaimNames)
+        {
+            claimsInRequestContext.Remove(claimType);
         }
 
         return claimsInRequestContext;

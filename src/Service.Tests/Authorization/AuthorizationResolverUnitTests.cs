@@ -1058,22 +1058,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate that duplicate claims throws an exception for everything except roles
+        /// Validate that the presence of duplicate claims in a ClaimsPrincipal results in a raised exception for
+        /// every claim type except 'roles'. This is because DAB resolves a single instance of the 'roles' claim that
+        /// matches the client role header defined role.
         /// duplicate role claims are ignored, so just checks policy is parsed as expected in this case 
         /// </summary>
         /// <param name="exceptionExpected"> Whether we expect an exception (403 forbidden) to be thrown while parsing policy </param>
         /// <param name="claimTypes"> Parameter list of claim types/keys to add to the claims dictionary that can be accessed with @claims </param>
         [DataTestMethod]
-        [DataRow(true, AuthenticationOptions.ROLE_CLAIM_TYPE, "username", "guid", "username",
-            DisplayName = "duplicate claim expect exception")]
-        [DataRow(false, AuthenticationOptions.ROLE_CLAIM_TYPE, "username", "guid", AuthenticationOptions.ROLE_CLAIM_TYPE,
-            DisplayName = "duplicate role claim does not expect exception")]
-        [DataRow(true, AuthenticationOptions.ROLE_CLAIM_TYPE, AuthenticationOptions.ROLE_CLAIM_TYPE, "username", "username",
-            DisplayName = "duplicate claim expect exception ignoring role")]
-        public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, params string[] claimTypes)
+        [DataRow(false, "@claims.guid eq 'value'", AuthenticationOptions.ROLE_CLAIM_TYPE, "username", "guid", "username",
+            DisplayName = "HappyPath: Duplicate username claim types non issue because claim is not referenced in dp policy.")]
+        [DataRow(true, "@claims.guid eq 'value'", AuthenticationOptions.ROLE_CLAIM_TYPE, AuthenticationOptions.ROLE_CLAIM_TYPE, "guid", "guid",
+            DisplayName = "ErrorScenario: Duplicate claim types are ignored so db policy referenced claim is not provided to db policy engine.")]
+        public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, string policy, params string[] claimTypes)
         {
-            string policy = $"@claims.guid eq 1";
-            string defaultClaimValue = "unimportant";
+            // "@claims.guid" expected policy claims reference ; "valueExpected" is the value that is 
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: TEST_ENTITY,
                 roleName: TEST_ROLE,
@@ -1086,10 +1085,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             // Add identity to the readAction, updateAction.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            string defaultClaimValue = "unimportant";
+
             foreach (string claimType in claimTypes)
             {
                 identity.AddClaim(new Claim(type: claimType, value: defaultClaimValue, ClaimValueTypes.String));
             }
+
+            // Add roles claim that matches client role header value. (x-ms-api-role)
+            identity.AddClaim(new Claim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: TEST_ROLE, ClaimValueTypes.String));
 
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
@@ -1100,22 +1104,58 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             {
                 try
                 {
-                    authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+                    string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
                     Assert.Fail();
                 }
                 catch (DataApiBuilderException ex)
                 {
                     Assert.AreEqual(HttpStatusCode.Forbidden, ex.StatusCode);
-                    Assert.AreEqual("Duplicate claims are not allowed within a request.", ex.Message);
+                    Assert.AreEqual("User does not possess all the claims required to perform this operation.", ex.Message);
                 }
             }
             else
             {
                 // If the role claim was the only duplicate, simply verify policy parsed as expected
-                string expectedPolicy = $"'{defaultClaimValue}' eq 1";
+                string expectedPolicy = $"'{defaultClaimValue}' eq 'value'";
                 string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
                 Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
             }
+        }
+
+        /// <summary>
+        /// Validates that duplicate 'roles' claims in the access token resolve to a single 'roles' claim:
+        /// the roles claim with value matching the client role header value.
+        /// This is important because a single 'roles' claim will always be made available to the db policy
+        /// and SQL session context features.
+        [TestMethod]
+        public void ParsePolicyWithDuplicateRolesClaims()
+        {
+            string policy = $"@claims.roles eq 'Writer'";
+
+            RuntimeConfig runtimeConfig = InitRuntimeConfig(
+                entityName: TEST_ENTITY,
+                roleName: TEST_ROLE,
+                operation: TEST_OPERATION,
+                includedCols: new HashSet<string> { "col1", "col2", "col3" },
+                databasePolicy: policy
+                );
+            AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
+            Mock<HttpContext> context = new();
+
+            // Add identity to the readAction, updateAction.
+            ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            // Add roles claim that matches client role header value. (x-ms-api-role)
+            identity.AddClaim(new Claim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: TEST_ROLE, ClaimValueTypes.String));
+            // Add roles claim with arbitrary secondary role which ensures user now has duplicate roles claim types.
+            identity.AddClaim(new Claim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: "role2", ClaimValueTypes.String));
+
+            ClaimsPrincipal principal = new(identity);
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            string expectedPolicy = $"'{TEST_ROLE}' eq 'Writer'";
+            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+            Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
         }
 
         // Indirectly tests the AuthorizationResolver private method:
@@ -1174,6 +1214,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Assert.AreEqual(actual: parsedPolicy, expected: string.Empty, message: errorMessage);
             }
         }
+        #endregion
+
+        #region Claims Processing Tests
 
         /// <summary>
         /// Test to validate the AuthorizationResolver.GetAllUserClaims() successfully adds role claim to the claimsInRequestContext dictionary.
@@ -1210,6 +1253,149 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.IsTrue(claimsInRequestContext.Count == 1);
             Assert.IsTrue(claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE));
             Assert.IsTrue(TEST_ROLE.Equals(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Value));
+        }
+
+        /// <summary>
+        /// JWT token JSON payloads may not be flat and may contain nested JSON objects or arrays.
+        /// This test validates that when dotnet (authentication jwt processing code) flattens the JWT token payload,
+        /// DAB is able to ignore duplicate claims (same claim name, different values) because multiple claims with the same name
+        /// are not supported in DAB.
+        /// DAB's Database Policies and Session context features utilize access token claims and there is no mechanism
+        /// to specify which claim value should be used when there are multiple claims with the same name.
+        /// </summary>
+        [TestMethod]
+        public void DuplicateClaimsExcludedFromDbPolicy_SessionCtx_Usage()
+        {
+            // Arrange
+            Mock<HttpContext> context = new();
+
+            // Creat list of claims for testing
+            List<Claim> claims = new()
+            {
+                new("scp", "openid"),
+                new("scp", "profile"),
+                new("scp", "GraphQLEndpoint"),
+                new("scope", "openid"),
+                new("scope", "profile"),
+                new("scope", "GraphQLEndpoint"),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE)
+            };
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identityWithClientRoleHeaderClaim = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identityWithClientRoleHeaderClaim.AddClaims(claims);
+
+            ClaimsPrincipal principal = new();
+            principal.AddIdentity(identityWithClientRoleHeaderClaim);
+
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            // Act
+            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+
+            // Assert
+            Assert.AreEqual(claimsInRequestContext.Count, 1, message: "Only one claim should be present to represent the client role header context.");
+            Assert.AreEqual(claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), true, message: "Only the claim, roles, should be present.");
+            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Value, TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+        }
+
+        /// <summary>
+        /// JWT token JSON payloads may not be flat and may contain nested JSON objects or arrays.
+        /// This test validates that when dotnet (authentication jwt processing code) flattens the JWT token payload,
+        /// DAB is able to pick out claims that only occur a single time. Multiple claims with the same name
+        /// are not supported in DAB. This test also protects against regression in current functionality because
+        /// this scenario works today. If we ignored any claim that *may* result in duplicate claims using the same name,
+        /// we would be making a breaking change.
+        /// DAB's Database Policies and Session context features utilize access token claims and those features
+        /// can utilize the claims that occur only once.
+        /// </summary>
+        [TestMethod]
+        public void UniqueClaimsResolvedForDbPolicy_SessionCtx_Usage()
+        {
+            // Arrange
+            Mock<HttpContext> context = new();
+
+            // Creat list of claims for testing
+            List<Claim> claims = new()
+            {
+                new("scp", "openid"),
+                new("sub", "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY"),
+                new("oid", "55296aad-ea7f-4c44-9a4c-bb1e8d43a005"),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "Don't_Parse_This_Role")
+            };
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identityWithClientRoleHeaderClaim = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identityWithClientRoleHeaderClaim.AddClaims(claims);
+
+            ClaimsPrincipal principal = new();
+            principal.AddIdentity(identityWithClientRoleHeaderClaim);
+
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            // Act
+            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+
+            // Assert
+            Assert.AreEqual(claimsInRequestContext.Count, 4, message: "Four claims were expected.");
+            Assert.AreEqual(claimsInRequestContext["scp"].Value, "openid", message: "Expected the scp claim to be present.");
+            Assert.AreEqual(claimsInRequestContext["sub"].Value, "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY", message: "Expected the sub claim to be present.");
+            Assert.AreEqual(claimsInRequestContext["oid"].Value, "55296aad-ea7f-4c44-9a4c-bb1e8d43a005", message: "Expected the oid claim to be present.");
+            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Value, TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+        }
+
+        /// <summary>
+        /// Validates that AuthorizationResolver.GetAllUserClaims(httpContext) does not resolve claims sourced from
+        /// an unauthenticated ClaimsIdentity object within a ClaimsPrincipal. While no scenarios may currently insert
+        /// an unauthenticated ClaimsIdentity object into a ClaimsPrincipal, this test ensures such an occurrence will not
+        /// prevent DAB from functioning as expected.
+        /// </summary>
+        [TestMethod]
+        public void ValidateUnauthenticatedUserClaimsAreNotResolvedInGetAllUserClaimsFunction()
+        {
+            // Arrange
+            Mock<HttpContext> context = new();
+
+            // Create authenticated ClaimsIdentity object with list of claims.
+            List<Claim> authenticatedUserclaims = new()
+            {
+                new("scp", "openid"),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE),
+            };
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity authenticatedIdentity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            authenticatedIdentity.AddClaims(authenticatedUserclaims);
+
+            // Create unauthenticated ClaimsIdentity object with list of claims.
+            List<Claim> unauthenticatedClaims = new()
+            {
+                new("scp", "invalidScope"),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "Don't_Parse_This_Role")
+            };
+
+            // ClaimsIdentity is unauthenticated because the authenticationType is null.
+            ClaimsIdentity unauthenticatedIdentity = new(authenticationType: null, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            unauthenticatedIdentity.AddClaims(unauthenticatedClaims);
+
+            //Add identities object to the Mock context object.
+            ClaimsPrincipal principal = new();
+            principal.AddIdentity(authenticatedIdentity);
+            principal.AddIdentity(unauthenticatedIdentity);
+
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            // Act
+            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+
+            // Assert
+            Assert.AreEqual(claimsInRequestContext.Count, 2, message: "Only two claims should be present.");
+            Assert.AreEqual(claimsInRequestContext["scp"].Value, "openid", message: "Unexpected scp claim returned.");
+            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Value, TEST_ROLE, message: "Unexpected roles claim returned.");
         }
         #endregion
 

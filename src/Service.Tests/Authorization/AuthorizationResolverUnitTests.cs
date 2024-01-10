@@ -1072,7 +1072,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             DisplayName = "ErrorScenario: Duplicate claim types are ignored so db policy referenced claim is not provided to db policy engine.")]
         public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, string policy, params string[] claimTypes)
         {
-            // "@claims.guid" expected policy claims reference ; "valueExpected" is the value that is 
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: TEST_ENTITY,
                 roleName: TEST_ROLE,

@@ -107,30 +107,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToOneJoinQuery()
         {
             string mySqlQuery = @"
-                SELECT JSON_OBJECT('id', `subq11`.`id`, 'websiteplacement', `subq11`.`websiteplacement`)
-                       AS `data`
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(@param3, `subq7`.`id`, @param4, `subq7`.`title`, @param5, 
+                                `subq7`.`websiteplacement`)), JSON_ARRAY()) AS `data`
                 FROM (
                     SELECT `table0`.`id` AS `id`,
+                        `table0`.`title` AS `title`,
                         `table1_subq`.`data` AS `websiteplacement`
                     FROM `books` AS `table0`
-                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq10`.`id`, 'price', `subq10`.`price`, 'books',
-                                `subq10`.`books`) AS `data` FROM (
-                            SELECT `table1`.`id` AS `id`,
-                                `table1`.`price` AS `price`,
-                                `table2_subq`.`data` AS `books`
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT(@param2, `subq6`.`price`) AS `data` FROM (
+                            SELECT `table1`.`price` AS `price`
                             FROM `book_website_placements` AS `table1`
-                            LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('id', `subq9`.`id`) AS `data` FROM (
-                                    SELECT `table2`.`id` AS `id`
-                                    FROM `books` AS `table2`
-                                    WHERE `table1`.`book_id` = `table2`.`id`
-                                    ORDER BY `table2`.`id` asc LIMIT 1
-                                    ) AS `subq9`) AS `table2_subq` ON TRUE
-                            WHERE `table0`.`id` = `table1`.`book_id`
-                            ORDER BY `table1`.`id` asc LIMIT 1
-                            ) AS `subq10`) AS `table1_subq` ON TRUE
-                    WHERE `table0`.`id` = 1
-                    ORDER BY `table0`.`id` asc LIMIT 100
-                    ) AS `subq11`
+                            WHERE `table1`.`book_id` = `table0`.`id`
+                            ORDER BY `table1`.`id` ASC LIMIT 1
+                            ) AS `subq6`) AS `table1_subq` ON TRUE
+                    WHERE 1 = 1
+                    ORDER BY `table0`.`id` ASC LIMIT 100
+                    ) AS `subq7`
             ";
 
             await OneToOneJoinQuery(mySqlQuery);

@@ -107,14 +107,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToOneJoinQuery()
         {
             string mySqlQuery = @"
-                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(@param3, `subq7`.`id`, @param4, `subq7`.`title`, @param5, 
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', `subq7`.`id`, 'title', `subq7`.`title`, 'websiteplacement',
                                 `subq7`.`websiteplacement`)), JSON_ARRAY()) AS `data`
                 FROM (
                     SELECT `table0`.`id` AS `id`,
                         `table0`.`title` AS `title`,
                         `table1_subq`.`data` AS `websiteplacement`
                     FROM `books` AS `table0`
-                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT(@param2, `subq6`.`price`) AS `data` FROM (
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('price', `subq6`.`price`) AS `data` FROM (
                             SELECT `table1`.`price` AS `price`
                             FROM `book_website_placements` AS `table1`
                             WHERE `table1`.`book_id` = `table0`.`id`

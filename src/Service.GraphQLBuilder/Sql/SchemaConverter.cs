@@ -130,6 +130,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                             out List<ForeignKeyDefinition>? listOfForeignKeys))
                     {
+                        // The listOfForeignKeys may contain optimistically added entries in each
+                        // relationship direction between the pair of entities for 1:1 or many:1 relationships.
+                        // Those entries which dont have a matching corresponding foreign key in the database,
+                        // the count of referencing/referenced columns will be 0. So, we need to filter out these
+                        // invalid entries. Non-zero referenced columns indicate valid matching foreign key definition in the
+                        // database and hence only those can be used to determine the directionality.
                         ForeignKeyDefinition? foreignKeyInfo =
                             listOfForeignKeys.Where(fk => fk.ReferencingColumns.Count > 0
                                 && fk.ReferencedColumns.Count > 0).FirstOrDefault();

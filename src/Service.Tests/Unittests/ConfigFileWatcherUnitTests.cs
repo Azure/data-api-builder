@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             FileSystem fileSystem = new();
             fileSystem.File.WriteAllText(configName, initialConfig);
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configName, string.Empty);
-            RuntimeConfigProvider configProvider = new(configLoader);
+            LocalRuntimeConfigProvider configProvider = new(configLoader);
             // Must GetConfig() to start file watching
             RuntimeConfig runtimeConfig = configProvider.GetConfig();
             // assert we have a valid config

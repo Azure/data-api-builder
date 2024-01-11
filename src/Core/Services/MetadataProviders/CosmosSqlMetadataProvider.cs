@@ -351,5 +351,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             return _runtimeConfig.IsDevelopmentMode();
         }
+
+        public bool TryGetEntityToColumnMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetColumnToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

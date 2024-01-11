@@ -124,6 +124,16 @@ namespace Azure.DataApiBuilder.Core.Services
         public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects();
 
         /// <summary>
+        /// Given entity name, gets the entity to column mappings if present.
+        /// </summary>
+        public bool TryGetEntityToColumnMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
+
+        /// <summary>
+        /// Given entity name, gets the column to entity mappings if present.
+        /// </summary>
+        public bool TryGetColumnToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
+
+        /// <summary>
         /// Gets Partition Key Path of a database container.
         /// </summary>
         string? GetPartitionKeyPath(string database, string container);

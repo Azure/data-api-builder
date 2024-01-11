@@ -6,7 +6,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 public class ConfigFileWatcher
 {
     private FileSystemWatcher? _fileWatcher;
-    private readonly IRuntimeConfigProvider? _configProvider;
+    private readonly LocalRuntimeConfigProvider? _configProvider;
 
     public ConfigFileWatcher(LocalRuntimeConfigProvider configProvider, string directoryName, string configFileName)
     {

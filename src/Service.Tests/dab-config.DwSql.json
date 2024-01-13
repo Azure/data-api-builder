@@ -861,8 +861,8 @@
         "websiteplacement": {
           "cardinality": "one",
           "target.entity": "BookWebsitePlacement",
-          "source.fields": [ "id" ],
-          "target.fields": [ "book_id" ],
+          "source.fields": [],
+          "target.fields": [],
           "linking.source.fields": [],
           "linking.target.fields": []
         },

@@ -19,6 +19,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// </summary>
         public IEnumerable<ISqlMetadataProvider> ListMetadataProviders();
 
+        public List<Exception> GetAllMetadataExceptions();
+
         /// <summary>
         /// Initializes the metadata providers.
         /// </summary>

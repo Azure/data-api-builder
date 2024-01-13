@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Humanizer;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests
@@ -39,6 +40,12 @@ namespace Azure.DataApiBuilder.Service.Tests
             FileSystemRuntimeConfigLoader runtimeConfigLoader = new(fileSystem);
             return runtimeConfigLoader;
         }
+
+        public static ILoggerFactory ProvisionLoggerFactory() =>
+          LoggerFactory.Create(builder =>
+          {
+              builder.AddConsole();
+          });
 
         /// <summary>
         /// Given the configuration path, generate the runtime configuration provider

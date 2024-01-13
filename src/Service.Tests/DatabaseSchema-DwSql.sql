@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS [foo].[magazines];
+DROP TABLE IF EXISTS stocks_price;
 DROP TABLE IF EXISTS stocks;
 DROP TABLE IF EXISTS comics;
 DROP TABLE IF EXISTS brokers;
@@ -125,6 +126,15 @@ CREATE TABLE stocks(
     piecesRequired int NOT NULL
 );
 
+
+CREATE TABLE stocks_price(
+    categoryid int NOT NULL,
+    pieceid int NOT NULL,
+    instant datetime NOT NULL,
+    price int,
+    is_wholesale_price bit
+);
+
 CREATE TABLE brokers(
     [ID Number] int NOT NULL,
     [First Name] varchar(2048) NOT NULL,
@@ -229,7 +239,7 @@ INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael'
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
 INSERT INTO stocks(categoryid, pieceid, categoryName, piecesAvailable, piecesRequired) VALUES (1,1,'SciFi',0,0),(2,1,'Tales',0,0),(0,1,'',0,0),(100,99,'Historical',0,0);
-
+INSERT INTO stocks_price (categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100, 1);
 INSERT INTO notebooks(id, notebookname, color, ownername) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
 INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');

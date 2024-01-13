@@ -262,7 +262,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Create ObjectTypeDefinitionNode for linking entities. These object definitions are not exposed in the schema
                 // but are used to generate the object definitions of directional linking entities for (source, target) and (target, source) entities.
                 Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities(linkingEntityNames, entities);
-                GenerateObjectDefinitionsForDirectionalLinkingEntities(objectTypes, linkingObjectTypes, entitiesWithManyToManyRelationships);
+                GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes, entitiesWithManyToManyRelationships);
             }
 
             // Return a list of all the object types to be exposed in the schema.
@@ -271,13 +271,13 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to generate object types for directional linking nodes from (source, target) and (target, source)
-        /// using simple linking nodes which relate the source/target entities with N:N relationship between them.
+        /// Helper method to generate object types for linking nodes from (source, target) using
+        /// simple linking nodes which relate the source/target entities with M:N relationship between them.
         /// </summary>
         /// <param name="objectTypes">Collection of object types.</param>
         /// <param name="linkingObjectTypes">Collection of object types for linking entities.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of pair of entities with N:N relationship between them.</param>
-        private void GenerateObjectDefinitionsForDirectionalLinkingEntities(
+        /// <param name="entitiesWithManyToManyRelationships">Collection of pair of entities with M:N relationship between them.</param>
+        private void GenerateSourceTargetLinkingObjectDefinitions(
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes,
             Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes,
             HashSet<Tuple<string, string>> entitiesWithManyToManyRelationships)

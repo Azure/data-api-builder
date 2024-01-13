@@ -104,6 +104,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         NameNode baseEntityNameForField = new(typeName);
                         typeName = LINKING_OBJECT_PREFIX + baseEntityName.Value + typeName;
                         def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == typeName)!;
+
+                        // Get entity definition for this ObjectTypeDefinitionNode.
+                        // Recurse for evaluating input objects for related entities.
                         return GetComplexInputType(inputs, definitions, f, typeName, baseEntityNameForField, (ObjectTypeDefinitionNode)def, databaseType);
                     }
 
@@ -191,6 +194,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
         /// <param name="field">Field that the input type is being generated for.</param>
         /// <param name="typeName">Name of the input type in the dictionary.</param>
+        /// <param name="baseObjectTypeName">Name of the underlying object type of the field for which the input type is to be created.</param>
         /// <param name="childObjectTypeDefinitionNode">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
         /// <param name="entities">Runtime configuration information for entities.</param>
@@ -200,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             FieldDefinitionNode field,
             string typeName,
-            NameNode baseEntityName,
+            NameNode baseObjectTypeName,
             ObjectTypeDefinitionNode childObjectTypeDefinitionNode,
             DatabaseType databaseType)
         {
@@ -208,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateCreateInputType(inputs, childObjectTypeDefinitionNode, new NameNode(typeName), baseEntityName, definitions, databaseType);
+                node = GenerateCreateInputType(inputs, childObjectTypeDefinitionNode, new NameNode(typeName), baseObjectTypeName, definitions, databaseType);
             }
             else
             {

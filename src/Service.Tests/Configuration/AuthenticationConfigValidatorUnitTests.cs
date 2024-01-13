@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             try
             {
-                _runtimeConfigValidator.ValidateConfig();
+                _runtimeConfigValidator.ValidateConfigProperties();
             }
             catch (NotSupportedException e)
             {
@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             try
             {
-                _runtimeConfigValidator.ValidateConfig();
+                _runtimeConfigValidator.ValidateConfigProperties();
             }
             catch (NotSupportedException e)
             {
@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             try
             {
-                _runtimeConfigValidator.ValidateConfig();
+                _runtimeConfigValidator.ValidateConfigProperties();
             }
             catch (NotSupportedException e)
             {
@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
-                _runtimeConfigValidator.ValidateConfig();
+                _runtimeConfigValidator.ValidateConfigProperties();
             });
 
             jwt = new(
@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
-                _runtimeConfigValidator.ValidateConfig();
+                _runtimeConfigValidator.ValidateConfigProperties();
             });
         }
 
@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
-                _runtimeConfigValidator.ValidateConfig();
+                _runtimeConfigValidator.ValidateConfigProperties();
             });
 
             jwt = new(
@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             Assert.ThrowsException<NotSupportedException>(() =>
             {
-                _runtimeConfigValidator.ValidateConfig();
+                _runtimeConfigValidator.ValidateConfigProperties();
             });
         }
 

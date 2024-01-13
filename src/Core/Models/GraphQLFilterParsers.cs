@@ -564,7 +564,7 @@ public static class FieldFilterParser
                 new PredicateOperand(column),
                 op,
                 new PredicateOperand(processLiteral ? $"{processLiterals(value, column.ColumnName)}" : value.ToString()))
-            ));
+                ));
         }
 
         return GQLFilterParser.MakeChainPredicate(predicates, PredicateOperation.AND);

@@ -251,7 +251,7 @@ public record RuntimeConfig
 
     public static string GenerateLinkingEntityName(string source, string target)
     {
-        return Entity.LINKING_ENTITY_PREFIX + (string.Compare(source, target) <= 0 ? source + target : target + source);
+        return Entity.LINKING_ENTITY_PREFIX + source + target;
     }
 
     /// <summary>

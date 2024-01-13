@@ -39,14 +39,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
             IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            HashSet<Tuple<string, string>>? relationshipsWithRightCardinalityMany = null,
             HashSet<Tuple<string, string>>? manyToManyRelationships = null)
         {
-            if (relationshipsWithRightCardinalityMany is null)
-            {
-                relationshipsWithRightCardinalityMany = new();
-            }
-
             if (manyToManyRelationships is null)
             {
                 manyToManyRelationships = new();
@@ -194,16 +188,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
                         };
 
-                        if (relationship.Cardinality is Cardinality.Many)
+                        if (relationship.LinkingObject is not null)
                         {
                             Tuple<string, string> sourceToTarget = new(entityName, targetEntityName);
-                            Tuple<string, string> targetToSource = new(targetEntityName, entityName);
-                            relationshipsWithRightCardinalityMany.Add(sourceToTarget);
-                            if (relationshipsWithRightCardinalityMany.Contains(targetToSource))
-                            {
-                                manyToManyRelationships.Add(sourceToTarget);
-                                manyToManyRelationships.Add(targetToSource);
-                            }
+                            manyToManyRelationships.Add(sourceToTarget);
                         }
 
                         FieldDefinitionNode relationshipField = new(

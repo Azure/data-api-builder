@@ -1164,7 +1164,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (!AreFieldsAuthorizedForEntity(clientRole, entityNameInMutation, EntityActionOperation.Create, fieldsInEntity))
                 {
                     throw new DataApiBuilderException(
-                        message: $"The client has insufficient permissions on one or more fields in the entity: {entityNameInMutation} referenced in this mutation.",
+                        message: $"Access is forbidden to one or more fields in the entity: {entityNameInMutation} referenced in this mutation.",
                         statusCode: HttpStatusCode.Forbidden,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
                     );
@@ -1265,11 +1265,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Dictionary<string, HashSet<string>> fieldsToAuthorize,
             RuntimeConfig runtimeConfig)
         {
-            if (!fieldsToAuthorize.ContainsKey(entityName))
-            {
-                fieldsToAuthorize.Add(entityName, new HashSet<string>());
-            }
-
+            fieldsToAuthorize.TryAdd(entityName, new HashSet<string>());
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             foreach (ObjectFieldNode field in fieldNodes)

@@ -25,6 +25,8 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Cosmos.Serialization.HybridRow;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -1179,6 +1181,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="context">Middleware Context.</param>
         /// <param name="parameters">Value for the input field.</param>
         /// <param name="runtimeConfig">Runtime config.</param>
+        /// <example>       1. mutation {
+        ///                 createbook(
+        ///                     item: {
+        ///                         title: "book #1"
+        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///                         publisher: { name: "Macmillan publishers" }
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                     })
+        ///                 {
+        ///                     id
+        ///                 }
+        ///                 2. mutation {
+        ///                 createbooks(
+        ///                     items: [{
+        ///                         title: "book #1"
+        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///                         publisher: { name: "Macmillan publishers" }
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                     },
+        ///                     {
+        ///                         title: "book #2"
+        ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
+        ///                         publisher: { name: "Pearson Education" }
+        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", author_name: "William Shakespeare" }]
+        ///                     }])
+        ///                 {
+        ///                     items{
+        ///                         id
+        ///                         title
+        ///                     }
+        ///                 }</example>
         private void PopulateMutationFieldsToAuthorize(
             Dictionary<string, HashSet<string>> fieldsToAuthorize,
             IInputField schema,
@@ -1188,21 +1221,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             RuntimeConfig runtimeConfig)
         {
             InputObjectType schemaObject = ResolverMiddleware.InputObjectTypeFromIInputField(schema);
-            if (parameters is List<ObjectFieldNode> fields)
+            if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
             {
-                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, fields, fieldsToAuthorize, runtimeConfig);
+                // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
+                // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
+                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, listOfObjectFieldNode, fieldsToAuthorize, runtimeConfig);
             }
-            else if (parameters is ObjectValueNode objectValue)
+            else if (parameters is List<IValueNode> listOfIValueNode)
             {
-                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, objectValue.Fields, fieldsToAuthorize, runtimeConfig);
+                // For the example createbooks mutation written above, the list value for `items` is interpreted as a List<IValueNode>
+                // i.e. items is a list of ObjectValueNode(s).
+                listOfIValueNode.ForEach(iValueNode => PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schema, entityName, context, iValueNode, runtimeConfig));
             }
-            else if (parameters is List<IValueNode> values)
+            else if (parameters is ObjectValueNode objectValueNode)
             {
-                values.ForEach(value => PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schema, entityName, context, value, runtimeConfig));
+                // For the example createbook mutation written above, the node for publisher field is interpreted as an ObjectValueNode.
+                // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
+                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, objectValueNode.Fields, fieldsToAuthorize, runtimeConfig);
             }
-            else if (parameters is ListValueNode listValue)
+            else if (parameters is ListValueNode listValueNode)
             {
-                listValue.GetNodes().ToList().ForEach(value => PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schema, entityName, context, value, runtimeConfig));
+                // For the example createbook mutation written above, the list values for reviews and authors fields are interpreted as ListValueNode.
+                // All the nodes in the ListValueNode are parsed one by one.
+                listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schema, entityName, context, objectValueNodeInListValueNode, runtimeConfig));
             }
         }
 
@@ -1235,13 +1276,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GetFieldDetails(field.Value, context.Variables);
                 SyntaxKind underlyingFieldKind = fieldDetails.Item2;
+                // If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a field
+                // which has a IntValue, StringValue, BooleanValue, NullValue or an EnumValue. In all of these cases, we do not have
+                // to recurse to process fields in the value - which is required for relationship fields.
                 if (underlyingFieldKind != SyntaxKind.ObjectValue && underlyingFieldKind != SyntaxKind.ListValue)
                 {
+                    // It might be the case that we are processing the fields for a linking input object.
                     // Linking input objects enable users to provide input for fields belonging to the target entity and the linking entity.
-                    // Hence, there might be fields which do not belong to the this entity.
+                    // Hence the backing column for fields belonging to the linking entity will not be present in the source definition of this target entity.
+                    // We need to skip such fields belonging to linking table as we do not perform authorization checks on them.
                     if (metadataProvider.TryGetBackingColumn(entityName, field.Name.Value, out string? _))
                     {
-                        // Only add those fields to this entity's set of fields which belong to this entity - and not the linking entity.
+                        // Only add those fields to this entity's set of fields which belong to this entity and not the linking entity.
                         fieldsToAuthorize[entityName].Add(field.Name.Value);
                     }
                 }
@@ -1249,6 +1295,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     string relationshipName = field.Name.Value;
                     string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
+
+                    // Recurse to process fields in the value of this field
                     PopulateMutationFieldsToAuthorize(
                         fieldsToAuthorize,
                         schemaObject.Fields[relationshipName],

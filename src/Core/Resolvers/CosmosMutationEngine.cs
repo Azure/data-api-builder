@@ -5,6 +5,7 @@ using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -62,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
             string entityName = metadataProvider.GetEntityName(graphQLType);
-            AuthorizeMutationFields(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, context, IMutationEngine.GetClientRoleFromMiddlewareContext(context), queryArgs, entityName, resolver.OperationType);
+            AuthorizeMutationFields(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, context, AuthorizationResolver.GetRoleOfGraphQLRequest(context), queryArgs, entityName, resolver.OperationType);
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
@@ -72,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
-            string roleName = GetRoleOfGraphQLRequest(context);
+            string roleName = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
             // READ permission is inherited by other roles from Anonymous role when present.
@@ -257,29 +258,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return item;
-        }
-
-        /// <summary>
-        /// Helper method to get the role with which the GraphQL API request was executed.
-        /// </summary>
-        /// <param name="context">HotChocolate context for the GraphQL request</param>
-        private static string GetRoleOfGraphQLRequest(IMiddlewareContext context)
-        {
-            string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
-            {
-                role = stringVals.ToString();
-            }
-
-            if (string.IsNullOrEmpty(role))
-            {
-                throw new DataApiBuilderException(
-                    message: "No ClientRoleHeader available to perform authorization.",
-                    statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
-
-            return role;
         }
 
         /// <summary>

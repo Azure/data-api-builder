@@ -109,12 +109,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             Tuple<JsonDocument?, IMetadata?>? result = null;
             EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
-
+            string roleName = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
             string inputArgumentName = isPointMutation ? MutationBuilder.ITEM_INPUT_ARGUMENT_NAME : MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
-            // If authorization fails, an exception will be thrown and request execution halts.
-            AuthorizeMutationFields(inputArgumentName, context, IMutationEngine.GetClientRoleFromMiddlewareContext(context), parameters, entityName, mutationOperation);
 
-            string roleName = GetRoleOfGraphQLRequest(context);
+            // If authorization fails, an exception will be thrown and request execution halts.
+            AuthorizeMutationFields(inputArgumentName, context, roleName, parameters, entityName, mutationOperation);
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
             // READ permission is inherited by other roles from Anonymous role when present.

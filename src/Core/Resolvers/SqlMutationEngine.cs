@@ -1276,12 +1276,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GetFieldDetails(field.Value, context.Variables);
                 SyntaxKind underlyingFieldKind = fieldDetails.Item2;
-                // If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a field
-                // which has a IntValue, StringValue, BooleanValue, NullValue or an EnumValue. In all of these cases, we do not have
-                // to recurse to process fields in the value - which is required for relationship fields.
-                if (underlyingFieldKind != SyntaxKind.ObjectValue && underlyingFieldKind != SyntaxKind.ListValue)
+
+                // If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column field
+                // which has an IntValue, FloatValue, StringValue, BooleanValue, NullValue or an EnumValue.
+                // In all of these cases, we do not have to recurse to process fields in the value - which is required for relationship fields.
+                if (underlyingFieldKind is not SyntaxKind.ObjectValue && underlyingFieldKind is not SyntaxKind.ListValue)
                 {
-                    // It might be the case that we are processing the fields for a linking input object.
+                    // It might be the case that we are currently processing the fields for a linking input object.
                     // Linking input objects enable users to provide input for fields belonging to the target entity and the linking entity.
                     // Hence the backing column for fields belonging to the linking entity will not be present in the source definition of this target entity.
                     // We need to skip such fields belonging to linking table as we do not perform authorization checks on them.
@@ -1296,7 +1297,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string relationshipName = field.Name.Value;
                     string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
 
-                    // Recurse to process fields in the value of this field
+                    // Recurse to process fields in the value of this field.
                     PopulateMutationFieldsToAuthorize(
                         fieldsToAuthorize,
                         schemaObject.Fields[relationshipName],

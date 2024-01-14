@@ -168,7 +168,7 @@ public record RuntimeConfig
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = GetAggregrateEntities(Entities);
+        this.Entities = DataSource.DatabaseType is DatabaseType.MSSQL ? GetAggregateEntities(Entities) : Entities;
         _defaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
@@ -222,7 +222,13 @@ public record RuntimeConfig
 
     }
 
-    private static RuntimeEntities GetAggregrateEntities(RuntimeEntities entities)
+    /// <summary>
+    /// Takes in a collection of all the entities exposed in the config file and creates linking entities for
+    /// all the linking objects in the relationships for these entities.
+    /// </summary>
+    /// <param name="entities">Collection of entities exposed in the config file.</param>
+    /// <returns>Union of entities exposed in the config file and the linking entities.</returns>
+    private static RuntimeEntities GetAggregateEntities(RuntimeEntities entities)
     {
         Dictionary<string, Entity> linkingEntities = new();
         foreach ((string sourceEntityName, Entity entity) in entities)
@@ -244,14 +250,14 @@ public record RuntimeConfig
                 if (!linkingEntities.ContainsKey(linkingEntityName))
                 {
                     Entity linkingEntity = new(
-                    Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),
-                    Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
-                    GraphQL: new(Singular: "", Plural: "", Enabled: false),
-                    Permissions: Array.Empty<EntityPermission>(),
-                    Relationships: null,
-                    Mappings: new(),
-                    IsLinkingEntity: true);
-                    linkingEntities.Add(linkingEntityName, linkingEntity);
+                        Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),
+                        Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                        GraphQL: new(Singular: "", Plural: "", Enabled: false),
+                        Permissions: Array.Empty<EntityPermission>(),
+                        Relationships: null,
+                        Mappings: new(),
+                        IsLinkingEntity: true);
+                    linkingEntities.TryAdd(linkingEntityName, linkingEntity);
                 }
             }
         }
@@ -282,7 +288,7 @@ public record RuntimeConfig
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = GetAggregrateEntities(Entities);
+        this.Entities = DataSource.DatabaseType is DatabaseType.MSSQL ? GetAggregateEntities(Entities) : Entities;
         _defaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;

@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

@@ -139,7 +139,7 @@ namespace Cli.Tests
                             ""provider"": ""StaticWebApps""
                         }}
                     }},
-                    ""telemetry"": {{{telemetrySection}}}
+                    {telemetrySection}
                 }},
                 ""entities"": {{}}";
         }
@@ -148,12 +148,18 @@ namespace Cli.Tests
         /// Represents a JSON string for the telemetry section of the config, with Application Insights enabled and a specified connection string.
         /// </summary>
         public const string TELEMETRY_SECTION_WITH_APP_INSIGHTS = @"
-            ""application-insights"": {
-                ""enabled"": true,
-                ""connection-string"": ""InstrumentationKey=00000000-0000-0000-0000-000000000000""
+            ""telemetry"": {
+                ""application-insights"": {
+                    ""enabled"": true,
+                    ""connection-string"": ""InstrumentationKey=00000000-0000-0000-0000-000000000000""
+                }
             }";
 
-        public const string EMPTY_TELEMETRY_SECTION = @"{}";
+        /// <summary>
+        /// Represents a JSON string for the empty telemetry section of the config.
+        /// </summary>
+        public const string EMPTY_TELEMETRY_SECTION = @"
+            ""telemetry"": {}";
     }
 
 }

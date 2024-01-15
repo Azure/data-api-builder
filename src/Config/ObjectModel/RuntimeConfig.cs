@@ -168,7 +168,7 @@ public record RuntimeConfig
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = DataSource.DatabaseType is DatabaseType.MSSQL ? GetAggregateEntities(Entities) : Entities;
+        this.Entities = Entities;
         _defaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
@@ -222,60 +222,6 @@ public record RuntimeConfig
 
     }
 
-    /// <summary>
-    /// Takes in a collection of all the entities exposed in the config file and creates linking entities for
-    /// all the linking objects in the relationships for these entities.
-    /// </summary>
-    /// <param name="entities">Collection of entities exposed in the config file.</param>
-    /// <returns>Union of entities exposed in the config file and the linking entities.</returns>
-    private static RuntimeEntities GetAggregateEntities(RuntimeEntities entities)
-    {
-        Dictionary<string, Entity> linkingEntities = new();
-        foreach ((string sourceEntityName, Entity entity) in entities)
-        {
-            if (entity.Relationships is null || entity.Relationships.Count == 0 || !entity.GraphQL.Enabled)
-            {   
-                continue;
-            }
-
-            foreach ((_, EntityRelationship entityRelationship) in entity.Relationships)
-            {
-                if (entityRelationship.LinkingObject is null)
-                {
-                    continue;
-                }
-
-                string linkingEntityName = GenerateLinkingEntityName(sourceEntityName, entityRelationship.TargetEntity);
-                if (entities.TryGetValue(linkingEntityName, out Entity? existingLinkingEntity))
-                {
-                    if (!existingLinkingEntity.IsLinkingEntity)
-                    {
-                        // This is an unlikely case which occurs when there is an entity present in the config
-                        // whose name matches the name of the current linking entity.
-                        throw new DataApiBuilderException(
-                            message: $"The name of the entity: {linkingEntityName} conflicts with another entity's name.",
-                            statusCode: HttpStatusCode.Conflict,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
-                }
-                else
-                {
-                    Entity linkingEntity = new(
-                        Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),
-                        Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
-                        GraphQL: new(Singular: "", Plural: "", Enabled: false),
-                        Permissions: Array.Empty<EntityPermission>(),
-                        Relationships: null,
-                        Mappings: new(),
-                        IsLinkingEntity: true);
-                    linkingEntities.TryAdd(linkingEntityName, linkingEntity);
-                }
-            }
-        }
-
-        return new(entities.Union(linkingEntities).ToDictionary(pair => pair.Key, pair => pair.Value));
-    }
-
     public static string GenerateLinkingEntityName(string source, string target)
     {
         return Entity.LINKING_ENTITY_PREFIX + source + target;
@@ -299,7 +245,7 @@ public record RuntimeConfig
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = DataSource.DatabaseType is DatabaseType.MSSQL ? GetAggregateEntities(Entities) : Entities;
+        this.Entities = Entities;
         _defaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;

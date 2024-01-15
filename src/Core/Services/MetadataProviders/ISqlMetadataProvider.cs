@@ -47,6 +47,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         string? GetSchemaGraphQLFieldTypeFromFieldName(string entityName, string fieldName);
 
+        IReadOnlyDictionary<string, Entity> GetLinkingEntities() => new Dictionary<string, Entity>();
+
         /// <summary>
         /// Obtains the underlying SourceDefinition for the given entity name.
         /// </summary>

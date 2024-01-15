@@ -434,7 +434,7 @@ public class EndToEndTests
         Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updateRuntimeConfig));
         Assert.IsNotNull(updateRuntimeConfig);
         Assert.AreEqual(TEST_ENV_CONN_STRING, updateRuntimeConfig.DataSource.ConnectionString);
-        Assert.AreEqual(2, updateRuntimeConfig.Entities.Where((entityDetails) => !entityDetails.Value.IsLinkingEntity).Count()); // No new entity added
+        Assert.AreEqual(2, updateRuntimeConfig.Entities); // No new entity added
 
         Assert.IsTrue(updateRuntimeConfig.Entities.ContainsKey("todo"));
         Entity entity = updateRuntimeConfig.Entities["todo"];

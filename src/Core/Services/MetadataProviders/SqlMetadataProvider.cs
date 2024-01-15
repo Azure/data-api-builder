@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly DatabaseType _databaseType;
 
-        private readonly IReadOnlyDictionary<string, Entity> _entities;
+        private IReadOnlyDictionary<string, Entity> _entities;
 
         protected readonly string _dataSourceName;
 
@@ -253,7 +253,12 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            GenerateDatabaseObjectForEntities();
+
+            Dictionary<string, Entity> linkingEntities = new();
+            GenerateDatabaseObjectForEntities(linkingEntities);
+            // At this point, the database objects for all entities in the config are generated. In addition to that,
+            // the database objects for all the linking entities are generated as well. 
+            _entities = _entities.Union(linkingEntities).ToDictionary(kv => kv.Key, kv => kv.Value);
             if (_isValidateOnly)
             {
                 // Currently Validate mode only support single datasource,
@@ -600,72 +605,79 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Create a DatabaseObject for all the exposed entities.
         /// </summary>
-        private void GenerateDatabaseObjectForEntities()
+        private void GenerateDatabaseObjectForEntities(Dictionary<string, Entity> linkingEntities)
         {
-            string schemaName, dbObjectName;
             Dictionary<string, DatabaseObject> sourceObjects = new();
             foreach ((string entityName, Entity entity) in _entities)
             {
-                try
+                PopulateDatabaseObjectForEntity(entity, entityName, sourceObjects, linkingEntities);
+            }
+        }
+
+        private void PopulateDatabaseObjectForEntity(
+            Entity entity,
+            string entityName,
+            Dictionary<string, DatabaseObject> sourceObjects,
+            Dictionary<string, Entity> linkingEntities)
+        {
+            try
+            {
+                EntitySourceType sourceType = GetEntitySourceType(entityName, entity);
+                if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
-                    EntitySourceType sourceType = GetEntitySourceType(entityName, entity);
-
-                    if (!EntityToDatabaseObject.ContainsKey(entityName))
+                    // Reuse the same Database object for multiple entities if they share the same source.
+                    if (!sourceObjects.TryGetValue(entity.Source.Object, out DatabaseObject? sourceObject))
                     {
-                        // Reuse the same Database object for multiple entities if they share the same source.
-                        if (!sourceObjects.TryGetValue(entity.Source.Object, out DatabaseObject? sourceObject))
+                        // parse source name into a tuple of (schemaName, databaseObjectName)
+                        (string schemaName, string dbObjectName) = ParseSchemaAndDbTableName(entity.Source.Object)!;
+
+                        // if specified as stored procedure in config,
+                        // initialize DatabaseObject as DatabaseStoredProcedure,
+                        // else with DatabaseTable (for tables) / DatabaseView (for views).
+
+                        if (sourceType is EntitySourceType.StoredProcedure)
                         {
-                            // parse source name into a tuple of (schemaName, databaseObjectName)
-                            (schemaName, dbObjectName) = ParseSchemaAndDbTableName(entity.Source.Object)!;
-
-                            // if specified as stored procedure in config,
-                            // initialize DatabaseObject as DatabaseStoredProcedure,
-                            // else with DatabaseTable (for tables) / DatabaseView (for views).
-
-                            if (sourceType is EntitySourceType.StoredProcedure)
+                            sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
                             {
-                                sourceObject = new DatabaseStoredProcedure(schemaName, dbObjectName)
-                                {
-                                    SourceType = sourceType,
-                                    StoredProcedureDefinition = new()
-                                };
-                            }
-                            else if (sourceType is EntitySourceType.Table)
+                                SourceType = sourceType,
+                                StoredProcedureDefinition = new()
+                            };
+                        }
+                        else if (sourceType is EntitySourceType.Table)
+                        {
+                            sourceObject = new DatabaseTable()
                             {
-                                sourceObject = new DatabaseTable()
-                                {
-                                    SchemaName = schemaName,
-                                    Name = dbObjectName,
-                                    SourceType = sourceType,
-                                    TableDefinition = new()
-                                };
-                            }
-                            else
+                                SchemaName = schemaName,
+                                Name = dbObjectName,
+                                SourceType = sourceType,
+                                TableDefinition = new()
+                            };
+                        }
+                        else
+                        {
+                            sourceObject = new DatabaseView(schemaName, dbObjectName)
                             {
-                                sourceObject = new DatabaseView(schemaName, dbObjectName)
-                                {
-                                    SchemaName = schemaName,
-                                    Name = dbObjectName,
-                                    SourceType = sourceType,
-                                    ViewDefinition = new()
-                                };
-                            }
-
-                            sourceObjects.Add(entity.Source.Object, sourceObject);
+                                SchemaName = schemaName,
+                                Name = dbObjectName,
+                                SourceType = sourceType,
+                                ViewDefinition = new()
+                            };
                         }
 
-                        EntityToDatabaseObject.Add(entityName, sourceObject);
+                        sourceObjects.Add(entity.Source.Object, sourceObject);
+                    }
 
-                        if (entity.Relationships is not null && entity.Source.Type is EntitySourceType.Table)
-                        {
-                            AddForeignKeysForRelationships(entityName, entity, (DatabaseTable)sourceObject);
-                        }
+                    EntityToDatabaseObject.Add(entityName, sourceObject);
+
+                    if (entity.Relationships is not null && entity.Source.Type is EntitySourceType.Table)
+                    {
+                        ProcessRelationships(entityName, entity, (DatabaseTable)sourceObject, sourceObjects, linkingEntities);
                     }
                 }
-                catch (Exception e)
-                {
-                    HandleOrRecordException(e);
-                }
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
             }
         }
 
@@ -701,10 +713,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="entity"></param>
         /// <param name="databaseTable"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        private void AddForeignKeysForRelationships(
+        private void ProcessRelationships(
             string entityName,
             Entity entity,
-            DatabaseTable databaseTable)
+            DatabaseTable databaseTable,
+            Dictionary<string, DatabaseObject> sourceObjects,
+            Dictionary<string, Entity> linkingEntities)
         {
             SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
             if (!sourceDefinition.SourceEntityRelationshipMap
@@ -746,6 +760,13 @@ namespace Azure.DataApiBuilder.Core.Services
                         referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
+
+                    PopulateMetadataForLinkingObject(
+                        entityName: entityName,
+                        targetEntityName: targetEntityName,
+                        linkingObject: relationship.LinkingObject,
+                        sourceObjects: sourceObjects,
+                        linkingEntities: linkingEntities);
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
@@ -801,6 +822,26 @@ namespace Azure.DataApiBuilder.Core.Services
                         relationshipData);
                 }
             }
+        }
+
+        private void PopulateMetadataForLinkingObject(
+            string entityName,
+            string targetEntityName,
+            string linkingObject,
+            Dictionary<string, DatabaseObject> sourceObjects,
+            Dictionary<string, Entity> linkingEntities)
+        {
+            string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(entityName, targetEntityName);
+            Entity linkingEntity = new(
+                Source: new EntitySource(Type: EntitySourceType.Table, Object: linkingObject, Parameters: null, KeyFields: null),
+                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                GraphQL: new(Singular: linkingEntityName, Plural: linkingEntityName, Enabled: false),
+                Permissions: Array.Empty<EntityPermission>(),
+                Relationships: null,
+                Mappings: new(),
+                IsLinkingEntity: true);
+            linkingEntities.TryAdd(linkingEntityName, linkingEntity);
+            PopulateDatabaseObjectForEntity(linkingEntity, linkingEntityName, sourceObjects, linkingEntities);
         }
 
         /// <summary>
@@ -896,6 +937,11 @@ namespace Azure.DataApiBuilder.Core.Services
         public string? GetSchemaGraphQLFieldTypeFromFieldName(string graphQLType, string fieldName)
             => throw new NotImplementedException();
 
+        public IReadOnlyDictionary<string, Entity> GetLinkingEntities()
+        {
+            return (IReadOnlyDictionary<string, Entity>)_entities.Where(entityDetails => entityDetails.Value.IsLinkingEntity).ToDictionary(kv => kv.Key, kv => kv.Value);
+        }
+
         /// <summary>
         /// Enrich the entities in the runtime config with the
         /// object definition information needed by the runtime to serve requests.
@@ -906,53 +952,58 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             foreach ((string entityName, Entity entity) in _entities)
             {
-                try
-                {
-                    EntitySourceType entitySourceType = GetEntitySourceType(entityName, entity);
-                    if (entitySourceType is EntitySourceType.StoredProcedure)
-                    {
-                        await FillSchemaForStoredProcedureAsync(
-                            entity,
-                            entityName,
-                            GetSchemaName(entityName),
-                            GetDatabaseObjectName(entityName),
-                            GetStoredProcedureDefinition(entityName));
-
-                        if (GetDatabaseType() == DatabaseType.MSSQL)
-                        {
-                            await PopulateResultSetDefinitionsForStoredProcedureAsync(
-                                GetSchemaName(entityName),
-                                GetDatabaseObjectName(entityName),
-                                GetStoredProcedureDefinition(entityName));
-                        }
-                    }
-                    else if (entitySourceType is EntitySourceType.Table)
-                    {
-                        await PopulateSourceDefinitionAsync(
-                            entityName,
-                            GetSchemaName(entityName),
-                            GetDatabaseObjectName(entityName),
-                            GetSourceDefinition(entityName),
-                            entity.Source.KeyFields);
-                    }
-                    else
-                    {
-                        ViewDefinition viewDefinition = (ViewDefinition)GetSourceDefinition(entityName);
-                        await PopulateSourceDefinitionAsync(
-                            entityName,
-                            GetSchemaName(entityName),
-                            GetDatabaseObjectName(entityName),
-                            viewDefinition,
-                            entity.Source.KeyFields);
-                    }
-                }
-                catch (Exception e)
-                {
-                    HandleOrRecordException(e);
-                }
+                await PopulateObjectDefinitionForEntity(entityName, entity);
             }
 
             await PopulateForeignKeyDefinitionAsync();
+        }
+
+        private async Task PopulateObjectDefinitionForEntity(string entityName, Entity entity)
+        {
+            try
+            {
+                EntitySourceType entitySourceType = GetEntitySourceType(entityName, entity);
+                if (entitySourceType is EntitySourceType.StoredProcedure)
+                {
+                    await FillSchemaForStoredProcedureAsync(
+                        entity,
+                        entityName,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetStoredProcedureDefinition(entityName));
+
+                    if (GetDatabaseType() == DatabaseType.MSSQL)
+                    {
+                        await PopulateResultSetDefinitionsForStoredProcedureAsync(
+                            GetSchemaName(entityName),
+                            GetDatabaseObjectName(entityName),
+                            GetStoredProcedureDefinition(entityName));
+                    }
+                }
+                else if (entitySourceType is EntitySourceType.Table)
+                {
+                    await PopulateSourceDefinitionAsync(
+                        entityName,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        GetSourceDefinition(entityName),
+                        entity.Source.KeyFields);
+                }
+                else
+                {
+                    ViewDefinition viewDefinition = (ViewDefinition)GetSourceDefinition(entityName);
+                    await PopulateSourceDefinitionAsync(
+                        entityName,
+                        GetSchemaName(entityName),
+                        GetDatabaseObjectName(entityName),
+                        viewDefinition,
+                        entity.Source.KeyFields);
+                }
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
+            }
         }
 
         /// <summary>

@@ -5,6 +5,7 @@
     <IsPackable>false</IsPackable>
     <Nullable>disable</Nullable>
     <OutputPath>$(BaseOutputPath)\tests</OutputPath>
+    <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

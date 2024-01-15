@@ -290,7 +290,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
                     ObjectTypeDefinitionNode targetNode = objectTypes[targetEntityName];
-                    IEnumerable <ForeignKeyDefinition> foreignKeyDefinitions = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+                    IEnumerable<ForeignKeyDefinition> foreignKeyDefinitions = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
 
                     // Get list of all referencing columns in the linking entity.
                     List<string> referencingColumnNames = foreignKeyDefinitions.SelectMany(foreignKeyDefinition => foreignKeyDefinition.ReferencingColumns).ToList();
@@ -310,7 +310,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     foreach (FieldDefinitionNode fieldInLinkingNode in fieldsInLinkingNode)
                     {
                         string fieldName = fieldInLinkingNode.Name.Value;
-                        if (!referencingColumnNames.Contains(fieldName)){
+                        if (!referencingColumnNames.Contains(fieldName))
+                        {
                             if (fieldNamesInTarget.Contains(fieldName))
                             {
                                 // The fieldName can represent a column in the targetEntity or a relationship.

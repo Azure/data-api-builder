@@ -245,9 +245,20 @@ public record RuntimeConfig
                     continue;
                 }
 
-                string targetEntityName = entityRelationship.TargetEntity;
-                string linkingEntityName = GenerateLinkingEntityName(sourceEntityName, targetEntityName);
-                if (!linkingEntities.ContainsKey(linkingEntityName))
+                string linkingEntityName = GenerateLinkingEntityName(sourceEntityName, entityRelationship.TargetEntity);
+                if (entities.TryGetValue(linkingEntityName, out Entity? existingLinkingEntity))
+                {
+                    if (!existingLinkingEntity.IsLinkingEntity)
+                    {
+                        // This is an unlikely case which occurs when there is an entity present in the config
+                        // whose name matches the name of the current linking entity.
+                        throw new DataApiBuilderException(
+                            message: $"The name of the entity: {linkingEntityName} conflicts with another entity's name.",
+                            statusCode: HttpStatusCode.Conflict,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+                }
+                else
                 {
                     Entity linkingEntity = new(
                         Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),

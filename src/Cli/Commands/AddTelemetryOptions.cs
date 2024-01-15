@@ -3,6 +3,7 @@
 
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
 using CommandLine;
 using Microsoft.Extensions.Logging;
@@ -16,17 +17,20 @@ namespace Cli.Commands
     [Verb("add-telemetry", isDefault: false, HelpText = "Add telemtry for Data Api builder Application", Hidden = false)]
     public class AddTelemetryOptions : Options
     {
-        public AddTelemetryOptions(bool appInsightsEnabled, string appInsightsConnString, string? config) : base(config)
+        public AddTelemetryOptions(string appInsightsConnString, CliBool appInsightsEnabled, string? config) : base(config)
         {
-            AppInsightsEnabled = appInsightsEnabled;
             AppInsightsConnString = appInsightsConnString;
+            AppInsightsEnabled = appInsightsEnabled;
         }
 
-        [Option("app-insights-enabled", Default = false, HelpText = "Enable/Disable Application Insights")]
-        public bool AppInsightsEnabled { get; }
-
-        [Option("app-insights-conn-string", HelpText = "Connection string for the Application Insights resource for telemetry data", Required = true)]
+        // Connection string for the Application Insights resource to which telemetry data should be sent.
+        // This optional is required and must be provided a valid connection string.
+        [Option("app-insights-conn-string", Required = true, HelpText = "Connection string for the Application Insights resource for telemetry data")]
         public string AppInsightsConnString { get; }
+
+        // To specifies whether Application Insights telemetry should be enabled. This flag is optional and default value is true.
+        [Option("app-insights-enabled", Default = CliBool.True, Required = false, HelpText = "(Default: true) Enable/Disable Application Insights")]
+        public CliBool AppInsightsEnabled { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

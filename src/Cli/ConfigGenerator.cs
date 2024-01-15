@@ -1320,7 +1320,7 @@ namespace Cli
 
         /// <summary>
         /// This method will add the telemetry options to the config file. if the config file already has telemetry options,
-        /// it will update the existing options.
+        /// it will overwrite the existing options.
         /// Data API builder consumes the config file with provided telemetry options to send telemetry to Application Insights.
         /// </summary>
         public static bool TryAddTelemetry(AddTelemetryOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
@@ -1338,7 +1338,7 @@ namespace Cli
 
             if (runtimeConfig.Runtime is null)
             {
-                _logger.LogError("Invalid config file: {runtimeConfigFile}.", runtimeConfigFile);
+                _logger.LogError("Invalid or missing 'runtime' section in config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
 
@@ -1349,7 +1349,7 @@ namespace Cli
             }
 
             ApplicationInsightsOptions applicationInsightsOptions = new(
-                Enabled: options.AppInsightsEnabled,
+                Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
                 ConnectionString: options.AppInsightsConnString
             );
 

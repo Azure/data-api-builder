@@ -3,7 +3,9 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+// using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.NamingPolicies;
+// using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -15,6 +17,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Options">Custom options for the specific database. If there are no options, this could be null.</param>
 public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dictionary<string, JsonElement>? Options)
 {
+    // const string ENV_PATTERN = @"@env\('.*?(?='\))'\)";
     /// <summary>
     /// Converts the <c>Options</c> dictionary into a typed options object.
     /// May return null if the dictionary is null.
@@ -52,6 +55,8 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
         if (Options is not null && Options.TryGetValue(option, out JsonElement value))
         {
             return value.GetString();
+            // string? val= value.GetString();
+            // return Regex.Replace(val!, ENV_PATTERN, new MatchEvaluator(ReplaceMatchWithEnvVariable));
         }
 
         return null;
@@ -66,6 +71,32 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
 
         return false;
     }
+
+    // private string ReplaceMatchWithEnvVariable(Match match)
+    //     {
+    //         // [^@env\(]   :  any substring that is not @env(
+    //         // .*          :  any char except newline any number of times
+    //         // (?=\))      :  look ahead for end char of )
+    //         // This pattern greedy matches all characters that are not a part of @env()
+    //         // ie: @env('hello@env('goodbye')world') match: 'hello@env('goodbye')world'
+    //         string innerPattern = @"[^@env\(].*(?=\))";
+
+    //         // strips first and last characters, ie: '''hello'' --> ''hello'
+    //         string envName = Regex.Match(match.Value, innerPattern).Value[1..^1];
+    //         string? envValue = Environment.GetEnvironmentVariable(envName);
+    //         // return envValue ?? match.Value;
+    //         // if (_replacementFailureMode == EnvironmentVariableReplacementFailureMode.Throw)
+    //         // {
+    //             return envValue is not null ? envValue :
+    //                 throw new DataApiBuilderException(message: $"Environmental Variable, {envName}, not found.",
+    //                                                statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+    //                                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+    //         // }
+    //         // else
+    //         // {
+    //         //     return envValue ?? match.Value;
+    //         // }
+    //     }
 
     [JsonIgnore]
     public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";

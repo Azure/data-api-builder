@@ -1,0 +1,69 @@
+{
+    "$schema": "https://github.com/Azure/data-api-builder/releases/download/v0.9.7/dab.draft.schema.json",
+    "data-source": {
+      "database-type": "cosmosdb_nosql",
+      "options": {
+        "database": "@env('DATABASE_NAME')",
+        "schema": "@env('GRAPHQL_SCHEMA_PATH')"
+      },
+      "connection-string": "@env('CONN_STRING')"
+    },
+    "runtime": {
+      "rest": {
+        "enabled": true,
+        "path": "/api",
+        "request-body-strict": true
+      },
+      "graphql": {
+        "enabled": true,
+        "path": "/graphql",
+        "allow-introspection": true
+      },
+      "host": {
+        "cors": {
+          "origins": [],
+          "allow-credentials": false
+        },
+        "authentication": {
+          "provider": "@env('AUTH_PROVIDER')"
+        },
+        "mode": "production"
+      }
+    },
+    "entities": {
+        "SupportedType": {
+            "source": {
+              "object": "type_table",
+              "type": "table"
+            },
+            "graphql": {
+              "enabled": true,
+              "type": {
+                "singular": "SupportedType",
+                "plural": "SupportedTypes"
+              }
+            },
+            "rest": {
+              "enabled": true,
+              "methods": []
+            },
+            "permissions": [
+              {
+                "role": "anonymous",
+                "actions": [
+                  "*"
+                ]
+              },
+              {
+                "role": "authenticated",
+                "actions": [
+                  "*"
+                ]
+              }
+            ],
+            "mappings": {
+              "id": "typeid"
+            }
+        }
+    }
+  }

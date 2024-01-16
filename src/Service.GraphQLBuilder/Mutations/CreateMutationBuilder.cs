@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             // 2. Complex input fields.
             // Evaluate input objects for related entities.
-            IEnumerable < InputValueDefinitionNode > complexInputFields =
+            IEnumerable<InputValueDefinitionNode> complexInputFields =
                 objectTypeDefinitionNode.Fields
                 .Where(f => !IsBuiltInType(f.Type))
                 .Where(f => IsComplexFieldAllowedOnCreateInput(f, databaseType, definitions))

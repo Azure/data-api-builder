@@ -269,7 +269,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(targetEntityName);
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbo))
+                if (sqlMetadataProvider.GetDatabaseType() is DatabaseType.MSSQL && sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbo))
                 {
                     string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
                     ObjectTypeDefinitionNode targetNode = objectTypes[targetEntityName];

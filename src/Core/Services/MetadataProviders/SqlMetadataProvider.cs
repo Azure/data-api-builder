@@ -38,6 +38,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private IReadOnlyDictionary<string, Entity> _entities;
 
+        private Dictionary<string, Entity> _linkingEntities = new();
+
         protected readonly string _dataSourceName;
 
         // Dictionary containing mapping of graphQL stored procedure exposed query/mutation name
@@ -253,12 +255,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-
-            Dictionary<string, Entity> linkingEntities = new();
-            GenerateDatabaseObjectForEntities(linkingEntities);
-            // At this point, the database objects for all entities in the config are generated. In addition to that,
-            // the database objects for all the linking entities are generated as well. 
-            _entities = _entities.Union(linkingEntities).ToDictionary(kv => kv.Key, kv => kv.Value);
+            GenerateDatabaseObjectForEntities();
             if (_isValidateOnly)
             {
                 // Currently Validate mode only support single datasource,
@@ -605,20 +602,19 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Create a DatabaseObject for all the exposed entities.
         /// </summary>
-        private void GenerateDatabaseObjectForEntities(Dictionary<string, Entity> linkingEntities)
+        private void GenerateDatabaseObjectForEntities()
         {
             Dictionary<string, DatabaseObject> sourceObjects = new();
             foreach ((string entityName, Entity entity) in _entities)
             {
-                PopulateDatabaseObjectForEntity(entity, entityName, sourceObjects, linkingEntities);
+                PopulateDatabaseObjectForEntity(entity, entityName, sourceObjects);
             }
         }
 
         private void PopulateDatabaseObjectForEntity(
             Entity entity,
             string entityName,
-            Dictionary<string, DatabaseObject> sourceObjects,
-            Dictionary<string, Entity> linkingEntities)
+            Dictionary<string, DatabaseObject> sourceObjects)
         {
             try
             {
@@ -671,7 +667,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (entity.Relationships is not null && entity.Source.Type is EntitySourceType.Table)
                     {
-                        ProcessRelationships(entityName, entity, (DatabaseTable)sourceObject, sourceObjects, linkingEntities);
+                        ProcessRelationships(entityName, entity, (DatabaseTable)sourceObject, sourceObjects);
                     }
                 }
             }
@@ -717,8 +713,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityName,
             Entity entity,
             DatabaseTable databaseTable,
-            Dictionary<string, DatabaseObject> sourceObjects,
-            Dictionary<string, Entity> linkingEntities)
+            Dictionary<string, DatabaseObject> sourceObjects)
         {
             SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
             if (!sourceDefinition.SourceEntityRelationshipMap
@@ -761,12 +756,13 @@ namespace Azure.DataApiBuilder.Core.Services
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
 
+                    // When a linking object is encountered, we will create a linking entity for the object.
+                    // Subsequently, we will also populate the Database object for the linking entity.
                     PopulateMetadataForLinkingObject(
                         entityName: entityName,
                         targetEntityName: targetEntityName,
                         linkingObject: relationship.LinkingObject,
-                        sourceObjects: sourceObjects,
-                        linkingEntities: linkingEntities);
+                        sourceObjects: sourceObjects);
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
@@ -828,8 +824,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityName,
             string targetEntityName,
             string linkingObject,
-            Dictionary<string, DatabaseObject> sourceObjects,
-            Dictionary<string, Entity> linkingEntities)
+            Dictionary<string, DatabaseObject> sourceObjects)
         {
             string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(entityName, targetEntityName);
             Entity linkingEntity = new(
@@ -840,8 +835,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 Relationships: null,
                 Mappings: new(),
                 IsLinkingEntity: true);
-            linkingEntities.TryAdd(linkingEntityName, linkingEntity);
-            PopulateDatabaseObjectForEntity(linkingEntity, linkingEntityName, sourceObjects, linkingEntities);
+            _linkingEntities.TryAdd(linkingEntityName, linkingEntity);
+            PopulateDatabaseObjectForEntity(linkingEntity, linkingEntityName, sourceObjects);
         }
 
         /// <summary>
@@ -939,7 +934,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         public IReadOnlyDictionary<string, Entity> GetLinkingEntities()
         {
-            return (IReadOnlyDictionary<string, Entity>)_entities.Where(entityDetails => entityDetails.Value.IsLinkingEntity).ToDictionary(kv => kv.Key, kv => kv.Value);
+            return _linkingEntities;
         }
 
         /// <summary>
@@ -951,6 +946,11 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task PopulateObjectDefinitionForEntities()
         {
             foreach ((string entityName, Entity entity) in _entities)
+            {
+                await PopulateObjectDefinitionForEntity(entityName, entity);
+            }
+
+            foreach ((string entityName, Entity entity) in _linkingEntities)
             {
                 await PopulateObjectDefinitionForEntity(entityName, entity);
             }

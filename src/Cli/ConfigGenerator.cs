@@ -142,7 +142,7 @@ namespace Cli
                         _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
-                    if (options.RestRequestBodyStrict is not CliBoolean.None)
+                    if (options.RestRequestBodyStrict is not CliBool.None)
                     {
                         _logger.LogWarning("Configuration option --rest.request-body-strict is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
@@ -232,7 +232,7 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBoolean.False ? false : true),
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
                     GraphQL: new(graphQLEnabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),

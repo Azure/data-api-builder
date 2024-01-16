@@ -126,12 +126,12 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Given entity name, gets the entity to column mappings if present.
         /// </summary>
-        public bool TryGetEntityToColumnMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
+        public bool TryGetEntityToFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
 
         /// <summary>
         /// Given entity name, gets the column to entity mappings if present.
         /// </summary>
-        public bool TryGetColumnToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
+        public bool TryGetFieldToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
 
         /// <summary>
         /// Gets Partition Key Path of a database container.

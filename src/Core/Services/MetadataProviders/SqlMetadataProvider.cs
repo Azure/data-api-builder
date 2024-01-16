@@ -285,7 +285,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public bool TryGetEntityToColumnMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        public bool TryGetEntityToFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             Dictionary<string, string>? entityToColumnMappings;
             mappings = null;
@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public bool TryGetColumnToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        public bool TryGetFieldToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             Dictionary<string, string>? columntoEntityMappings;
             mappings = null;

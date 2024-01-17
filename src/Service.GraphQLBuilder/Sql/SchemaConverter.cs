@@ -31,6 +31,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// currently used to lookup relationship metadata.</param>
         /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
         /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
+        /// <param name="databaseType">The type of database to which this entity belongs to.</param>
+        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
         public static ObjectTypeDefinitionNode FromDatabaseObject(
             string entityName,
@@ -39,13 +41,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
             IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            HashSet<Tuple<string, string>>? manyToManyRelationships = null)
+            DatabaseType databaseType,
+            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships = null)
         {
-            if (manyToManyRelationships is null)
-            {
-                manyToManyRelationships = new();
-            }
-
             Dictionary<string, FieldDefinitionNode> fields = new();
             List<DirectiveNode> objectTypeDirectives = new()
             {
@@ -188,10 +186,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
                         };
 
-                        if (relationship.LinkingObject is not null)
+                        if (databaseType is DatabaseType.MSSQL && relationship.LinkingObject is not null && entitiesWithManyToManyRelationships is not null)
                         {
-                            Tuple<string, string> sourceToTarget = new(entityName, targetEntityName);
-                            manyToManyRelationships.Add(sourceToTarget);
+                            entitiesWithManyToManyRelationships.Add(new(entityName, targetEntityName));
                         }
 
                         FieldDefinitionNode relationshipField = new(

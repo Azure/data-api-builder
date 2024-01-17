@@ -212,14 +212,15 @@ namespace Azure.DataApiBuilder.Core.Services
                     if (rolesAllowedForEntity.Any())
                     {
                         ObjectTypeDefinitionNode node = SchemaConverter.FromDatabaseObject(
-                            entityName,
-                            databaseObject,
-                            entity,
-                            entities,
-                            rolesAllowedForEntity,
-                            rolesAllowedForFields,
-                            entitiesWithManyToManyRelationships
-                        );
+                            entityName: entityName,
+                            databaseObject: databaseObject,
+                            configEntity: entity,
+                            entities: entities,
+                            rolesAllowedForEntity: rolesAllowedForEntity,
+                            rolesAllowedForFields: rolesAllowedForFields,
+                            databaseType: sqlMetadataProvider.GetDatabaseType(),
+                            entitiesWithManyToManyRelationships: entitiesWithManyToManyRelationships
+                            );
 
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {
@@ -266,11 +267,6 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = new();
             foreach (ISqlMetadataProvider sqlMetadataProvider in sqlMetadataProviders)
             {
-                if (sqlMetadataProvider.GetDatabaseType() is not DatabaseType.MSSQL)
-                {
-                    continue;
-                }
-
                 foreach ((string linkingEntityName, Entity linkingEntity) in sqlMetadataProvider.GetLinkingEntities())
                 {
                     if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(linkingEntityName, out DatabaseObject? linkingDbObject))
@@ -281,7 +277,8 @@ namespace Azure.DataApiBuilder.Core.Services
                                 configEntity: linkingEntity,
                                 entities: new(new Dictionary<string, Entity>()),
                                 rolesAllowedForEntity: new List<string>(),
-                                rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>()
+                                rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>(),
+                                databaseType: sqlMetadataProvider.GetDatabaseType()
                             );
 
                         linkingObjectTypes.Add(linkingEntityName, node);
@@ -308,7 +305,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(targetEntityName);
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-                if (sqlMetadataProvider.GetDatabaseType() is DatabaseType.MSSQL && sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbo))
+                if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbo))
                 {
                     string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
                     ObjectTypeDefinitionNode targetNode = objectTypes[targetEntityName];

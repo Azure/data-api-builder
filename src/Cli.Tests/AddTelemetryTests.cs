@@ -116,7 +116,7 @@ namespace Cli.Tests
         /// <summary>
         /// Generates a JSON string representing a runtime section of the config, with a customizable telemetry section.
         /// </summary> 
-        public static string GenerateRuntimeSection(string telemetrySection)
+        private static string GenerateRuntimeSection(string telemetrySection)
         {
             return $@"
                 ""runtime"": {{
@@ -147,7 +147,7 @@ namespace Cli.Tests
         /// <summary>
         /// Represents a JSON string for the telemetry section of the config, with Application Insights enabled and a specified connection string.
         /// </summary>
-        public const string TELEMETRY_SECTION_WITH_APP_INSIGHTS = @"
+        private const string TELEMETRY_SECTION_WITH_APP_INSIGHTS = @"
             ""telemetry"": {
                 ""application-insights"": {
                     ""enabled"": true,
@@ -158,7 +158,7 @@ namespace Cli.Tests
         /// <summary>
         /// Represents a JSON string for the empty telemetry section of the config.
         /// </summary>
-        public const string EMPTY_TELEMETRY_SECTION = @"
+        private const string EMPTY_TELEMETRY_SECTION = @"
             ""telemetry"": {}";
     }
 

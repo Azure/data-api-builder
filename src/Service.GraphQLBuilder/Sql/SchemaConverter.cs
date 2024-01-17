@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// currently used to lookup relationship metadata.</param>
         /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
         /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
-        /// <param name="databaseType">The type of database to which this entity belongs to.</param>
+        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
         /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
         public static ObjectTypeDefinitionNode FromDatabaseObject(
@@ -41,7 +41,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
             IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            DatabaseType databaseType,
+            bool isNestedMutationSupported = false,
             HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships = null)
         {
             Dictionary<string, FieldDefinitionNode> fields = new();
@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
                         };
 
-                        if (databaseType is DatabaseType.MSSQL && relationship.LinkingObject is not null && entitiesWithManyToManyRelationships is not null)
+                        if (isNestedMutationSupported && relationship.LinkingObject is not null && entitiesWithManyToManyRelationships is not null)
                         {
                             entitiesWithManyToManyRelationships.Add(new(entityName, targetEntityName));
                         }

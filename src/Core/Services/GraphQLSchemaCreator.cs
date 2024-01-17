@@ -40,6 +40,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private static readonly HashSet<DatabaseType> _relationalDbsSupportingNestedMutations = new() { DatabaseType.MSSQL };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -218,7 +219,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             entities: entities,
                             rolesAllowedForEntity: rolesAllowedForEntity,
                             rolesAllowedForFields: rolesAllowedForFields,
-                            databaseType: sqlMetadataProvider.GetDatabaseType(),
+                            isNestedMutationSupported: DoesRelationalDBSupportNestedMutations(sqlMetadataProvider.GetDatabaseType()),
                             entitiesWithManyToManyRelationships: entitiesWithManyToManyRelationships
                             );
 
@@ -255,6 +256,14 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Helper method to evaluate whether DAB supports nested mutations for particular relational database type. 
+        /// </summary>
+        private static bool DoesRelationalDBSupportNestedMutations(DatabaseType databaseType)
+        {
+            return _relationalDbsSupportingNestedMutations.Contains(databaseType);
+        }
+
+        /// <summary>
         /// Helper method to generate object definitions for linking entities. These object definitions are used later
         /// to generate the object definitions for directional linking entities for (source, target) and (target, source).
         /// </summary>
@@ -277,8 +286,7 @@ namespace Azure.DataApiBuilder.Core.Services
                                 configEntity: linkingEntity,
                                 entities: new(new Dictionary<string, Entity>()),
                                 rolesAllowedForEntity: new List<string>(),
-                                rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>(),
-                                databaseType: sqlMetadataProvider.GetDatabaseType()
+                                rolesAllowedForFields: new Dictionary<string, IEnumerable<string>>()
                             );
 
                         linkingObjectTypes.Add(linkingEntityName, node);

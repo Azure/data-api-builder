@@ -178,7 +178,7 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        foreach (KeyValuePair<string, Entity> entity in this.Entities)
+        foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
         }
@@ -188,7 +188,7 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>> allEntities = this.Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);

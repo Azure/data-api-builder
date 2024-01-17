@@ -32,6 +32,8 @@ public record Entity
     public Dictionary<string, string>? Mappings { get; init; }
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
     public EntityCacheOptions? Cache { get; init; }
+
+    [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
 
     [JsonConstructor]

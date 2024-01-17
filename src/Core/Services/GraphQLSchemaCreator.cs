@@ -82,8 +82,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Generate the Query and the Mutation Node.
             (DocumentNode queryNode, DocumentNode mutationNode) = GenerateQueryAndMutationNodes(root, inputTypes);
 
-            return sb
-                .AddDocument(root)
+            return sb.AddDocument(root)
                 .AddAuthorizeDirectiveType()
                 // Add our custom directives
                 .AddDirectiveType<ModelDirectiveType>()

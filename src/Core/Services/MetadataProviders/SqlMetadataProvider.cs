@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private IReadOnlyDictionary<string, Entity> _entities;
 
-        private Dictionary<string, Entity> _linkingEntities = new();
+        protected Dictionary<string, Entity> _linkingEntities = new();
 
         protected readonly string _dataSourceName;
 
@@ -611,7 +611,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
-        private void PopulateDatabaseObjectForEntity(
+        protected void PopulateDatabaseObjectForEntity(
             Entity entity,
             string entityName,
             Dictionary<string, DatabaseObject> sourceObjects)
@@ -820,23 +820,22 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
-        private void PopulateMetadataForLinkingObject(
+        /// <summary>
+        /// Helper method to create a linking entity and a database object for the given linking object (which relates the source and target with an M:N relationship).
+        /// The created linking entity and its corresponding database object definition is later used during GraphQL schema generation
+        /// to enable nested mutations.
+        /// </summary>
+        /// <param name="entityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="linkingObject">Linking object</param>
+        /// <param name="sourceObjects">Dictionary storing a collection of database objects which have been created.</param>
+        protected virtual void PopulateMetadataForLinkingObject(
             string entityName,
             string targetEntityName,
             string linkingObject,
             Dictionary<string, DatabaseObject> sourceObjects)
         {
-            string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(entityName, targetEntityName);
-            Entity linkingEntity = new(
-                Source: new EntitySource(Type: EntitySourceType.Table, Object: linkingObject, Parameters: null, KeyFields: null),
-                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
-                GraphQL: new(Singular: linkingEntityName, Plural: linkingEntityName, Enabled: false),
-                Permissions: Array.Empty<EntityPermission>(),
-                Relationships: null,
-                Mappings: new(),
-                IsLinkingEntity: true);
-            _linkingEntities.TryAdd(linkingEntityName, linkingEntity);
-            PopulateDatabaseObjectForEntity(linkingEntity, linkingEntityName, sourceObjects);
+            return;
         }
 
         /// <summary>

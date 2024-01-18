@@ -10,15 +10,16 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using static Azure.DataApiBuilder.Core.Configurations.IRuntimeConfigProvider;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
 /// <summary>
-/// This class is responsible for exposing the runtime config to the rest of the service.
-/// The <c>RuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="FileSystemRuntimeConfigLoader"/> to do so.
+/// This class is responsible for exposing the runtime config to the rest of the service when in a hosted scenario.
+/// The <c>HostedRuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="FileSystemRuntimeConfigLoader"/> to do so.
 /// </summary>
 /// <remarks>
-/// The <c>RuntimeConfigProvider</c> will maintain internal state of the config, and will only load it once.
+/// The <c>HostedRuntimeConfigProvider</c> will maintain internal state of the config, and will only load it once.
 ///
 /// This class should be treated as the owner of the config that is available within the service, and other classes
 /// should not load the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
@@ -26,27 +27,15 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 /// </remarks>
 public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
 {
-    public delegate Task<bool> RuntimeConfigLoadedHandler(HostedRuntimeConfigProvider sender, RuntimeConfig config);
-
     public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
 
-    /// <summary>
-    /// Indicates whether the config was loaded after the runtime was initialized.
-    /// </summary>
-    /// <remarks>This is most commonly used when DAB's config is provided via the <c>ConfigurationController</c>, such as when it's a hosted service.</remarks>
     public bool IsLateConfigured { get; set; }
 
-    /// <summary>
-    /// The access tokens representing a Managed Identity to connect to the database.
-    /// The key is the unique datasource name and the value is the access token.
-    /// </summary>
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; set; } = new Dictionary<string, string?>();
 
     public RuntimeConfigLoader ConfigLoader { get; set; }
 
-    private ConfigFileWatcher? _configFileWatcher;
-
-    private RuntimeConfig? _runtimeConfig;
+    public RuntimeConfig? _runtimeConfig;
 
     public HostedRuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
@@ -62,14 +51,19 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
     /// <exception cref="DataApiBuilderException">Thrown when the loader is unable to load an instance of the config from its known location.</exception>
     public RuntimeConfig GetConfig()
     {
-        throw new NotImplementedException();
+        if (_runtimeConfig is not null)
+        {
+            return _runtimeConfig;
+        }
+        else
+        {
+            throw new DataApiBuilderException(
+                message: "Runtime config isn't setup.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
     }
 
-    /// <summary>
-    /// Attempt to acquire runtime configuration metadata.
-    /// </summary>
-    /// <param name="runtimeConfig">Populated runtime configuration, if present.</param>
-    /// <returns>True when runtime config is provided, otherwise false.</returns>
     public bool TryGetConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
         throw new NotImplementedException();

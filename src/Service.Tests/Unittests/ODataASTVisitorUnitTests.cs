@@ -356,7 +356,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Name = tableName
             };
             FindRequestContext context = new(entityName, dbo, isList);
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            LocalRuntimeConfigProvider runtimeConfigProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             AuthorizationResolver authorizationResolver = new(
                 runtimeConfigProvider,
                 _metadataProviderFactory.Object);

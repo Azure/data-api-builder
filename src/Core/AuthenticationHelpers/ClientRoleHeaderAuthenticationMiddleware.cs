@@ -34,7 +34,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
 
     public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next,
         ILogger<ClientRoleHeaderAuthenticationMiddleware> logger,
-        RuntimeConfigProvider runtimeConfigProvider)
+        IRuntimeConfigProvider runtimeConfigProvider)
     {
         _nextMiddleware = next;
         _logger = logger;

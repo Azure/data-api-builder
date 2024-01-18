@@ -266,7 +266,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         public static RuntimeConfig SetupRuntimeConfig()
         {
             FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
-            RuntimeConfigProvider provider = new(configPath);
+            LocalRuntimeConfigProvider provider = new(configPath);
 
             return provider.GetConfig();
         }

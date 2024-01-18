@@ -121,7 +121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            LocalRuntimeConfigProvider provider = new(loader);
             MsSqlQueryBuilder queryBuilder = new();
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();

@@ -118,9 +118,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Mock<IMutationEngineFactory> mutationEngineFactory = new();
 
             Mock<RuntimeConfigLoader> mockLoader = new(null);
-            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>())).Returns(true);
+            mockLoader.Object.RuntimeConfig = mockConfig1;
 
-            RuntimeConfigProvider provider = new(mockLoader.Object);
+            LocalRuntimeConfigProvider provider = new(mockLoader.Object);
 
             // Using a sample schema file to test multi-source query.
             // Schema file contains some sample entities that we can test against.
@@ -193,9 +193,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                );
 
             Mock<RuntimeConfigLoader> mockLoader = new(null);
-            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig, It.IsAny<bool>())).Returns(true);
+            mockLoader.Object.RuntimeConfig = mockConfig;
 
-            RuntimeConfigProvider provider = new(mockLoader.Object);
+            LocalRuntimeConfigProvider provider = new(mockLoader.Object);
             provider.TryGetConfig(out RuntimeConfig _);
             provider.TrySetAccesstoken(db1AccessToken, dataSourceName1);
             provider.TrySetAccesstoken(db2AccessToken, dataSourceName2);

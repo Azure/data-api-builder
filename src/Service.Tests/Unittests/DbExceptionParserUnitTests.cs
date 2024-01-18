@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            LocalRuntimeConfigProvider provider = new(loader);
 
             Mock<DbExceptionParser> parser = new(provider);
             DbException e = SqlTestHelper.CreateSqlException(connectionEstablishmentError, expected);
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            LocalRuntimeConfigProvider provider = new(loader);
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
 
             Assert.AreEqual(expected, dbExceptionParser.IsTransientException(SqlTestHelper.CreateSqlException(number)));

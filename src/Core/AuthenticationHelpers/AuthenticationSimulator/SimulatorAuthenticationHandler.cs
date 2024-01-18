@@ -32,7 +32,7 @@ public class SimulatorAuthenticationHandler : AuthenticationHandler<Authenticati
     /// <param name="encoder">URL encoder.</param>
     /// <param name="clock">System clock.</param>
     public SimulatorAuthenticationHandler(
-        RuntimeConfigProvider runtimeConfigProvider,
+        IRuntimeConfigProvider runtimeConfigProvider,
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,

@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
         /// <param name="httpContextAccessor">httpContextAccessor.</param>
         /// <param name="authorizationResolver">authorizationResolver.</param>
         /// <param name="gQLFilterParser">GqlFilterParser.</param>
-        public MutationEngineFactory(RuntimeConfigProvider runtimeConfigProvider,
+        public MutationEngineFactory(IRuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             IMetadataProviderFactory metadataProviderFactory,
             CosmosClientProvider cosmosClientProvider,

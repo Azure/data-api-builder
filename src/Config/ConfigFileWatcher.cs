@@ -1,14 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-namespace Azure.DataApiBuilder.Core.Configurations;
+namespace Azure.DataApiBuilder.Config;
 
 public class ConfigFileWatcher
 {
     private FileSystemWatcher? _fileWatcher;
-    private readonly LocalRuntimeConfigProvider? _configProvider;
+    private FileSystemRuntimeConfigLoader _configLoader;
 
-    public ConfigFileWatcher(LocalRuntimeConfigProvider configProvider, string directoryName, string configFileName)
+    public ConfigFileWatcher(FileSystemRuntimeConfigLoader configLoader, string directoryName, string configFileName)
     {
         _fileWatcher = new FileSystemWatcher(directoryName)
         {
@@ -16,7 +16,7 @@ public class ConfigFileWatcher
             EnableRaisingEvents = true
         };
 
-        _configProvider = configProvider;
+        _configLoader = configLoader;
         _fileWatcher.Changed += OnConfigFileChange;
     }
 
@@ -31,14 +31,19 @@ public class ConfigFileWatcher
     {
         try
         {
-            if (_configProvider is null)
+            if (_configLoader is null)
             {
                 throw new ArgumentNullException("_configProvider can not be null.");
             }
 
-            if (!_configProvider.IsLateConfigured && _configProvider.GetConfig().IsDevelopmentMode())
+            if (_configLoader.RuntimeConfig is null)
             {
-                _configProvider.HotReloadConfig();
+                throw new ArgumentNullException("RuntimeConfig can not be null.");
+            }
+
+            if (_configLoader.RuntimeConfig.IsDevelopmentMode())
+            {
+                _configLoader.HotReloadConfig();
             }
         }
         catch (Exception ex)

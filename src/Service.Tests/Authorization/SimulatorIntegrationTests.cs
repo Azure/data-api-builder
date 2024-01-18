@@ -82,7 +82,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
             JsonElement actual = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                 _client,
-                configProvider: _server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                configProvider: _server.Services.GetRequiredService<IRuntimeConfigProvider>(),
                 query: graphQLQuery,
                 queryName: graphQLQueryName,
                 variables: null,
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         private static void SetupCustomRuntimeConfiguration()
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
+            LocalRuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(TestHelper.GetRuntimeConfigLoader());
             RuntimeConfig config = configProvider.GetConfig();
 
             AuthenticationOptions AuthenticationOptions = new(Provider: AuthenticationOptions.SIMULATOR_AUTHENTICATION, null);

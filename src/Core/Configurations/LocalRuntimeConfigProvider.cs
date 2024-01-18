@@ -6,27 +6,24 @@ using System.Net;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using static Azure.DataApiBuilder.Core.Configurations.HostedRuntimeConfigProvider;
+using static Azure.DataApiBuilder.Core.Configurations.IRuntimeConfigProvider;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
 /// <summary>
-/// This class is responsible for exposing the runtime config to the rest of the service.
+/// This class is responsible for exposing the runtime config to the rest of the service when in a local scenario.
 /// The <c>RuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="FileSystemRuntimeConfigLoader"/> to do so.
 /// </summary>
 /// <remarks>
-/// The <c>RuntimeConfigProvider</c> will maintain internal state of the config, and will only load it once.
+/// The <c>LocalRuntimeConfigProvider</c> will not maintain internal state of the config, it uses the RuntimeConfigLoader
+/// to retrieve the config.
 ///
-/// This class should be treated as the owner of the config that is available within the service, and other classes
-/// should not load the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
+/// This class should be treated as the sole accessor of the config that is available within the service, and other classes
+/// should not access the config directly, or maintain a reference to it, so that we can do hot-reloading by replacing
 /// the config that is available from this type.
 /// </remarks>
 public class LocalRuntimeConfigProvider : IRuntimeConfigProvider
 {
-    /// <summary>
-    /// Indicates whether the config was loaded after the runtime was initialized.
-    /// </summary>
-    /// <remarks>This is most commonly used when DAB's config is provided via the <c>ConfigurationController</c>, such as when it's a hosted service.</remarks>
     public bool IsLateConfigured { get; set; }
 
     public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
@@ -34,8 +31,6 @@ public class LocalRuntimeConfigProvider : IRuntimeConfigProvider
     public Dictionary<string, string?> ManagedIdentityAccessToken { get; set; } = new Dictionary<string, string?>();
 
     public RuntimeConfigLoader ConfigLoader { get; set; }
-
-    private ConfigFileWatcher? _configFileWatcher;
 
     public LocalRuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
     {
@@ -57,10 +52,7 @@ public class LocalRuntimeConfigProvider : IRuntimeConfigProvider
         }
 
         // While loading the config file, replace all the environment variables with their values.
-        if (ConfigLoader.TryLoadKnownConfig(out _, replaceEnvVar: true))
-        {
-            TrySetupConfigFileWatcher();
-        }
+        ConfigLoader.TryLoadKnownConfig(out _, replaceEnvVar: true);
 
         if (ConfigLoader.RuntimeConfig is null)
         {
@@ -74,35 +66,6 @@ public class LocalRuntimeConfigProvider : IRuntimeConfigProvider
     }
 
     /// <summary>
-    /// Checks if we have already attempted to configure the file watcher, if not
-    /// instantiate the file watcher if we are in the correct scenario. If we
-    /// are not in the correct scenario, do not setup a file watcher but remember
-    /// that we have attempted to do so to avoid repeat checks in future calls.
-    /// Returns true if we instantiate a file watcher.
-    /// </summary>
-    private bool TrySetupConfigFileWatcher()
-    {
-        if (!IsLateConfigured && ConfigLoader.RuntimeConfig is not null && ConfigLoader.RuntimeConfig.IsDevelopmentMode())
-        {
-            try
-            {
-                FileSystemRuntimeConfigLoader loader = (FileSystemRuntimeConfigLoader)ConfigLoader;
-                _configFileWatcher = new(this, loader.GetConfigDirectoryName(), loader.GetConfigFileName());
-            }
-            catch (Exception ex)
-            {
-                // Need to remove the dependencies in startup on the RuntimeConfigProvider
-                // before we can have an ILogger here.
-                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
-            }
-
-            return _configFileWatcher is not null;
-        }
-
-        return false;
-    }
-
-    /// <summary>
     /// Attempt to acquire runtime configuration metadata.
     /// </summary>
     /// <param name="runtimeConfig">Populated runtime configuration, if present.</param>
@@ -111,10 +74,8 @@ public class LocalRuntimeConfigProvider : IRuntimeConfigProvider
     {
         if (ConfigLoader.RuntimeConfig is null)
         {
-            if (ConfigLoader.TryLoadKnownConfig(out RuntimeConfig? _, replaceEnvVar: true))
-            {
-                TrySetupConfigFileWatcher();
-            }
+            ConfigLoader.TryLoadKnownConfig(out _, replaceEnvVar: true);
+            
         }
 
         runtimeConfig = ConfigLoader.RuntimeConfig;
@@ -134,11 +95,30 @@ public class LocalRuntimeConfigProvider : IRuntimeConfigProvider
     }
 
     /// <summary>
-    /// Hot Reloads the runtime config when the file watcher
-    /// is active and detects a change to the underlying config file.
+    /// Set the runtime configuration provider with the specified accessToken for the specified datasource.
+    /// This initialization method is used to set the access token for the current runtimeConfig.
+    /// As opposed to using a json input and regenerating the runtimconfig, it sets the access token for the current runtimeConfig on the provider.
     /// </summary>
-    public void HotReloadConfig()
+    /// <param name="accessToken">The string representation of a managed identity access token</param>
+    /// <param name="dataSourceName">Name of the datasource for which to assign the token.</param>
+    /// <returns>true if the initialization succeeded, false otherwise.</returns>
+    public bool TrySetAccesstoken(
+        string? accessToken,
+        string dataSourceName)
     {
-        ConfigLoader.TryLoadKnownConfig(out _, replaceEnvVar: true);
+        if (ConfigLoader.RuntimeConfig is null)
+        {
+            // if runtimeConfig is not set up, throw as cannot initialize.
+            throw new DataApiBuilderException($"{nameof(RuntimeConfig)} has not been loaded.", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+        }
+
+        // Validate that the datasource exists in the runtimeConfig and then add or update access token.
+        if (ConfigLoader.RuntimeConfig.CheckDataSourceExists(dataSourceName))
+        {
+            ManagedIdentityAccessToken[dataSourceName] = accessToken;
+            return true;
+        }
+
+        return false;
     }
 }

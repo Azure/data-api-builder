@@ -48,7 +48,7 @@ public class AuthorizationResolver : IAuthorizationResolver
         }
         else
         {
-            runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((HostedRuntimeConfigProvider sender, RuntimeConfig config) =>
+            runtimeConfigProvider.RuntimeConfigLoadedHandlers.Add((IRuntimeConfigProvider sender, RuntimeConfig config) =>
             {
                 SetEntityPermissionMap(config);
                 return Task.FromResult(true);

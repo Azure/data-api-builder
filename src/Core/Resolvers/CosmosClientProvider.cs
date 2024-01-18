@@ -19,9 +19,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public Dictionary<string, CosmosClient?> Clients { get; private set; }
 
-        public RuntimeConfigProvider RuntimeConfigProvider;
+        public IRuntimeConfigProvider RuntimeConfigProvider;
 
-        public CosmosClientProvider(RuntimeConfigProvider runtimeConfigProvider)
+        public CosmosClientProvider(IRuntimeConfigProvider runtimeConfigProvider)
         {
             // This access token is coming from ConfigurationController parameter, that's why it's not in RuntimeConfig file.
             // On engine first start-up, access token will be null since ConfigurationController hasn't been called at that time.

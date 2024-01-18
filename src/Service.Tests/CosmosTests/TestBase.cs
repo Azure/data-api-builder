@@ -123,7 +123,7 @@ type Sun @model(name:""Sun"") {
             { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(updatedConfig.ToJson()) }
         });
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
-        RuntimeConfigProvider provider = new(loader);
+        LocalRuntimeConfigProvider provider = new(loader);
 
         ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);
         Mock<IMetadataProviderFactory> metadataProviderFactory = new();
@@ -182,7 +182,7 @@ type Sun @model(name:""Sun"") {
     /// <returns></returns>
     internal Task<JsonElement> ExecuteGraphQLRequestAsync(string queryName, string query, Dictionary<string, object> variables = null, string authToken = null, string clientRoleHeader = null)
     {
-        RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+        IRuntimeConfigProvider configProvider = _application.Services.GetService<IRuntimeConfigProvider>();
         return GraphQLRequestExecutor.PostGraphQLRequestAsync(_client, configProvider, queryName, query, variables, authToken, clientRoleHeader);
     }
 

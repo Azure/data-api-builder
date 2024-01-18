@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
             SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfig);
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            LocalRuntimeConfigProvider runtimeConfigProvider = (LocalRuntimeConfigProvider)TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
             SetUpSQLMetadataProvider(runtimeConfigProvider);
             await ResetDbStateAsync();
             await _sqlMetadataProvider.InitializeAsync();
@@ -110,7 +110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
+            LocalRuntimeConfigProvider runtimeConfigProvider = (LocalRuntimeConfigProvider)TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             Mock<IQueryExecutor> queryExecutor = new();
@@ -174,7 +174,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
 
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            LocalRuntimeConfigProvider runtimeConfigProvider = (LocalRuntimeConfigProvider)TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
 
             try
@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DatabaseEngine = TestCategory.MSSQL;
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            LocalRuntimeConfigProvider runtimeConfigProvider = (LocalRuntimeConfigProvider)TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
             SetUpSQLMetadataProvider(runtimeConfigProvider);
 
             await _sqlMetadataProvider.InitializeAsync();
@@ -252,7 +252,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 DatabaseEngine = TestCategory.MSSQL;
                 TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
                 RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
-                RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+                LocalRuntimeConfigProvider runtimeConfigProvider = (LocalRuntimeConfigProvider)TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
                 SetUpSQLMetadataProvider(runtimeConfigProvider);
                 ((MsSqlMetadataProvider)_sqlMetadataProvider).ValidateEntityAndGraphQLPathUniqueness(path: entityPath, graphQLGlobalPath: graphQLConfigPath);
                 if (expectsError)

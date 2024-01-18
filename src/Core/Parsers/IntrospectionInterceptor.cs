@@ -14,15 +14,15 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// </summary>
     public class IntrospectionInterceptor : DefaultHttpRequestInterceptor
     {
-        private RuntimeConfigProvider _runtimeConfigProvider;
+        private IRuntimeConfigProvider _runtimeConfigProvider;
 
         /// <summary>
-        /// Constructor injects RuntimeConfigProvider to allow
+        /// Constructor injects IRuntimeConfigProvider to allow
         /// HotChocolate to attempt to retrieve the runtime config
         /// when evaluating GraphQL requests.
         /// </summary>
         /// <param name="runtimeConfigProvider"></param>
-        public IntrospectionInterceptor(RuntimeConfigProvider runtimeConfigProvider)
+        public IntrospectionInterceptor(IRuntimeConfigProvider runtimeConfigProvider)
         {
             _runtimeConfigProvider = runtimeConfigProvider;
         }

@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.Core;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -62,7 +63,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                Entities: new(new Dictionary<string, Entity>())
             );
 
-            RuntimeConfigProvider provider = TestHelper.GenerateInMemoryRuntimeConfigProvider(mockConfig);
+            Mock<RuntimeConfigLoader> mockLoader = new(null);
+            HostedRuntimeConfigProvider provider = new(mockLoader.Object)
+            {
+                _runtimeConfig = mockConfig
+            };//(HostedRuntimeConfigProvider)TestHelper.GenerateInMemoryRuntimeConfigProvider(mockConfig);
             Mock<DbExceptionParser> dbExceptionParser = new(provider);
             Mock<ILogger<PostgreSqlQueryExecutor>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();

@@ -29,6 +29,8 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     // or user provided config file which could be a relative file path, absolute file path or simply the file name assumed to be in current directory.
     private string _baseConfigFilePath;
 
+    private ConfigFileWatcher? _configFileWatcher;
+
     private readonly IFileSystem _fileSystem;
 
     public const string CONFIGFILE_NAME = "dab-config";
@@ -88,6 +90,32 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     }
 
     /// <summary>
+    /// Checks if we have already attempted to configure the file watcher, if not
+    /// instantiate the file watcher if we are in the correct mode.
+    /// Returns true if we instantiate a file watcher.
+    /// </summary>
+    private bool TrySetupConfigFileWatcher()
+    {
+        if (RuntimeConfig is not null && RuntimeConfig.IsDevelopmentMode())
+        {
+            try
+            {
+                _configFileWatcher = new(this, GetConfigDirectoryName(), GetConfigFileName());
+            }
+            catch (Exception ex)
+            {
+                // Need to remove the dependencies in startup on the RuntimeConfigProvider
+                // before we can have an ILogger here.
+                Console.WriteLine($"Attempt to configure config file watcher for hot reload failed due to: {ex.Message}.");
+            }
+
+            return _configFileWatcher is not null;
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Load the runtime config from the specified path.
     /// </summary>
     /// <param name="path">The path to the dab-config.json file.</param>
@@ -105,6 +133,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
             bool res = TryParseConfig(json, out RuntimeConfig, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
+            TrySetupConfigFileWatcher();
             config = RuntimeConfig;
             return res;
         }
@@ -129,6 +158,15 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
     {
         return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
+    }
+
+    /// <summary>
+    /// Hot Reloads the runtime config when the file watcher
+    /// is active and detects a change to the underlying config file.
+    /// </summary>
+    public void HotReloadConfig()
+    {
+        TryLoadKnownConfig(out _, replaceEnvVar: true);
     }
 
     /// <summary>

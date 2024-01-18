@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 
             FileSystemRuntimeConfigLoader loader = new(fs);
 
-            RuntimeConfigProvider provider = new(loader);
+            LocalRuntimeConfigProvider provider = new(loader);
 
             Mock<IAbstractQueryManagerFactory> queryManagerfactory = new();
             Mock<IQueryEngineFactory> queryEngineFactory = new();

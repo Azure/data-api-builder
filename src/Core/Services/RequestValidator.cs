@@ -24,9 +24,9 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string PRIMARY_KEY_NOT_PROVIDED_ERR_MESSAGE = "Primary Key for this HTTP request type is required.";
 
         private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
-        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IRuntimeConfigProvider _runtimeConfigProvider;
 
-        public RequestValidator(IMetadataProviderFactory sqlMetadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider)
+        public RequestValidator(IMetadataProviderFactory sqlMetadataProviderFactory, IRuntimeConfigProvider runtimeConfigProvider)
         {
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;

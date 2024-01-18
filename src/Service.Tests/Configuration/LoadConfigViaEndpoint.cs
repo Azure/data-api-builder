@@ -33,7 +33,7 @@ public class LoadConfigViaEndpointTests
             await httpClient.PostAsync(configurationEndpoint, content);
         Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
-        RuntimeConfigProvider configProvider = server.Services.GetService(typeof(RuntimeConfigProvider)) as RuntimeConfigProvider;
+        LocalRuntimeConfigProvider configProvider = server.Services.GetService(typeof(IRuntimeConfigProvider)) as LocalRuntimeConfigProvider;
         RuntimeConfig loadedConfig = configProvider.GetConfig();
 
         Assert.AreEqual(config.Schema, loadedConfig.Schema);
@@ -55,7 +55,7 @@ public class LoadConfigViaEndpointTests
             await httpClient.PostAsync(configurationEndpoint, content);
         Assert.AreEqual(HttpStatusCode.OK, postResult.StatusCode);
 
-        RuntimeConfigProvider configProvider = server.Services.GetService(typeof(RuntimeConfigProvider)) as RuntimeConfigProvider;
+        LocalRuntimeConfigProvider configProvider = server.Services.GetService(typeof(IRuntimeConfigProvider)) as LocalRuntimeConfigProvider;
         RuntimeConfig loadedConfig = configProvider.GetConfig();
 
         Assert.AreNotEqual(config.Schema, loadedConfig.Schema);

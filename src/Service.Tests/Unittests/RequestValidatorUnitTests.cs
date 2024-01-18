@@ -366,7 +366,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 MockFileSystem fileSystem = new();
                 fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
                 FileSystemRuntimeConfigLoader loader = new(fileSystem);
-                RuntimeConfigProvider provider = new(loader);
+                LocalRuntimeConfigProvider provider = new(loader);
                 Mock<IMetadataProviderFactory> metadataProviderFactory = new();
                 metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<String>())).Returns(_mockMetadataStore.Object);
                 RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);

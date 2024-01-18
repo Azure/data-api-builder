@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
-            LocalRuntimeConfigProvider configProvider = new(configLoader);
+            IRuntimeConfigProvider configProvider = new LocalRuntimeConfigProvider(configLoader);
 
             services.AddSingleton(fileSystem);
             services.AddSingleton(configProvider);

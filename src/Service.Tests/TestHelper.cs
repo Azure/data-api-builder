@@ -53,9 +53,9 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         /// <param name="loader"></param>
         /// <returns></returns>
-        public static RuntimeConfigProvider GetRuntimeConfigProvider(FileSystemRuntimeConfigLoader loader)
+        public static LocalRuntimeConfigProvider GetRuntimeConfigProvider(FileSystemRuntimeConfigLoader loader)
         {
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            LocalRuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             // Only set IsLateConfigured for MsSQL for now to do certificate validation.
             // For Pg/MySQL databases, set this after SSL connections are enabled for testing.
@@ -194,12 +194,12 @@ namespace Azure.DataApiBuilder.Service.Tests
             ""entities"": {}" +
           "}";
 
-        public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
+        public static IRuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
         {
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            IRuntimeConfigProvider runtimeConfigProvider = new LocalRuntimeConfigProvider(loader);
             return runtimeConfigProvider;
         }
 
@@ -214,7 +214,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         public static void ConstructNewConfigWithSpecifiedHostMode(string configFileName, HostMode hostModeType, string databaseType, string runtimeBaseRoute = "/")
         {
             SetupDatabaseEnvironment(databaseType);
-            RuntimeConfigProvider configProvider = GetRuntimeConfigProvider(GetRuntimeConfigLoader());
+            LocalRuntimeConfigProvider configProvider = GetRuntimeConfigProvider(GetRuntimeConfigLoader());
             RuntimeConfig config = configProvider.GetConfig();
 
             RuntimeConfig configWithCustomHostMode =

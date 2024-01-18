@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             runtimeConfig = AddCustomEntities(customEntities, runtimeConfig);
 
             // Generate in memory runtime config provider that uses the config that we have modified
-            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            LocalRuntimeConfigProvider runtimeConfigProvider = (LocalRuntimeConfigProvider)TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
 
             _queryEngineLogger = new Mock<ILogger<IQueryEngine>>().Object;
             _mutationEngineLogger = new Mock<ILogger<SqlMutationEngine>>().Object;
@@ -243,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             }
         }
 
-        protected static void SetUpSQLMetadataProvider(RuntimeConfigProvider runtimeConfigProvider)
+        protected static void SetUpSQLMetadataProvider(IRuntimeConfigProvider runtimeConfigProvider)
         {
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
@@ -580,7 +580,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             string clientRoleHeader = null,
             bool expectsError = false)
         {
-            RuntimeConfigProvider configProvider = _application.Services.GetService<RuntimeConfigProvider>();
+            IRuntimeConfigProvider configProvider = _application.Services.GetService<IRuntimeConfigProvider>();
             return await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                 HttpClient,
                 configProvider,

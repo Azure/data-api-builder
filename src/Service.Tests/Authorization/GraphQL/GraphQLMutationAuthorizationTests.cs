@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(string.Empty));
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
+            LocalRuntimeConfigProvider provider = new(loader);
             DefaultHttpContext context = new();
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             Mock<GQLFilterParser> _gQLFilterParser = new(provider, _metadataProviderFactory.Object);

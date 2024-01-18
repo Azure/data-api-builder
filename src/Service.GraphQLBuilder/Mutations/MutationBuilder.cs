@@ -7,6 +7,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
+using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
@@ -45,8 +46,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             {
                 if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && IsModelType(objectTypeDefinitionNode))
                 {
-                    NameNode name = objectTypeDefinitionNode.Name;
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
+                    NameNode name = databaseTypes[dbEntityName] is DatabaseType.DWSQL ? new NameNode("DbOperationResult") : objectTypeDefinitionNode.Name;
 
                     // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.
@@ -177,6 +178,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 string s when s.StartsWith(EntityActionOperation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.UpdateGraphQL,
                 _ => EntityActionOperation.Delete
             };
+        }
+
+        /// <summary>
+        /// Create and return a default GraphQL result field for a mutation which doesn't
+        /// define a result set and doesn't return any rows.
+        /// </summary>
+        public static FieldDefinitionNode GetDefaultResultFieldForMutation()
+        {
+            return new(
+                location: null,
+                name: new("result"),
+                description: new StringValueNode("Contains result for mutation execution"),
+                arguments: new List<InputValueDefinitionNode>(),
+                type: new StringType().ToTypeNode(),
+                directives: new List<DirectiveNode>());
         }
     }
 }

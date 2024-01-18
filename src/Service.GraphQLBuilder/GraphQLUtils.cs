@@ -29,6 +29,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string OBJECT_TYPE_MUTATION = "mutation";
         public const string OBJECT_TYPE_QUERY = "query";
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
+        public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -288,7 +289,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 // we are at the root query node - need to determine return type and store on context.
                 // Output type below would be the graphql object return type - Books,BooksConnectionObject.
                 IOutputType outputType = context.Selection.Field.Type;
-                string entityName = outputType.TypeName();
+                string entityName = GetEntityNameFromContext(context);
 
                 // Below is only needed if say we have an Array return type or items object for plural case.
                 ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
@@ -323,6 +324,38 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             return dataSourceName;
+        }
+
+        /// <summary>
+        /// Get entity name from context object.
+        /// </summary>
+        public static string GetEntityNameFromContext(IMiddlewareContext context)
+        {
+            string entityName = context.Selection.Field.Type.TypeName();
+
+            if (entityName == "DbOperationResult")
+            {
+                // CUD for a mutation whose result set we do not have. Get Entity name from the mutation name.
+                entityName = context.Selection.Field.Name;
+                // Check if the input string starts with "create", "update", or "delete"
+                if (entityName.StartsWith("create", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Remove the "create" prefix
+                    entityName = entityName.Substring("create".Length);
+                }
+                else if (entityName.StartsWith("update", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Remove the "update" prefix
+                    entityName = entityName.Substring("update".Length);
+                }
+                else if (entityName.StartsWith("delete", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Remove the "delete" prefix
+                    entityName = entityName.Substring("delete".Length);
+                }
+            }
+
+            return entityName;
         }
 
         private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)

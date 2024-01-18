@@ -84,7 +84,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             dataSourceName = GetValidatedDataSourceName(dataSourceName);
             string graphqlMutationName = context.Selection.Field.Name.Value;
             IOutputType outputType = context.Selection.Field.Type;
-            string entityName = outputType.TypeName();
+            string entityName = GraphQLUtils.GetEntityNameFromContext(context);
+
             ObjectType _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
 
             if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
@@ -117,7 +118,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         // When read permission is not configured, an error response is returned. So, the mutation result needs to
                         // be computed only when the read permission is configured.
-                        if (isReadPermissionConfigured)
+                        if (isReadPermissionConfigured && context.Selection.Type.TypeName() != GraphQLUtils.DB_OPERATION_RESULT_TYPE)
                         {
                             // compute the mutation result before removing the element,
                             // since typical GraphQL delete mutations return the metadata of the deleted item.
@@ -145,6 +146,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 default(JsonDocument),
                                 PaginationMetadata.MakeEmptyPaginationMetadata());
                         }
+                        else
+                        {
+                            result = GetDbOperationResultSuccessJsonDocument();
+                        }
                     }
                     else
                     {
@@ -169,6 +174,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                         context,
                                         GetBackingColumnsFromCollection(entityName: entityName, parameters: mutationResultRow.Columns, sqlMetadataProvider: sqlMetadataProvider),
                                         dataSourceName);
+                        }
+                        else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
+                        {
+                            result = GetDbOperationResultSuccessJsonDocument();
                         }
                     }
 
@@ -829,7 +838,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
-                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
+
+                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0 && !dbResultSet!.ResultProperties.TryGetValue("RecordsAffected", out object? val))
                 {
                     // For GraphQL, insert operation corresponds to Create action.
                     if (operationType is EntityActionOperation.Create)
@@ -1177,6 +1187,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
             return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
+        }
+
+        /// <summary>
+        /// Returns success DbOperationResult.
+        /// </summary>
+        private static Tuple<JsonDocument?, IMetadata?> GetDbOperationResultSuccessJsonDocument()
+        {
+            // Create a JSON object with one field "status" and value "success"
+            JsonObject jsonObject = new() { { "status", "success" } };
+
+            return new Tuple<JsonDocument?, IMetadata?>(
+                JsonDocument.Parse(jsonObject.ToString()),
+                PaginationMetadata.MakeEmptyPaginationMetadata());
         }
     }
 }

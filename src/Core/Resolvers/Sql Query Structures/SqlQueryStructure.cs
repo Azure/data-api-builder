@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 PaginationMetadata.Subqueries.Add(QueryBuilder.PAGINATION_FIELD_NAME, PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            EntityName = _underlyingFieldType.Name;
+            EntityName = GraphQLUtils.GetEntityNameFromContext(ctx);
 
             if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
             {

@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -232,6 +233,20 @@ namespace Azure.DataApiBuilder.Core.Services
                 objectTypes[entityName] = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
             }
 
+            Dictionary<string, FieldDefinitionNode> fields = new();
+            NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
+            FieldDefinitionNode field = MutationBuilder.GetDefaultResultFieldForMutation();
+
+            fields.TryAdd("result", field);
+
+            objectTypes.Add(GraphQLUtils.DB_OPERATION_RESULT_TYPE, new ObjectTypeDefinitionNode(
+                location: null,
+                name: nameNode,
+                description: null,
+                new List<DirectiveNode>(),
+                new List<NamedTypeNode>(),
+                fields.Values.ToImmutableList()));
+
             List<IDefinitionNode> nodes = new(objectTypes.Values);
             return new DocumentNode(nodes);
         }
@@ -283,6 +298,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     case DatabaseType.CosmosDB_NoSQL:
                         cosmosDataSourceNames.Add(_runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName));
                         break;
+                    case DatabaseType.DWSQL:
+
                     case DatabaseType.MSSQL or DatabaseType.MySQL or DatabaseType.PostgreSQL or DatabaseType.DWSQL:
                         sqlEntities.TryAdd(entityName, entity);
                         break;

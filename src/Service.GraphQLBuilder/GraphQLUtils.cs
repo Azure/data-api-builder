@@ -288,27 +288,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 // we are at the root query node - need to determine return type and store on context.
                 // Output type below would be the graphql object return type - Books,BooksConnectionObject.
-                IOutputType outputType = context.Selection.Field.Type;
                 string entityName = GetEntityNameFromContext(context);
-
-                // Below is only needed if say we have an Array return type or items object for plural case.
-                ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
-
-                // Example: CustomersConnectionObject - for get all scenarios.
-                if (QueryBuilder.IsPaginationType(underlyingFieldType))
-                {
-                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
-                    outputType = subField.Type;
-                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
-                    entityName = underlyingFieldType.Name;
-                }
-
-                // if name on schema is different from name in config.
-                // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
-                {
-                    entityName = modelName;
-                }
 
                 dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
 
@@ -335,23 +315,32 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             if (entityName == "DbOperationResult")
             {
-                // CUD for a mutation whose result set we do not have. Get Entity name from the mutation name.
-                entityName = context.Selection.Field.Name;
-                // Check if the input string starts with "create", "update", or "delete"
-                if (entityName.StartsWith("create", StringComparison.OrdinalIgnoreCase))
+                // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
+                if (GraphQLUtils.TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
                 {
-                    // Remove the "create" prefix
-                    entityName = entityName.Substring("create".Length);
+                    entityName = modelName;
                 }
-                else if (entityName.StartsWith("update", StringComparison.OrdinalIgnoreCase))
+            }
+            else
+            {
+                // for rest of scenarios get entity name from output object type.
+                ObjectType underlyingFieldType;
+                IOutputType type = context.Selection.Field.Type;
+                underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                // Example: CustomersConnectionObject - for get all scenarios.
+                if (QueryBuilder.IsPaginationType(underlyingFieldType))
                 {
-                    // Remove the "update" prefix
-                    entityName = entityName.Substring("update".Length);
+                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+                    type = subField.Type;
+                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                    entityName = underlyingFieldType.Name;
                 }
-                else if (entityName.StartsWith("delete", StringComparison.OrdinalIgnoreCase))
+
+                // if name on schema is different from name in config.
+                // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
+                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
                 {
-                    // Remove the "delete" prefix
-                    entityName = entityName.Substring("delete".Length);
+                    entityName = modelName;
                 }
             }
 

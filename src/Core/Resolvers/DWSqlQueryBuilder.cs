@@ -186,9 +186,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Build(SqlUpdateStructure structure)
         {
             string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+            string predicates = JoinPredicateStrings(
+                       structure.GetDbPolicyForOperation(EntityActionOperation.Update),
+                       Build(structure.Predicates));
 
             StringBuilder updateQuery = new($"UPDATE {tableName} SET {Build(structure.UpdateOperations, ", ")} ");
-
+            updateQuery.Append($"WHERE {predicates};");
             return updateQuery.ToString();
         }
 

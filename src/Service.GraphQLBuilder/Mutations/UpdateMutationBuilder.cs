@@ -194,6 +194,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             RuntimeEntities entities,
             string dbEntityName,
             DatabaseType databaseType,
+            string returnEntityName,
             IEnumerable<string>? rolesAllowedForMutation = null)
         {
             InputObjectTypeDefinitionNode input = GenerateUpdateInputType(
@@ -236,7 +237,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     new List<DirectiveNode>()));
 
             // Create authorize directive denoting allowed roles
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", dbEntityName)) };
 
             if (CreateAuthorizationDirectiveIfNecessary(
                     rolesAllowedForMutation,
@@ -251,7 +252,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 new NameNode($"update{singularName}"),
                 new StringValueNode($"Updates a {singularName}"),
                 inputValues,
-                new NamedTypeNode(name),
+                new NamedTypeNode(returnEntityName),
                 fieldDefinitionNodeDirectives
             );
         }

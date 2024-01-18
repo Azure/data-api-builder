@@ -83,15 +83,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             dataSourceName = GetValidatedDataSourceName(dataSourceName);
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            IOutputType outputType = context.Selection.Field.Type;
             string entityName = GraphQLUtils.GetEntityNameFromContext(context);
-
-            ObjectType _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
-
-            if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
-            {
-                entityName = modelName;
-            }
 
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
@@ -139,16 +131,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // a concurrent request race. Hence, empty the non-null result.
                         if (resultProperties is not null
                             && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
-                            && Convert.ToInt32(value) == 0
-                            && result is not null && result.Item1 is not null)
+                            && Convert.ToInt32(value) == 0)
                         {
-                            result = new Tuple<JsonDocument?, IMetadata?>(
-                                default(JsonDocument),
-                                PaginationMetadata.MakeEmptyPaginationMetadata());
+                            if (result is not null && result.Item1 is not null)
+                            {
+                                result = new Tuple<JsonDocument?, IMetadata?>(
+                                    default(JsonDocument),
+                                    PaginationMetadata.MakeEmptyPaginationMetadata());
+                            }
+                            else
+                            {
+                                // no record affected but db call ran successfully.
+                                result = GetDbOperationResultJsonDocument("item not found");
+                            }
                         }
                         else
                         {
-                            result = GetDbOperationResultSuccessJsonDocument();
+                            result = GetDbOperationResultJsonDocument("success");
                         }
                     }
                     else
@@ -177,7 +176,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         }
                         else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
                         {
-                            result = GetDbOperationResultSuccessJsonDocument();
+                            result = GetDbOperationResultJsonDocument("success");
                         }
                     }
 
@@ -839,7 +838,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
 
-                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0 && !dbResultSet!.ResultProperties.TryGetValue("RecordsAffected", out object? val))
+                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0 && dbResultSet!.ResultProperties.TryGetValue("RecordsAffected", out object? recordsAffected) && (int)recordsAffected == 0)
                 {
                     // For GraphQL, insert operation corresponds to Create action.
                     if (operationType is EntityActionOperation.Create)
@@ -1190,12 +1189,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Returns success DbOperationResult.
+        /// Returns DbOperationResult with required result.
         /// </summary>
-        private static Tuple<JsonDocument?, IMetadata?> GetDbOperationResultSuccessJsonDocument()
+        private static Tuple<JsonDocument?, IMetadata?> GetDbOperationResultJsonDocument(string result)
         {
-            // Create a JSON object with one field "status" and value "success"
-            JsonObject jsonObject = new() { { "status", "success" } };
+            // Create a JSON object with one field "result" and value result
+            JsonObject jsonObject = new() { { "result", result } };
 
             return new Tuple<JsonDocument?, IMetadata?>(
                 JsonDocument.Parse(jsonObject.ToString()),

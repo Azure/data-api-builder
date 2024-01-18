@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -17,13 +18,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="name">Name of the GraphQL object to generate the delete field for.</param>
         /// <param name="objectTypeDefinitionNode">The GraphQL object type to generate for.</param>
         /// <param name="configEntity">Entity definition</param>
+        /// <param name="dbEntityName">Entity name in runtime config.</param>
+        /// <param name="databaseType">Database type the operation is targetting.</param>
+        /// <param name="returnEntityName">Name of return type entity for mutation.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>delete*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
         public static FieldDefinitionNode Build(
             NameNode name,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             Entity configEntity,
+            string dbEntityName,
             DatabaseType databaseType,
+            string returnEntityName,
             IEnumerable<string>? rolesAllowedForMutation = null)
         {
             List<FieldDefinitionNode> idFields = FindPrimaryKeyFields(objectTypeDefinitionNode, databaseType);
@@ -50,7 +56,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             // Create authorize directive denoting allowed roles
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", dbEntityName)) };
 
             if (CreateAuthorizationDirectiveIfNecessary(
                     rolesAllowedForMutation,
@@ -65,7 +71,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 new NameNode($"delete{singularName}"),
                 new StringValueNode($"Delete a {singularName}"),
                 inputValues,
-                new NamedTypeNode(name),
+                new NamedTypeNode(returnEntityName),
                 fieldDefinitionNodeDirectives
             );
         }

@@ -35,11 +35,79 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                 return new GraphQLRuntimeOptions(Enabled: false);
             }
 
-            // Remove the converter so we don't recurse.
-            JsonSerializerOptions innerOptions = new(options);
-            _ = innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is GraphQLRuntimeOptionsConverterFactory));
+            if(reader.TokenType == JsonTokenType.StartObject)
+            {
+                GraphQLRuntimeOptions graphQLRuntimeOptions = new();
+                NestedMutationOptionsConverter nestedMutationOptionsConverter = options.GetConverter(typeof(NestedMutationOptions)) as NestedMutationOptionsConverter ??
+                                            throw new JsonException("Failed to get nested mutation options converter");
 
-            return JsonSerializer.Deserialize<GraphQLRuntimeOptions>(ref reader, innerOptions);
+                while(reader.Read())
+                {
+                    
+
+                    if (reader.TokenType == JsonTokenType.EndObject)
+                    {
+                        break;
+                    }
+
+                    string? propertyName = reader.GetString();
+                    reader.Read();                    
+                    switch (propertyName)
+                    {
+                        case "enabled":
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { Enabled = reader.GetBoolean() };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unexpected type of value entered for enabled: {reader.TokenType}");
+                            }
+
+                            break;
+
+                        case "allow-introspection":
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { AllowIntrospection = reader.GetBoolean() };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unexpected type of value entered for allow-introspection: {reader.TokenType}");
+                            }
+
+                            break;
+                        case "path":
+                            if (reader.TokenType is JsonTokenType.String)
+                            {
+                                string? path = reader.GetString();
+                                if (path is null)
+                                {
+                                    path = "/graphql";
+                                }
+
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { Path = path };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unexpected type of value entered for path: {reader.TokenType}");
+                            }
+
+                            break;
+
+                        case "nested-mutations":
+                            graphQLRuntimeOptions = graphQLRuntimeOptions with { NestedMutationOptions = nestedMutationOptionsConverter.Read(ref reader, typeToConvert, options) };
+                            break;
+
+                        default:
+                            throw new JsonException($"Unexpected property {propertyName}");
+                    }                   
+                }
+
+                return graphQLRuntimeOptions;
+            }
+
+            throw new JsonException("Failed to read the GraphQL Runtime Options");
         }
 
         public override void Write(Utf8JsonWriter writer, GraphQLRuntimeOptions value, JsonSerializerOptions options)
@@ -48,6 +116,16 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteBoolean("enabled", value.Enabled);
             writer.WriteString("path", value.Path);
             writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
+            
+            if(value.NestedMutationOptions is not null)
+            {
+
+                NestedMutationOptionsConverter nestedMutationOptionsConverter = options.GetConverter(typeof(NestedMutationOptions)) as NestedMutationOptionsConverter ??
+                                            throw new JsonException("Failed to get nested mutation options converter");
+
+                nestedMutationOptionsConverter.Write(writer, value.NestedMutationOptions, options);
+            }
+
             writer.WriteEndObject();
         }
     }

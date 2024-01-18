@@ -111,48 +111,6 @@ internal class DataSourceConverterFactory : JsonConverterFactory
             return dataSource;
         }
 
-        // private static Dictionary<string, JsonElement>? DeserializeDataSourceOptions(ref Utf8JsonReader reader){
-        //     Dictionary<string,JsonElement> dict = new();
-        //     if (reader.TokenType is JsonTokenType.StartObject)
-        //     {
-        //         while (reader.Read())
-        //         {
-        //             if (reader.TokenType is JsonTokenType.EndObject)
-        //             {
-        //                 break;
-        //             }
-
-        //             if (reader.TokenType is JsonTokenType.PropertyName)
-        //             {
-        //                 string key= reader.GetString()!;
-        //                 reader.Read();
-        //                 if (reader.TokenType is JsonTokenType.String)
-        //                 {
-        //                     string value = reader.DeserializeString(replaceEnvVar: true) ?? string.Empty;
-        //                     using (JsonDocument doc = JsonDocument.Parse($"\"{value}\""))
-        //                     {
-        //                         dict.Add(key, doc.RootElement);
-        //                     }
-        //                 }
-        //                 else if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False){
-        //                     bool value = reader.GetBoolean();
-        //                     using (JsonDocument doc = JsonDocument.Parse(value.ToString().ToLower()))
-        //                     {
-        //                         dict.Add(key, doc.RootElement);
-        //                     }
-        //                 }
-        //                 else {
-        //                     throw new JsonException($"Unexpected value Type {reader.TokenType} for Key {key} while deserializing DataSource Options.");
-        //                 }
-        //             }
-        //         }
-
-        //         return dict;
-        //     }
-
-        //     return null;
-        // }
-
         public override void Write(Utf8JsonWriter writer, DataSource value, JsonSerializerOptions options)
         {
             // Remove the converter so we don't recurse.

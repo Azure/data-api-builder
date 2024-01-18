@@ -171,7 +171,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new DataSourceFilesConverter());
         options.Converters.Add(new EntityCacheOptionsConverterFactory());
-        // options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
+        options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
 
         if (replaceEnvVar)
         {

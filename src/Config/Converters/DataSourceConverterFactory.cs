@@ -50,7 +50,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
             DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, null);
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                
+
                 while (reader.Read())
                 {
                     if (reader.TokenType is JsonTokenType.EndObject)
@@ -61,17 +61,44 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                     if (reader.TokenType is JsonTokenType.PropertyName)
                     {
                         string propertyName = reader.GetString() ?? string.Empty;
-                        // reader.Read();
+                        reader.Read();
                         switch (propertyName)
                         {
                             case "database-type":
                                 dataSource = dataSource with { DatabaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!) };
                                 break;
                             case "connection-string":
-                                dataSource = dataSource with { ConnectionString = reader.DeserializeString(replaceEnvVar: true) ?? string.Empty };
+                                dataSource = dataSource with { ConnectionString = reader.DeserializeString(replaceEnvVar: true)! };
                                 break;
                             case "options":
-                                dataSource = dataSource with { Options = JsonSerializer.Deserialize<Dictionary<string,JsonElement>>(ref reader, options) };
+                                Dictionary<string, JsonElement> optionsDict = new();
+                                while (reader.Read() && reader.TokenType is not JsonTokenType.EndObject)
+                                {
+                                    string key = reader.GetString()!;
+                                    reader.Read();
+                                    JsonElement element;
+                                    if (reader.TokenType is JsonTokenType.String)
+                                    {
+                                        string stringValue = reader.DeserializeString(replaceEnvVar: true)!;
+
+                                        using (JsonDocument doc = JsonDocument.Parse($"\"{stringValue}\""))
+                                        {
+                                            element = doc.RootElement.Clone();
+                                        }
+                                    }
+                                    else
+                                    {
+                                        bool boolValue = reader.GetBoolean();
+                                        using (JsonDocument doc = JsonDocument.Parse(boolValue.ToString().ToLower()))
+                                        {
+                                            element = doc.RootElement.Clone();
+                                        }
+                                    }
+
+                                    optionsDict.Add(key, element);
+                                }
+
+                                dataSource = dataSource with { Options = optionsDict };
                                 break;
                             default:
                                 throw new JsonException($"Unexpected property {propertyName} while deserializing DataSource.");
@@ -79,7 +106,6 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                     }
                 }
 
-                
             }
 
             return dataSource;

@@ -839,7 +839,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
 
-                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0 && dbResultSet!.ResultProperties.TryGetValue("RecordsAffected", out object? recordsAffected) && (int)recordsAffected == 0)
+                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0 && dbResultSet!.ResultProperties.TryGetValue("RecordsAffected", out object? recordsAffected) && (int)recordsAffected <= 0)
                 {
                     // For GraphQL, insert operation corresponds to Create action.
                     if (operationType is EntityActionOperation.Create)

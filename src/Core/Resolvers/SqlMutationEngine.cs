@@ -127,25 +127,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 sqlMetadataProvider);
 
                         // If the number of records affected by DELETE were zero,
-                        // and yet the result was not null previously, it indicates this DELETE lost
-                        // a concurrent request race. Hence, empty the non-null result.
                         if (resultProperties is not null
                             && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
                             && Convert.ToInt32(value) == 0)
                         {
+                            // the result was not null previously, it indicates this DELETE lost
+                            // a concurrent request race. Hence, empty the non-null result.
                             if (result is not null && result.Item1 is not null)
                             {
+
                                 result = new Tuple<JsonDocument?, IMetadata?>(
                                     default(JsonDocument),
                                     PaginationMetadata.MakeEmptyPaginationMetadata());
                             }
-                            else
+                            else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
                             {
                                 // no record affected but db call ran successfully.
                                 result = GetDbOperationResultJsonDocument("item not found");
                             }
                         }
-                        else
+                        else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
                         {
                             result = GetDbOperationResultJsonDocument("success");
                         }

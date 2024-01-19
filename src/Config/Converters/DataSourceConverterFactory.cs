@@ -68,7 +68,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                 dataSource = dataSource with { DatabaseType = EnumExtensions.Deserialize<DatabaseType>(reader.DeserializeString(_replaceEnvVar)!) };
                                 break;
                             case "connection-string":
-                                dataSource = dataSource with { ConnectionString = reader.DeserializeString(replaceEnvVar: true)! };
+                                dataSource = dataSource with { ConnectionString = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)! };
                                 break;
                             case "options":
                                 Dictionary<string, JsonElement> optionsDict = new();
@@ -79,7 +79,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                     JsonElement element;
                                     if (reader.TokenType is JsonTokenType.String)
                                     {
-                                        string stringValue = reader.DeserializeString(replaceEnvVar: true)!;
+                                        string stringValue = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
 
                                         using (JsonDocument doc = JsonDocument.Parse($"\"{stringValue}\""))
                                         {

@@ -435,7 +435,7 @@ namespace Cli.Tests
         {
             InitOptions options;
 
-            if(databaseTye is DatabaseType.CosmosDB_NoSQL)
+            if (databaseTye is DatabaseType.CosmosDB_NoSQL)
             {
                 // A scheme file is added since its mandatory for CosmosDB_NoSQL 
                 ((MockFileSystem)_fileSystem!).AddFile(TEST_SCHEMA_FILE, new MockFileData(""));

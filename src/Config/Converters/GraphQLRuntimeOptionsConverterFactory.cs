@@ -35,15 +35,14 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                 return new GraphQLRuntimeOptions(Enabled: false);
             }
 
-            if(reader.TokenType == JsonTokenType.StartObject)
+            if (reader.TokenType == JsonTokenType.StartObject)
             {
                 GraphQLRuntimeOptions graphQLRuntimeOptions = new();
                 NestedMutationOptionsConverter nestedMutationOptionsConverter = options.GetConverter(typeof(NestedMutationOptions)) as NestedMutationOptionsConverter ??
                                             throw new JsonException("Failed to get nested mutation options converter");
 
-                while(reader.Read())
+                while (reader.Read())
                 {
-                    
 
                     if (reader.TokenType == JsonTokenType.EndObject)
                     {
@@ -51,7 +50,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                     }
 
                     string? propertyName = reader.GetString();
-                    reader.Read();                    
+                    reader.Read();
                     switch (propertyName)
                     {
                         case "enabled":
@@ -101,7 +100,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 
                         default:
                             throw new JsonException($"Unexpected property {propertyName}");
-                    }                   
+                    }
                 }
 
                 return graphQLRuntimeOptions;
@@ -116,8 +115,8 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteBoolean("enabled", value.Enabled);
             writer.WriteString("path", value.Path);
             writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
-            
-            if(value.NestedMutationOptions is not null)
+
+            if (value.NestedMutationOptions is not null)
             {
 
                 NestedMutationOptionsConverter nestedMutationOptionsConverter = options.GetConverter(typeof(NestedMutationOptions)) as NestedMutationOptionsConverter ??

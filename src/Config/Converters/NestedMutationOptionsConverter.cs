@@ -7,6 +7,9 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters
 {
+    /// <summary>
+    /// Converter for the nested mutation options.
+    /// </summary>
     internal class NestedMutationOptionsConverter : JsonConverter<NestedMutationOptions>
     {
 
@@ -18,6 +21,7 @@ namespace Azure.DataApiBuilder.Config.Converters
                                             throw new JsonException("Failed to get nested insert options converter");
         }
 
+        /// <inheritdoc/>
         public override NestedMutationOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.Null)
@@ -25,7 +29,7 @@ namespace Azure.DataApiBuilder.Config.Converters
                 return new NestedMutationOptions(new(enabled: false));
             }
 
-            if(reader.TokenType is JsonTokenType.StartObject)
+            if (reader.TokenType is JsonTokenType.StartObject)
             {
                 NestedMutationOptions? nestedMutationOptions = new(new(enabled: false));
 
@@ -51,16 +55,18 @@ namespace Azure.DataApiBuilder.Config.Converters
 
                 return nestedMutationOptions;
             }
-            
+
             throw new JsonException();
         }
+
+        /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, NestedMutationOptions value, JsonSerializerOptions options)
         {
             writer.WritePropertyName("nested-mutations");
 
             writer.WriteStartObject();
 
-            if(value.NestedInsertOptions is not null)
+            if (value.NestedInsertOptions is not null)
             {
                 _nestedInsertOptionsConverter.Write(writer, value.NestedInsertOptions, options);
             }

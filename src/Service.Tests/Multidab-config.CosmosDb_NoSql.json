@@ -17,7 +17,12 @@
     "graphql": {
       "enabled": true,
       "path": "/graphql",
-      "allow-introspection": true
+      "allow-introspection": true,
+      "nested-mutations": {
+        "inserts": {
+          "enabled": false
+        }
+      }
     },
     "host": {
       "cors": {

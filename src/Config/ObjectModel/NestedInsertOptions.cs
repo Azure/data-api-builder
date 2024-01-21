@@ -3,9 +3,9 @@
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
 /// <summary>
-/// 
+/// Options for nested insert operations.
 /// </summary>
-/// <param name="Enabled"></param>
+/// <param name="Enabled"> Indicates whether nested insert operation is enabled.</param>
 public class NestedInsertOptions
 {
     public bool Enabled;

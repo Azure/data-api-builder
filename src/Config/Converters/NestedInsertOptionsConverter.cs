@@ -7,16 +7,20 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.Converters
 {
+    /// <summary>
+    /// Converter for the nested insert operation options.
+    /// </summary>
     internal class NestedInsertOptionsConverter : JsonConverter<NestedInsertOptions>
     {
+        /// <inheritdoc/>
         public override NestedInsertOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            if(reader.TokenType is JsonTokenType.StartObject)
+            if (reader.TokenType is JsonTokenType.StartObject)
             {
                 NestedInsertOptions? nestedInsertOptions = new(enabled: false);
-                while(reader.Read())
+                while (reader.Read())
                 {
-                    if(reader.TokenType == JsonTokenType.EndObject)
+                    if (reader.TokenType == JsonTokenType.EndObject)
                     {
                         break;
                     }
@@ -25,13 +29,13 @@ namespace Azure.DataApiBuilder.Config.Converters
                     switch (propertyName)
                     {
                         case "enabled":
-                                reader.Read();
-                                if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
-                                    {
-                                        nestedInsertOptions = new(reader.GetBoolean());
-                                    }
+                            reader.Read();
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            {
+                                nestedInsertOptions = new(reader.GetBoolean());
+                            }
 
-                                break;
+                            break;
                         default:
                             throw new JsonException($"Unexpected property {propertyName}");
 
@@ -44,6 +48,7 @@ namespace Azure.DataApiBuilder.Config.Converters
             throw new JsonException();
         }
 
+        /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, NestedInsertOptions value, JsonSerializerOptions options)
         {
             writer.WritePropertyName("inserts");

@@ -114,17 +114,19 @@ namespace Cli
                 return false;
             }
 
-            
-
             bool isNestedInsertEnabledForGraphQL;
 
-            if(dbType is not DatabaseType.MSSQL && options.NestedInsertOperationEnabled is not CliBool.None)
+            // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-insert.enabled is specified for other database types,
+            // a warning is logged.
+            if (dbType is not DatabaseType.MSSQL && options.NestedInsertOperationEnabled is not CliBool.None)
             {
                 _logger.LogWarning($"The option --graphql.nested-insert.enabled is not supported for {dbType.ToString()} database type and will not be honored.");
             }
 
-            if(dbType is not DatabaseType.MSSQL)
+            if (dbType is not DatabaseType.MSSQL)
             {
+                // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-insert.enabled is specified for other database types,
+                // it is not honored.
                 isNestedInsertEnabledForGraphQL = false;
             }
             else
@@ -307,15 +309,20 @@ namespace Cli
             return true;
         }
 
+        /// <summary>
+        /// Helper method to determine if the nested insert operation is enabled or not based on the inputs from dab init command.
+        /// </summary>
+        /// <param name="nestedInsertsEnabledOptionValue">Input value for --graphql.nested-insert.enabled option of the init command</param>
+        /// <param name="isNestedInsertEnabledForGraphQL">Boolean value indicating if nested insert operation is enabled.</param>
         private static bool IsNestedInsertOperationEnabled(CliBool nestedInsertsEnabledOptionValue, out bool isNestedInsertEnabledForGraphQL)
         {
-            if(nestedInsertsEnabledOptionValue is CliBool.None)
+            if (nestedInsertsEnabledOptionValue is CliBool.None)
             {
                 isNestedInsertEnabledForGraphQL = false;
                 return true;
             }
 
-            if(bool.TryParse(nestedInsertsEnabledOptionValue.ToString(), out isNestedInsertEnabledForGraphQL))
+            if (bool.TryParse(nestedInsertsEnabledOptionValue.ToString(), out isNestedInsertEnabledForGraphQL))
             {
                 return true;
             }

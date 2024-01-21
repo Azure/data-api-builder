@@ -1,6 +1,6 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL,
+    DatabaseType: DWSQL,
     Options: {
       set-session-context: {
         ValueKind: True

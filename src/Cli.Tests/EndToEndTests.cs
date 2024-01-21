@@ -132,6 +132,44 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to validate the successful generation of config file with the --graphql.nested-insert.enabled option of the init command.
+    /// </summary>
+    /// <param name="isNestedInsertsEnabled">Value for the nested insert enabled flag in the init command.</param>
+    /// <param name="expectedValueForNestedInsertEnabledFlag"> Expected value for the nested insert enabled flag in the config file.</param>
+    [DataTestMethod]
+    [DataRow(CliBool.True, true, DisplayName = "Nested Insert operation is enabled the config file by specifying '--graphql.nested-insert.enabled true'")]
+    [DataRow(CliBool.False , false , DisplayName = "Nested Insert operation is disabled the config file by specifying '--graphql.nested-insert.enabled false'")]
+    [DataRow(null, false, DisplayName = " '--graphql.nested-insert' option is not used in the init command. When not enabled explicitly, the nested insert operation will be disabled.")]
+    public void TestEnablingNestedInsertOperation(CliBool? isNestedInsertsEnabled, bool expectedValueForNestedInsertEnabledFlag)
+    {
+        List<string> args = new(){ "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", "mssql"};
+
+        if (isNestedInsertsEnabled is not null)
+        {
+            args.Add("--graphql.nested-insert.enabled");
+            args.Add(isNestedInsertsEnabled.ToString()!);
+        }
+
+        Program.Execute(args.ToArray(), _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
+            TEST_RUNTIME_CONFIG_FILE,
+            out RuntimeConfig? runtimeConfig,
+            replaceEnvVar: true));
+
+        SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
+        Assert.AreEqual(ProductInfo.GetDataApiBuilderApplicationName(), builder.ApplicationName);
+
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
+        Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
+        Assert.IsNotNull(runtimeConfig.Runtime.GraphQL.NestedMutationOptions);
+        Assert.IsNotNull(runtimeConfig.Runtime.GraphQL.NestedMutationOptions.NestedInsertOptions);
+        Assert.AreEqual(expectedValueForNestedInsertEnabledFlag, runtimeConfig.Runtime.GraphQL.NestedMutationOptions.NestedInsertOptions.Enabled);
+    }
+
+    /// <summary>
     /// Test to verify adding a new Entity.
     /// </summary>
     [TestMethod]

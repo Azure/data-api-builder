@@ -416,7 +416,12 @@ public class CachingConfigProcessingTests
                 ""graphql"": {
                   ""enabled"": true,
                   ""path"": ""/An_"",
-                  ""allow-introspection"": true
+                  ""allow-introspection"": true,
+                  ""nested-mutations"": {
+                        ""inserts"": {
+                            ""enabled"": false
+                        }
+                    }
                   },
                 ""host"": {
                   ""cors"": {

@@ -1,16 +1,21 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL,
     Options: {
-      set-session-context: {
-        ValueKind: True
+      container: {
+        ValueKind: String
+      },
+      database: {
+        ValueKind: String
+      },
+      schema: {
+        ValueKind: String
       }
     }
   },
   Runtime: {
     Rest: {
-      Enabled: true,
-      Path: /rest-api,
+      Enabled: false,
+      Path: /api,
       RequestBodyStrict: true
     },
     GraphQL: {

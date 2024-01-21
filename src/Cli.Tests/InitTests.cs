@@ -409,6 +409,73 @@ namespace Cli.Tests
             return ExecuteVerifyTest(options);
         }
 
+        /// <summary>
+        /// Test to validate the config is correctly generated with different database types and various options for --graphql.nested-insert.enabled flag.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-insert.enabled true' for MsSQL database type")]
+        [DataRow(DatabaseType.MSSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-insert.enabled false' for MsSQL database type")]
+        [DataRow(DatabaseType.MSSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-insert.enabled' option for MsSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-insert.enabled true' for PostgreSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-insert.enabled false' for PostgreSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-insert.enabled' option for PostgreSQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-insert.enabled true' for MySQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-insert.enabled false' for MySQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-insert.enabled' option for MySQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-insert.enabled true' for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-insert.enabled false' for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-insert.enabled' option for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-insert.enabled true' for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-insert.enabled false' for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-insert.enabled' option for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-insert.enabled true' for DWSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-insert.enabled false' for DWSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-insert.enabled' option for DWSQL database type")]
+        public Task VerifyCorrectConfigGenerationWithNestedMutationOptions(DatabaseType databaseTye, CliBool isNestedInsertEnabled)
+        {
+            InitOptions options;
+
+            if(databaseTye is DatabaseType.CosmosDB_NoSQL)
+            {
+                // A scheme file is added since its mandatory for CosmosDB_NoSQL 
+                ((MockFileSystem)_fileSystem!).AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
+
+                options = new(
+                databaseType: databaseTye,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: "testdb",
+                cosmosNoSqlContainer: "testcontainer",
+                graphQLSchemaPath: TEST_SCHEMA_FILE,
+                setSessionContext: true,
+                hostMode: HostMode.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restPath: "rest-api",
+                config: TEST_RUNTIME_CONFIG_FILE,
+                nestedInsertOperationEnabled: isNestedInsertEnabled);
+            }
+            else
+            {
+                options = new(
+                databaseType: databaseTye,
+                connectionString: "testconnectionstring",
+                cosmosNoSqlDatabase: null,
+                cosmosNoSqlContainer: null,
+                graphQLSchemaPath: null,
+                setSessionContext: true,
+                hostMode: HostMode.Development,
+                corsOrigin: new List<string>() { "http://localhost:3000", "http://nolocalhost:80" },
+                authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
+                restPath: "rest-api",
+                config: TEST_RUNTIME_CONFIG_FILE,
+                nestedInsertOperationEnabled: isNestedInsertEnabled);
+            }
+
+            VerifySettings verifySettings = new();
+            verifySettings.UseHashedParameters(databaseTye, isNestedInsertEnabled);
+            return ExecuteVerifyTest(options, verifySettings);
+        }
+
         private Task ExecuteVerifyTest(InitOptions options, VerifySettings? settings = null)
         {
             Assert.IsTrue(TryCreateRuntimeConfig(options, _runtimeConfigLoader!, _fileSystem!, out RuntimeConfig? runtimeConfig));

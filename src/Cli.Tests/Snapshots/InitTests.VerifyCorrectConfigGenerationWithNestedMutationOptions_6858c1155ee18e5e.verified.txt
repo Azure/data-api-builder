@@ -19,7 +19,7 @@
       AllowIntrospection: true,
       NestedMutationOptions: {
         NestedInsertOptions: {
-          Enabled: false
+          Enabled: true
         }
       }
     },

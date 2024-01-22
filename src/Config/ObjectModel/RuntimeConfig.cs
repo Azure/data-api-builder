@@ -31,6 +31,16 @@ public record RuntimeConfig
     public bool SqlDataSourceUsed { get; private set; }
 
     /// <summary>
+    /// Retrieves the value of runtime.CacheEnabled property if present, default is false.
+    /// Caching is enabled only when explicitly set to true.
+    /// </summary>
+    /// <returns>Whether caching is globally enabled.</returns>
+    [JsonIgnore]
+    public bool IsCachingEnabled =>
+        Runtime is not null &&
+        Runtime.IsCachingEnabled;
+
+    /// <summary>
     /// Retrieves the value of runtime.rest.request-body-strict property if present, default is true.
     /// </summary>
     [JsonIgnore]
@@ -158,7 +168,7 @@ public record RuntimeConfig
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = GetAggregrateEntities(Entities);
+        this.Entities = Entities;
         _defaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
@@ -168,7 +178,7 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        foreach (KeyValuePair<string, Entity> entity in this.Entities)
+        foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
         }
@@ -178,7 +188,7 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>> allEntities = this.Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
@@ -212,43 +222,9 @@ public record RuntimeConfig
 
     }
 
-    private static RuntimeEntities GetAggregrateEntities(RuntimeEntities entities)
-    {
-        Dictionary<string, Entity> linkingEntities = new();
-        foreach ((string sourceEntityName, Entity entity) in entities)
-        {
-            if (entity.Relationships is null || entity.Relationships.Count == 0 || !entity.GraphQL.Enabled)
-            {   
-                continue;
-            }
-
-            foreach ((_, EntityRelationship entityRelationship) in entity.Relationships)
-            {
-                if (entityRelationship.LinkingObject is null)
-                {
-                    continue;
-                }
-
-                string targetEntityName = entityRelationship.TargetEntity;
-                string linkingEntityName = GenerateLinkingEntityName(sourceEntityName, targetEntityName);
-                Entity linkingEntity = new(
-                    Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),
-                    Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
-                    GraphQL: new(Singular: "", Plural: "", Enabled: false),
-                    Permissions: Array.Empty<EntityPermission>(),
-                    Relationships: null,
-                    Mappings: new(),
-                    IsLinkingEntity: true);
-                linkingEntities.TryAdd(linkingEntityName, linkingEntity);
-            }
-        }
-
-        return new(entities.Union(linkingEntities).ToDictionary(pair => pair.Key, pair => pair.Value));
-    }
-
     public static string GenerateLinkingEntityName(string source, string target)
     {
-        return Entity.LINKING_ENTITY_PREFIX + (string.Compare(source, target) <= 0 ? source + target : target + source);
+        return Entity.LINKING_ENTITY_PREFIX + source + target;
     }
 
     /// <summary>
@@ -269,7 +245,7 @@ public record RuntimeConfig
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = GetAggregrateEntities(Entities);
+        this.Entities = Entities;
         _defaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
@@ -358,6 +334,66 @@ public record RuntimeConfig
         Runtime is not null && Runtime.Host is not null
         && Runtime.Host.Mode is HostMode.Development;
 
+    /// <summary>
+    /// Returns the ttl-seconds value for a given entity.
+    /// If the property is not set, returns the global default value set in the runtime config.
+    /// If the global default value is not set, the default value is used (5 seconds).
+    /// </summary>
+    /// <param name="entityName">Name of the entity to check cache configuration.</param>
+    /// <returns>Number of seconds (ttl) that a cache entry should be valid before cache eviction.</returns>
+    /// <exception cref="DataApiBuilderException">Raised when an invalid entity name is provided or if the entity has caching disabled.</exception>
+    public int GetEntityCacheEntryTtl(string entityName)
+    {
+        if (!Entities.TryGetValue(entityName, out Entity? entityConfig))
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} is not a valid entity.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+        }
+
+        if (!entityConfig.IsCachingEnabled)
+        {
+            throw new DataApiBuilderException(
+                message: $"{entityName} does not have caching enabled.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+        }
+
+        if (entityConfig.Cache.UserProvidedTtlOptions)
+        {
+            return entityConfig.Cache.TtlSeconds.Value;
+        }
+        else
+        {
+            return GlobalCacheEntryTtl();
+        }
+    }
+
+    /// <summary>
+    /// Whether the caching service should be used for a given operation. This is determined by
+    /// - whether caching is enabled globally
+    /// - whether the datasource is SQL and session context is disabled.
+    /// </summary>
+    /// <returns>Whether cache operations should proceed.</returns>
+    public bool CanUseCache()
+    {
+        bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
+        return IsCachingEnabled && SqlDataSourceUsed && !setSessionContextEnabled;
+    }
+
+    /// <summary>
+    /// Returns the ttl-seconds value for the global cache entry.
+    /// If no value is explicitly set, returns the global default value.
+    /// </summary>
+    /// <returns>Number of seconds a cache entry should be valid before cache eviction.</returns>
+    public int GlobalCacheEntryTtl()
+    {
+        return Runtime is not null && Runtime.IsCachingEnabled && Runtime.Cache.UserProvidedTtlOptions
+            ? Runtime.Cache.TtlSeconds.Value
+            : EntityCacheOptions.DEFAULT_TTL_SECONDS;
+    }
+
     private void CheckDataSourceNamePresent(string dataSourceName)
     {
         if (!_dataSourceNameToDataSource.ContainsKey(dataSourceName))
@@ -375,11 +411,6 @@ public record RuntimeConfig
                 statusCode: HttpStatusCode.NotFound,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
         }
-    }
-
-    public void AddEntityNameToDataSourceNameMapping(string entityName, string dataSourceName)
-    {
-        _entityNameToDataSourceName.TryAdd(entityName, dataSourceName);
     }
 
     private void SetupDataSourcesUsed()

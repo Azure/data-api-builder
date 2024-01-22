@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -30,6 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly ILogger<IQueryEngine> _logger;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly GQLFilterParser _gQLFilterParser;
+        private readonly DabCacheService _cache;
 
         // <summary>
         // Constructor.
@@ -41,7 +43,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             ILogger<IQueryEngine> logger,
-            RuntimeConfigProvider runtimeConfigProvider)
+            RuntimeConfigProvider runtimeConfigProvider,
+            DabCacheService cache)
         {
             _queryFactory = queryFactory;
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
@@ -50,6 +53,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _gQLFilterParser = gQLFilterParser;
             _logger = logger;
             _runtimeConfigProvider = runtimeConfigProvider;
+            _cache = cache;
         }
 
         /// <summary>
@@ -199,21 +203,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName)
         {
-            DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
 
             // Open connection and execute query using _queryExecutor
             string queryString = queryBuilder.Build(structure);
-            JsonDocument? jsonDocument =
-                await queryExecutor.ExecuteQueryAsync(
-                    sqltext: queryString,
-                    parameters: structure.Parameters,
-                    dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
-                    httpContext: _httpContextAccessor.HttpContext!,
-                    args: null,
-                    dataSourceName: dataSourceName);
-            return jsonDocument;
+
+            if (runtimeConfig.CanUseCache())
+            {
+                bool dbPolicyConfigured = !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
+
+                if (dbPolicyConfigured)
+                {
+                    DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
+                    JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                    byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+                    JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+                    return cacheServiceResponse;
+                }
+            }
+
+            JsonDocument? response = await queryExecutor.ExecuteQueryAsync(
+                sqltext: queryString,
+                parameters: structure.Parameters,
+                dataReaderHandler: queryExecutor.GetJsonResultAsync<JsonDocument>,
+                httpContext: _httpContextAccessor.HttpContext!,
+                args: null,
+                dataSourceName: dataSourceName);
+            return response;
         }
 
         // <summary>

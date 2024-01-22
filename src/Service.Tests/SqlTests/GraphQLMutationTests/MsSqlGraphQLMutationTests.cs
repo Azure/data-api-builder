@@ -59,6 +59,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new row in a table containing default values as built_in methods.
+        /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
+        /// as graphQL response.
+        /// </summary>
+        [TestMethod]
+        public override async Task InsertMutationWithDefaultBuiltInFunctions()
+        {
+            await base.InsertMutationWithDefaultBuiltInFunctions();
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new Publisher with name = 'New publisher'
         /// <code>Check: </code> Mutation fails because the database policy (@item.name ne 'New publisher') prohibits insertion of records with name = 'New publisher'.
         /// </summary>
@@ -841,10 +852,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// placement
         /// </summary>
         [TestMethod]
-        public async Task TestViolatingOneToOneRelashionShip()
+        public async Task TestViolatingOneToOneRelationship()
         {
             string expectedErrorMessageSubString = "Violation of UNIQUE KEY constraint";
-            await TestViolatingOneToOneRelashionShip(expectedErrorMessageSubString);
+            await TestViolatingOneToOneRelationship(expectedErrorMessageSubString);
         }
         #endregion
     }

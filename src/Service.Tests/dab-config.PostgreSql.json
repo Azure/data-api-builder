@@ -1291,6 +1291,14 @@
       },
       "permissions": [
         {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
           "role": "authenticated",
           "actions": [
             {
@@ -2329,6 +2337,26 @@
           ]
         }
       }
+    },
+    "DefaultBuiltInFunction": {
+      "source": {
+        "object": "default_with_function_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
     },
     "AuthorNF": {
       "source": {

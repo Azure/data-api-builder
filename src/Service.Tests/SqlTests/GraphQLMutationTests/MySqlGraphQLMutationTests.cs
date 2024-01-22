@@ -12,8 +12,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
     public class MySqlGraphQLMutationTests : GraphQLMutationTestBase
     {
         private static string _invalidForeignKeyError =
-            "Cannot add or update a child row: a foreign key constraint fails " +
-            "(\\u0060datagateway\\u0060.\\u0060books\\u0060";
+            "Cannot add or update a child row: a foreign key constraint fails";
 
         #region Test Fixture Setup
 
@@ -95,6 +94,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             await InsertMutationForComputedColumns(mySqlQuery);
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Inserts new row in a table containing default values as built_in methods.
+        /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
+        /// as graphQL response.
+        /// </summary>
+        [TestMethod]
+        public override async Task InsertMutationWithDefaultBuiltInFunctions()
+        {
+            await base.InsertMutationWithDefaultBuiltInFunctions();
         }
 
         /// <summary>
@@ -664,11 +674,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// placement
         /// </summary>
         [TestMethod]
-        public async Task TestViolatingOneToOneRelashionShip()
+        public async Task TestViolatingOneToOneRelationship()
         {
-            string errorMessage = "Duplicate entry \\u00271\\u0027 for key " +
-                                  "\\u0027book_website_placements.book_id\\u0027\"";
-            await TestViolatingOneToOneRelashionShip(errorMessage);
+            string errorMessage = "Duplicate entry '1' for key " +
+                                  "'book_website_placements.book_id'";
+            await TestViolatingOneToOneRelationship(errorMessage);
         }
 
         [TestMethod]

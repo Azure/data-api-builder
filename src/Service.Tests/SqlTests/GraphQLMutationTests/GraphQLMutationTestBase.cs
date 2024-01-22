@@ -41,6 +41,56 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new row and return all its columns
+        /// <code>Check: </code> A row is inserted in the table that has rows with default values as built_in methods.
+        /// it should insert it correctly with default values correctly handled by database.
+        /// current_date, current_timestamp, random_number, next_day have default value as built_in methods GETDATE(), NOW(), RAND(), DATEADD(), resp.
+        /// default_string_with_parenthesis has default value "()", default_function_string_with_parenthesis has default value "NOW()".
+        /// default_integer has default value 100, default_date_string has default value "1999-01-08 10:23:54".
+        /// Returned response would look like:
+        /// "createDefaultBuiltInFunction": {
+        ///   "current_date": "2023-12-15T16:24:48.267Z",
+        ///   "current_timestamp": "2023-12-15T16:24:48.267Z",
+        ///   "random_number": 0,
+        ///   "next_day": "2023-12-16T00:00:00.000Z",
+        ///   "default_string_with_paranthesis": "()",
+        ///   "default_function_string_with_paranthesis": "NOW()",
+        ///   "default_integer": 100,
+        ///   "default_date_string": "1999-01-08T10:23:54.000Z"
+        /// }
+        /// </summary>
+        public virtual async Task InsertMutationWithDefaultBuiltInFunctions()
+        {
+            string graphQLMutationName = "createDefaultBuiltInFunction";
+            string graphQLMutation = @"
+                mutation {
+                    createDefaultBuiltInFunction(item: { user_value: 1234 }) {
+                        current_date
+                        current_timestamp
+                        random_number
+                        next_day
+                        default_string_with_parenthesis
+                        default_function_string_with_parenthesis
+                        default_integer
+                        default_date_string
+                    }
+                }
+            ";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+
+            // Assert the values
+            Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("current_date").GetString()));
+            Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("current_timestamp").GetString()));
+            Assert.IsNotNull(result.GetProperty("random_number").GetInt32());
+            Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("next_day").GetString()));
+            Assert.AreEqual("()", result.GetProperty("default_string_with_parenthesis").GetString());
+            Assert.AreEqual("NOW()", result.GetProperty("default_function_string_with_parenthesis").GetString());
+            Assert.AreEqual(100, result.GetProperty("default_integer").GetInt32());
+            Assert.AreEqual("1999-01-08T10:23:54.000Z", result.GetProperty("default_date_string").GetString());
+        }
+
+        /// <summary>
         /// <code>Do: </code> Attempt to insert a new publisher with name not allowed by database policy (@item.name ne 'New publisher')
         /// <code>Check: </code> Mutation fails with expected authorization failure.
         /// </summary>
@@ -1188,7 +1238,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// Test adding a website placement to a book which already has a website
         /// placement
         /// </summary>
-        public async Task TestViolatingOneToOneRelashionShip(string errorMessage)
+        public async Task TestViolatingOneToOneRelationship(string errorMessage)
         {
             string graphQLMutationName = "createBookWebsitePlacement";
             string graphQLMutation = @"

@@ -1278,6 +1278,14 @@
             ]
           },
           {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
             Role: TestNestedFilterFieldIsNull_ColumnForbidden,
             Actions: [
               {
@@ -2095,16 +2103,13 @@
       GetPublisher: {
         Source: {
           Object: get_publisher_by_id,
-          Type: stored-procedure,
-          Parameters: {
-            id: 1
-          }
+          Type: stored-procedure
         },
         GraphQL: {
           Singular: GetPublisher,
           Plural: GetPublishers,
           Enabled: true,
-          Operation: Mutation
+          Operation: Query
         },
         Rest: {
           Methods: [
@@ -2546,6 +2551,32 @@
         GraphQL: {
           Singular: books_sold,
           Plural: books_sold,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      DefaultBuiltInFunction: {
+        Source: {
+          Object: default_with_function_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: DefaultBuiltInFunction,
+          Plural: DefaultBuiltInFunctions,
           Enabled: true
         },
         Rest: {

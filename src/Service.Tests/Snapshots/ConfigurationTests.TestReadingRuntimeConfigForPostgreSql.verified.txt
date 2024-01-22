@@ -1230,6 +1230,14 @@
             ]
           },
           {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
             Role: TestNestedFilterFieldIsNull_ColumnForbidden,
             Actions: [
               {
@@ -2034,6 +2042,32 @@
         GraphQL: {
           Singular: books_sold,
           Plural: books_sold,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      DefaultBuiltInFunction: {
+        Source: {
+          Object: default_with_function_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: DefaultBuiltInFunction,
+          Plural: DefaultBuiltInFunctions,
           Enabled: true
         },
         Rest: {

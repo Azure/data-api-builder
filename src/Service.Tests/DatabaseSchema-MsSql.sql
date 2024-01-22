@@ -50,6 +50,7 @@ DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS fte_data;
 DROP TABLE IF EXISTS intern_data;
 DROP TABLE IF EXISTS books_sold;
+DROP TABLE IF EXISTS default_with_function_table;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -285,6 +286,20 @@ create table books_sold
     last_sold_on_date as last_sold_on,
 )
 
+CREATE TABLE default_with_function_table
+(
+    id INT PRIMARY KEY IDENTITY(1,1),
+    user_value INT,
+    [current_date] DATETIME DEFAULT GETDATE() NOT NULL,
+    [current_timestamp] DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    random_number INT DEFAULT RAND() NOT NULL,
+    next_day DATETIME DEFAULT DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()) + 1, 0) NOT NULL,
+	default_string_with_parenthesis VARCHAR(100) DEFAULT '()',
+	default_function_string_with_parenthesis VARCHAR(100) DEFAULT 'NOW()',
+	default_integer INT DEFAULT 100,
+    default_date_string DATETIME DEFAULT '1999-01-08 10:23:54'
+)
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -468,6 +483,7 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 (5, 'Snow White', 'AnotherTales', 3001);
 INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2, 1, 'Tales'),(0,1,''),(100, 99, 'Historical');
 INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, 1), (1, 1, 42.75, 0), (100, 99, NULL, NULL);
+INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100.57, 1);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');

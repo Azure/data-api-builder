@@ -48,7 +48,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 {
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     NameNode name = objectTypeDefinitionNode.Name;
-                    string returnEntityName = databaseTypes[dbEntityName] is DatabaseType.DWSQL ? GraphQLUtils.DB_OPERATION_RESULT_TYPE : name.Value;
 
                     // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.
@@ -76,6 +75,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     }
                     else
                     {
+                        string returnEntityName = databaseTypes[dbEntityName] is DatabaseType.DWSQL ? GraphQLUtils.DB_OPERATION_RESULT_TYPE : name.Value;
                         AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
                         AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
                         AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);

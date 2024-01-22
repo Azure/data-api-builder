@@ -110,14 +110,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         // When read permission is not configured, an error response is returned. So, the mutation result needs to
                         // be computed only when the read permission is configured.
-                        if (isReadPermissionConfigured && context.Selection.Type.TypeName() != GraphQLUtils.DB_OPERATION_RESULT_TYPE)
+                        if (isReadPermissionConfigured)
                         {
-                            // compute the mutation result before removing the element,
-                            // since typical GraphQL delete mutations return the metadata of the deleted item.
-                            result = await queryEngine.ExecuteAsync(
-                                        context,
-                                        GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
-                                        dataSourceName);
+                            // For cases we only require summary, we can skip getting the impacted records.
+                            if (context.Selection.Type.TypeName() != GraphQLUtils.DB_OPERATION_RESULT_TYPE)
+                            {
+                                // compute the mutation result before removing the element,
+                                // since typical GraphQL delete mutations return the metadata of the deleted item.
+                                result = await queryEngine.ExecuteAsync(
+                                            context,
+                                            GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
+                                            dataSourceName);
+                            }
                         }
 
                         Dictionary<string, object>? resultProperties =
@@ -163,21 +167,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         // When read permission is not configured, an error response is returned. So, the mutation result needs to
                         // be computed only when the read permission is configured.
-                        if (isReadPermissionConfigured && mutationResultRow is not null && mutationResultRow.Columns.Count > 0
-                            && !context.Selection.Type.IsScalarType())
+                        if (isReadPermissionConfigured)
                         {
-                            // Because the GraphQL mutation result set columns were exposed (mapped) column names,
-                            // the column names must be converted to backing (source) column names so the
-                            // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
-                            // represent database column names.
-                            result = await queryEngine.ExecuteAsync(
-                                        context,
-                                        GetBackingColumnsFromCollection(entityName: entityName, parameters: mutationResultRow.Columns, sqlMetadataProvider: sqlMetadataProvider),
-                                        dataSourceName);
-                        }
-                        else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
-                        {
-                            result = GetDbOperationResultJsonDocument("success");
+                            if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
+                                && !context.Selection.Type.IsScalarType())
+                            {
+                                // Because the GraphQL mutation result set columns were exposed (mapped) column names,
+                                // the column names must be converted to backing (source) column names so the
+                                // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
+                                // represent database column names.
+                                result = await queryEngine.ExecuteAsync(
+                                            context,
+                                            GetBackingColumnsFromCollection(entityName: entityName, parameters: mutationResultRow.Columns, sqlMetadataProvider: sqlMetadataProvider),
+                                            dataSourceName);
+                            }
+                            else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
+                            {
+                                result = GetDbOperationResultJsonDocument("success");
+                            }
                         }
                     }
 

@@ -219,6 +219,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
         /// <summary>
         /// Generate the `create` mutation field for the GraphQL mutations for a given Object Definition
+        /// ReturnEntityName can be different from dbEntityName in cases where user wants summary results returned (through the DBOperationResult entity)
+        /// as opposed to full entity.
         /// </summary>
         /// <param name="name">Name of the GraphQL object to generate the create field for.</param>
         /// <param name="inputs">All known GraphQL input types.</param>

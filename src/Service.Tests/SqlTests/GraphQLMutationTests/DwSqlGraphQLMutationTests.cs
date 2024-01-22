@@ -39,8 +39,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         /// <summary>
         /// <code>Do: </code> Inserts new book and return its id and title
-        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
-        /// if the mutation query has returned the correct information
+        /// <code>Check: </code> Result value of success is verified in the response.
         /// </summary>
         [TestMethod]
         public async Task InsertMutation()
@@ -60,8 +59,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         /// <summary>
         /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
-        /// <code>Check: </code> If book with the expected values of the new book is present in the database and
-        /// if the mutation query has returned the correct information
+        /// <code>Check: </code> Result value of success is verified in the response.
         /// </summary>
         [TestMethod]
         public async Task InsertMutationWithVariables()
@@ -107,8 +105,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         /// <summary>
         /// <code>Do: </code>Update book in database and return its updated fields
-        /// <code>Check: </code>if the book with the id of the edited book and the new values exists in the database
-        /// and if the mutation query has returned the values correctly
+        /// <code>Check: </code>Result value of success is verified in the response.
         /// </summary>
         [TestMethod]
         public async Task UpdateMutation()
@@ -128,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         /// <summary>
         /// <code>Do: </code>Delete book by id
-        /// <code>Check: </code>if the mutation returned result is as expected and if book by that id has been deleted
+        /// <code>Check: </code>Result value of success is verified in the response and book by that id has been deleted
         /// </summary>
         [TestMethod]
         public async Task DeleteMutation()
@@ -260,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         /// <summary>
         /// <code>Do: </code>Update a simple view
-        /// <code>Check: </code> the updated entry is present in the view
+        /// <code>Check: </code> Result value of success is verified in the response.
         /// </summary>
         [TestMethod]
         public async Task UpdateSimpleView()
@@ -342,7 +339,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         /// <summary>
         /// Demonstrates that using mapped column names for fields within the GraphQL mutation results in successful engine processing
-        /// of removal of the record where column1 = $id and the returned object representing the deleting record utilizes the mapped column values.
+        /// of removal of the record where column1 = $id.
+        /// Result value of success is verified in the response.
         /// </summary>
         [TestMethod]
         public async Task DeleteMutationWithVariablesAndMappings()
@@ -377,7 +375,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         /// <summary>
         /// <code>Do: </code>Delete an entry from a simple view
-        /// <code>Check: </code>if the mutation returned result is as expected and if the entry that id has been deleted
+        /// <code>Check: </code>Result value of success is verified in the response and if the entry of that id has been deleted
         /// </summary>
         [TestMethod]
         public async Task DeleteFromSimpleView()
@@ -457,7 +455,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
-            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: $"item");
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: $"The argument `item` is required");
         }
 
         /// <summary>
@@ -564,7 +562,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
 
         [TestMethod]
         [Ignore]
-        /// <inheritdoc/>
+        /// <summary>
+        /// Database policy for create operation is only supported for mssql.
+        /// </summary>
         public override Task TestDbPolicyForCreateOperationReferencingFieldAbsentInRequest()
         {
             throw new NotImplementedException();

@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             string entityName = context.Selection.Field.Type.TypeName();
 
-            if (entityName == "DbOperationResult")
+            if (entityName is DB_OPERATION_RESULT_TYPE)
             {
                 // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
                 if (GraphQLUtils.TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))

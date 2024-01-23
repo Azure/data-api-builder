@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Controllers;
 using Microsoft.AspNetCore.Authorization;
@@ -34,6 +35,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using MySqlConnector;
 using Npgsql;
+using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 {
@@ -95,6 +97,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             runtimeConfig = DatabaseEngine switch
             {
                 TestCategory.MYSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "magazines"),
+                TestCategory.DWSQL => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines", new string[] { "id" }),
                 _ => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines"),
             };
 
@@ -140,6 +143,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 runtimeConfigProvider,
                 _metadataProviderFactory.Object);
 
+            Mock<IFusionCache> cache = new();
+            DabCacheService cacheService = new(cache.Object, logger: null, _httpContextAccessor.Object);
+
             _application = new WebApplicationFactory<Program>()
                 .WithWebHostBuilder(builder =>
                 {
@@ -157,7 +163,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                                 _authorizationResolver,
                                 _gQLFilterParser,
                                 _queryEngineLogger,
-                                runtimeConfigProvider
+                                runtimeConfigProvider,
+                                cacheService
                                 );
                         });
                         services.AddSingleton<IMutationEngine>(implementationFactory: (serviceProvider) =>
@@ -310,6 +317,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                              _sqlMetadataLogger,
                              dataSourceName);
                     break;
+                case TestCategory.DWSQL:
+                    Mock<ILogger<MsSqlQueryExecutor>> DwSqlQueryExecutorLogger = new();
+                    _queryBuilder = new DwSqlQueryBuilder();
+                    _defaultSchemaName = "dbo";
+                    _dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+                    _queryExecutor = new MsSqlQueryExecutor(
+                        runtimeConfigProvider,
+                        _dbExceptionParser,
+                        DwSqlQueryExecutorLogger.Object,
+                        httpContextAccessor.Object);
+                    _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+                    _queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(_queryExecutor);
+
+                    _sqlMetadataProvider =
+                         new MsSqlMetadataProvider(
+                             runtimeConfigProvider,
+                             _queryManagerFactory.Object,
+                             _sqlMetadataLogger,
+                             dataSourceName);
+                    break;
+
             }
         }
 

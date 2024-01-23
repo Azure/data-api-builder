@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
@@ -38,6 +39,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
 namespace Azure.DataApiBuilder.Service
@@ -85,10 +87,15 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton(configProvider);
             services.AddSingleton(configLoader);
 
-            // Add ApplicationTelemetry service and register custom ITelemetryInitializer implementation with the dependency injection
-            services.AddApplicationInsightsTelemetry();
-
-            services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            if (configProvider.TryGetConfig(out RuntimeConfig? runtimeConfig)
+                && runtimeConfig.Runtime?.Telemetry?.ApplicationInsights is not null
+                && runtimeConfig.Runtime.Telemetry.ApplicationInsights.Enabled)
+            {
+                // Add ApplicationTelemetry service and register
+                // custom ITelemetryInitializer implementation with the dependency injection
+                services.AddApplicationInsightsTelemetry();
+                services.AddSingleton<ITelemetryInitializer, AppInsightsTelemetryInitializer>();
+            }
 
             services.AddSingleton(implementationFactory: (serviceProvider) =>
             {
@@ -167,12 +174,24 @@ namespace Azure.DataApiBuilder.Service
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
                 return loggerFactory.CreateLogger<IAuthorizationResolver>();
             });
+
             services.AddSingleton<IAuthorizationHandler, RestAuthorizationHandler>();
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
             AddGraphQLService(services);
+            services.AddFusionCache()
+                .WithOptions(options =>
+                {
+                    options.FactoryErrorsLogLevel = LogLevel.Debug;
+                    options.EventHandlingErrorsLogLevel = LogLevel.Debug;
+                })
+                .WithDefaultEntryOptions(new FusionCacheEntryOptions
+                {
+                    Duration = TimeSpan.FromSeconds(5)
+                });
 
+            services.AddSingleton<DabCacheService>();
             services.AddControllers();
         }
 
@@ -229,7 +248,7 @@ namespace Azure.DataApiBuilder.Service
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, RuntimeConfigProvider runtimeConfigProvider, IHostApplicationLifetime hostLifetime)
         {
             bool isRuntimeReady = false;
             FileSystemRuntimeConfigLoader fileSystemRuntimeConfigLoader = (FileSystemRuntimeConfigLoader)runtimeConfigProvider.ConfigLoader;
@@ -247,10 +266,12 @@ namespace Azure.DataApiBuilder.Service
                     // Exiting if config provided is Invalid.
                     if (_logger is not null)
                     {
-                        _logger.LogError("Exiting the runtime engine...");
+                        _logger.LogError(
+                            message: "Could not initialize the engine with the runtime config file: {configFilePath}",
+                            fileSystemRuntimeConfigLoader.ConfigFilePath);
                     }
 
-                    throw new ApplicationException($"Could not initialize the engine with the runtime config file: {fileSystemRuntimeConfigLoader.ConfigFilePath}");
+                    hostLifetime.StopApplication();
                 }
             }
             else
@@ -562,12 +583,12 @@ namespace Azure.DataApiBuilder.Service
                 // Now that the configuration has been set, perform validation of the runtime config
                 // itself.
 
-                runtimeConfigValidator.ValidateConfig();
+                runtimeConfigValidator.ValidateConfigProperties();
 
                 if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    RuntimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
+                    runtimeConfigValidator.ValidatePermissionsInConfig(runtimeConfig);
                 }
 
                 IMetadataProviderFactory sqlMetadataProviderFactory =
@@ -600,8 +621,6 @@ namespace Azure.DataApiBuilder.Service
                     // Running only in developer mode to ensure fast and smooth startup in production.
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProviderFactory!);
                 }
-
-                runtimeConfigValidator.ValidateStoredProceduresInConfig(runtimeConfig, sqlMetadataProviderFactory!);
 
                 // Attempt to create OpenAPI document.
                 // Errors must not crash nor halt the intialization of the engine

@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
             };
 
-            await SetManagedIdentityAccessTokenIfAnyAsync(conn);
+            await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
             return await _retryPolicy.ExecuteAsync(async () =>
             {
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
                     }
 
-                    TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, args);
+                    TResult? result = await ExecuteQueryAgainstDbAsync(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
 
                     if (retryAttempt > 1)
                     {
@@ -149,6 +149,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext,
+            string dataSourceName,
             List<string>? args = null)
         {
             await conn.OpenAsync();
@@ -157,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
             // at the database level.
-            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters);
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
 
             cmd.CommandText = sessionParamsQuery + sqltext;
             if (parameters is not null)
@@ -313,12 +314,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Parse Results into Json and return
             if (dbDataReader.HasRows)
             {
-                // Make sure to get the complete json string in case of large document.
-                jsonResult =
-                    JsonSerializer.Deserialize<TResult>(
-                        await GetJsonStringFromDbReader(dbDataReader));
+                string jsonString = await GetJsonStringFromDbReader(dbDataReader);
+
+                ///Json string can be null or empty when the returned result from the db is NULL.
+                ///In dw case when the entire result is a null, a single row with an empty string is returned, owing to the isnullcheck that is done while constructing the json in the query.
+                if (!string.IsNullOrEmpty(jsonString))
+                {
+                    // Make sure to get the complete json string in case of large document.
+                    jsonResult = JsonSerializer.Deserialize<TResult>(jsonString);
+                }
             }
-            else
+
+            if (jsonResult is null)
             {
                 QueryExecutorLogger.LogInformation("Did not return any rows in the JSON result.");
             }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -109,6 +110,15 @@ namespace Azure.DataApiBuilder.Core.Services
             [SqlDbType.UniqueIdentifier] = typeof(Guid),
             [SqlDbType.VarBinary] = typeof(byte[]),
             [SqlDbType.VarChar] = typeof(string)
+        };
+
+        private static Dictionary<SqlDbType, DbType> _sqlDbDateTimeTypeToDbType = new()
+        {
+            [SqlDbType.Date] = DbType.Date,
+            [SqlDbType.DateTime] = DbType.DateTime,
+            [SqlDbType.SmallDateTime] = DbType.DateTime,
+            [SqlDbType.DateTime2] = DbType.DateTime2,
+            [SqlDbType.DateTimeOffset] = DbType.DateTimeOffset
         };
 
         /// <summary>
@@ -229,6 +239,17 @@ namespace Azure.DataApiBuilder.Core.Services
                 message: $"Tried to convert unsupported data type: {sqlDbTypeName}",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+        }
+
+        /// <summary>
+        /// Helper method to get the DbType corresponding to the given SqlDb datetime type.
+        /// </summary>
+        /// <param name="sqlDbType">Underlying sqlDbType of the parameter.</param>
+        /// <param name="dbType">DbType of the parameter corresponding to its sqlDbType.</param>
+        /// <returns>True if given DateTime sqlDbType is supported by DAB, else false.</returns>
+        public static bool TryGetDbTypeFromSqlDbDateTimeType(SqlDbType sqlDbType, [NotNullWhen(true)] out DbType dbType)
+        {
+            return _sqlDbDateTimeTypeToDbType.TryGetValue(sqlDbType, out dbType);
         }
     }
 }

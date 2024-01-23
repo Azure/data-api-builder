@@ -170,6 +170,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityRestOptionsConverterFactory(replaceEnvVar));
         options.Converters.Add(new EntityActionConverterFactory());
         options.Converters.Add(new DataSourceFilesConverter());
+        options.Converters.Add(new EntityCacheOptionsConverterFactory());
 
         if (replaceEnvVar)
         {
@@ -194,8 +195,7 @@ public abstract class RuntimeConfigLoader
             return connectionString;
         }
 
-        // Get the application name using ProductInfo.GetDataApiBuilderUserAgent().
-        string applicationName = ProductInfo.GetDataApiBuilderUserAgent();
+        string applicationName = ProductInfo.GetDataApiBuilderApplicationName();
 
         // Create a StringBuilder from the connection string.
         SqlConnectionStringBuilder connectionStringBuilder;

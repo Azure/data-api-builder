@@ -36,7 +36,7 @@ namespace Cli.Commands
             bool graphqlDisabled = false,
             CliBool restEnabled = CliBool.None,
             CliBool graphqlEnabled = CliBool.None,
-            CliBoolean restRequestBodyStrict = CliBoolean.None,
+            CliBool restRequestBodyStrict = CliBool.None,
             string? config = null)
             : base(config)
         {
@@ -61,7 +61,7 @@ namespace Cli.Commands
             RestRequestBodyStrict = restRequestBodyStrict;
         }
 
-        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql")]
+        [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql, dwsql")]
         public DatabaseType DatabaseType { get; }
 
         [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
@@ -118,7 +118,7 @@ namespace Cli.Commands
         // Since the rest.request-body-strict option does not have a default value, it is required to specify a value for this option if it is
         // included in the init command.
         [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
-        public CliBoolean RestRequestBodyStrict { get; }
+        public CliBool RestRequestBodyStrict { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

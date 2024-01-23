@@ -1095,6 +1095,14 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition.PrimaryKey = new(runtimeConfigKeyFields);
             }
 
+            if (sourceDefinition.PrimaryKey.Count == 0)
+            {
+                throw new DataApiBuilderException(
+                       message: $"Primary key not configured on the given database object {tableName}",
+                       statusCode: HttpStatusCode.ServiceUnavailable,
+                       subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
             _entities.TryGetValue(entityName, out Entity? entity);
             if (GetDatabaseType() is DatabaseType.MSSQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
             {

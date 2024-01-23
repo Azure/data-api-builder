@@ -352,12 +352,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return _runtimeConfig.IsDevelopmentMode();
         }
 
-        public bool TryGetEntityToFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             throw new NotImplementedException();
         }
 
-        public bool TryGetFieldToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        public bool TryGetBackingFieldToExposedFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             throw new NotImplementedException();
         }

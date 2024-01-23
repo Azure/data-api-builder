@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Given entity name, gets the map of backing field to exposed field mappings.
         /// </summary>
-        public bool TryGetBackingFieldToExposedFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
 
         /// <summary>
         /// Gets Partition Key Path of a database container.

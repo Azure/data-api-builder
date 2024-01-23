@@ -357,7 +357,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public bool TryGetBackingFieldToExposedFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             throw new NotImplementedException();
         }

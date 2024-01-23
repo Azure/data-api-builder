@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public bool TryGetBackingFieldToExposedFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             Dictionary<string, string>? columntoEntityMappings;
             mappings = null;

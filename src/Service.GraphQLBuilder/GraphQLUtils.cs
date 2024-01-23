@@ -300,7 +300,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 // Derive node from path - e.g. /books/{id} - node would be books.
                 // for this queryNode path we have stored the datasourceName needed to retrieve query and mutation engine of inner objects
                 object? obj = context.ContextData[GenerateDataSourceNameKeyFromPath(context)];
-                dataSourceName = obj?.ToString()!;
+
+                if (obj is null)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Unable to determine datasource name for operation.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                }
+
+                dataSourceName = obj.ToString()!;
             }
 
             return dataSourceName;

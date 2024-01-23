@@ -227,7 +227,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="objectTypeDefinitionNode">The GraphQL object type to generate for.</param>
         /// <param name="root">The GraphQL document root to find GraphQL schema items in.</param>
         /// <param name="databaseType">Type of database we're generating the field for.</param>
-        /// <param name="entity">Runtime config information for the type.</param>
+        /// <param name="entities">Runtime entities specification from config.</param>
+        /// <param name="dbEntityName">Entity name specified in the runtime config.</param>
+        /// <param name="returnEntityName">Name of type to be returned by the mutation.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
         public static FieldDefinitionNode Build(

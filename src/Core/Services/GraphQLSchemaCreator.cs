@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             Dictionary<string, FieldDefinitionNode> fields = new();
             NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
-            FieldDefinitionNode field = MutationBuilder.GetDefaultResultFieldForMutation();
+            FieldDefinitionNode field = GetDbOperationResultField();
 
             fields.TryAdd("result", field);
 
@@ -280,6 +280,21 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return root;
+        }
+
+        /// <summary>
+        /// Create and return a default GraphQL result field for a mutation which doesn't
+        /// define a result set and doesn't return any rows.
+        /// </summary>
+        private static FieldDefinitionNode GetDbOperationResultField()
+        {
+            return new(
+                location: null,
+                name: new("result"),
+                description: new StringValueNode("Contains result for mutation execution"),
+                arguments: new List<InputValueDefinitionNode>(),
+                type: new StringType().ToTypeNode(),
+                directives: new List<DirectiveNode>());
         }
 
         public (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateGraphQLObjects()

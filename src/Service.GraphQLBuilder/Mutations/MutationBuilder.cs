@@ -7,7 +7,6 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
-using HotChocolate.Types;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
@@ -180,21 +179,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 string s when s.StartsWith(EntityActionOperation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.UpdateGraphQL,
                 _ => EntityActionOperation.Delete
             };
-        }
-
-        /// <summary>
-        /// Create and return a default GraphQL result field for a mutation which doesn't
-        /// define a result set and doesn't return any rows.
-        /// </summary>
-        public static FieldDefinitionNode GetDefaultResultFieldForMutation()
-        {
-            return new(
-                location: null,
-                name: new("result"),
-                description: new StringValueNode("Contains result for mutation execution"),
-                arguments: new List<InputValueDefinitionNode>(),
-                type: new StringType().ToTypeNode(),
-                directives: new List<DirectiveNode>());
         }
     }
 }

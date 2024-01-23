@@ -112,7 +112,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // be computed only when the read permission is configured.
                         if (isReadPermissionConfigured)
                         {
-                            // For cases we only require summary, we can skip getting the impacted records.
+                            // For cases we only require a result summarizing the operation (DBOperationResult),
+                            // we can skip getting the impacted records.
                             if (context.Selection.Type.TypeName() != GraphQLUtils.DB_OPERATION_RESULT_TYPE)
                             {
                                 // compute the mutation result before removing the element,

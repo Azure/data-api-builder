@@ -285,7 +285,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public bool TryGetEntityToFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             Dictionary<string, string>? entityToColumnMappings;
             mappings = null;
@@ -299,7 +299,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc/>
-        public bool TryGetFieldToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        public bool TryGetBackingFieldToExposedFieldMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             Dictionary<string, string>? columntoEntityMappings;
             mappings = null;
@@ -1093,14 +1093,6 @@ namespace Azure.DataApiBuilder.Core.Services
             else
             {
                 sourceDefinition.PrimaryKey = new(runtimeConfigKeyFields);
-            }
-
-            if (sourceDefinition.PrimaryKey.Count == 0)
-            {
-                throw new DataApiBuilderException(
-                       message: $"Primary key not configured on the given database object {tableName}",
-                       statusCode: HttpStatusCode.ServiceUnavailable,
-                       subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
             _entities.TryGetValue(entityName, out Entity? entity);

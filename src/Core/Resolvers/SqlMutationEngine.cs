@@ -1134,16 +1134,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
 
             // Dictionary to store a mapping from entityName to all field names being referenced from that entity in the mutation.
-            Dictionary<string, HashSet<string>> fieldsToAuthorize = new();
+            Dictionary<string, HashSet<string>> entityAndFieldsToAuthorize = new();
             object? parameters;
             if (parametersDictionary.TryGetValue(inputArgumentName, out parameters))
             {
                 // Get all the entity names and field names referenced in the mutation.
-                PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schemaForArgument, entityName, context, parameters, _runtimeConfigProvider.GetConfig());
+                PopulateMutationFieldsToAuthorize(entityAndFieldsToAuthorize, schemaForArgument, entityName, context, parameters, _runtimeConfigProvider.GetConfig());
             }
 
             // List of entities which are being referenced in the mutation.
-            IEnumerable<string> entityNames = fieldsToAuthorize.Keys;
+            IEnumerable<string> entityNames = entityAndFieldsToAuthorize.Keys;
 
             // Perform authorization check at entity level.
             foreach(string entityNameInMutation in entityNames)
@@ -1159,7 +1159,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // Perform authorization checks at field level.
-            foreach ((string entityNameInMutation, HashSet<string> fieldsInEntity) in fieldsToAuthorize)
+            foreach ((string entityNameInMutation, HashSet<string> fieldsInEntity) in entityAndFieldsToAuthorize)
             {
                 if (!AreFieldsAuthorizedForEntity(clientRole, entityNameInMutation, EntityActionOperation.Create, fieldsInEntity))
                 {
@@ -1175,7 +1175,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Helper method to collect names of all the fields referenced from every entity in a GraphQL mutation.
         /// </summary>
-        /// <param name="fieldsToAuthorize">Dictionary to store all the entities and their corresponding fields are stored.</param>
+        /// <param name="entityAndFieldsToAuthorize">Dictionary to store all the entities and their corresponding fields are stored.</param>
         /// <param name="schema">Schema for the input field.</param>
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="context">Middleware Context.</param>
@@ -1184,9 +1184,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <example>       1. mutation {
         ///                 createbook(
         ///                     item: {
-        ///                         title: "book #1"
+        ///                         title: "book #1",
         ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
-        ///                         publisher: { name: "Macmillan publishers" }
+        ///                         publisher: { name: "Macmillan publishers" },
         ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
         ///                     })
         ///                 {
@@ -1195,15 +1195,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                 2. mutation {
         ///                 createbooks(
         ///                     items: [{
-        ///                         title: "book #1"
+        ///                         title: "book #1",
         ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
-        ///                         publisher: { name: "Macmillan publishers" }
+        ///                         publisher: { name: "Macmillan publishers" },
         ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
         ///                     },
         ///                     {
-        ///                         title: "book #2"
+        ///                         title: "book #2",
         ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
-        ///                         publisher: { name: "Pearson Education" }
+        ///                         publisher: { name: "Pearson Education" },
         ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", author_name: "William Shakespeare" }]
         ///                     }])
         ///                 {
@@ -1213,7 +1213,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                     }
         ///                 }</example>
         private void PopulateMutationFieldsToAuthorize(
-            Dictionary<string, HashSet<string>> fieldsToAuthorize,
+            Dictionary<string, HashSet<string>> entityAndFieldsToAuthorize,
             IInputField schema,
             string entityName,
             IMiddlewareContext context,
@@ -1225,25 +1225,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
-                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, listOfObjectFieldNode, fieldsToAuthorize, runtimeConfig);
+                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, listOfObjectFieldNode, entityAndFieldsToAuthorize, runtimeConfig);
             }
             else if (parameters is List<IValueNode> listOfIValueNode)
             {
                 // For the example createbooks mutation written above, the list value for `items` is interpreted as a List<IValueNode>
                 // i.e. items is a list of ObjectValueNode(s).
-                listOfIValueNode.ForEach(iValueNode => PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schema, entityName, context, iValueNode, runtimeConfig));
+                listOfIValueNode.ForEach(iValueNode => PopulateMutationFieldsToAuthorize(entityAndFieldsToAuthorize, schema, entityName, context, iValueNode, runtimeConfig));
             }
             else if (parameters is ObjectValueNode objectValueNode)
             {
                 // For the example createbook mutation written above, the node for publisher field is interpreted as an ObjectValueNode.
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
-                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, objectValueNode.Fields, fieldsToAuthorize, runtimeConfig);
+                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, objectValueNode.Fields, entityAndFieldsToAuthorize, runtimeConfig);
             }
             else if (parameters is ListValueNode listValueNode)
             {
                 // For the example createbook mutation written above, the list values for reviews and authors fields are interpreted as ListValueNode.
                 // All the nodes in the ListValueNode are parsed one by one.
-                listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => PopulateMutationFieldsToAuthorize(fieldsToAuthorize, schema, entityName, context, objectValueNodeInListValueNode, runtimeConfig));
+                listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => PopulateMutationFieldsToAuthorize(entityAndFieldsToAuthorize, schema, entityName, context, objectValueNodeInListValueNode, runtimeConfig));
             }
         }
 

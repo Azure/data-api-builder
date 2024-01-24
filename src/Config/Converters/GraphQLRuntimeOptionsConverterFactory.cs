@@ -9,6 +9,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private bool _replaceEnvVar;
+
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
@@ -18,11 +22,27 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new GraphQLRuntimeOptionsConverter();
+        return new GraphQLRuntimeOptionsConverter(_replaceEnvVar);
+    }
+
+    internal GraphQLRuntimeOptionsConverterFactory(bool replaceEnvVar)
+    {
+        _replaceEnvVar = replaceEnvVar;
     }
 
     private class GraphQLRuntimeOptionsConverter : JsonConverter<GraphQLRuntimeOptions>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private bool _replaceEnvVar;
+
+        /// <param name="replaceEnvVar">Whether to replace environment variable with its
+        /// value or not while deserializing.</param>
+        internal GraphQLRuntimeOptionsConverter(bool replaceEnvVar)
+        {
+            _replaceEnvVar = replaceEnvVar;
+        }
+
         public override GraphQLRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
@@ -79,7 +99,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                         case "path":
                             if (reader.TokenType is JsonTokenType.String)
                             {
-                                string? path = reader.GetString();
+                                string? path = reader.DeserializeString(_replaceEnvVar);
                                 if (path is null)
                                 {
                                     path = "/graphql";

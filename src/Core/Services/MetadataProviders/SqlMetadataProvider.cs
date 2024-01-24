@@ -1240,7 +1240,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
+            DataTable? dataTable = EntitiesDataSet.Tables[$"{schemaName}.{tableName}"];
             if (dataTable is null)
             {
                 try
@@ -1366,7 +1366,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 = $"SELECT * FROM {queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
             adapterForTable.SelectCommand = selectCommand;
 
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
+            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, $"{schemaName}.{tableName}");
             return dataTable[0];
         }
 

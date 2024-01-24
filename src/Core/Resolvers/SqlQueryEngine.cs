@@ -160,7 +160,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 context.EntityName,
                 _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName),
                 _authorizationResolver,
-                _gQLFilterParser,
+                _gQLFilterParser, 
                 context.ResolvedParameters);
             using JsonDocument? queryJson = await ExecuteAsync(structure, dataSourceName);
             // queryJson is null if dbreader had no rows to return

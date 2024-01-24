@@ -218,15 +218,6 @@ public class RelationshipMetadata
     /// </summary>
     public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; private set; }
         = new(StringComparer.InvariantCultureIgnoreCase);
-
-    /// <summary>
-    /// Dictionary of target entity name to ForeignKeyDefinition used for insert operation.
-    /// Do we need a list of <ForeignKeyDefinition> here? Is just a single ForeignKeyDefinition sufficient?
-    /// What happens when the fk constraint is made up of multiple columns?
-    /// </summary>
-    public Dictionary<string, ForeignKeyDefinition> TargetEntityToFkDefinitionMapForInsertOperation { get; set; }
-        = new(StringComparer.InvariantCultureIgnoreCase);
-
 }
 
 public class ColumnDefinition

@@ -34,6 +34,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null,
             string dataSourceName = "");
 
+        public TResult? ExecuteQuery2<TResult>(
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
+            HttpContext? httpContext = null,
+            List<string>? args = null,
+            string dataSourceName = "");
+
         /// <summary>
         /// Extracts the rows from the given DbDataReader to populate
         /// the JsonArray to be returned.
@@ -66,6 +74,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public Task<DbResultSet> ExtractResultSetFromDbDataReader(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
+
+        public DbResultSet ExtractResultSetFromDbDataReader2(DbDataReader dbDataReader, List<string>? args = null);
 
         /// <summary>
         /// Extracts the result set corresponding to the operation (update/insert) being executed.

@@ -1613,6 +1613,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
                     // If none of the inferred foreign keys have the referencing columns,
                     // it means metadata is still missing fail the bootstrap.
+
                     if (!foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() != 0)))
                     {
                         HandleOrRecordException(new NotSupportedException($"Some of the relationship information missing and could not be inferred for {sourceEntityName}."));
@@ -1709,6 +1710,8 @@ namespace Azure.DataApiBuilder.Core.Services
         private void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
+            List<Tuple<string, Tuple<string, ForeignKeyDefinition>>> invalidFkEntries = new();
+
             // For each table definition that has to be populated with the inferred
             // foreign key information.
             foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)
@@ -1718,7 +1721,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 foreach ((string entityName, RelationshipMetadata relationshipData)
                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
-
                     foreach(KeyValuePair<string, List<ForeignKeyDefinition> > entry in relationshipData.TargetEntityToFkDefinitionMap)
                     {
                         string targetEntityName = entry.Key;
@@ -1730,14 +1732,16 @@ namespace Azure.DataApiBuilder.Core.Services
                         // equate the referencing columns and referenced columns.
                         foreach (ForeignKeyDefinition fk in foreignKeys)
                         {
+                            if(PairToFkDefinition is null)
+                            {
+                                continue;
+                            }
+
                             // Add the referencing and referenced columns for this foreign key definition
                             // for the target.
-                            if (PairToFkDefinition is not null && PairToFkDefinition.TryGetValue(
+                            if (PairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
-                                //For insert operations, the foreign keys inferred from the database is given preference over the one declared in config file.
-                                relationshipData.TargetEntityToFkDefinitionMapForInsertOperation[targetEntityName] = inferredDefinition;
-
                                 if(fk.ReferencedColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
                                 {
                                     continue;
@@ -1757,9 +1761,32 @@ namespace Azure.DataApiBuilder.Core.Services
                                     fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
                                 }
                             }
-                        }    
+                            else
+                            {
+                                Tuple<string, Tuple<string, ForeignKeyDefinition>> invalidFkEntry = new(entityName, new(targetEntityName, fk));
+                                invalidFkEntries.Add(invalidFkEntry);
+                            }
+                        }   
                     }
                 }
+            }
+
+            RemoveInvalidFkEntries(invalidFkEntries);
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void RemoveInvalidFkEntries(List<Tuple<string, Tuple<string, ForeignKeyDefinition>>> invalidFkEntries)
+        {
+            foreach(Tuple<string, Tuple<string, ForeignKeyDefinition> > invalidFkEntry in invalidFkEntries)
+            {
+                string entityName = invalidFkEntry.Item1;
+                string relatedEntityName = invalidFkEntry.Item2.Item1;
+                ForeignKeyDefinition invalidFk = invalidFkEntry.Item2.Item2;
+
+                RelationshipMetadata relationshipMetadata = GetSourceDefinition(entityName).SourceEntityRelationshipMap[entityName];
+                relationshipMetadata.TargetEntityToFkDefinitionMap[relatedEntityName].Remove(invalidFk);
             }
         }
 

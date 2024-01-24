@@ -171,6 +171,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     ) AS subq"
             },
             {
+                "FindOnTableWithNamingCollision",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _collisionEntity + @"
+                        WHERE 1 <> 1
+                    ) AS subq"
+            },
+            {
                 "FindTestWithQueryStringOneField",
                 @"
                   SELECT json_agg(to_jsonb(subq)) AS data

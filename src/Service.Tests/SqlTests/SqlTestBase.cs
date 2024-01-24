@@ -101,6 +101,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                 _ => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "magazine", "foo.magazines"),
             };
 
+            // Add table name collision testing entity to the config
+            runtimeConfig = DatabaseEngine switch
+            {
+                TestCategory.MYSQL => runtimeConfig,
+                _ => TestHelper.AddMissingEntitiesToConfig(runtimeConfig, "bar_magazine", "bar.magazines", new string[] { "id" })
+            };
+
             // Add custom entities for the test, if any.
             runtimeConfig = AddCustomEntities(customEntities, runtimeConfig);
 

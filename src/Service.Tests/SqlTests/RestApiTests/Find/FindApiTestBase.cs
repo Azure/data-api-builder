@@ -128,6 +128,22 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
+        /// Tests the Rest Api to validate that queries work
+        /// when there are is the same table name in two different
+        /// schemas.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public virtual async Task FindOnTableWithNamingCollision()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: string.Empty,
+                entityNameOrPath: _collisionEntity,
+                sqlQuery: GetQuery("FindOnTableWithNamingCollision"));
+        }
+
+        /// <summary>
         /// Validates that a Find request on a single item with $select with only non-PK fields
         /// returns only the selected fields and does not contain PK fields.
         /// </summary>

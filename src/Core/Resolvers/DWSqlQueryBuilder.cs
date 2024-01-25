@@ -15,6 +15,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class DwSqlQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         private static DbCommandBuilder _builder = new SqlCommandBuilder();
+        public const string COUNT_ROWS_WITH_GIVEN_PK = "cnt_rows_to_update";
 
         /// <inheritdoc />
         public override string QuoteIdentifier(string ident)
@@ -161,19 +162,48 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse Sql currently does not support inserts");
+            string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+
+            // Predicates by virtue of database policy for Create action.
+            string dbPolicypredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
+
+            // Columns whose values are provided in the request body - to be inserted into the record.
+            string insertColumns = Build(structure.InsertColumns);
+
+            // Values to be inserted into the entity.
+            string values = dbPolicypredicates.Equals(BASE_PREDICATE) ?
+                $"VALUES ({string.Join(", ", structure.Values)});" : $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {dbPolicypredicates};";
+
+            // Final insert query to be executed against the database.
+            StringBuilder insertQuery = new();
+            insertQuery.Append($"INSERT INTO {tableName} ({insertColumns}) ");
+            insertQuery.Append(values);
+
+            return insertQuery.ToString();
         }
 
         /// <inheritdoc />
         public string Build(SqlUpdateStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support updates");
+            string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+            string predicates = JoinPredicateStrings(
+                       structure.GetDbPolicyForOperation(EntityActionOperation.Update),
+                       Build(structure.Predicates));
+
+            StringBuilder updateQuery = new($"UPDATE {tableName} SET {Build(structure.UpdateOperations, ", ")} ");
+            updateQuery.Append($"WHERE {predicates};");
+            return updateQuery.ToString();
         }
 
         /// <inheritdoc />
         public string Build(SqlDeleteStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support deletes");
+            string predicates = JoinPredicateStrings(
+                       structure.GetDbPolicyForOperation(EntityActionOperation.Delete),
+                       Build(structure.Predicates));
+
+            return $"DELETE FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                    $"WHERE {predicates} ";
         }
 
         /// <inheritdoc />
@@ -185,7 +215,65 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlUpsertQueryStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support updates");
+            string tableName = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}";
+
+            // Predicates by virtue of PK.
+            string pkPredicates = JoinPredicateStrings(Build(structure.Predicates));
+
+            string updateOperations = Build(structure.UpdateOperations, ", ");
+            string queryToGetCountOfRecordWithPK = $"SELECT COUNT(*) as {COUNT_ROWS_WITH_GIVEN_PK} FROM {tableName} WHERE {pkPredicates}";
+
+            // Query to get the number of records with a given PK.
+            string prefixQuery = $"DECLARE @ROWS_TO_UPDATE int;" +
+                $"SET @ROWS_TO_UPDATE = ({queryToGetCountOfRecordWithPK}); " +
+                $"{queryToGetCountOfRecordWithPK};";
+
+            // Final query to be executed for the given PUT/PATCH operation.
+            StringBuilder upsertQuery = new(prefixQuery);
+
+            // Query to update record (if there exists one for given PK).
+            StringBuilder updateQuery = new(
+                $"IF @ROWS_TO_UPDATE = 1 " +
+                $"BEGIN " +
+                $"UPDATE {tableName} " +
+                $"SET {updateOperations} ");
+
+            // End the IF block.
+            updateQuery.Append("END ");
+
+            // Append the update query to upsert query.
+            upsertQuery.Append(updateQuery);
+            if (!structure.IsFallbackToUpdate)
+            {
+                // Append the conditional to check if the insert query is to be executed or not.
+                // Insert is only attempted when no record exists corresponding to given PK.
+                upsertQuery.Append("ELSE BEGIN ");
+
+                // Columns which are assigned some value in the PUT/PATCH request.
+                string insertColumns = Build(structure.InsertColumns);
+
+                // Predicates added by virtue of database policy for create operation.
+                string createPredicates = JoinPredicateStrings(structure.GetDbPolicyForOperation(EntityActionOperation.Create));
+
+                // Query to insert record (if there exists none for given PK).
+                StringBuilder insertQuery = new($"INSERT INTO {tableName} ({insertColumns}) ");
+
+                // Query to fetch the column values to be inserted into the entity.
+                string fetchColumnValuesQuery = BASE_PREDICATE.Equals(createPredicates) ?
+                    $"VALUES({string.Join(", ", structure.Values)});" :
+                    $"SELECT {insertColumns} FROM (VALUES({string.Join(", ", structure.Values)})) T({insertColumns}) WHERE {createPredicates};";
+
+                // Append the values to be inserted to the insertQuery.
+                insertQuery.Append(fetchColumnValuesQuery);
+
+                // Append the insert query to the upsert query.
+                upsertQuery.Append(insertQuery.ToString());
+
+                // End the ELSE block.
+                upsertQuery.Append("END");
+            }
+
+            return upsertQuery.ToString();
         }
 
         /// <summary>

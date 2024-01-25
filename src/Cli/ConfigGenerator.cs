@@ -1319,7 +1319,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// This method will add the telemetry options to the config file. if the config file already has telemetry options,
+        /// This method will add the telemetry options to the config file. If the config file already has telemetry options,
         /// it will overwrite the existing options.
         /// Data API builder consumes the config file with provided telemetry options to send telemetry to Application Insights.
         /// </summary>

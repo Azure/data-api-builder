@@ -40,7 +40,8 @@ namespace Cli.Tests
             Assert.IsTrue(fileSystem.FileExists(configPath));
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(fileSystem.File.ReadAllText(configPath), out RuntimeConfig? config));
             Assert.IsNotNull(config);
-            Assert.IsNull(config.Runtime!.Telemetry);
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNull(config.Runtime.Telemetry);
 
             // Add Telemetry
             bool isSuccess = ConfigGenerator.TryAddTelemetry(
@@ -55,8 +56,9 @@ namespace Cli.Tests
                 Assert.IsTrue(fileSystem.FileExists(configPath));
                 Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(fileSystem.File.ReadAllText(configPath), out config));
                 Assert.IsNotNull(config);
-                Assert.IsNotNull(config.Runtime!.Telemetry);
-                TelemetryOptions telemetryOptions = config.Runtime!.Telemetry;
+                Assert.IsNotNull(config.Runtime);
+                Assert.IsNotNull(config.Runtime.Telemetry);
+                TelemetryOptions telemetryOptions = config.Runtime.Telemetry;
                 Assert.IsNotNull(telemetryOptions.ApplicationInsights);
                 Assert.AreEqual(isTelemetryEnabled is CliBool.True ? true : false, telemetryOptions.ApplicationInsights.Enabled);
                 Assert.AreEqual(appInsightsConnString, telemetryOptions.ApplicationInsights.ConnectionString);
@@ -88,13 +90,13 @@ namespace Cli.Tests
 
             if (isEmptyTelemetry)
             {
-                Assert.IsNull(config.Runtime!.Telemetry!.ApplicationInsights);
+                Assert.IsNull(config.Runtime.Telemetry.ApplicationInsights);
             }
             else
             {
-                Assert.IsNotNull(config.Runtime!.Telemetry!.ApplicationInsights);
-                Assert.AreEqual(true, config.Runtime!.Telemetry!.ApplicationInsights!.Enabled);
-                Assert.AreEqual("InstrumentationKey=00000000-0000-0000-0000-000000000000", config.Runtime!.Telemetry!.ApplicationInsights!.ConnectionString);
+                Assert.IsNotNull(config.Runtime.Telemetry.ApplicationInsights);
+                Assert.AreEqual(true, config.Runtime.Telemetry.ApplicationInsights.Enabled);
+                Assert.AreEqual("InstrumentationKey=00000000-0000-0000-0000-000000000000", config.Runtime.Telemetry.ApplicationInsights.ConnectionString);
             }
 
             // Add Telemetry
@@ -108,10 +110,11 @@ namespace Cli.Tests
             Assert.IsTrue(fileSystem.FileExists(configPath));
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(fileSystem.File.ReadAllText(configPath), out config));
             Assert.IsNotNull(config);
-            Assert.IsNotNull(config.Runtime!.Telemetry);
-            Assert.IsNotNull(config.Runtime!.Telemetry.ApplicationInsights);
-            Assert.IsFalse(config.Runtime!.Telemetry!.ApplicationInsights.Enabled);
-            Assert.AreEqual("InstrumentationKey=11111-1111-111-11-1", config.Runtime!.Telemetry!.ApplicationInsights.ConnectionString);
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
+            Assert.IsNotNull(config.Runtime.Telemetry.ApplicationInsights);
+            Assert.IsFalse(config.Runtime.Telemetry.ApplicationInsights.Enabled);
+            Assert.AreEqual("InstrumentationKey=11111-1111-111-11-1", config.Runtime.Telemetry.ApplicationInsights.ConnectionString);
         }
 
         /// <summary>

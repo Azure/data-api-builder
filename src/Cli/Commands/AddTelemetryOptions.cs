@@ -14,7 +14,7 @@ namespace Cli.Commands
     /// <summary>
     /// Telemetry command options
     /// </summary>
-    [Verb("add-telemetry", isDefault: false, HelpText = "Add telemtry for Data Api builder Application", Hidden = false)]
+    [Verb("add-telemetry", isDefault: false, HelpText = "Add telemetry for Data Api builder Application", Hidden = false)]
     public class AddTelemetryOptions : Options
     {
         public AddTelemetryOptions(string appInsightsConnString, CliBool appInsightsEnabled, string? config) : base(config)
@@ -24,11 +24,11 @@ namespace Cli.Commands
         }
 
         // Connection string for the Application Insights resource to which telemetry data should be sent.
-        // This optional is required and must be provided a valid connection string.
+        // This option  is required and must be provided with a valid connection string.
         [Option("app-insights-conn-string", Required = true, HelpText = "Connection string for the Application Insights resource for telemetry data")]
         public string AppInsightsConnString { get; }
 
-        // To specifies whether Application Insights telemetry should be enabled. This flag is optional and default value is true.
+        // To specify whether Application Insights telemetry should be enabled. This flag is optional and default value is true.
         [Option("app-insights-enabled", Default = CliBool.True, Required = false, HelpText = "(Default: true) Enable/Disable Application Insights")]
         public CliBool AppInsightsEnabled { get; }
 

@@ -83,7 +83,8 @@ namespace Cli.Tests
             Assert.IsTrue(fileSystem.FileExists(configPath));
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(fileSystem.File.ReadAllText(configPath), out RuntimeConfig? config));
             Assert.IsNotNull(config);
-            Assert.IsNotNull(config.Runtime!.Telemetry);
+            Assert.IsNotNull(config.Runtime);
+            Assert.IsNotNull(config.Runtime.Telemetry);
 
             if (isEmptyTelemetry)
             {

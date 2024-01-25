@@ -420,7 +420,15 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
-            return (IMetadata)context.ContextData[metadataKey]!;
+
+            if (context.ContextData.ContainsKey(metadataKey))
+            {
+                return (IMetadata)context.ContextData[metadataKey]!;
+            }
+            else
+            {
+                return null!;
+            }
         }
 
         private static IMetadata GetMetadataObjectField(IPureResolverContext context)

@@ -192,7 +192,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public IReadOnlyList<JsonElement> ResolveList(
+        public object ResolveList(
                     JsonElement array,
                     IObjectField fieldSchema,
                     ref IMetadata metadata)

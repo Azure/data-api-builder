@@ -226,7 +226,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 listValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
                 IMetadata metadata = GetMetadata(context);
-                IReadOnlyList<JsonElement> result = queryEngine.ResolveList(listValue, context.Selection.Field, ref metadata);
+                object result = queryEngine.ResolveList(listValue, context.Selection.Field, ref metadata);
                 SetNewMetadataChildren(context, metadata);
                 return result;
             }

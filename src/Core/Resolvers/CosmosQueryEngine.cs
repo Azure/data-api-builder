@@ -196,15 +196,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public IReadOnlyList<JsonElement> ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
+        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
-            List<JsonElement> list = new();
-            foreach (JsonElement element in array.EnumerateArray())
+            IType listType = fieldSchema.Type;
+            // Is the List type nullable? [...]! vs [...]
+            if (listType.IsNonNullType())
             {
-                list.Add(element);
+                listType = listType.InnerType().InnerType();
+            }
+            else
+            {
+                listType = listType.InnerType();
             }
 
-            return list;
+            // Is the type of the list values nullable?
+            if (listType.IsNonNullType())
+            {
+                listType = listType.InnerType();
+            }
+
+            if (listType.IsObjectType())
+            {
+                return JsonSerializer.Deserialize<List<JsonElement>>(array);
+            }
+
+            return JsonSerializer.Deserialize(array, fieldSchema.RuntimeType);
         }
 
         /// <summary>

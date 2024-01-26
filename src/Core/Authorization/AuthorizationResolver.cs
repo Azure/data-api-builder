@@ -4,6 +4,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
+using System.Security.Principal;
+using System.Text;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -438,9 +440,9 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
-    /// Returns a dictionary (claim name -> claim) populated from claims within a ClaimsPrincipal's ClaimsIdentity object.
-    /// Collect all unique token claims.
-    /// Claims with a value whose data type is one of the following may result in duplicate claim types which are not supported:
+    /// Returns a dictionary (claim name -> list of claims) populated from claims within a ClaimsPrincipal's ClaimsIdentity object.
+    /// Dictionary keys represent all unique token claims detected in access token.
+    /// Claims with a value whose data type is one of the following may result in multiple claims with the same type and different values.
     /// 1. JSON object
     /// 2. JSON array: e.g. roles and groups claim, which are arrays of strings and are flattened to: roles: role1, roles: role2, groups: group1, groups: group2
     /// 3. String delimited with spaces -> e.g. scp claim, which is a space delimited string of scopes and is flattened to: scp: scope1, scp: scope2. scp: scope3
@@ -453,22 +455,17 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// Only ignore duplicates because to ingore specific claim types (besides the role claim) is a breaking change.
     /// e.g. When only one scope exists in a JWT token, one scp claim will be resolved: scp: scope1
     /// However, a delimited scp claim will result in multiple claims -> scp: scope1 , scp: scope2.
-    /// We can't know which scp the user intends to use in a database policy or session context variable, so we remove all scp claims when duplicates exist.
-    /// Because claims are resolved into a dictionary by DAB, dupes have been and continue to be unsupported.
     /// </summary>
     /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
     /// <returns>Dictionary with claimType -> claim mappings.</returns>
-    public static Dictionary<string, Claim> GetAllUserClaims(HttpContext? context)
+    public static Dictionary<string, List<Claim>> GetAllUserClaims(HttpContext? context)
     {
-        Dictionary<string, Claim> claimsInRequestContext = new();
+        Dictionary<string, List<Claim>> claimsInRequestContext = new();
         if (context is null)
         {
             return claimsInRequestContext;
         }
 
-        string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
-
-        HashSet<string> duplicateClaimNames = new();
         // Iterate through all the identities to populate claims in request context.
         foreach (ClaimsIdentity identity in context.User.Identities)
         {
@@ -478,12 +475,106 @@ public class AuthorizationResolver : IAuthorizationResolver
                 continue;
             }
 
-            // From the authenticated identity, find and extract the role claim matching the role designated
-            // in the client role header. This claim will be added to the claimsInRequestContext dictionary.
+            foreach (Claim claim in identity.Claims)
+            {
+                if (claimsInRequestContext.ContainsKey(claim.Type))
+                {
+                    claimsInRequestContext[claim.Type].Add(claim);
+                }
+                else
+                {
+                    claimsInRequestContext.Add(claim.Type, new List<Claim>() { claim });
+                }
+            }
+        }
+
+        return claimsInRequestContext;
+    }
+
+    public static Dictionary<string, string> GetProcessedUserClaims(HttpContext? context)
+    {
+        if (context is null)
+        {
+            return new();
+        }
+
+        List<Claim> userClaims = GetAuthenticatedUserClaims(context.User);
+        Dictionary<string, List<Claim>> authenticatedUserClaims = new();
+
+        foreach (Claim claim in userClaims)
+        {
+            if (authenticatedUserClaims.ContainsKey(claim.Type))
+            {
+                authenticatedUserClaims[claim.Type].Add(claim);
+            }
+            else
+            {
+                authenticatedUserClaims.Add(claim.Type, new List<Claim>() { claim });
+            }
+        }
+
+        Dictionary<string, string> result = new();
+        foreach ((string claimName, List<Claim> claimValues) in authenticatedUserClaims)
+        {
+            StringBuilder spaceDelimitedClaimPayload = new();
+            for (int i = 0; i < claimValues.Count - 1; i++)
+            {
+                spaceDelimitedClaimPayload.Append(claimValues[i].Value + " ");
+            }
+
+            spaceDelimitedClaimPayload.Append(claimValues[claimValues.Count - 1].Value);
+            result.Add(claimName, spaceDelimitedClaimPayload.ToString());
+        }
+
+        return result;
+    }
+
+    private static List<Claim> GetAuthenticatedUserClaims(ClaimsPrincipal claimsPrincipal)
+    {
+        List<Claim> claims = new();
+        foreach (ClaimsIdentity identity in claimsPrincipal.Identities)
+        {
+            if (identity.IsAuthenticated)
+            {
+                claims.AddRange(identity.Claims);
+            }
+        }
+
+        return claims;
+    }
+
+    /// <summary>
+    /// Helper method to extract all claims available in the HttpContext's user object and add the claims
+    /// to the claimsInRequestContext dictionary to be used for claimType -> claim lookups.
+    /// </summary>
+    /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
+    /// <returns>Dictionary with claimType -> claim mappings.</returns>
+    public static Dictionary<string, Claim> GetAllUserClaimsForDbPolicy(HttpContext? context)
+    {
+        Dictionary<string, Claim> claimsInRequestContext = new();
+        if (context is null)
+        {
+            return claimsInRequestContext;
+        }
+
+        string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
+
+        // Iterate through all the identities to populate claims in request context.
+        foreach (ClaimsIdentity identity in context.User.Identities)
+        {
+
+            // Only add a role claim which represents the role context evaluated for the request,
+            // as this can be via the virtue of an identity added by DAB.
             if (!claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
                 identity.HasClaim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader))
             {
                 claimsInRequestContext.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
+            }
+
+            // If identity is not authenticated, we don't honor any other claims present in this identity.
+            if (!identity.IsAuthenticated)
+            {
+                continue;
             }
 
             foreach (Claim claim in identity.Claims)
@@ -494,21 +585,17 @@ public class AuthorizationResolver : IAuthorizationResolver
                  * claim.Value: "authz@microsoft.com"
                  * claim.ValueType: "string"
                  */
-                // Ignore role claims because they have already been processed.
-                // Only the role claim designated in the client role header is added to the claimsInRequestContext dictionary.
+                // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
                 if (!claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE) && !claimsInRequestContext.TryAdd(claim.Type, claim))
                 {
-                    duplicateClaimNames.Add(claim.Type);
+                    // If there are duplicate claims present in the request, return an exception.
+                    throw new DataApiBuilderException(
+                        message: "Duplicate claims are not allowed within a request.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        );
                 }
             }
-        }
-
-        // Remove any claimType detected to have more than one instance.
-        // For example: scp claim is a json array of strings. If the user has multiple scopes,
-        // the claimType will be present multiple times.
-        foreach (string claimType in duplicateClaimNames)
-        {
-            claimsInRequestContext.Remove(claimType);
         }
 
         return claimsInRequestContext;

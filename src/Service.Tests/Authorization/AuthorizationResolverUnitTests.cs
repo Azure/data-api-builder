@@ -1246,7 +1246,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Execute the method to be tested - GetAllUserClaims().
-            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaimsForDbPolicy(context.Object);
 
             // Assert that only the role claim corresponding to clientRoleHeader is added to the claims dictionary.
             Assert.IsTrue(claimsInRequestContext.Count == 1);
@@ -1291,7 +1291,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Act
-            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaimsForDbPolicy(context.Object);
 
             // Assert
             Assert.AreEqual(claimsInRequestContext.Count, 1, message: "Only one claim should be present to represent the client role header context.");
@@ -1302,8 +1302,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <summary>
         /// JWT token JSON payloads may not be flat and may contain nested JSON objects or arrays.
         /// This test validates that when dotnet (authentication jwt processing code) flattens the JWT token payload,
-        /// DAB is able to pick out claims that only occur a single time. Multiple claims with the same name
-        /// are not supported in DAB. This test also protects against regression in current functionality because
+        /// This test also protects against regression in current functionality because
         /// this scenario works today. If we ignored any claim that *may* result in duplicate claims using the same name,
         /// we would be making a breaking change.
         /// DAB's Database Policies and Session context features utilize access token claims and those features
@@ -1322,7 +1321,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 new("sub", "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY"),
                 new("oid", "55296aad-ea7f-4c44-9a4c-bb1e8d43a005"),
                 new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE),
-                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "Don't_Parse_This_Role")
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "ROLE2")
             };
 
             //Add identity object to the Mock context object.
@@ -1336,7 +1335,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Act
-            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaimsForDbPolicy(context.Object);
 
             // Assert
             Assert.AreEqual(claimsInRequestContext.Count, 4, message: "Four claims were expected.");
@@ -1389,7 +1388,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Act
-            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaimsForDbPolicy(context.Object);
 
             // Assert
             Assert.AreEqual(claimsInRequestContext.Count, 2, message: "Only two claims should be present.");

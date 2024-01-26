@@ -21,7 +21,6 @@ using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Processing;
 using HotChocolate.Resolvers;
-using HotChocolate.Types;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;

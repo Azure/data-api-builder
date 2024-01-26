@@ -318,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Get entity name from context object.
         /// </summary>
-        public static string GetEntityNameFromContext(IMiddlewareContext context)
+        public static string GetEntityNameFromContext(IPureResolverContext context)
         {
             string entityName = context.Selection.Field.Type.TypeName();
 

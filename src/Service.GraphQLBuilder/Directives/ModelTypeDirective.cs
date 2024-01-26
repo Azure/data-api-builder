@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
             descriptor.Name(DirectiveName)
                 .Description("A directive to indicate the type maps to a storable entity not a nested entity.");
 
-            descriptor.Location(DirectiveLocation.Object);
+            descriptor.Location(DirectiveLocation.Object | DirectiveLocation.FieldDefinition);
 
             descriptor.Argument(ModelNameArgument)
                 .Description("Underlying name of the database entity.")

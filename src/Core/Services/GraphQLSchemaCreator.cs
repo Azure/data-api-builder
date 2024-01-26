@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
@@ -233,6 +234,20 @@ namespace Azure.DataApiBuilder.Core.Services
                 objectTypes[entityName] = QueryBuilder.AddQueryArgumentsForRelationships(node, inputObjects);
             }
 
+            Dictionary<string, FieldDefinitionNode> fields = new();
+            NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
+            FieldDefinitionNode field = GetDbOperationResultField();
+
+            fields.TryAdd("result", field);
+
+            objectTypes.Add(GraphQLUtils.DB_OPERATION_RESULT_TYPE, new ObjectTypeDefinitionNode(
+                location: null,
+                name: nameNode,
+                description: null,
+                new List<DirectiveNode>(),
+                new List<NamedTypeNode>(),
+                fields.Values.ToImmutableList()));
+
             List<IDefinitionNode> nodes = new(objectTypes.Values);
             return new DocumentNode(nodes);
         }
@@ -266,6 +281,21 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return root;
+        }
+
+        /// <summary>
+        /// Create and return a default GraphQL result field for a mutation which doesn't
+        /// define a result set and doesn't return any rows.
+        /// </summary>
+        private static FieldDefinitionNode GetDbOperationResultField()
+        {
+            return new(
+                location: null,
+                name: new("result"),
+                description: new StringValueNode("Contains result for mutation execution"),
+                arguments: new List<InputValueDefinitionNode>(),
+                type: new StringType().ToTypeNode(),
+                directives: new List<DirectiveNode>());
         }
 
         public (DocumentNode, Dictionary<string, InputObjectTypeDefinitionNode>) GenerateGraphQLObjects()

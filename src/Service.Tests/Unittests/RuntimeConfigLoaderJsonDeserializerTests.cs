@@ -107,6 +107,51 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Tests the parsing of the runtime configuration with environment variables based on replaceEnvVar parameter.
+        /// </summary>
+        /// <param name="replaceEnvVar">A boolean indicating whether to replace environment variables in the configuration.</param>
+        [DataTestMethod]
+        [DataRow(false, DisplayName="Do not replace environment variables.")]
+        [DataRow(true, DisplayName="Replace environment variables.")]
+        public void TestConfigParsingWithEnvVarReplacement(bool replaceEnvVar)
+        {
+            SetEnvironmentVariablesFromText(_environmentFileContent);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+              _configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: replaceEnvVar));
+            Assert.AreEqual(runtimeConfig.DataSource.ConnectionString, GetEnvironmentVariableIfReplaced("DATABASE_CONNECTION_STRING", replaceEnvVar));
+            Assert.AreEqual(runtimeConfig.DataSource.Options["database"].ToString(), GetEnvironmentVariableIfReplaced("DATABASE_NAME", replaceEnvVar));
+            Assert.AreEqual(runtimeConfig.DataSource.Options["schema"].ToString(), GetEnvironmentVariableIfReplaced("GRAPHQL_SCHEMA_PATH", replaceEnvVar));
+            Assert.AreEqual(runtimeConfig.Runtime.Host.Authentication.Jwt.Audience, GetEnvironmentVariableIfReplaced("JWT_AUDIENCE", replaceEnvVar));
+            Assert.AreEqual(runtimeConfig.Runtime.Host.Authentication.Jwt.Issuer, GetEnvironmentVariableIfReplaced("JWT_ISSUER", replaceEnvVar));
+            Assert.AreEqual(runtimeConfig.Entities["Book"].Source.Object, GetEnvironmentVariableIfReplaced("ENTITY_SOURCE", replaceEnvVar));
+            Assert.AreEqual(runtimeConfig.Entities["Book"].Rest.Path, GetEnvironmentVariableIfReplaced("ENTITY_REST_PATH", replaceEnvVar));
+            Assert.AreEqual(runtimeConfig.Entities["Book"].Permissions[0].Role, GetEnvironmentVariableIfReplaced("ENTITY_ROLE", replaceEnvVar));
+            
+            ClearEnvironmentVariablesFromText(_environmentFileContent);
+        }
+
+        /// <summary>
+        /// Retrieves the value of an environment variable if replacement is enabled, otherwise returns a placeholder string.
+        /// </summary>
+        /// <param name="envVarName">The name of the environment variable.</param>
+        /// <param name="replaceEnvVar">A boolean indicating whether to replace the environment variable with its value.</param>
+        /// <returns>
+        /// If replacement is enabled, the value of the environment variable. 
+        /// Otherwise, a placeholder string in the format "@env('variableName')".
+        /// </returns>
+        private static string GetEnvironmentVariableIfReplaced(string envVarName, bool replaceEnvVar)
+        {
+            if (replaceEnvVar)
+            {
+                return Environment.GetEnvironmentVariable(envVarName);
+            }
+            else
+            {
+                return $"@env('{envVarName}')";
+            }
+        }
+
+        /// <summary>
         /// Method to validate that comments are skipped in config file (and are ignored during deserialization).
         /// </summary>
         [TestMethod]
@@ -377,6 +422,102 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
   }
 }
 ";
+        }
+
+        /// <summary>
+        /// Config containing environment variables.
+        /// </summary>
+        private static string _configWithEnvVar = @"
+          {
+            ""$schema"": ""/dab-schema.json"",
+            ""data-source"": {
+              ""database-type"": ""cosmosdb_nosql"",
+              ""options"": {
+                ""database"": ""@env('DATABASE_NAME')"",
+                ""schema"": ""@env('GRAPHQL_SCHEMA_PATH')""
+              },
+              ""connection-string"": ""@env('DATABASE_CONNECTION_STRING')""
+            },
+            ""runtime"": {
+              ""rest"": {
+                ""enabled"": true,
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""allow-introspection"": true,
+                ""enabled"": true,
+                ""path"": ""/graphql""
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""AzureAD"",
+                  ""jwt"": {
+                    ""audience"": ""@env('JWT_AUDIENCE')"",
+                    ""issuer"": ""@env('JWT_ISSUER')""
+                  }
+                }
+              }
+            },
+            ""entities"": {
+              ""Book"": {
+                ""source"": ""@env('ENTITY_SOURCE')"",
+                ""rest"": ""@env('ENTITY_REST_PATH')"",
+                ""permissions"": [
+                    {
+                      ""role"": ""@env('ENTITY_ROLE')"",
+                      ""actions"": [ ""*"" ]
+                    }
+                ]
+              }
+            }
+          }
+        ";
+
+        /// <summary>
+        /// Clears the environment variables defined in the provided text.
+        /// </summary>
+        /// <param name="text">A string containing environment variables in the format "KEY=VALUE", one per line.</param>
+        private static void ClearEnvironmentVariablesFromText(string text)
+        {
+            string[] lines = text.Split('\n');
+            foreach (string line in lines)
+            {
+                string[] parts = line.Split('=');
+                Environment.SetEnvironmentVariable(parts[0], null);
+            }
+        }
+
+        /// <summary>
+        /// A string representing environment variables for testing environment variable replacement in the config.
+        /// </summary>
+        private static string _environmentFileContent = 
+            "DATABASE_TYPE=cosmosdb_nosql" + "\n" +
+            "DATABASE_NAME=planet" + "\n" +
+            "GRAPHQL_SCHEMA_PATH=gql-schema.gql" + "\n" +
+            "DATABASE_CONNECTION_STRING=TEST_CONNECTION_STRING" + "\n" +
+            "JWT_AUDIENCE=TEST_AUDIENCE" + "\n" +
+            "JWT_ISSUER=TEST_ISSUER" + "\n" +
+            "ENTITY_SOURCE=books" + "\n" +
+            "ENTITY_ROLE=anonymous" + "\n" +
+            "ENTITY_REST_PATH=/books";
+
+        /// <summary>
+        /// Sets environment variables from a given text.
+        /// </summary>
+        /// <param name="text">A string containing environment variables in the format "KEY=VALUE", one per line.</param>
+        private static void SetEnvironmentVariablesFromText(string text)
+        {
+            string[] lines = text.Split('\n');
+            foreach (string line in lines)
+            {
+                string[] parts = line.Split('=');
+                Environment.SetEnvironmentVariable(parts[0], parts[1]);
+            }
         }
 
         private static bool TryParseAndAssertOnDefaults(string json, out RuntimeConfig parsedConfig)

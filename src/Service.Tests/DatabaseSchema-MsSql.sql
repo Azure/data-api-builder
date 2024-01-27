@@ -122,9 +122,9 @@ CREATE TABLE [foo].[magazines](
 EXEC('CREATE SCHEMA [bar]');
 
 CREATE TABLE [bar].[magazines](
-    id int PRIMARY KEY,
-    title varchar(max) NOT NULL,
-    issue_number int NULL
+    upc int PRIMARY KEY,
+    comic_name varchar(max) NOT NULL,
+    issue int NULL
 );
 
 CREATE TABLE comics(
@@ -467,7 +467,7 @@ INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', '
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
-INSERT INTO [bar].[magazines](id, title, issue_number) VALUES (0, '0', 0);
+INSERT INTO [bar].[magazines](upc, comic_name, issue) VALUES (0, '0', 0);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 
 SET IDENTITY_INSERT series ON

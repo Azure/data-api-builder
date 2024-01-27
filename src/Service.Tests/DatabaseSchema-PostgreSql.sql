@@ -103,9 +103,9 @@ CREATE TABLE foo.magazines(
 );
 
 CREATE TABLE bar.magazines(
-    id int PRIMARY KEY,
-    title text NOT NULL,
-    issue_number int NULL
+    upc int PRIMARY KEY,
+    comic_name text NOT NULL,
+    issue int NULL
 );
 
 CREATE TABLE comics(
@@ -335,7 +335,7 @@ INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, '')
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);;
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 INSERT INTO foo.magazines(id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
-INSERT INTO bar.magazines(id, title, issue_number) VALUES (0, '0', 0);
+INSERT INTO bar.magazines(upc, comic_name, issue) VALUES (0, '0', 0);
 INSERT INTO series(id, name) VALUES (3001, 'Foundation'), (3002, 'Hyperion Cantos');
 INSERT INTO comics(id, title, "categoryName", series_id)
 VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Únknown','', 3002), (4, 'Alexander the Great', 'Historical', NULL);INSERT INTO stocks(categoryid, pieceid, "categoryName") VALUES (1, 1, 'SciFi'), (2, 1, 'Tales'),(0,1,''),(100, 99, 'Historical');

@@ -62,6 +62,56 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return query;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <param name="isQueryForNestedInsertOperation"></param>
+        /// <returns></returns>
+        public string Build(SqlQueryStructure structure, bool isQueryForNestedInsertOperation = false)
+        {
+            string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
+            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                             $"AS {QuoteIdentifier($"{structure.SourceAlias}")}{Build(structure.Joins)}";
+
+            fromSql += string.Join(
+                    "",
+                    structure.JoinQueries.Select(
+                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
+
+            string predicates;
+
+            if(isQueryForNestedInsertOperation)
+            {
+                predicates = JoinPredicateStrings(
+                                structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                structure.FilterPredicates,
+                                Build(structure.Predicates, " OR "),
+                                Build(structure.PaginationMetadata.PaginationPredicate));
+            }
+            else
+            {
+                predicates = JoinPredicateStrings(
+                                structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                structure.FilterPredicates,
+                                Build(structure.Predicates),
+                                Build(structure.PaginationMetadata.PaginationPredicate));
+            }
+
+            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
+                + $" FROM {fromSql}"
+                + $" WHERE {predicates}"
+                + $" ORDER BY {Build(structure.OrderByColumns)}";
+
+            query += FOR_JSON_SUFFIX;
+            if (!structure.IsListQuery)
+            {
+                query += "," + WITHOUT_ARRAY_WRAPPER_SUFFIX;
+            }
+
+            return query;
+        }
+
         /// <inheritdoc />
         public string Build(SqlInsertStructure structure)
         {
@@ -510,5 +560,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return query;
         }
+
+        
     }
 }

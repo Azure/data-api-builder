@@ -232,5 +232,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 $"WHERE attrelid = ({schemaParamName} || '.' || {tableParamName})::regclass AND attgenerated = 's';";
             return query;
         }
+
+        string IQueryBuilder.Build(SqlQueryStructure structure, bool isQueryForNestedInsertOperation)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

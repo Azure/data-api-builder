@@ -122,6 +122,121 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ctx"></param>
+        /// <param name="queryParams"></param>
+        /// <param name="sqlMetadataProvider"></param>
+        /// <param name="authorizationResolver"></param>
+        /// <param name="runtimeConfigProvider"></param>
+        /// <param name="gQLFilterParser"></param>
+        public SqlQueryStructure(
+            IMiddlewareContext ctx,
+            List<IDictionary<string, object?>> queryParams,
+            ISqlMetadataProvider sqlMetadataProvider,
+            IAuthorizationResolver authorizationResolver,
+            RuntimeConfigProvider runtimeConfigProvider,
+            GQLFilterParser gQLFilterParser,
+            IncrementingInteger counter,
+            string entityName = "")
+            // This constructor simply forwards to the more general constructor
+            // that is used to create GraphQL queries. We give it some values
+            // that make sense for the outermost query.
+            : this(sqlMetadataProvider,
+                  authorizationResolver,
+                  gQLFilterParser,
+                  predicates: null,
+                  entityName: entityName,
+                  counter: counter)
+        {
+            _ctx = ctx;
+
+            IObjectField schemaField = _ctx.Selection.Field;
+            FieldNode? queryField = _ctx.Selection.SyntaxNode;
+
+            IOutputType outputType = schemaField.Type;
+            _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+
+            PaginationMetadata.IsPaginated = QueryBuilder.IsPaginationType(_underlyingFieldType);
+
+            if (PaginationMetadata.IsPaginated)
+            {
+                if (queryField != null && queryField.SelectionSet != null)
+                {
+                    // process pagination fields without overriding them
+                    ProcessPaginationFields(queryField.SelectionSet.Selections);
+
+                    // override schemaField and queryField with the schemaField and queryField of *Connection.items
+                    queryField = ExtractItemsQueryField(queryField);
+                }
+
+                schemaField = ExtractItemsSchemaField(schemaField);
+
+                outputType = schemaField.Type;
+                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+
+                // this is required to correctly keep track of which pagination metadata
+                // refers to what section of the json
+                // for a paginationless chain:
+                //      getbooks > publisher > books > publisher
+                //      each new entry in the chain corresponds to a subquery so there will be
+                //      a matching pagination metadata object chain
+                // for a chain with pagination:
+                //      books > items > publisher > books > publisher
+                //      items do not have a matching subquery so the line of code below is
+                //      required to build a pagination metadata chain matching the json result
+                PaginationMetadata.Subqueries.Add(QueryBuilder.PAGINATION_FIELD_NAME, PaginationMetadata.MakeEmptyPaginationMetadata());
+            }
+
+            EntityName = _underlyingFieldType.Name;
+
+            if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
+            {
+                EntityName = modelName;
+            }
+
+            DatabaseObject.SchemaName = sqlMetadataProvider.GetSchemaName(EntityName);
+            DatabaseObject.Name = sqlMetadataProvider.GetDatabaseObjectName(EntityName);
+            SourceAlias = CreateTableAlias();
+
+            // support identification of entities by primary key when query is non list type nor paginated
+            // only perform this action for the outermost query as subqueries shouldn't provide primary key search
+            AddPrimaryKeyPredicates(queryParams);
+
+            // SelectionSet will not be null when a field is not a leaf.
+            // There may be another entity to resolve as a sub-query.
+            if (queryField != null && queryField.SelectionSet != null)
+            {
+                AddGraphQLFields(queryField.SelectionSet.Selections, runtimeConfigProvider);
+            }
+
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
+            // Process Authorization Policy of the entity being processed.
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
+
+            if (outputType.IsNonNullType())
+            {
+                IsListQuery = outputType.InnerType().IsListType();
+            }
+            else
+            {
+                IsListQuery = outputType.IsListType();
+            }
+
+            OrderByColumns = PrimaryKeyAsOrderByColumns();
+
+            // If there are no columns, add the primary key column
+            // to prevent failures when executing the database query.
+            if (!Columns.Any())
+            {
+                AddColumn(PrimaryKey()[0]);
+            }
+
+            ParametrizeColumns();
+
+        }
+
+        /// <summary>
         /// Generate the structure for a SQL query based on FindRequestContext,
         /// which is created by a FindById or FindMany REST request.
         /// </summary>
@@ -432,6 +547,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ColumnLabelToParam = new();
             FilterPredicates = string.Empty;
             OrderByColumns = new();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        private void AddPrimaryKeyPredicates(List<IDictionary<string, object?>> queryParams)
+        {
+            foreach (IDictionary<string, object?> queryParam in queryParams)
+            {
+                AddPrimaryKeyPredicates(queryParam);
+            }
         }
 
         ///<summary>

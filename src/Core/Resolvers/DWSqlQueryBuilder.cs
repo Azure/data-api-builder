@@ -250,5 +250,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return query;
         }
+
+        string IQueryBuilder.Build(SqlQueryStructure structure, bool isQueryForNestedInsertOperation)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

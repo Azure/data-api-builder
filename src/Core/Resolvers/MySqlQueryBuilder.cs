@@ -366,5 +366,10 @@ WHERE
         {
             throw new NotImplementedException();
         }
+
+        string IQueryBuilder.Build(SqlQueryStructure structure, bool isQueryForNestedInsertOperation)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

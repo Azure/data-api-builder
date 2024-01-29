@@ -384,5 +384,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             byte[] base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
             return Encoding.UTF8.GetString(base64EncodedBytes);
         }
+
+        Task<Tuple<JsonDocument?, IMetadata?>> IQueryEngine.ExecuteAsync(IMiddlewareContext context, List<IDictionary<string, object?>> parameters, string dataSourceName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

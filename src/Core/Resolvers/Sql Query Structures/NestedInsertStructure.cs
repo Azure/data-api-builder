@@ -1,18 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
-using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.AspNetCore.Http;
-
 namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
 {
     internal class NestedInsertStructure

@@ -177,6 +177,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     multipleInputType);
 
                         // add logic to resolve for selection set.
+                        // use multipleInputType to see if the original intent was to return a list or not.
+                        if(! multipleInputType)
+                        {
+                            result = await queryEngine.ExecuteAsync(
+                                        context,
+                                        resultPKs[0],
+                                        dataSourceName);
+                        }
+                        else
+                        {
+                            result = await queryEngine.ExecuteAsync(
+                                        context,
+                                        resultPKs,
+                                        dataSourceName);
+                        }
 
                     }
                     else
@@ -204,6 +219,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                         dataSourceName);
                         }
                     }
+
+                    transactionScope.Complete();
                 }
 
             }
@@ -950,9 +967,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     NestedInsertStructure nestedInsertStructure = new(entityName, entityName, null, input);
                     Dictionary<string, Dictionary<string, object?>> resultPKs = new();
                     PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context);
-                    if(resultPKs.TryGetValue(entityName, out Dictionary<string, object?>? insertedPKs) && insertedPKs is not null)
+                    if(nestedInsertStructure.CurrentEntityPKs is not null)
                     {
-                        finalResultPKs.Add(insertedPKs);
+                        finalResultPKs.Add(nestedInsertStructure.CurrentEntityPKs);
                     }
                 }
             }
@@ -963,10 +980,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 NestedInsertStructure nestedInsertStructure = new(entityName, entityName, null, input);
 
                 PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context);
+                if (nestedInsertStructure.CurrentEntityPKs is not null)
+                {
+                    finalResultPKs.Add(nestedInsertStructure.CurrentEntityPKs);
+                }
             }
 
             return finalResultPKs;
-
         }
 
         /// <summary>
@@ -1131,7 +1151,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (string pk in primaryKeyColumnNames)
                 {
                     resultValues.Add(pk, insertedValues[pk]);
-                    Console.WriteLine( "Entity Name : " + entityName  + " Value : " + insertedValues[pk]);
                 }
 
                 resultPKs.Add(entityName, resultValues);

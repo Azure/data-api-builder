@@ -346,8 +346,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
   },
   ""data-source"": {
     ""database-type"": " + enumString + @",
-    ""connection-string"": ""server=dataapibuilder;database=" + reps[++index % reps.Length] + @";uid=" + reps[++index % reps.Length] + @";Password=" + reps[++index % reps.Length] + @";"",
-    ""resolver-config-file"": """ + reps[++index % reps.Length] + @"""
+    ""connection-string"": ""server=dataapibuilder;database=" + reps[++index % reps.Length] + @";uid=" + reps[++index % reps.Length] + @";Password=" + reps[++index % reps.Length] + @";""
   },
   ""runtime"": {
     ""rest"": {

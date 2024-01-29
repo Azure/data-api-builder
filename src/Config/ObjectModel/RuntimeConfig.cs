@@ -168,7 +168,7 @@ public record RuntimeConfig
         this.Schema = Schema ?? DEFAULT_CONFIG_SCHEMA_LINK;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = GetAggregrateEntities(Entities);
+        this.Entities = Entities;
         _defaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
@@ -178,7 +178,7 @@ public record RuntimeConfig
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
-        foreach (KeyValuePair<string, Entity> entity in this.Entities)
+        foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
         }
@@ -188,7 +188,7 @@ public record RuntimeConfig
 
         if (DataSourceFiles is not null && DataSourceFiles.SourceFiles is not null)
         {
-            IEnumerable<KeyValuePair<string, Entity>> allEntities = this.Entities.AsEnumerable();
+            IEnumerable<KeyValuePair<string, Entity>> allEntities = Entities.AsEnumerable();
             // Iterate through all the datasource files and load the config.
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
@@ -222,43 +222,6 @@ public record RuntimeConfig
 
     }
 
-    private static RuntimeEntities GetAggregrateEntities(RuntimeEntities entities)
-    {
-        Dictionary<string, Entity> linkingEntities = new();
-        foreach ((string sourceEntityName, Entity entity) in entities)
-        {
-            if (entity.Relationships is null || entity.Relationships.Count == 0 || !entity.GraphQL.Enabled)
-            {   
-                continue;
-            }
-
-            foreach ((_, EntityRelationship entityRelationship) in entity.Relationships)
-            {
-                if (entityRelationship.LinkingObject is null)
-                {
-                    continue;
-                }
-
-                string targetEntityName = entityRelationship.TargetEntity;
-                string linkingEntityName = GenerateLinkingEntityName(sourceEntityName, targetEntityName);
-                if (!linkingEntities.ContainsKey(linkingEntityName))
-                {
-                    Entity linkingEntity = new(
-                    Source: new EntitySource(Type: EntitySourceType.Table, Object: entityRelationship.LinkingObject, Parameters: null, KeyFields: null),
-                    Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
-                    GraphQL: new(Singular: "", Plural: "", Enabled: false),
-                    Permissions: Array.Empty<EntityPermission>(),
-                    Relationships: null,
-                    Mappings: new(),
-                    IsLinkingEntity: true);
-                    linkingEntities.Add(linkingEntityName, linkingEntity);
-                }
-            }
-        }
-
-        return new(entities.Union(linkingEntities).ToDictionary(pair => pair.Key, pair => pair.Value));
-    }
-
     public static string GenerateLinkingEntityName(string source, string target)
     {
         return Entity.LINKING_ENTITY_PREFIX + source + target;
@@ -282,7 +245,7 @@ public record RuntimeConfig
         this.Schema = Schema;
         this.DataSource = DataSource;
         this.Runtime = Runtime;
-        this.Entities = GetAggregrateEntities(Entities);
+        this.Entities = Entities;
         _defaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;

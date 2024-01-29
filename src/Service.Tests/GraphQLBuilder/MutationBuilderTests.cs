@@ -94,7 +94,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode createField =
                 query.Fields.Where(f => f.Name.Value == $"createFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: createField.Directives.Count);
+                actual: createField.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -719,7 +719,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode deleteField =
                 query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: deleteField.Directives.Count);
+                actual: deleteField.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -838,7 +838,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode collectionField =
                 query.Fields.Where(f => f.Name.Value == $"updateFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: collectionField.Directives.Count);
+                actual: field.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -905,46 +905,6 @@ type Bar @model(name:""Bar""){
             Assert.IsFalse(inputObj.Fields[1].Type.IsNonNullType(), "bar field shouldn't be null");
             Assert.IsTrue(inputObj.Fields[1].Type.IsListType(), "bar field should be a list");
             Assert.IsFalse(inputObj.Fields[1].Type.InnerType().IsNonNullType(), "list fields should be nullable");
-        }
-
-        [TestMethod]
-        [TestCategory("Mutation Builder - Create")]
-        public void CreateMutationWontCreateNestedModelsOnInput()
-        {
-            string gql =
-                @"
-type Foo @model(name:""Foo"") {
-    id: ID!
-    baz: Baz!
-}
-
-type Baz @model(name:""Baz"") {
-    id: ID!
-    x: String!
-}
-                ";
-
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
-            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
-            {
-                { "Foo", DatabaseType.MSSQL },
-                { "Baz", DatabaseType.MSSQL }
-            };
-            DocumentNode mutationRoot = MutationBuilder.Build(
-                root,
-                entityNameToDatabaseType,
-                new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } }),
-                entityPermissionsMap: _entityPermissions
-                );
-
-            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
-            Assert.AreEqual(1, field.Arguments.Count);
-
-            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
-            Assert.AreEqual(1, argType.Fields.Count);
-            Assert.AreEqual("id", argType.Fields[0].Name.Value);
         }
 
         [TestMethod]
@@ -1112,7 +1072,7 @@ type Foo @model(name:""Foo"") {{
             // The permissions are setup for create, update and delete operations.
             // So create, update and delete mutations should get generated.
             // A Check to validate that the count of mutations generated is 3.
-            Assert.AreEqual(3 * entityNames.Length, mutation.Fields.Count);
+            Assert.AreEqual(4 * entityNames.Length, mutation.Fields.Count);
 
             for (int i = 0; i < entityNames.Length; i++)
             {

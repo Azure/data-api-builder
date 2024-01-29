@@ -133,12 +133,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // be computed only when the read permission is configured.
                         if (isReadPermissionConfigured)
                         {
-                            // compute the mutation result before removing the element,
-                            // since typical GraphQL delete mutations return the metadata of the deleted item.
-                            result = await queryEngine.ExecuteAsync(
-                                        context,
-                                        GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
-                                        dataSourceName);
+                            // For cases we only require a result summarizing the operation (DBOperationResult),
+                            // we can skip getting the impacted records.
+                            if (context.Selection.Type.TypeName() != GraphQLUtils.DB_OPERATION_RESULT_TYPE)
+                            {
+                                // compute the mutation result before removing the element,
+                                // since typical GraphQL delete mutations return the metadata of the deleted item.
+                                result = await queryEngine.ExecuteAsync(
+                                            context,
+                                            GetBackingColumnsFromCollection(entityName: entityName, parameters: parameters, sqlMetadataProvider: sqlMetadataProvider),
+                                            dataSourceName);
+                            }
                         }
 
                         Dictionary<string, object>? resultProperties =
@@ -148,16 +153,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 sqlMetadataProvider);
 
                         // If the number of records affected by DELETE were zero,
-                        // and yet the result was not null previously, it indicates this DELETE lost
-                        // a concurrent request race. Hence, empty the non-null result.
                         if (resultProperties is not null
                             && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
-                            && Convert.ToInt32(value) == 0
-                            && result is not null && result.Item1 is not null)
+                            && Convert.ToInt32(value) == 0)
                         {
-                            result = new Tuple<JsonDocument?, IMetadata?>(
-                                default(JsonDocument),
-                                PaginationMetadata.MakeEmptyPaginationMetadata());
+                            // the result was not null previously, it indicates this DELETE lost
+                            // a concurrent request race. Hence, empty the non-null result.
+                            if (result is not null && result.Item1 is not null)
+                            {
+
+                                result = new Tuple<JsonDocument?, IMetadata?>(
+                                    default(JsonDocument),
+                                    PaginationMetadata.MakeEmptyPaginationMetadata());
+                            }
+                            else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
+                            {
+                                // no record affected but db call ran successfully.
+                                result = GetDbOperationResultJsonDocument("item not found");
+                            }
+                        }
+                        else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
+                        {
+                            result = GetDbOperationResultJsonDocument("success");
                         }
                     }
                     else
@@ -172,17 +189,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         // When read permission is not configured, an error response is returned. So, the mutation result needs to
                         // be computed only when the read permission is configured.
-                        if (isReadPermissionConfigured && mutationResultRow is not null && mutationResultRow.Columns.Count > 0
-                            && !context.Selection.Type.IsScalarType())
+                        if (isReadPermissionConfigured)
                         {
-                            // Because the GraphQL mutation result set columns were exposed (mapped) column names,
-                            // the column names must be converted to backing (source) column names so the
-                            // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
-                            // represent database column names.
-                            result = await queryEngine.ExecuteAsync(
-                                        context,
-                                        GetBackingColumnsFromCollection(entityName: entityName, parameters: mutationResultRow.Columns, sqlMetadataProvider: sqlMetadataProvider),
-                                        dataSourceName);
+                            if (mutationResultRow is not null && mutationResultRow.Columns.Count > 0
+                                && !context.Selection.Type.IsScalarType())
+                            {
+                                // Because the GraphQL mutation result set columns were exposed (mapped) column names,
+                                // the column names must be converted to backing (source) column names so the
+                                // PrimaryKeyPredicates created in the SqlQueryStructure created by the query engine
+                                // represent database column names.
+                                result = await queryEngine.ExecuteAsync(
+                                            context,
+                                            GetBackingColumnsFromCollection(entityName: entityName, parameters: mutationResultRow.Columns, sqlMetadataProvider: sqlMetadataProvider),
+                                            dataSourceName);
+                            }
+                            else if (context.Selection.Type.TypeName() == GraphQLUtils.DB_OPERATION_RESULT_TYPE)
+                            {
+                                result = GetDbOperationResultJsonDocument("success");
+                            }
                         }
                     }
 
@@ -843,7 +867,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
-                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
+
+                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0 && dbResultSet!.ResultProperties.TryGetValue("RecordsAffected", out object? recordsAffected) && (int)recordsAffected <= 0)
                 {
                     // For GraphQL, insert operation corresponds to Create action.
                     if (operationType is EntityActionOperation.Create)
@@ -1392,6 +1417,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
             return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
+        }
+
+        /// <summary>
+        /// Returns DbOperationResult with required result.
+        /// </summary>
+        private static Tuple<JsonDocument?, IMetadata?> GetDbOperationResultJsonDocument(string result)
+        {
+            // Create a JSON object with one field "result" and value result
+            JsonObject jsonObject = new() { { "result", result } };
+
+            return new Tuple<JsonDocument?, IMetadata?>(
+                JsonDocument.Parse(jsonObject.ToString()),
+                PaginationMetadata.MakeEmptyPaginationMetadata());
         }
     }
 }

@@ -31,6 +31,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// currently used to lookup relationship metadata.</param>
         /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
         /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
+        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
+        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
         public static ObjectTypeDefinitionNode FromDatabaseObject(
             string entityName,
@@ -39,45 +41,135 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
             IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            HashSet<Tuple<string, string>>? manyToManyRelationships = null)
+            bool isNestedMutationSupported = false,
+            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships = null)
         {
-            if (manyToManyRelationships is null)
+            ObjectTypeDefinitionNode objectDefinitionNode;
+            switch (databaseObject.SourceType)
             {
-                manyToManyRelationships = new();
+                case EntitySourceType.StoredProcedure:
+                    objectDefinitionNode = CreateObjectTypeDefinitionForStoredProcedure(
+                        entityName: entityName,
+                        databaseObject: databaseObject,
+                        configEntity: configEntity,
+                        rolesAllowedForEntity: rolesAllowedForEntity,
+                        rolesAllowedForFields: rolesAllowedForFields);
+                    break;
+                case EntitySourceType.Table:
+                case EntitySourceType.View:
+                    objectDefinitionNode = CreateObjectTypeDefinitionForTableOrView(
+                        entityName: entityName,
+                        databaseObject: databaseObject,
+                        configEntity: configEntity,
+                        entities: entities,
+                        rolesAllowedForEntity: rolesAllowedForEntity,
+                        rolesAllowedForFields: rolesAllowedForFields,
+                        isNestedMutationSupported: isNestedMutationSupported,
+                        entitiesWithManyToManyRelationships: entitiesWithManyToManyRelationships);
+                    break;
+                default:
+                    throw new DataApiBuilderException(
+                        message: $"The source type of entity: {entityName} is not supported",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
 
+            return objectDefinitionNode;
+        }
+
+        /// <summary>
+        /// Helper method to create object type definition for stored procedures.
+        /// </summary>
+        /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
+        /// <param name="databaseObject">SQL database object information.</param>
+        /// <param name="configEntity">Runtime config information for the table.</param>
+        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
+        /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
+        /// <returns>A GraphQL object type for the table/view to be provided to a Hot Chocolate GraphQL document.</returns>
+        private static ObjectTypeDefinitionNode CreateObjectTypeDefinitionForStoredProcedure(
+            string entityName,
+            DatabaseObject databaseObject,
+            Entity configEntity,
+            IEnumerable<string> rolesAllowedForEntity,
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+        {
             Dictionary<string, FieldDefinitionNode> fields = new();
-            List<DirectiveNode> objectTypeDirectives = new()
-            {
-                new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName))
-            };
-            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
-            NameNode nameNode = new(value: GetDefinedSingularName(entityName, configEntity));
+            SourceDefinition storedProcedureDefinition = databaseObject.SourceDefinition;
 
             // When the result set is not defined, it could be a mutation operation with no returning columns
             // Here we create a field called result which will be an empty array.
-            if (databaseObject.SourceType is EntitySourceType.StoredProcedure && ((StoredProcedureDefinition)sourceDefinition).Columns.Count == 0)
+            if (storedProcedureDefinition.Columns.Count == 0)
             {
                 FieldDefinitionNode field = GetDefaultResultFieldForStoredProcedure();
 
                 fields.TryAdd("result", field);
             }
 
+            foreach ((string columnName, ColumnDefinition column) in storedProcedureDefinition.Columns)
+            {
+                List<DirectiveNode> directives = new();
+                // A field is added to the schema when there is atleast one roles allowed to access the field.
+                if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
+                {
+                    // Even if roles is empty, we create a field for columns returned by a stored-procedures since they only support 1 CRUD action,
+                    // and it's possible that it might return some values during mutation operation (i.e, containing one of create/update/delete permission).
+                    FieldDefinitionNode field = GenerateFieldForColumn(configEntity, columnName, column, directives, roles);
+                    fields.Add(columnName, field);
+                }
+            }
+
+            // Top-level object type definition name should be singular.
+            // The singularPlural.Singular value is used, and if not configured,
+            // the top-level entity name value is used. No singularization occurs
+            // if the top-level entity name is already plural.
+            return new ObjectTypeDefinitionNode(
+                location: null,
+                name: new(value: GetDefinedSingularName(entityName, configEntity)),
+                description: null,
+                directives: GenerateObjectTypeDirectivesForEntity(entityName, configEntity, rolesAllowedForEntity),
+                new List<NamedTypeNode>(),
+                fields.Values.ToImmutableList());
+        }
+
+        /// <summary>
+        /// Helper method to create object type definition for database tables or views.
+        /// </summary>
+        /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
+        /// <param name="databaseObject">SQL database object information.</param>
+        /// <param name="configEntity">Runtime config information for the table.</param>
+        /// <param name="entities">Key/Value Collection mapping entity name to the entity object,
+        /// currently used to lookup relationship metadata.</param>
+        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
+        /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
+        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
+        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
+        /// <returns>A GraphQL object type for the table/view to be provided to a Hot Chocolate GraphQL document.</returns>
+        private static ObjectTypeDefinitionNode CreateObjectTypeDefinitionForTableOrView(
+            string entityName,
+            DatabaseObject databaseObject,
+            Entity configEntity,
+            RuntimeEntities entities,
+            IEnumerable<string> rolesAllowedForEntity,
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            bool isNestedMutationSupported,
+            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships)
+        {
+            Dictionary<string, FieldDefinitionNode> fields = new();
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             foreach ((string columnName, ColumnDefinition column) in sourceDefinition.Columns)
             {
                 List<DirectiveNode> directives = new();
-
-                if (databaseObject.SourceType is not EntitySourceType.StoredProcedure && sourceDefinition.PrimaryKey.Contains(columnName))
+                if (sourceDefinition.PrimaryKey.Contains(columnName))
                 {
                     directives.Add(new DirectiveNode(PrimaryKeyDirectiveType.DirectiveName, new ArgumentNode("databaseType", column.SystemType.Name)));
                 }
 
-                if (databaseObject.SourceType is not EntitySourceType.StoredProcedure && column.IsReadOnly)
+                if (column.IsReadOnly)
                 {
                     directives.Add(new DirectiveNode(AutoGeneratedDirectiveType.DirectiveName));
                 }
 
-                if (databaseObject.SourceType is not EntitySourceType.StoredProcedure && column.DefaultValue is not null)
+                if (column.DefaultValue is not null)
                 {
                     IValueNode arg = CreateValueNodeFromDbObjectMetadata(column.DefaultValue);
 
@@ -91,142 +183,37 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles) || configEntity.IsLinkingEntity)
                 {
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
-                    // This check is bypassed for:
-                    // 1. Stored-procedures since they only support 1 CRUD action, and it's possible that it might return some values
-                    // during mutation operation (i.e, containing one of create/update/delete permission).
-                    // 2. Linking entity for the same reason explained above.
-                    if (configEntity.IsLinkingEntity || roles is not null && roles.Count() > 0 || databaseObject.SourceType is EntitySourceType.StoredProcedure)
+                    // This check is bypassed for lnking entities for the same reason explained above.
+                    if (configEntity.IsLinkingEntity || roles is not null && roles.Count() > 0)
                     {
-                        if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
-                                roles,
-                                out DirectiveNode? authZDirective))
-                        {
-                            directives.Add(authZDirective!);
-                        }
-
-                        string exposedColumnName = columnName;
-                        if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: columnName, out string? columnAlias))
-                        {
-                            exposedColumnName = columnAlias;
-                        }
-
-                        NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
-                        FieldDefinitionNode field = new(
-                            location: null,
-                            new(exposedColumnName),
-                            description: null,
-                            new List<InputValueDefinitionNode>(),
-                            column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
-                            directives);
-
+                        FieldDefinitionNode field = GenerateFieldForColumn(configEntity, columnName, column, directives, roles);
                         fields.Add(columnName, field);
                     }
                 }
             }
 
-            // A linking entity is not exposed in the runtime config file but is used by DAB to support nested mutations on entities with N:N relationship.
+            // A linking entity is not exposed in the runtime config file but is used by DAB to support nested mutations on entities with M:N relationship.
             // Hence we don't need to process relationships for the linking entity itself.
             if (!configEntity.IsLinkingEntity)
             {
-                HashSet<string> foreignKeyFieldsInEntity = new();
                 if (configEntity.Relationships is not null)
                 {
+                    HashSet<string> foreignKeyFieldsInEntity = new();
                     foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
                     {
-                        // Generate the field that represents the relationship to ObjectType, so you can navigate through it
-                        // and walk the graph
-                        string targetEntityName = relationship.TargetEntity.Split('.').Last();
-                        Entity referencedEntity = entities[targetEntityName];
-                        bool isNullableRelationship = false;
-
-                        if (// Retrieve all the relationship information for the source entity which is backed by this table definition
-                            sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
-                            &&
-                            // From the relationship information, obtain the foreign key definition for the given target entity
-                            relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
-                                out List<ForeignKeyDefinition>? listOfForeignKeys))
-                        {
-                            ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
-
-                            // Determine whether the relationship should be nullable by obtaining the nullability
-                            // of the referencing(if source entity is the referencing object in the pair)
-                            // or referenced columns (if source entity is the referenced object in the pair).
-                            if (foreignKeyInfo is not null)
-                            {
-                                RelationShipPair pair = foreignKeyInfo.Pair;
-                                // The given entity may be the referencing or referenced database object in the foreign key
-                                // relationship. To determine this, compare with the entity's database object.
-                                if (pair.ReferencingDbTable.Equals(databaseObject))
-                                {
-                                    isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
-                                    foreignKeyFieldsInEntity.UnionWith(foreignKeyInfo.ReferencingColumns);
-                                }
-                                else
-                                {
-                                    isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
-                                }
-                            }
-                            else
-                            {
-                                throw new DataApiBuilderException(
-                                    message: $"No relationship exists between {entityName} and {targetEntityName}",
-                                    statusCode: HttpStatusCode.InternalServerError,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
-                            }
-                        }
-
-                        INullableTypeNode targetField = relationship.Cardinality switch
-                        {
-                            Cardinality.One =>
-                                new NamedTypeNode(GetDefinedSingularName(targetEntityName, referencedEntity)),
-                            Cardinality.Many =>
-                                new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(targetEntityName, referencedEntity))),
-                            _ =>
-                                throw new DataApiBuilderException(
-                                    message: "Specified cardinality isn't supported",
-                                    statusCode: HttpStatusCode.InternalServerError,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
-                        };
-
-                        if (relationship.LinkingObject is not null)
-                        {
-                            Tuple<string, string> sourceToTarget = new(entityName, targetEntityName);
-                            manyToManyRelationships.Add(sourceToTarget);
-                        }
-
-                        FieldDefinitionNode relationshipField = new(
-                            location: null,
-                            new NameNode(relationshipName),
-                            description: null,
-                            new List<InputValueDefinitionNode>(),
-                            isNullableRelationship ? targetField : new NonNullTypeNode(targetField),
-                            new List<DirectiveNode> {
-                            new(RelationshipDirectiveType.DirectiveName,
-                                new ArgumentNode("target", GetDefinedSingularName(targetEntityName, referencedEntity)),
-                                new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
-                            });
-
+                        FieldDefinitionNode relationshipField = GenerateFieldForRelationship(
+                            entityName,
+                            databaseObject,
+                            entities,
+                            isNestedMutationSupported,
+                            entitiesWithManyToManyRelationships,
+                            foreignKeyFieldsInEntity,
+                            relationshipName,
+                            relationship);
                         fields.Add(relationshipField.Name.Value, relationshipField);
                     }
-                }
 
-                // If there are foreign key references present in the entity, the values of these foreign keys can come
-                // via insertions in the related entity. By adding ForiegnKeyDirective here, we can later ensure that while creating input type for
-                // create mutations, these fields can be marked as nullable/optional.
-                foreach (string foreignKeyFieldInEntity in foreignKeyFieldsInEntity)
-                {
-                    FieldDefinitionNode field = fields[foreignKeyFieldInEntity];
-                    List<DirectiveNode> directives = (List<DirectiveNode>)field.Directives;
-                    directives.Add(new DirectiveNode(ForeignKeyDirectiveType.DirectiveName));
-                    field = field.WithDirectives(directives);
-                    fields[foreignKeyFieldInEntity] = field;
-                }
-
-                if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
-                        rolesAllowedForEntity,
-                        out DirectiveNode? authorizeDirective))
-                {
-                    objectTypeDirectives.Add(authorizeDirective!);
+                    AddForeignKeyDirectiveToFields(fields, foreignKeyFieldsInEntity);
                 }
             }
 
@@ -236,11 +223,193 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             // if the top-level entity name is already plural.
             return new ObjectTypeDefinitionNode(
                 location: null,
-                name: nameNode,
+                name: new(value: GetDefinedSingularName(entityName, configEntity)),
                 description: null,
-                objectTypeDirectives,
+                directives: GenerateObjectTypeDirectivesForEntity(entityName, configEntity, rolesAllowedForEntity),
                 new List<NamedTypeNode>(),
                 fields.Values.ToImmutableList());
+        }
+
+        /// <summary>
+        /// Helper method to generate the FieldDefinitionNode for a column in a table/view or a result set field in a stored-procedure.
+        /// </summary>
+        /// <param name="configEntity">Entity's definition (to which the column belongs).</param>
+        /// <param name="columnName">Backing column name.</param>
+        /// <param name="column">Column definition.</param>
+        /// <param name="directives">List of directives to be added to the column's field definition.</param>
+        /// <param name="roles">List of roles having read permission on the column (for tables/views) or execute permission for stored-procedure.</param>
+        /// <returns>Generated field definition node for the column to be used in the entity's object type definition.</returns>
+        private static FieldDefinitionNode GenerateFieldForColumn(Entity configEntity, string columnName, ColumnDefinition column, List<DirectiveNode> directives, IEnumerable<string>? roles)
+        {
+            if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                                            roles,
+                                            out DirectiveNode? authZDirective))
+            {
+                directives.Add(authZDirective!);
+            }
+
+            string exposedColumnName = columnName;
+            if (configEntity.Mappings is not null && configEntity.Mappings.TryGetValue(key: columnName, out string? columnAlias))
+            {
+                exposedColumnName = columnAlias;
+            }
+
+            NamedTypeNode fieldType = new(GetGraphQLTypeFromSystemType(column.SystemType));
+            FieldDefinitionNode field = new(
+                location: null,
+                new(exposedColumnName),
+                description: null,
+                new List<InputValueDefinitionNode>(),
+                column.IsNullable ? fieldType : new NonNullTypeNode(fieldType),
+                directives);
+            return field;
+        }
+
+        /// <summary>
+        /// Helper method to generate field for a relationship for an entity. While processing the relationship, it does some other things:
+        /// 1. Helps in keeping track of relationships with cardinality M:N as whenever such a relationship is encountered,
+        /// the (soure, target) pair of entities is added to the collection of entities with many to many relationship.
+        /// 2. Helps in keeping track of fields from the source entity which hold foreign key references to the target entity.
+        /// </summary>
+        /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
+        /// <param name="databaseObject">SQL database object information.</param>
+        /// <param name="entities">Key/Value Collection mapping entity name to the entity object, currently used to lookup relationship metadata.</param>
+        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
+        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
+        /// <param name="foreignKeyFieldsInEntity">Set of fields from source entity holding foreign key references to a target entity.</param>
+        /// <param name="relationshipName">Name of the relationship.</param>
+        /// <param name="relationship">Relationship data.</param>
+        private static FieldDefinitionNode GenerateFieldForRelationship(
+            string entityName,
+            DatabaseObject databaseObject,
+            RuntimeEntities entities,
+            bool isNestedMutationSupported,
+            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships,
+            HashSet<string> foreignKeyFieldsInEntity,
+            string relationshipName,
+            EntityRelationship relationship)
+        {
+            // Generate the field that represents the relationship to ObjectType, so you can navigate through it
+            // and walk the graph.
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+            string targetEntityName = relationship.TargetEntity.Split('.').Last();
+            Entity referencedEntity = entities[targetEntityName];
+            bool isNullableRelationship = false;
+
+            if (// Retrieve all the relationship information for the source entity which is backed by this table definition
+                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
+                &&
+                // From the relationship information, obtain the foreign key definition for the given target entity
+                relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
+                    out List<ForeignKeyDefinition>? listOfForeignKeys))
+            {
+                ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
+
+                // Determine whether the relationship should be nullable by obtaining the nullability
+                // of the referencing(if source entity is the referencing object in the pair)
+                // or referenced columns (if source entity is the referenced object in the pair).
+                if (foreignKeyInfo is not null)
+                {
+                    RelationShipPair pair = foreignKeyInfo.Pair;
+                    // The given entity may be the referencing or referenced database object in the foreign key
+                    // relationship. To determine this, compare with the entity's database object.
+                    if (pair.ReferencingDbTable.Equals(databaseObject))
+                    {
+                        isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
+                        foreignKeyFieldsInEntity.UnionWith(foreignKeyInfo.ReferencingColumns);
+                    }
+                    else
+                    {
+                        isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
+                    }
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: $"No relationship exists between {entityName} and {targetEntityName}",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                }
+            }
+
+            INullableTypeNode targetField = relationship.Cardinality switch
+            {
+                Cardinality.One =>
+                    new NamedTypeNode(GetDefinedSingularName(targetEntityName, referencedEntity)),
+                Cardinality.Many =>
+                    new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(targetEntityName, referencedEntity))),
+                _ =>
+                    throw new DataApiBuilderException(
+                        message: "Specified cardinality isn't supported",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
+            };
+
+            if (isNestedMutationSupported && relationship.LinkingObject is not null && entitiesWithManyToManyRelationships is not null)
+            {
+                entitiesWithManyToManyRelationships.Add(new(entityName, targetEntityName));
+            }
+
+            FieldDefinitionNode relationshipField = new(
+                location: null,
+                new NameNode(relationshipName),
+                description: null,
+                new List<InputValueDefinitionNode>(),
+                isNullableRelationship ? targetField : new NonNullTypeNode(targetField),
+                new List<DirectiveNode> {
+                            new(RelationshipDirectiveType.DirectiveName,
+                                new ArgumentNode("target", GetDefinedSingularName(targetEntityName, referencedEntity)),
+                                new ArgumentNode("cardinality", relationship.Cardinality.ToString()))
+                });
+
+            return relationshipField;
+        }
+
+        /// <summary>
+        /// Helper method to generate the list of directives for an entity's object type definition.
+        /// </summary>
+        /// <param name="entityName">Name of the entity for whose object type definition, the list of directives are to be created.</param>
+        /// <param name="configEntity">Entity definition.</param>
+        /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
+        /// <returns>List of directives for the object definition of the entity.</returns>
+        private static List<DirectiveNode> GenerateObjectTypeDirectivesForEntity(string entityName, Entity configEntity, IEnumerable<string> rolesAllowedForEntity)
+        {
+            List<DirectiveNode> objectTypeDirectives = new();
+            if (!configEntity.IsLinkingEntity)
+            {
+                objectTypeDirectives.Add(new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", entityName)));
+                if (GraphQLUtils.CreateAuthorizationDirectiveIfNecessary(
+                        rolesAllowedForEntity,
+                        out DirectiveNode? authorizeDirective))
+                {
+                    objectTypeDirectives.Add(authorizeDirective!);
+                }
+            }
+
+            return objectTypeDirectives;
+        }
+
+        /// <summary>
+        /// Helper method to add foreign key directive type to all the fields in the entity which
+        /// hold a foreign key reference to another entity exposed in the config.
+        /// The values of such fields holding foreign key references can come via insertions in the related entity.
+        /// By adding ForiegnKeyDirective here, we can later ensure that while creating input type for create mutations,
+        /// these fields can be marked as nullable/optional.
+        /// </summary>
+        /// <param name="fields">All fields present in the entity.</param>
+        /// <param name="foreignKeys">List of keys holding foreign key reference to another entity.</param>
+        private static void AddForeignKeyDirectiveToFields(Dictionary<string, FieldDefinitionNode> fields, IEnumerable<string> foreignKeys)
+        {
+            foreach (string foreignKey in foreignKeys)
+            {
+                FieldDefinitionNode foreignKeyField = fields[foreignKey];
+                List<DirectiveNode> directives = (List<DirectiveNode>)foreignKeyField.Directives;
+
+                // Add foreign key directive.
+                directives.Add(new DirectiveNode(ForeignKeyDirectiveType.DirectiveName));
+                foreignKeyField = foreignKeyField.WithDirectives(directives);
+                fields[foreignKey] = foreignKeyField;
+            }
         }
 
         /// <summary>

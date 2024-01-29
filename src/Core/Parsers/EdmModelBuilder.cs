@@ -47,8 +47,15 @@ namespace Azure.DataApiBuilder.Core.Parsers
             // since we allow for aliases to be used in place of the names of the actual
             // columns of the database object (such as table's columns), we need to
             // account for these potential aliases in our EDM Model.
+            HashSet<string> linkingEntityNames = new(sqlMetadataProvider.GetLinkingEntities().Keys);
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
+                if (linkingEntityNames.Contains(entityAndDbObject.Key))
+                {
+                    // No need to create entity types for linking entity.
+                    continue;
+                }
+
                 // Do not add stored procedures, which do not have table definitions or conventional columns, to edm model
                 // As of now, no ODataFilterParsing will be supported for stored procedure result sets
                 if (entityAndDbObject.Value.SourceType is not EntitySourceType.StoredProcedure)
@@ -109,12 +116,19 @@ namespace Azure.DataApiBuilder.Core.Parsers
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows.
-            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
+            HashSet<string> linkingEntityNames = new(sqlMetadataProvider.GetLinkingEntities().Keys);
+            foreach ((string entityName, DatabaseObject dbObject) in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (entityAndDbObject.Value.SourceType != EntitySourceType.StoredProcedure)
+                if (linkingEntityNames.Contains(entityName))
                 {
-                    string entityName = $"{entityAndDbObject.Value.FullName}";
-                    container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
+                    // No need to create entity set for linking entity.
+                    continue;
+                }
+
+                if (dbObject.SourceType != EntitySourceType.StoredProcedure)
+                {
+                    string fullSourceName = $"{dbObject.FullName}";
+                    container.AddEntitySet(name: $"{entityName}.{fullSourceName}", _entities[$"{entityName}.{fullSourceName}"]);
                 }
             }
 

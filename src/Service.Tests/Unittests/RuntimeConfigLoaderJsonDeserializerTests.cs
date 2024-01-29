@@ -111,8 +111,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="replaceEnvVar">A boolean indicating whether to replace environment variables in the configuration.</param>
         [DataTestMethod]
-        [DataRow(false, DisplayName="Do not replace environment variables.")]
-        [DataRow(true, DisplayName="Replace environment variables.")]
+        [DataRow(false, DisplayName = "Do not replace environment variables.")]
+        [DataRow(true, DisplayName = "Replace environment variables.")]
         public void TestConfigParsingWithEnvVarReplacement(bool replaceEnvVar)
         {
             SetEnvironmentVariablesFromText(_environmentFileContent);
@@ -126,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(runtimeConfig.Entities["Book"].Source.Object, GetEnvironmentVariableIfReplaced("ENTITY_SOURCE", replaceEnvVar));
             Assert.AreEqual(runtimeConfig.Entities["Book"].Rest.Path, GetEnvironmentVariableIfReplaced("ENTITY_REST_PATH", replaceEnvVar));
             Assert.AreEqual(runtimeConfig.Entities["Book"].Permissions[0].Role, GetEnvironmentVariableIfReplaced("ENTITY_ROLE", replaceEnvVar));
-            
+
             ClearEnvironmentVariablesFromText(_environmentFileContent);
         }
 
@@ -495,7 +495,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// A string representing environment variables for testing environment variable replacement in the config.
         /// </summary>
-        private static string _environmentFileContent = 
+        private static string _environmentFileContent =
             "DATABASE_TYPE=cosmosdb_nosql" + "\n" +
             "DATABASE_NAME=planet" + "\n" +
             "GRAPHQL_SCHEMA_PATH=gql-schema.gql" + "\n" +

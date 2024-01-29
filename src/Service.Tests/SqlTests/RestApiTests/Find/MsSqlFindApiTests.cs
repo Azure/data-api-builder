@@ -52,8 +52,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             },
             {
                 "FindOnTableWithNamingCollision",
-                $"SELECT * FROM { _collisionEntity } " +
-                $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
+                $"SELECT [upc], [comic_name], [issue] " +
+                $"FROM { _collisionTable } AS { _collisionEntity } " +
+                $"WHERE 1 = 1 ORDER BY [upc] ASC FOR JSON PATH"
             },
             {
                 "FindViewAll",

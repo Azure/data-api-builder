@@ -1240,12 +1240,14 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            DataTable? dataTable = EntitiesDataSet.Tables[$"{schemaName}.{tableName}"];
+            // MySQL does not use schema
+            string schemaAndTableName = _databaseType is DatabaseType.MySQL ? tableName : $"{schemaName}.{tableName}";
+            DataTable? dataTable = EntitiesDataSet.Tables[schemaAndTableName];
             if (dataTable is null)
             {
                 try
                 {
-                    dataTable = await FillSchemaForTableAsync(schemaName, tableName);
+                    dataTable = await FillSchemaForTableAsync(schemaName, tableName, schemaAndTableName);
                 }
                 catch (Exception ex) when (ex is not DataApiBuilderException)
                 {
@@ -1315,7 +1317,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
-            string tableName)
+            string tableName,
+            string schemaAndTableName)
         {
             using ConnectionT conn = new();
             // If connection string is set to empty string
@@ -1366,7 +1369,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 = $"SELECT * FROM {queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
             adapterForTable.SelectCommand = selectCommand;
 
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, $"{schemaName}.{tableName}");
+            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, schemaAndTableName);
             return dataTable[0];
         }
 

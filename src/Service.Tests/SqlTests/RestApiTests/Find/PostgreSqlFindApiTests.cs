@@ -175,9 +175,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT to_jsonb(subq) AS data
                     FROM (
-                        SELECT *
-                        FROM " + _collisionEntity + @"
-                        WHERE 1 <> 1
+                        SELECT upc, comic_name, issue
+                        FROM " + _collisionTable + @"
+                        WHERE 1 = 1
                     ) AS subq"
             },
             {

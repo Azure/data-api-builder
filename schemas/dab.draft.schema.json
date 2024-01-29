@@ -236,6 +236,34 @@
               }
             }
           }
+        },
+        "telemetry": {
+          "type": "object",
+          "description": "Telemetry configuration",
+          "additionalProperties": false,
+          "properties": {
+            "application-insights": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "connection-string": {
+                  "type": "string",
+                  "description": "Application Insights connection string"
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Allow enabling/disabling Application Insights telemetry.",
+                  "default": true
+                }
+              },
+              "required": [
+                "connection-string"
+              ]
+            }
+          },
+          "required": [
+            "application-insights"
+          ]
         }
       }
     },

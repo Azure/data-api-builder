@@ -81,6 +81,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         ValidateAuthenticationOptions(runtimeConfig);
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
+        ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -117,6 +118,24 @@ public class RuntimeConfigValidator : IConfigValidator
         }
 
         ValidateDatabaseType(runtimeConfig, fileSystem, logger);
+    }
+
+    /// <summary>
+    /// A connection string to send telemetry to Application Insights is required if telemetry is enabled.
+    /// </summary>
+    public void ValidateAppInsightsTelemetryConnectionString(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.ApplicationInsights is not null)
+        {
+            ApplicationInsightsOptions applicationInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
+            if (applicationInsightsOptions.Enabled && string.IsNullOrWhiteSpace(applicationInsightsOptions.ConnectionString))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Application Insights connection string cannot be null or empty if enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
     }
 
     /// <summary>

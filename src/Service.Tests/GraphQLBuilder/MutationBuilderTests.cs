@@ -94,7 +94,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode createField =
                 query.Fields.Where(f => f.Name.Value == $"createFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: createField.Directives.Count);
+                actual: createField.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -719,7 +719,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode deleteField =
                 query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: deleteField.Directives.Count);
+                actual: deleteField.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -838,7 +838,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode collectionField =
                 query.Fields.Where(f => f.Name.Value == $"updateFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: collectionField.Directives.Count);
+                actual: field.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]

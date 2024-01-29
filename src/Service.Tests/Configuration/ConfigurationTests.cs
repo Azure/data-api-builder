@@ -2862,7 +2862,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private static string GenerateMockJwtToken()
         {
-            string mySecret = "PlaceholderPlaceholder";
+            string mySecret = "PlaceholderPlaceholderPlaceholder";
             SymmetricSecurityKey mySecurityKey = new(Encoding.ASCII.GetBytes(mySecret));
 
             JwtSecurityTokenHandler tokenHandler = new();

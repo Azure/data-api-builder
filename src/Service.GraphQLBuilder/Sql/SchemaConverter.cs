@@ -263,10 +263,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
                 out List<ForeignKeyDefinition>? listOfForeignKeys))
             {
-                // The listOfForeignKeys may contain optimistically added entries in each
-                // relationship direction between the pair of entities for 1:1 or many:1 relationships.
-                // Those entries which dont have a matching corresponding foreign key in the database,
-                // the count of referencing/referenced columns will be 0. So, we need to filter out these
+                // DAB optimistically adds entries to 'listOfForeignKeys' representing each relationship direction
+                // between a pair of entities when 1:1 or many:1 relationships are defined in the runtime config.
+                // Entries which don't have a matching corresponding foreign key in the database
+                // will have 0 referencing/referenced columns. So, we need to filter out these
                 // invalid entries. Non-zero referenced columns indicate valid matching foreign key definition in the
                 // database and hence only those can be used to determine the directionality.
 
@@ -299,8 +299,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     }
                     else
                     {
-                        // if the entity is "referenced", it may or may not have a relationship with the referencing
-                        // entity irrespective of nullability of the referenced columns.
+                        // a record of the "referenced" entity may or may not have a relationship with
+                        // any other record of the referencing entity in the database
+                        // (irrespective of nullability of the referenced columns)
                         // Setting the relationship field to nullable ensures even those records
                         // that are not related are considered while querying.
                         isNullableRelationship = true;

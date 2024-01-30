@@ -288,11 +288,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 // in the foreign key relationship.
                 if (referencingForeignKeyInfo.Count() > 0 || referencedForeignKeyInfo.Count() > 0)
                 {
+                    // The source entity could be both the referencing and referenced entity
+                    // in case of missing foreign keys in the db or self referencing relationships.
                     // Use the nullability of referencing columns to determine
-                    // the nullability of the relationship field only if it is not a referenced
-                    // entity as well (which could happen in case of missing foreign keys in the db
-                    // or self referencing entities).
-                    if (referencingForeignKeyInfo.Count() > 0 && referencedForeignKeyInfo.Count() == 0)
+                    // the nullability of the relationship field only if
+                    // 1. there is exactly one relationship where source is the referencing entity.
+                    // DAB doesn't support multiple relationships at the moment.
+                    // and
+                    // 2. when the source is not a referenced entity in any of the relationships.
+                    if (referencingForeignKeyInfo.Count() == 1 && referencedForeignKeyInfo.Count() == 0)
                     {
                         ForeignKeyDefinition foreignKeyInfo = referencingForeignKeyInfo.First();
                         isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);

@@ -24,7 +24,7 @@ jobs:
       buildConfiguration: 'Release'
       dbPassword: ''
       data-source.connection-string: ''
-      testDatabaseName: 'datagateway'
+      testDatabaseName: 'MySqlTestDb'
 
   steps:
   - task: NuGetAuthenticate@1

@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             string predicates;
 
-            if(isQueryForNestedInsertOperation)
+            if (isQueryForNestedInsertOperation)
             {
                 predicates = JoinPredicateStrings(
                                 structure.GetDbPolicyForOperation(EntityActionOperation.Read),
@@ -561,6 +561,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return query;
         }
 
-        
     }
 }

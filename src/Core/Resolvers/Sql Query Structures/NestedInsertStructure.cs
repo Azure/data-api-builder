@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         /// 
         /// </summary>
         public List<Tuple<string, object?>> DependentEntities;
-        
+
         /// <summary>
         /// Fields belonging to the current entity.
         /// </summary>
@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
 
             DependencyEntities = new();
             DependentEntities = new();
-            if(IsLinkingTableInsertionRequired)
+            if (IsLinkingTableInsertionRequired)
             {
                 LinkingTableParams = new Dictionary<string, object?>();
             }

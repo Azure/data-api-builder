@@ -96,7 +96,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             };
 
             int retryAttempt = 0;
-            
+
             SetManagedIdentityAccessTokenIfAny(conn, dataSourceName);
 
             return _retryPolicy.Execute(() =>

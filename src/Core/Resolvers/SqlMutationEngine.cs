@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName = outputType.TypeName();
             ObjectType _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
 
-            if(_underlyingFieldType.Name.Value.EndsWith(MULTIPLE_ITEMS_RESPONSE_TYPE_SUFFIX))
+            if (_underlyingFieldType.Name.Value.EndsWith(MULTIPLE_ITEMS_RESPONSE_TYPE_SUFFIX))
             {
                 multipleInputType = true;
                 IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[MULTIPLE_INPUT_ARGUEMENT_NAME];
@@ -110,7 +110,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 entityName = modelName;
             }
-            
 
             Tuple<JsonDocument?, IMetadata?>? result = null;
             EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
@@ -121,7 +120,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
             }
-            
+
             string roleName = GetRoleOfGraphQLRequest(context);
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
@@ -176,8 +175,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     context,
                                     multipleInputType);
 
-                        
-                        if(! multipleInputType)
+                        if (!multipleInputType)
                         {
                             result = await queryEngine.ExecuteAsync(
                                         context,
@@ -946,8 +944,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             string fieldName = multipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
             object? inputParams = GQLNestedInsertArguementToDictParams(context, fieldName, parameters);
-            
-            if(inputParams is null)
+
+            if (inputParams is null)
             {
                 throw new DataApiBuilderException(
                               message: "Invalid data entered in the mutation request",
@@ -957,15 +955,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             List<IDictionary<string, object?>> finalResultPKs = new();
 
-            if(multipleInputType)
+            if (multipleInputType)
             {
                 List<IDictionary<string, object?>> inputList = (List<IDictionary<string, object?>>)inputParams;
-                foreach(IDictionary<string, object?> input in inputList)
+                foreach (IDictionary<string, object?> input in inputList)
                 {
                     NestedInsertStructure nestedInsertStructure = new(entityName, entityName, null, input);
                     Dictionary<string, Dictionary<string, object?>> resultPKs = new();
                     PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context);
-                    if(nestedInsertStructure.CurrentEntityPKs is not null)
+                    if (nestedInsertStructure.CurrentEntityPKs is not null)
                     {
                         finalResultPKs.Add(nestedInsertStructure.CurrentEntityPKs);
                     }
@@ -998,11 +996,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private void PerformDbInsertOperation(
             ISqlMetadataProvider sqlMetadataProvider,
             NestedInsertStructure nestedInsertStructure,
-            Dictionary<string, Dictionary<string,object?> > resultPKs,
+            Dictionary<string, Dictionary<string, object?>> resultPKs,
             IMiddlewareContext? context = null)
         {
 
-            if(nestedInsertStructure.InputMutParams is null)
+            if (nestedInsertStructure.InputMutParams is null)
             {
                 throw new DataApiBuilderException(
                         message: "Null input parameter is not acceptable",
@@ -1013,10 +1011,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // For One - Many and Many - Many relationship types, the entire logic needs to be run for each element of the input.
             // So, when the input is a list, we iterate over the list and run the logic for each element.
-            if(nestedInsertStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
+            if (nestedInsertStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
             {
-                List<IDictionary<string, object?> > inputParamList = (List<IDictionary<string, object?> >)nestedInsertStructure.InputMutParams;
-                foreach(IDictionary<string, object?> inputParam in inputParamList)
+                List<IDictionary<string, object?>> inputParamList = (List<IDictionary<string, object?>>)nestedInsertStructure.InputMutParams;
+                foreach (IDictionary<string, object?> inputParam in inputParamList)
                 {
                     NestedInsertStructure ns = new(nestedInsertStructure.EntityName, nestedInsertStructure.HigherLevelEntityName, nestedInsertStructure.HigherLevelEntityPKs, inputParam, nestedInsertStructure.IsLinkingTableInsertionRequired);
                     Dictionary<string, Dictionary<string, object?>> newResultPks = new();
@@ -1079,7 +1077,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             {
                                 nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, relatedEntityPKValue);
                             }
-                            else if(nestedInsertStructure.HigherLevelEntityPKs is not null
+                            else if (nestedInsertStructure.HigherLevelEntityPKs is not null
                                  && nestedInsertStructure.HigherLevelEntityPKs.TryGetValue(referencedColumnName, out object? pkValue)
                                  && pkValue is not null)
                             {
@@ -1151,9 +1149,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 nestedInsertStructure.CurrentEntityPKs = pkValues;
 
                 //Perform an insertion in the linking table if required
-                if(nestedInsertStructure.IsLinkingTableInsertionRequired)
+                if (nestedInsertStructure.IsLinkingTableInsertionRequired)
                 {
-                    if(nestedInsertStructure.LinkingTableParams is null)
+                    if (nestedInsertStructure.LinkingTableParams is null)
                     {
                         nestedInsertStructure.LinkingTableParams = new Dictionary<string, object?>();
                     }
@@ -1204,7 +1202,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                                             nestedInsertStructure.LinkingTableParams!,
                                                                             GetHttpContext(),
                                                                             isLinkingEntity: true);
-                    
+
                     string linkingTableQueryString = queryBuilder.Build(linkingEntitySqlInsertStructure);
                     SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(RuntimeConfig.GenerateLinkingEntityName(nestedInsertStructure.HigherLevelEntityName, entityName));
 
@@ -1262,14 +1260,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns></returns>
         public static string GetRelatedEntityNameInRelationship(Entity entity, string relationshipName)
         {
-            if(entity.Relationships is null)
+            if (entity.Relationships is null)
             {
                 throw new DataApiBuilderException(message: "Entity has no relationships defined",
                                                   statusCode: HttpStatusCode.InternalServerError,
                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
-            if(entity.Relationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
+            if (entity.Relationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
                && entityRelationship is not null)
             {
                 return entityRelationship.TargetEntity;
@@ -1314,9 +1312,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object?> currentEntityParams = new Dictionary<string, object?>();
             IDictionary<string, object?> linkingTableParams = new Dictionary<string, object?>();
 
-            if(nestedInsertStructure.InputMutParams is null)
+            if (nestedInsertStructure.InputMutParams is null)
             {
-                return ;
+                return;
             }
 
             if (topLevelEntityRelationships is not null)
@@ -1359,14 +1357,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        if(sqlMetadataProvider.TryGetBackingColumn(entityName, entry.Key, out _))
+                        if (sqlMetadataProvider.TryGetBackingColumn(entityName, entry.Key, out _))
                         {
                             currentEntityParams.Add(entry.Key, entry.Value);
                         }
                         else
                         {
                             linkingTableParams.Add(entry.Key, entry.Value);
-                        }                        
+                        }
                     }
                 }
             }
@@ -1382,8 +1380,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="fieldName"></param>
         /// <param name="mutationParameters"></param>
         /// <returns></returns>
-       internal static object? GQLNestedInsertArguementToDictParams(IMiddlewareContext context, string fieldName, IDictionary<string, object?> mutationParameters)
-       {
+        internal static object? GQLNestedInsertArguementToDictParams(IMiddlewareContext context, string fieldName, IDictionary<string, object?> mutationParameters)
+        {
 
             if (mutationParameters.TryGetValue(fieldName, out object? inputParameters))
             {
@@ -1400,7 +1398,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     statusCode: HttpStatusCode.BadRequest);
             }
 
-       } 
+        }
 
         /// <summary>
         /// 
@@ -1414,14 +1412,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (inputParameters is List<IValueNode> inputList)
             {
                 List<IDictionary<string, object?>> resultList = new();
-                
+
                 foreach (IValueNode input in inputList)
                 {
                     object? resultItem = GQLNestedInsertArguementToDictParamsUtil(context, itemsArgumentObject, input.Value);
 
                     if (resultItem is not null)
-                    { 
-                        resultList.Add((IDictionary<string, object?>) resultItem);
+                    {
+                        resultList.Add((IDictionary<string, object?>)resultItem);
                     }
                 }
 
@@ -1432,7 +1430,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Dictionary<string, object?> result = new();
                 foreach (ObjectFieldNode node in nodes)
                 {
-                    
+
                     string name = node.Name.Value;
                     if (node.Value.Kind == SyntaxKind.ListValue)
                     {

@@ -1,12 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
 {
     internal class MutationInputItem
@@ -20,7 +14,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         public MutationInputItem(bool isMultiplInputType, object input)
         {
             IsMultipleInputType = isMultiplInputType;
-            if(isMultiplInputType)
+            if (isMultiplInputType)
             {
                 InputList = (List<IDictionary<string, MutationInputItem?>>)input;
             }

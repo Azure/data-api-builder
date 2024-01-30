@@ -1735,7 +1735,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 foreach ((string entityName, RelationshipMetadata relationshipData)
                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
-                    foreach(KeyValuePair<string, List<ForeignKeyDefinition> > entry in relationshipData.TargetEntityToFkDefinitionMap)
+                    foreach (KeyValuePair<string, List<ForeignKeyDefinition>> entry in relationshipData.TargetEntityToFkDefinitionMap)
                     {
                         string targetEntityName = entry.Key;
                         List<ForeignKeyDefinition> foreignKeys = entry.Value;
@@ -1746,7 +1746,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         // equate the referencing columns and referenced columns.
                         foreach (ForeignKeyDefinition fk in foreignKeys)
                         {
-                            if(PairToFkDefinition is null)
+                            if (PairToFkDefinition is null)
                             {
                                 continue;
                             }
@@ -1756,7 +1756,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             if (PairToFkDefinition.TryGetValue(
                                     fk.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
-                                if(fk.ReferencedColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
+                                if (fk.ReferencedColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
                                 {
                                     continue;
                                 }
@@ -1780,7 +1780,7 @@ namespace Azure.DataApiBuilder.Core.Services
                                 Tuple<string, Tuple<string, ForeignKeyDefinition>> invalidFkEntry = new(entityName, new(targetEntityName, fk));
                                 invalidFkEntries.Add(invalidFkEntry);
                             }
-                        }   
+                        }
                     }
                 }
             }
@@ -1793,7 +1793,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private void RemoveInvalidFkEntries(List<Tuple<string, Tuple<string, ForeignKeyDefinition>>> invalidFkEntries)
         {
-            foreach(Tuple<string, Tuple<string, ForeignKeyDefinition> > invalidFkEntry in invalidFkEntries)
+            foreach (Tuple<string, Tuple<string, ForeignKeyDefinition>> invalidFkEntry in invalidFkEntries)
             {
                 string entityName = invalidFkEntry.Item1;
                 string relatedEntityName = invalidFkEntry.Item2.Item1;

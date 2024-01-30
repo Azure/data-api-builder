@@ -288,7 +288,7 @@ create table books_sold
 
 CREATE TABLE default_with_function_table
 (
-    id INT PRIMARY KEY IDENTITY(1,1),
+    id INT PRIMARY KEY IDENTITY(5001,1),
     user_value INT,
     [current_date] DATETIME DEFAULT GETDATE() NOT NULL,
     [current_timestamp] DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,

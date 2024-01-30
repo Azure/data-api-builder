@@ -374,6 +374,7 @@ SELECT setval('type_table_id_seq', 5000);
 SELECT setval('sales_id_seq', 5000);
 SELECT setval('players_id_seq', 5000);
 SELECT setval('clubs_id_seq', 5000);
+SELECT setval('default_with_function_table_id_seq', 5000);
 
 CREATE VIEW books_view_all AS SELECT * FROM books;
 CREATE VIEW books_view_with_mapping AS SELECT * FROM books;

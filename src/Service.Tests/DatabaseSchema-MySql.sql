@@ -385,6 +385,8 @@ ALTER TABLE sales AUTO_INCREMENT = 5001;
 ALTER TABLE players AUTO_INCREMENT = 5001;
 ALTER TABLE clubs AUTO_INCREMENT = 5001;
 
+ALTER TABLE default_with_function_table AUTO_INCREMENT = 5001;
+
 prepare stmt1 from  'CREATE VIEW books_view_all AS SELECT * FROM books';
 
 prepare stmt2 from  'CREATE VIEW books_view_with_mapping AS SELECT * FROM books';

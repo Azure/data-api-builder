@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             DatabaseObject databaseObject,
             string targetEntityName)
         {
-            bool isNullableRelationship  = false;
+            bool isNullableRelationship = false;
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             if (// Retrieve all the relationship information for the source entity which is backed by this table definition
                 sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)

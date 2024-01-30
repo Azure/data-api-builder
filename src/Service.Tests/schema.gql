@@ -4,7 +4,8 @@ type Character @model(name:"Character") {
     type: String,
     homePlanet: Int,
     primaryFunction: String,
-    star: Star
+    star: Star,
+    moons: [Moon]
 }
 
 type Planet @model(name:"Planet"){
@@ -13,10 +14,22 @@ type Planet @model(name:"Planet"){
     character: Character,
     age : Int,
     dimension : String,
-    stars: [Star]
+    stars: [Star],
+    additionalAttributes: [AdditionalAttribute!]
 }
 
 type Star @model(name:"StarAlias"){
+    id : ID,
+    name : String
+}
+
+type Moon @model(name:"Moon"){
+    id : ID,
+    name : String
+    details : String
+}
+
+type AdditionalAttribute @model(name:"AdditionalAttribute") {
     id : ID,
     name : String
 }

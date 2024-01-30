@@ -99,6 +99,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
 
+            Console.WriteLine($"IsPaginated: {IsPaginated}");
             if (IsPaginated)
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
@@ -160,6 +161,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (queryParams.ContainsKey(QueryBuilder.FILTER_FIELD_NAME))
             {
+                Console.WriteLine("Filter field found");
+
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
                 if (filterObject is not null)

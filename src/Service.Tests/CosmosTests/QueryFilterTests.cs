@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Humanizer;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -55,10 +57,56 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         }
 
+        /// <summary>
+        /// Tests eq of StringFilterInput
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringMultiLevelFiltersWithObjectType()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {character: {star: {name: {eq: ""Earth_star""}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = "select c.name from c where c.character.star.name = \"Earth_star\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where volcano is an array
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringMultiLevelFiltersWithArrayType()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {additionalAttributes: {name: {eq: ""volcano1""}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.additionalAttributes WHERE a.name = \"volcano1\"";
+            string dbQueryWithArrayLike = "SELECT c.name FROM c WHERE ARRAY_CONTAINS(c.additionalAttributes, { \"name\": \"volcano1\" }, true)";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithArrayLike);
+        }
+
         private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
         {
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
+            Console.WriteLine("ACTUAL : " + actual.ToString());
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
+            Console.WriteLine("EXPECTED : " + expected.RootElement.ToString());
             ValidateResults(actual.GetProperty("items"), expected.RootElement);
         }
 
@@ -890,7 +938,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
             CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
-            cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            // cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

@@ -39,7 +39,8 @@ type Character @model(name:""Character"") {
     type: String,
     homePlanet: Int,
     primaryFunction: String,
-    star: Star
+    star: Star,
+    moons: [Moon],
 }
 
 type Planet @model {
@@ -50,8 +51,8 @@ type Planet @model {
     dimension : String,
     earth: Earth,
     stars: [Star],
-    moons: [Moon],
-    tags: [String!]
+    tags: [String!],
+    additionalAttributes: [AdditionalAttribute]
 }
 
 type Star @model(name:""StarAlias"") {
@@ -80,13 +81,18 @@ type Earth @model(name:""Earth"") {
 type Sun @model(name:""Sun"") {
     id : ID,
     name : String
+}
+
+type AdditionalAttribute @model(name:""AdditionalAttribute"") {
+    id : ID,
+    name : String
 }";
 
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 
     private HttpClient _client;
     internal WebApplicationFactory<Startup> _application;
-    internal string _containerName = Guid.NewGuid().ToString();
+    internal string _containerName = "planet";
 
     [TestInitialize]
     public void Init()

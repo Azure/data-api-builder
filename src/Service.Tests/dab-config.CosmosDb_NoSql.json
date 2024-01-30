@@ -375,6 +375,27 @@
           ]
         }
       ]
+    },
+    "AdditionalAttribute": {
+      "source": "graphqldb.additionalAttribute",
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "AdditionalAttribute",
+          "plural": "AdditionalAttributes"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
     }
   }
 }

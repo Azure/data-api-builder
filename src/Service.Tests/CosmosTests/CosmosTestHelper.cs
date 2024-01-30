@@ -50,6 +50,19 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     id = id,
                     name = "blue earth"
                 },
+                additionalAttributes = new[]
+                {
+                    new
+                    {
+                        id = id + "v1",
+                        name = "volcano1"
+                    },
+                    new
+                    {
+                        id = id + "v2",
+                        name = "volcano2"
+                    }
+                },
                 tags = new[] { "tag1", "tag2" }
             };
         }

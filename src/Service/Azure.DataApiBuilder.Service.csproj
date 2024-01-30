@@ -49,6 +49,13 @@
 
 
     <ItemGroup>
+      <Content Include="schema.gql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+
+    <ItemGroup>
         <PackageReference Include="Azure.Identity" />
         <PackageReference Include="HotChocolate" />
         <PackageReference Include="HotChocolate.AspNetCore" />
@@ -91,6 +98,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="dab-config.CosmosDb_NoSql.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

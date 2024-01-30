@@ -28,6 +28,7 @@ public class GQLFilterParser
     private readonly RuntimeConfigProvider _configProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
 
+    private string _path = "C:\\Users\\sourabhjain\\Downloads\\dablog.txt";
     /// <summary>
     /// Constructor for GQLFilterParser
     /// </summary>
@@ -61,6 +62,8 @@ public class GQLFilterParser
         string entityName = queryStructure.EntityName;
         SourceDefinition sourceDefinition = queryStructure.GetUnderlyingSourceDefinition();
 
+        System.IO.File.AppendAllText(_path, $"Parsing filter for {entityName}\n");
+
         string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
         ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
@@ -73,6 +76,8 @@ public class GQLFilterParser
                 value: field.Value,
                 argumentSchema: filterArgumentObject.Fields[field.Name.Value],
                 variables: ctx.Variables);
+
+            System.IO.File.AppendAllText(_path, $"Parsing filter field {field.Name.Value} with value {fieldValue}\n");
 
             if (fieldValue is null)
             {
@@ -118,6 +123,8 @@ public class GQLFilterParser
             else
             {
                 List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
+
+                System.IO.File.AppendAllText(_path, $"Parsing filter field {field.Name.Value} with subfields {subfields}\n");
 
                 // Preserve the name value present in the filter.
                 // In some cases, 'name' represents a relationship field on a source entity,
@@ -174,6 +181,7 @@ public class GQLFilterParser
                 // Example: {entityName}FilterInput
                 if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                 {
+                    System.IO.File.AppendAllText(_path, $"Non Standard Query Inputs type {filterInputObjectType.Name}\n");
                     if (sourceDefinition.PrimaryKey.Count != 0)
                     {
                         // For SQL i.e. when there are primary keys on the source, we need to perform a join
@@ -195,6 +203,8 @@ public class GQLFilterParser
                         queryStructure.SourceAlias = sourceName + "." + backingColumnName;
                         string? nestedFieldType = metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
 
+                        System.IO.File.AppendAllText(_path, $"Nested field type {nestedFieldType}\n");
+
                         if (nestedFieldType is null)
                         {
                             throw new DataApiBuilderException(
@@ -204,6 +214,9 @@ public class GQLFilterParser
                         }
 
                         queryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldType);
+
+                        System.IO.File.AppendAllText(_path, $"Nested entity name {queryStructure.EntityName}\n");
+
                         predicates.Push(new PredicateOperand(Parse(ctx,
                             filterArgumentObject.Fields[name],
                             subfields,
@@ -214,6 +227,7 @@ public class GQLFilterParser
                 }
                 else
                 {
+                    System.IO.File.AppendAllText(_path, $"Standard Query Inputs type {filterInputObjectType.Name}\n");
                     predicates.Push(
                         new PredicateOperand(
                             ParseScalarType(

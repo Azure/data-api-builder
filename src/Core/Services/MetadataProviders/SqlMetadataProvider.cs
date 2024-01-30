@@ -1078,26 +1078,40 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             foreach ((string entityName, Entity _) in _entities)
             {
-                try
+                GenerateExposedToBackingColumnMapUtil(entityName);
+            }
+
+            foreach ((string entityName, Entity _) in _linkingEntities)
+            {
+                GenerateExposedToBackingColumnMapUtil(entityName);
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="entityName"></param>
+        private void GenerateExposedToBackingColumnMapUtil(string entityName)
+        {
+            try
+            {
+                // For StoredProcedures, result set definitions become the column definition.
+                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                foreach (string columnName in sourceDefinition.Columns.Keys)
                 {
-                    // For StoredProcedures, result set definitions become the column definition.
-                    Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                    EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                    EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                    SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                    foreach (string columnName in sourceDefinition.Columns.Keys)
+                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
                     {
-                        if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
-                        {
-                            EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
-                            EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
-                        }
+                        EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
+                        EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
                     }
                 }
-                catch (Exception e)
-                {
-                    HandleOrRecordException(e);
-                }
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
             }
         }
 
@@ -1638,7 +1652,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             // Extract all the rows in the current Result Set of DbDataReader.
             DbResultSet foreignKeysInfoWithProperties =
-                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
+                await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
 
@@ -1687,7 +1701,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             // Extract all the rows in the current Result Set of DbDataReader.
             DbResultSet readOnlyFieldRowsWithProperties =
-                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
+                await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
 
             List<string> readOnlyFields = new();
 

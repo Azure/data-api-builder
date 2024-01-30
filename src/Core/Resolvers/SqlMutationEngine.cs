@@ -45,7 +45,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
         public const string SINGLE_INPUT_ARGUEMENT_NAME = "item";
         public const string MULTIPLE_INPUT_ARGUEMENT_NAME = "items";
-        
+        public const string MULTIPLE_ITEMS_RESPONSE_TYPE_SUFFIX = "Connection";
+
         private static DataApiBuilderException _dabExceptionWithTransactionErrorMessage = new(message: TRANSACTION_EXCEPTION_ERROR_MSG,
                                                                                             statusCode: HttpStatusCode.InternalServerError,
                                                                                             subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
@@ -96,7 +97,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName = outputType.TypeName();
             ObjectType _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
 
-            if(_underlyingFieldType.Name.Value.EndsWith("Connection"))
+            if(_underlyingFieldType.Name.Value.EndsWith(MULTIPLE_ITEMS_RESPONSE_TYPE_SUFFIX))
             {
                 multipleInputType = true;
                 IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[MULTIPLE_INPUT_ARGUEMENT_NAME];
@@ -114,10 +115,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Tuple<JsonDocument?, IMetadata?>? result = null;
             EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
 
-            // If authorization fails, an exception will be thrown and request execution halts.
-
-            // merge changes with Ayush's branch to incorporate AuthZ logic changes
-            if(mutationOperation is not EntityActionOperation.Create)
+            // Ignoring AuthZ validations for Nested Insert operations in this PR.
+            // AuthZ for nested inserts are implemented in a separate PR ---> https://github.com/Azure/data-api-builder/pull/1943
+            if (mutationOperation is not EntityActionOperation.Create)
             {
                 AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
             }
@@ -176,8 +176,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     context,
                                     multipleInputType);
 
-                        // add logic to resolve for selection set.
-                        // use multipleInputType to see if the original intent was to return a list or not.
+                        
                         if(! multipleInputType)
                         {
                             result = await queryEngine.ExecuteAsync(
@@ -876,7 +875,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     await queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        queryExecutor.ExtractResultSetFromDbDataReader,
+                        queryExecutor.ExtractResultSetFromDbDataReaderAsync,
                         GetHttpContext(),
                         primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey,
                         dataSourceName);
@@ -919,7 +918,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     await queryExecutor.ExecuteQueryAsync(
                         sqltext: queryString,
                         parameters: queryParameters,
-                        dataReaderHandler: queryExecutor.ExtractResultSetFromDbDataReader,
+                        dataReaderHandler: queryExecutor.ExtractResultSetFromDbDataReaderAsync,
                         httpContext: GetHttpContext(),
                         dataSourceName: dataSourceName);
                 dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new()) : null;
@@ -928,25 +927,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return dbResultSetRow;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="entityName"></param>
+        /// <param name="parameters"></param>
+        /// <param name="sqlMetadataProvider"></param>
+        /// <param name="context"></param>
+        /// <param name="multipleInputType"></param>
+        /// <returns></returns>
+        /// <exception cref="DataApiBuilderException"></exception>
         private List<IDictionary<string, object?>> PerformNestedInsertOperation(
                 string entityName,
                 IDictionary<string, object?> parameters,
                 ISqlMetadataProvider sqlMetadataProvider,
-                IMiddlewareContext? context = null,
+                IMiddlewareContext context,
                 bool multipleInputType = false)
         {
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
-
-            Console.WriteLine(entityName);            
-            Console.WriteLine(context!.Selection.Type.ToString());
-            Console.WriteLine(sqlMetadataProvider.GetDatabaseType());
-            Console.WriteLine(dataSourceName);
-
-            Console.WriteLine(multipleInputType);
             string fieldName = multipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
-            Console.WriteLine( "fieldName : " + fieldName);
-            Console.WriteLine(parameters.Count);
-
             object? inputParams = GQLNestedInsertArguementToDictParams(context, fieldName, parameters);
             
             if(inputParams is null)
@@ -1007,12 +1005,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if(nestedInsertStructure.InputMutParams is null)
             {
                 throw new DataApiBuilderException(
-                        message: "Null Input Parameter not acceptable",
+                        message: "Null input parameter is not acceptable",
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
                     );
             }
 
+            // For One - Many and Many - Many relationship types, the entire logic needs to be run for each element of the input.
+            // So, when the input is a list, we iterate over the list and run the logic for each element.
             if(nestedInsertStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
             {
                 List<IDictionary<string, object?> > inputParamList = (List<IDictionary<string, object?> >)nestedInsertStructure.InputMutParams;
@@ -1028,6 +1028,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string entityName = nestedInsertStructure.EntityName;
                 Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
 
+                // Dependency Entity refers to those entities that are to be inserted before the top level entities. PKs of these entites are required
+                // to be able to successfully create a record in the table backing the top level entity. 
+                // Dependent Entity refers to those entities that are to be inserted after the top level entities. These entities require the PK of the top
+                // level entity.
                 DetermineDependentAndDependencyEntities(nestedInsertStructure.EntityName, nestedInsertStructure, sqlMetadataProvider, entity.Relationships);
 
                 // Recurse for dependency entities
@@ -1039,16 +1043,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 SourceDefinition currentEntitySourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
 
-                /*
-                 * In the next few lines, add logic to handle mapping related stuff. 
-                 * The fields in the dictionaries can have mapped values whereas column names obtained from database metadata has only backing column names.
-                 */
-
-                // do we get the backing column names here?
-                Dictionary<string, ColumnDefinition> columnsInCurrentEntity = currentEntitySourceDefinition.Columns;
-
                 List<string> primaryKeyColumnNames = new();
-                // do we get the backing column names here?
                 foreach (string primaryKey in currentEntitySourceDefinition.PrimaryKey)
                 {
                     primaryKeyColumnNames.Add(primaryKey);
@@ -1057,6 +1052,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 DatabaseObject entityObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
                 string entityFullName = entityObject.FullName;
                 RelationshipMetadata relationshipData = currentEntitySourceDefinition.SourceEntityRelationshipMap[entityName];
+
+                // Populate the foreign key values for the current entity. 
                 foreach ((string relatedEntityName, List<ForeignKeyDefinition> fkDefinitions) in relationshipData.TargetEntityToFkDefinitionMap)
                 {
                     DatabaseObject relatedEntityObject = sqlMetadataProvider.EntityToDatabaseObject[relatedEntityName];
@@ -1067,7 +1064,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         int count = fkDefinition.ReferencingColumns.Count;
                         for (int i = 0; i < count; i++)
                         {
-                            // what happens when the fk constraint is made up of composite keys?
                             string referencingColumnName = fkDefinition.ReferencingColumns[i];
                             string referencedColumnName = fkDefinition.ReferencedColumns[i];
 
@@ -1076,23 +1072,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 continue;
                             }
 
-                            if (resultPKs.TryGetValue(relatedEntityName, out Dictionary<string, object?>? results)
-                                 && results is not null
-                                 && results.TryGetValue(referencedColumnName, out object? value)
-                                 && value is not null)
+                            if (resultPKs.TryGetValue(relatedEntityName, out Dictionary<string, object?>? relatedEntityPKs)
+                                 && relatedEntityPKs is not null
+                                 && relatedEntityPKs.TryGetValue(referencedColumnName, out object? relatedEntityPKValue)
+                                 && relatedEntityPKValue is not null)
                             {
-                                nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, value);
+                                nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, relatedEntityPKValue);
                             }
                             else if(nestedInsertStructure.HigherLevelEntityPKs is not null
-                                 && nestedInsertStructure.HigherLevelEntityPKs.TryGetValue(referencedColumnName, out object? value2)
-                                 && value2 is not null)
+                                 && nestedInsertStructure.HigherLevelEntityPKs.TryGetValue(referencedColumnName, out object? pkValue)
+                                 && pkValue is not null)
                             {
-                                nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, value2);
+                                nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, pkValue);
                             }
                             else
                             {
-                                // evaluate if a new substatus code needs to be introduced
-                                throw new DataApiBuilderException(message: "The result PKs do not contain the required field", subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError, statusCode: HttpStatusCode.InternalServerError);
+                                throw new DataApiBuilderException(
+                                                        message: $"Foreign Key value for  Entity: {entityName}, Column : {referencedColumnName} not found",
+                                                        subStatusCode: DataApiBuilderException.SubStatusCodes.ForeignKeyNotFound,
+                                                        statusCode: HttpStatusCode.InternalServerError);
                             }
                         }
                     }
@@ -1106,24 +1104,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                             GetHttpContext());
 
                 IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
-
-                string queryString = queryBuilder.Build(sqlInsertStructure);
-                Console.WriteLine("Query String : " + queryString);
-
-                Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructure.Parameters;
-
                 IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+                string queryString = queryBuilder.Build(sqlInsertStructure);
+                Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructure.Parameters;
 
                 DbResultSet? dbResultSet;
                 DbResultSetRow? dbResultSetRow;
 
-                dbResultSet = queryExecutor.ExecuteQuery2(
+                dbResultSet = queryExecutor.ExecuteQuery(
                                       queryString,
                                       queryParameters,
-                                      queryExecutor.ExtractResultSetFromDbDataReader2,
+                                      queryExecutor.ExtractResultSetFromDbDataReader,
                                       GetHttpContext(),
-                                      primaryKeyColumnNames.Count > 0 ? primaryKeyColumnNames : currentEntitySourceDefinition.PrimaryKey,
+                                      primaryKeyColumnNames,
                                       dataSourceName);
 
                 dbResultSetRow = dbResultSet is not null ?
@@ -1147,36 +1141,161 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 Dictionary<string, object?> insertedValues = dbResultSetRow.Columns;
-                Dictionary<string, object?> resultValues = new();
+                Dictionary<string, object?> pkValues = new();
                 foreach (string pk in primaryKeyColumnNames)
                 {
-                    resultValues.Add(pk, insertedValues[pk]);
+                    pkValues.Add(pk, insertedValues[pk]);
                 }
 
-                resultPKs.Add(entityName, resultValues);
-                nestedInsertStructure.CurrentEntityPKs = resultValues;
+                resultPKs.Add(entityName, pkValues);
+                nestedInsertStructure.CurrentEntityPKs = pkValues;
+
+                //Perform an insertion in the linking table if required
+                if(nestedInsertStructure.IsLinkingTableInsertionRequired)
+                {
+                    if(nestedInsertStructure.LinkingTableParams is null)
+                    {
+                        nestedInsertStructure.LinkingTableParams = new Dictionary<string, object?>();
+                    }
+
+                    // Add higher level entity PKs
+                    List<ForeignKeyDefinition> foreignKeyDefinitions = relationshipData.TargetEntityToFkDefinitionMap[nestedInsertStructure.HigherLevelEntityName];
+                    ForeignKeyDefinition fkDefinition = foreignKeyDefinitions[0];
+
+                    int count = fkDefinition.ReferencingColumns.Count;
+                    for (int i = 0; i < count; i++)
+                    {
+                        string referencingColumnName = fkDefinition.ReferencingColumns[i];
+                        string referencedColumnName = fkDefinition.ReferencedColumns[i];
+
+                        if (nestedInsertStructure.LinkingTableParams.ContainsKey(referencingColumnName))
+                        {
+                            continue;
+                        }
+
+                        nestedInsertStructure.LinkingTableParams.Add(referencingColumnName, nestedInsertStructure.CurrentEntityPKs![referencedColumnName]);
+                    }
+
+                    // Add current entity PKs
+                    SourceDefinition higherLevelEntityRelationshipMetadata = sqlMetadataProvider.GetSourceDefinition(nestedInsertStructure.HigherLevelEntityName);
+                    RelationshipMetadata relationshipMetadata2 = higherLevelEntityRelationshipMetadata.SourceEntityRelationshipMap[nestedInsertStructure.HigherLevelEntityName];
+
+                    foreignKeyDefinitions = relationshipMetadata2.TargetEntityToFkDefinitionMap[entityName];
+                    fkDefinition = foreignKeyDefinitions[0];
+
+                    count = fkDefinition.ReferencingColumns.Count;
+                    for (int i = 0; i < count; i++)
+                    {
+                        string referencingColumnName = fkDefinition.ReferencingColumns[i];
+                        string referencedColumnName = fkDefinition.ReferencedColumns[i];
+
+                        if (nestedInsertStructure.LinkingTableParams.ContainsKey(referencingColumnName))
+                        {
+                            continue;
+                        }
+
+                        nestedInsertStructure.LinkingTableParams.Add(referencingColumnName, nestedInsertStructure.HigherLevelEntityPKs![referencedColumnName]);
+                    }
+
+                    SqlInsertStructure linkingEntitySqlInsertStructure = new(RuntimeConfig.GenerateLinkingEntityName(nestedInsertStructure.HigherLevelEntityName, entityName),
+                                                                            sqlMetadataProvider,
+                                                                            _authorizationResolver,
+                                                                            _gQLFilterParser,
+                                                                            nestedInsertStructure.LinkingTableParams!,
+                                                                            GetHttpContext(),
+                                                                            isLinkingEntity: true);
+                    
+                    string linkingTableQueryString = queryBuilder.Build(linkingEntitySqlInsertStructure);
+                    SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(RuntimeConfig.GenerateLinkingEntityName(nestedInsertStructure.HigherLevelEntityName, entityName));
+
+                    List<string> linkingTablePkColumns = new();
+                    foreach (string primaryKey in linkingTableSourceDefinition.PrimaryKey)
+                    {
+                        linkingTablePkColumns.Add(primaryKey);
+                    }
+
+                    Dictionary<string, DbConnectionParam> linkingTableQueryParams = linkingEntitySqlInsertStructure.Parameters;
+                    dbResultSet = queryExecutor.ExecuteQuery(
+                                      linkingTableQueryString,
+                                      linkingTableQueryParams,
+                                      queryExecutor.ExtractResultSetFromDbDataReader,
+                                      GetHttpContext(),
+                                      linkingTablePkColumns,
+                                      dataSourceName);
+
+                    dbResultSetRow = dbResultSet is not null ?
+                            (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
+
+                    if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
+                    {
+                        // For GraphQL, insert operation corresponds to Create action.
+                        throw new DataApiBuilderException(
+                            message: "Could not insert row with given values.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                    }
+
+                    if (dbResultSetRow is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "No data returned back from database.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                    }
+                }
 
                 // Recurse for dependent entities
                 foreach (Tuple<string, object?> dependentEntity in nestedInsertStructure.DependentEntities)
                 {
-                    NestedInsertStructure dependentEntityNestedInsertStructure = new(GetRelatedEntityNameInRelationship(entity, dependentEntity.Item1), entityName, nestedInsertStructure.CurrentEntityPKs, dependentEntity.Item2);
+                    string relatedEntityName = GetRelatedEntityNameInRelationship(entity, dependentEntity.Item1);
+                    NestedInsertStructure dependentEntityNestedInsertStructure = new(relatedEntityName, entityName, nestedInsertStructure.CurrentEntityPKs, dependentEntity.Item2, IsLinkingTableInsertionRequired(entity, dependentEntity.Item1));
                     PerformDbInsertOperation(sqlMetadataProvider, dependentEntityNestedInsertStructure, resultPKs, context);
                 }
             }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="relationshipName"></param>
+        /// <returns></returns>
         public static string GetRelatedEntityNameInRelationship(Entity entity, string relationshipName)
         {
-            return entity.Relationships![relationshipName]!.TargetEntity;
+            if(entity.Relationships is null)
+            {
+                throw new DataApiBuilderException(message: "Entity has no relationships defined",
+                                                  statusCode: HttpStatusCode.InternalServerError,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            if(entity.Relationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
+               && entityRelationship is not null)
+            {
+                return entityRelationship.TargetEntity;
+            }
+            else
+            {
+                throw new DataApiBuilderException(message: $"Entity does not have a relationship named {relationshipName}",
+                                                  statusCode: HttpStatusCode.InternalServerError,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
+            }
+
         }
 
-        public static bool IsLinkingTableInsertionRequired(Entity topLevelEntity, string relatedEntityName)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="topLevelEntity"></param>
+        /// <param name="relationshipName"></param>
+        /// <returns></returns>
+        public static bool IsLinkingTableInsertionRequired(Entity topLevelEntity, string relationshipName)
         {
             return topLevelEntity is not null &&
                    topLevelEntity.Relationships is not null &&
-                   topLevelEntity.Relationships[relatedEntityName] is not null &&
-                   topLevelEntity.Relationships[relatedEntityName].Cardinality is Cardinality.Many &&
-                   topLevelEntity.Relationships[relatedEntityName].LinkingObject is not null;
+                   topLevelEntity.Relationships[relationshipName] is not null &&
+                   topLevelEntity.Relationships[relationshipName].Cardinality is Cardinality.Many &&
+                   topLevelEntity.Relationships[relationshipName].LinkingObject is not null;
         }
 
         /// <summary>
@@ -1193,6 +1312,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                              Dictionary<string, EntityRelationship>? topLevelEntityRelationships)
         {
             IDictionary<string, object?> currentEntityParams = new Dictionary<string, object?>();
+            IDictionary<string, object?> linkingTableParams = new Dictionary<string, object?>();
 
             if(nestedInsertStructure.InputMutParams is null)
             {
@@ -1239,12 +1359,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        currentEntityParams.Add(entry.Key, entry.Value);
+                        if(sqlMetadataProvider.TryGetBackingColumn(entityName, entry.Key, out _))
+                        {
+                            currentEntityParams.Add(entry.Key, entry.Value);
+                        }
+                        else
+                        {
+                            linkingTableParams.Add(entry.Key, entry.Value);
+                        }                        
                     }
                 }
             }
 
             nestedInsertStructure.CurrentEntityParams = currentEntityParams;
+            nestedInsertStructure.LinkingTableParams = linkingTableParams;
         }
 
         /// <summary>
@@ -1275,8 +1403,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
        } 
 
         /// <summary>
-        /// 1. does not handle variables
-        /// 2. does not handle null values for input types ---> check if that is necessary
+        /// 
         /// </summary>
         /// <param name="context"></param>
         /// <param name="rawInput"></param>
@@ -1317,8 +1444,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        //result.Add(name, ResolverMiddleware.ExtractValueFromIValueNode(node.Value, itemsArgumentObject.Fields[name], context.Variables));
-
                         if (node.Value.Value is not null)
                         {
                             if (node.Value.Kind == SyntaxKind.Variable)

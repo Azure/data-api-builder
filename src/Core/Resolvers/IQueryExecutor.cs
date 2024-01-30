@@ -34,7 +34,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null,
             string dataSourceName = "");
 
-        public TResult? ExecuteQuery2<TResult>(
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TResult"></typeparam>
+        /// <param name="sqltext"></param>
+        /// <param name="parameters"></param>
+        /// <param name="dataReaderHandler"></param>
+        /// <param name="httpContext"></param>
+        /// <param name="args"></param>
+        /// <param name="dataSourceName"></param>
+        /// <returns></returns>
+        public TResult? ExecuteQuery<TResult>(
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
@@ -71,11 +82,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dbDataReader">A DbDataReader</param>
         /// <param name="args">List of columns to extract. Extracts all if unspecified.</param>
         /// <returns>Current Result Set in the DbDataReader.</returns>
-        public Task<DbResultSet> ExtractResultSetFromDbDataReader(
+        public Task<DbResultSet> ExtractResultSetFromDbDataReaderAsync(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 
-        public DbResultSet ExtractResultSetFromDbDataReader2(DbDataReader dbDataReader, List<string>? args = null);
+        public DbResultSet ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null);
 
         /// <summary>
         /// Extracts the result set corresponding to the operation (update/insert) being executed.

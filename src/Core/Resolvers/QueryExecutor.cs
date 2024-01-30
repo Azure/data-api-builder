@@ -32,9 +32,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
         private static int _maxRetryCount = 5;
 
-        private AsyncRetryPolicy _retryPolicy;
+        private AsyncRetryPolicy _retryPolicyAsync;
 
-        private RetryPolicy _retryPolicy2;
+        private RetryPolicy _retryPolicy;
 
         /// <summary>
         /// Dictionary that stores dataSourceName to its corresponding connection string builder.
@@ -51,28 +51,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
-            _retryPolicy = Policy
-            .Handle<DbException>(DbExceptionParser.IsTransientException)
-            .WaitAndRetryAsync(
-                retryCount: _maxRetryCount,
-                sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-                onRetry: (exception, backOffTime) =>
-                {
-                    QueryExecutorLogger.LogError(exception: exception, message: "Error during query execution, retrying.");
-                });
+            _retryPolicyAsync = Policy
+                .Handle<DbException>(DbExceptionParser.IsTransientException)
+                .WaitAndRetryAsync(
+                    retryCount: _maxRetryCount,
+                    sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                    onRetry: (exception, backOffTime) =>
+                    {
+                        QueryExecutorLogger.LogError(exception: exception, message: "Error during query execution, retrying.");
+                    });
 
-            _retryPolicy2 = Policy
+            _retryPolicy = Policy
                 .Handle<DbException>(DbExceptionParser.IsTransientException)
                 .WaitAndRetry(
-                                   retryCount: _maxRetryCount,
-                                                      sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-                                                                         onRetry: (exception, backOffTime) =>
-                                                                         {
+                    retryCount: _maxRetryCount,
+                    sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                    onRetry: (exception, backOffTime) =>
+                    {
                         QueryExecutorLogger.LogError(exception: exception, message: "Error during query execution, retrying.");
                     });
         }
 
-        public virtual TResult? ExecuteQuery2<TResult>(
+        public virtual TResult? ExecuteQuery<TResult>(
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             
             SetManagedIdentityAccessTokenIfAny(conn, dataSourceName);
 
-            return _retryPolicy2.Execute(() =>
+            return _retryPolicy.Execute(() =>
             {
                 retryAttempt++;
                 try
@@ -171,7 +171,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
-            return await _retryPolicy.ExecuteAsync(async () =>
+            return await _retryPolicyAsync.ExecuteAsync(async () =>
             {
                 retryAttempt++;
                 try
@@ -396,7 +396,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <inheritdoc />
         public async Task<DbResultSet>
-            ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
+            ExtractResultSetFromDbDataReaderAsync(DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader).Result ?? new());
 
@@ -438,7 +438,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         public DbResultSet
-            ExtractResultSetFromDbDataReader2(DbDataReader dbDataReader, List<string>? args = null)
+            ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader).Result ?? new());
 
@@ -487,7 +487,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbDataReader dbDataReader,
             List<string>? args = null)
         {
-            DbResultSet dbResultSet = await ExtractResultSetFromDbDataReader(dbDataReader);
+            DbResultSet dbResultSet = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
             JsonArray resultArray = new();
 
             foreach (DbResultSetRow dbResultSetRow in dbResultSet.Rows)
@@ -542,7 +542,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet
-                = await ExtractResultSetFromDbDataReader(dbDataReader);
+                = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
 
             /// Processes a second result set from DbDataReader if it exists.
             /// In MsSQL upsert:
@@ -556,7 +556,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else if (await dbDataReader.NextResultAsync())
             {
                 // Since no first result set exists, we return the second result set.
-                return await ExtractResultSetFromDbDataReader(dbDataReader);
+                return await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
             }
             else
             {

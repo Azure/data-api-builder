@@ -68,10 +68,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task OneToOneJoinQuery()
         {
-            string msSqlQuery = @"
+            string dwSqlQuery = @"
                 SELECT COALESCE('[' + STRING_AGG('{' + N'""id"":' + ISNULL(STRING_ESCAPE(CAST([id] AS NVARCHAR(MAX)), 'json'), 
                                 'null') + ',' + N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' + 
-                            N'""websiteplacement"":' + ISNULL('""' + STRING_ESCAPE([websiteplacement], 'json') + '""', 'null') + 
+                            N'""websiteplacement"":' + ISNULL([websiteplacement], 'null') + 
                             '}', ', ') + ']', '[]')
                 FROM (
                     SELECT TOP 100 [table0].[id] AS [id],
@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
                     ORDER BY [table0].[id] ASC
                     ) AS [table0]";
 
-            await OneToOneJoinQuery(msSqlQuery);
+            await OneToOneJoinQuery(dwSqlQuery);
         }
 
         /// <summary>

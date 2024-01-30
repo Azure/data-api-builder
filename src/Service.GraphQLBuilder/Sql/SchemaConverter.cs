@@ -294,7 +294,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     // or self referencing entities).
                     if (referencingForeignKeyInfo.Count() > 0 && referencedForeignKeyInfo.Count() == 0)
                     {
-                        ForeignKeyDefinition foreignKeyInfo = referencedForeignKeyInfo.First();
+                        ForeignKeyDefinition foreignKeyInfo = referencingForeignKeyInfo.First();
                         isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
                     }
                     else

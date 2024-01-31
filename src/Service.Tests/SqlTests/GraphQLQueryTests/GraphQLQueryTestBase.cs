@@ -556,24 +556,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task OneToOneJoinQuery(string dbQuery)
         {
-            string graphQLQueryName = "book_by_pk";
+            string graphQLQueryName = "books";
             string graphQLQuery = @"query {
-                book_by_pk(id: 1) {
-                  id
-                  websiteplacement {
+                books {
+                  items {
                     id
+                    title
+                    websiteplacement {
                     price
-                    books {
-                      id
-                    }
                   }
                 }
+              }
             }";
 
             JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
         }
 
         /// <summary>

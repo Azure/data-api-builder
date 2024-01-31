@@ -15,7 +15,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
     public static class CreateMutationBuilder
     {
+        private const string INSERT_MULTIPLE_MUTATION_SUFFIX = "_Multiple";
         public const string INPUT_ARGUMENT_NAME = "item";
+        public const string ARRAY_INPUT_ARGUMENT_NAME = "items";
 
         /// <summary>
         /// Generate the GraphQL input type from an object type
@@ -23,6 +25,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="inputs">Reference table of all known input types.</param>
         /// <param name="objectTypeDefinitionNode">GraphQL object to generate the input type for.</param>
         /// <param name="name">Name of the GraphQL object type.</param>
+        /// <param name="baseEntityName">In case when we are creating input type for linking object, baseEntityName = targetEntityName,
+        /// else baseEntityName = name.</param>
         /// <param name="definitions">All named GraphQL items in the schema (objects, enums, scalars, etc.)</param>
         /// <param name="databaseType">Database type to generate input type for.</param>
         /// <param name="entities">Runtime config information.</param>
@@ -31,9 +35,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             NameNode name,
+            NameNode baseEntityName,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
-            DatabaseType databaseType,
-            RuntimeEntities entities)
+            DatabaseType databaseType)
         {
             NameNode inputName = GenerateInputTypeName(name.Value);
 
@@ -42,41 +46,76 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 return inputs[inputName];
             }
 
-            IEnumerable<InputValueDefinitionNode> inputFields =
-                objectTypeDefinitionNode.Fields
-                .Where(f => FieldAllowedOnCreateInput(f, databaseType, definitions))
+            // The input fields for a create object will be a combination of:
+            // 1. Simple input fields corresponding to columns which belong to the table.
+            // 2. Complex input fields corresponding to tables having a foreign key relationship with this table.
+            List<InputValueDefinitionNode> inputFields = new();
+
+            // 1. Simple input fields.
+            IEnumerable<InputValueDefinitionNode> simpleInputFields = objectTypeDefinitionNode.Fields
+                .Where(f => IsBuiltInType(f.Type))
+                .Where(f => IsBuiltInTypeFieldAllowedForCreateInput(f, databaseType))
                 .Select(f =>
                 {
-                    if (!IsBuiltInType(f.Type))
-                    {
-                        string typeName = RelationshipDirectiveType.Target(f);
-                        HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value == typeName);
-
-                        if (def is null)
-                        {
-                            throw new DataApiBuilderException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.GraphQLMapping);
-                        }
-
-                        if (def is ObjectTypeDefinitionNode otdn)
-                        {
-                            //Get entity definition for this ObjectTypeDefinitionNode
-                            return GetComplexInputType(inputs, definitions, f, typeName, otdn, databaseType, entities);
-                        }
-                    }
-
-                    return GenerateSimpleInputType(name, f);
+                    return GenerateSimpleInputType(name, f, databaseType);
                 });
 
+            // Add simple input fields to list of input fields for current input type.
+            foreach (InputValueDefinitionNode simpleInputField in simpleInputFields)
+            {
+                inputFields.Add(simpleInputField);
+            }
+
+            // Create input object for this entity.
             InputObjectTypeDefinitionNode input =
                 new(
                     location: null,
                     inputName,
                     new StringValueNode($"Input type for creating {name}"),
                     new List<DirectiveNode>(),
-                    inputFields.ToList()
+                    inputFields
                 );
 
+            // Add input object to the dictionary of entities for which input object has already been created.
+            // This input object currently holds only simple fields.
+            // The complex fields (for related entities) would be added later when we return from recursion.
+            // Adding the input object to the dictionary ensures that we don't go into infinite recursion and return whenever
+            // we find that the input object has already been created for the entity.
             inputs.Add(input.Name, input);
+
+            // 2. Complex input fields.
+            // Evaluate input objects for related entities.
+            IEnumerable<InputValueDefinitionNode> complexInputFields =
+                objectTypeDefinitionNode.Fields
+                .Where(f => !IsBuiltInType(f.Type))
+                .Where(f => IsComplexFieldAllowedOnCreateInput(f, databaseType, definitions))
+                .Select(f =>
+                {
+                    string typeName = RelationshipDirectiveType.Target(f);
+                    HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value == typeName);
+
+                    if (def is null)
+                    {
+                        throw new DataApiBuilderException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                    }
+
+                    if (databaseType is DatabaseType.MSSQL && IsMToNRelationship(f, (ObjectTypeDefinitionNode)def, baseEntityName))
+                    {
+                        NameNode baseEntityNameForField = new(typeName);
+                        typeName = LINKING_OBJECT_PREFIX + baseEntityName.Value + typeName;
+                        def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == typeName)!;
+
+                        // Get entity definition for this ObjectTypeDefinitionNode.
+                        // Recurse for evaluating input objects for related entities.
+                        return GetComplexInputType(inputs, definitions, f, typeName, baseEntityNameForField, (ObjectTypeDefinitionNode)def, databaseType);
+                    }
+
+                    // Get entity definition for this ObjectTypeDefinitionNode.
+                    // Recurse for evaluating input objects for related entities.
+                    return GetComplexInputType(inputs, definitions, f, typeName, new(typeName), (ObjectTypeDefinitionNode)def, databaseType);
+                });
+            // Append relationship fields to the input fields.
+            inputFields.AddRange(complexInputFields);
             return input;
         }
 
@@ -87,23 +126,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType">The type of database to generate for</param>
         /// <param name="definitions">The other named types in the schema</param>
         /// <returns>true if the field is allowed, false if it is not.</returns>
-        private static bool FieldAllowedOnCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
+        private static bool IsComplexFieldAllowedOnCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
-            if (IsBuiltInType(field.Type))
-            {
-                // cosmosdb_nosql doesn't have the concept of "auto increment" for the ID field, nor does it have "auto generate"
-                // fields like timestap/etc. like SQL, so we're assuming that any built-in type will be user-settable
-                // during the create mutation
-                return databaseType switch
-                {
-                    DatabaseType.CosmosDB_NoSQL => true,
-                    _ => !IsAutoGeneratedField(field),
-                };
-            }
-
             if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
-                return false;
+                // Support for inserting nested entities with relationship cardinalities of 1-N or N-N is only supported for MsSql.
+                switch (databaseType)
+                {
+                    case DatabaseType.MSSQL:
+                        return true;
+                    default:
+                        return false;
+                }
             }
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
@@ -111,13 +145,30 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // For cosmos, allow updating nested objects
             if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)
             {
-                return false;
+                return databaseType is DatabaseType.MSSQL;
             }
 
             return true;
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f)
+        private static bool IsBuiltInTypeFieldAllowedForCreateInput(FieldDefinitionNode field, DatabaseType databaseType)
+        {
+            // cosmosdb_nosql doesn't have the concept of "auto increment" for the ID field, nor does it have "auto generate"
+            // fields like timestap/etc. like SQL, so we're assuming that any built-in type will be user-settable
+            // during the create mutation
+            return databaseType switch
+            {
+                DatabaseType.CosmosDB_NoSQL => true,
+                _ => !IsAutoGeneratedField(field)
+            };
+        }
+
+        private static bool HasForeignKeyReference(FieldDefinitionNode field)
+        {
+            return field.Directives.Any(d => d.Name.Value.Equals(ForeignKeyDirectiveType.DirectiveName));
+        }
+
+        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, DatabaseType databaseType)
         {
             IValueNode? defaultValue = null;
 
@@ -130,7 +181,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 f.Name,
                 new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
-                defaultValue is not null ? f.Type.NullableType() : f.Type,
+                defaultValue is not null || databaseType is DatabaseType.MSSQL && HasForeignKeyReference(f) ? f.Type.NullableType() : f.Type,
                 defaultValue,
                 new List<DirectiveNode>()
             );
@@ -143,7 +194,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
         /// <param name="field">Field that the input type is being generated for.</param>
         /// <param name="typeName">Name of the input type in the dictionary.</param>
-        /// <param name="otdn">The GraphQL object type to create the input type for.</param>
+        /// <param name="baseObjectTypeName">Name of the underlying object type of the field for which the input type is to be created.</param>
+        /// <param name="childObjectTypeDefinitionNode">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
         /// <param name="entities">Runtime configuration information for entities.</param>
         /// <returns>A GraphQL input type value.</returns>
@@ -152,15 +204,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             FieldDefinitionNode field,
             string typeName,
-            ObjectTypeDefinitionNode otdn,
-            DatabaseType databaseType,
-            RuntimeEntities entities)
+            NameNode baseObjectTypeName,
+            ObjectTypeDefinitionNode childObjectTypeDefinitionNode,
+            DatabaseType databaseType)
         {
             InputObjectTypeDefinitionNode node;
             NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateCreateInputType(inputs, otdn, field.Type.NamedType().Name, definitions, databaseType, entities);
+                node = GenerateCreateInputType(inputs, childObjectTypeDefinitionNode, new NameNode(typeName), baseObjectTypeName, definitions, databaseType);
             }
             else
             {
@@ -168,9 +220,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-
+            if (databaseType is DatabaseType.MSSQL && RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
+            {
+                // For *:N relationships, we need to create a list type.
+                type = new ListTypeNode(new NonNullTypeNode((INullableTypeNode)type));
+            }
             // For a type like [Bar!]! we have to first unpack the outer non-null
-            if (field.Type.IsNonNullType())
+            else if (field.Type.IsNonNullType())
             {
                 // The innerType is the raw List, scalar or object type without null settings
                 ITypeNode innerType = field.Type.InnerType();
@@ -192,10 +248,39 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 field.Name,
                 new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                type,
+                databaseType is DatabaseType.MSSQL ? type.NullableType() : type,
                 defaultValue: null,
-                field.Directives
+                databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
             );
+        }
+
+        /// <summary>
+        /// Helper method to determine if there is a M:N relationship between the parent and child node.
+        /// </summary>
+        /// <param name="fieldDefinitionNode">FieldDefinition of the child node.</param>
+        /// <param name="childObjectTypeDefinitionNode">Object definition of the child node.</param>
+        /// <param name="parentNode">Parent node's NameNode.</param>
+        /// <returns></returns>
+        private static bool IsMToNRelationship(FieldDefinitionNode fieldDefinitionNode, ObjectTypeDefinitionNode childObjectTypeDefinitionNode, NameNode parentNode)
+        {
+            Cardinality rightCardinality = RelationshipDirectiveType.Cardinality(fieldDefinitionNode);
+            if (rightCardinality is not Cardinality.Many)
+            {
+                return false;
+            }
+
+            List<FieldDefinitionNode> fieldsInChildNode = childObjectTypeDefinitionNode.Fields.ToList();
+            int index = fieldsInChildNode.FindIndex(field => field.Type.NamedType().Name.Value.Equals(QueryBuilder.GeneratePaginationTypeName(parentNode.Value)));
+            if (index == -1)
+            {
+                // Indicates that there is a 1:N relationship between parent and child nodes.
+                return false;
+            }
+
+            FieldDefinitionNode parentFieldInChildNode = fieldsInChildNode[index];
+
+            // Return true if left cardinality is also N.
+            return RelationshipDirectiveType.Cardinality(parentFieldInChildNode) is Cardinality.Many;
         }
 
         private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)
@@ -218,7 +303,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Generate the `create` mutation field for the GraphQL mutations for a given Object Definition
+        /// Generate the `create` point/batch mutation fields for the GraphQL mutations for a given Object Definition
         /// ReturnEntityName can be different from dbEntityName in cases where user wants summary results returned (through the DBOperationResult entity)
         /// as opposed to full entity.
         /// </summary>
@@ -232,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="returnEntityName">Name of type to be returned by the mutation.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
-        public static FieldDefinitionNode Build(
+        public static Tuple<FieldDefinitionNode, FieldDefinitionNode> Build(
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
@@ -249,9 +334,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 inputs,
                 objectTypeDefinitionNode,
                 name,
+                name,
                 root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
-                databaseType,
-                entities);
+                databaseType);
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", dbEntityName)) };
@@ -264,12 +349,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             string singularName = GetDefinedSingularName(name.Value, entity);
-            return new(
+
+            // Point insertion node.
+            FieldDefinitionNode createOneNode = new(
                 location: null,
                 new NameNode($"create{singularName}"),
                 new StringValueNode($"Creates a new {singularName}"),
                 new List<InputValueDefinitionNode> {
-                new InputValueDefinitionNode(
+                new(
                     location : null,
                     new NameNode(INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for creating {name}"),
@@ -280,6 +367,39 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 new NamedTypeNode(returnEntityName),
                 fieldDefinitionNodeDirectives
             );
+
+            // Multiple insertion node.
+            FieldDefinitionNode createMultipleNode = new(
+                location: null,
+                new NameNode($"create{GetInsertMultipleMutationName(singularName, GetDefinedPluralName(name.Value, entity))}"),
+                new StringValueNode($"Creates multiple new {singularName}"),
+                new List<InputValueDefinitionNode> {
+                new(
+                    location : null,
+                    new NameNode(ARRAY_INPUT_ARGUMENT_NAME),
+                    new StringValueNode($"Input representing all the fields for creating {name}"),
+                    new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(input.Name))),
+                    defaultValue: null,
+                    new List<DirectiveNode>())
+                },
+                new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(dbEntityName, entity))),
+                fieldDefinitionNodeDirectives
+            );
+
+            return new(createOneNode, createMultipleNode);
+        }
+
+        /// <summary>
+        /// Helper method to determine the name of the insert multiple mutation.
+        /// If the singular and plural graphql names for the entity match, we suffix the name with the insert multiple mutation suffix.
+        /// However if the plural and singular names are different, we use the plural name to construct the mutation.
+        /// </summary>
+        /// <param name="singularName">Singular name of the entity to be used for GraphQL.</param>
+        /// <param name="pluralName">Plural name of the entity to be used for GraphQL.</param>
+        /// <returns>Name of the insert multiple mutation.</returns>
+        private static string GetInsertMultipleMutationName(string singularName, string pluralName)
+        {
+            return singularName.Equals(pluralName) ? $"{singularName}{INSERT_MULTIPLE_MUTATION_SUFFIX}" : pluralName;
         }
     }
 }

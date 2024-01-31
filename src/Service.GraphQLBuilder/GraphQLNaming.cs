@@ -28,6 +28,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <seealso cref="https://spec.graphql.org/October2021/#sec-Names.Reserved-Names"/>
         public const string INTROSPECTION_FIELD_PREFIX = "__";
 
+        public const string LINKING_OBJECT_PREFIX = "LinkingObject_";
+
         /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
         /// Completely removes invalid characters from the input parameter: name.
@@ -102,6 +104,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             return configEntity.GraphQL.Singular;
+        }
+
+        public static string GetDefinedPluralName(string entityName, Entity configEntity)
+        {
+            if (string.IsNullOrEmpty(configEntity.GraphQL.Plural))
+            {
+                throw new ArgumentException($"The entity '{entityName}' does not have a plural name defined in config, nor has one been extrapolated from the entity name.");
+            }
+
+            return configEntity.GraphQL.Plural;
         }
 
         /// <summary>

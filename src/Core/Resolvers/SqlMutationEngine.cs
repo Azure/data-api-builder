@@ -19,10 +19,13 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using HotChocolate.Execution;
+using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Azure.Cosmos.Serialization.HybridRow;
 using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -83,18 +86,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             dataSourceName = GetValidatedDataSourceName(dataSourceName);
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            string entityName = GraphQLUtils.GetEntityNameFromContext(context);
+            IOutputType outputType = context.Selection.Field.Type;
+            string entityName = outputType.TypeName();
+            ObjectType _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+            bool isPointMutation;
+            if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
+            {
+                isPointMutation = true;
+                entityName = modelName;
+            }
+            else
+            {
+                isPointMutation = false;
+                outputType = _underlyingFieldType.Fields[MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME].Type;
+                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
+                if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? baseModelName))
+                {
+                    entityName = baseModelName;
+                }
+            }
 
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
 
             Tuple<JsonDocument?, IMetadata?>? result = null;
             EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
+            string roleName = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
+            string inputArgumentName = isPointMutation ? MutationBuilder.ITEM_INPUT_ARGUMENT_NAME : MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
 
             // If authorization fails, an exception will be thrown and request execution halts.
-            AuthorizeMutationFields(context, parameters, entityName, mutationOperation);
-
-            string roleName = GetRoleOfGraphQLRequest(context);
+            AuthorizeMutationFields(inputArgumentName, context, roleName, parameters, entityName, mutationOperation);
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
             // READ permission is inherited by other roles from Anonymous role when present.
@@ -1048,41 +1069,52 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
-        /// <summary>
-        /// Authorization check on mutation fields provided in a GraphQL Mutation request.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <param name="parameters"></param>
-        /// <param name="entityName"></param>
-        /// <param name="mutationOperation"></param>
-        /// <exception cref="DataApiBuilderException"></exception>
+        /// <inheritdoc/>
         public void AuthorizeMutationFields(
+            string inputArgumentName,
             IMiddlewareContext context,
+            string clientRole,
             IDictionary<string, object?> parameters,
             string entityName,
             EntityActionOperation mutationOperation)
         {
-            string role = GetRoleOfGraphQLRequest(context);
+            if (mutationOperation is EntityActionOperation.Create)
+            {
+                AuthorizeEntityAndFieldsForMutation(context, clientRole, entityName, mutationOperation, inputArgumentName, parameters);
+                return;
+            }
 
             List<string> inputArgumentKeys;
             if (mutationOperation != EntityActionOperation.Delete)
             {
-                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(inputArgumentName, parameters);
             }
             else
             {
                 inputArgumentKeys = parameters.Keys.ToList();
             }
 
+            if (!AreFieldsAuthorizedForEntity(clientRole, entityName, mutationOperation, inputArgumentKeys))
+            {
+                throw new DataApiBuilderException(
+                        message: "Unauthorized due to one or more fields in this mutation.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                    );
+            }
+        }
+
+        private bool AreFieldsAuthorizedForEntity(string clientRole, string entityName, EntityActionOperation mutationOperation, IEnumerable<string> inputArgumentKeys)
+        {
             bool isAuthorized; // False by default.
 
             switch (mutationOperation)
             {
                 case EntityActionOperation.UpdateGraphQL:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: EntityActionOperation.Update, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: EntityActionOperation.Update, inputArgumentKeys);
                     break;
                 case EntityActionOperation.Create:
-                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys);
+                    isAuthorized = _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: mutationOperation, inputArgumentKeys);
                     break;
                 case EntityActionOperation.Execute:
                 case EntityActionOperation.Delete:
@@ -1100,37 +1132,227 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         );
             }
 
-            if (!isAuthorized)
+            return isAuthorized;
+        }
+
+        /// <summary>
+        /// Performs authorization checks on entity level permissions and field level permissions for every entity and field
+        /// referenced in a GraphQL mutation for the given client role.
+        /// </summary>
+        /// <param name="context">Middleware context.</param>
+        /// <param name="clientRole">Client role header value extracted from the middleware context of the mutation</param>
+        /// <param name="entityName">entity name</param>
+        /// <param name="entityName">Top level entity name.</param>
+        /// <param name="operation">mutation operation</param>
+        /// <param name="inputArgumentName">Name of the input argument (differs based on point/multiple mutation).</param>
+        /// <param name="parametersDictionary">Dictionary of key/value pairs for the argument name/value.</param>
+        /// <exception cref="DataApiBuilderException">Throws exception when an authorization check fails.</exception>
+        private void AuthorizeEntityAndFieldsForMutation(
+            IMiddlewareContext context,
+            string clientRole,
+            string entityName,
+            EntityActionOperation operation,
+            string inputArgumentName,
+            IDictionary<string, object?> parametersDictionary
+            )
+        {
+            IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
+
+            // Dictionary to store a mapping from entityName to all field names being referenced from that entity in the mutation.
+            Dictionary<string, HashSet<string>> entityAndFieldsToAuthorize = new();
+            object? parameters;
+            if (parametersDictionary.TryGetValue(inputArgumentName, out parameters))
             {
-                throw new DataApiBuilderException(
-                    message: "Unauthorized due to one or more fields in this mutation.",
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                );
+                // Get all the entity names and field names referenced in the mutation.
+                PopulateMutationFieldsToAuthorize(entityAndFieldsToAuthorize, schemaForArgument, entityName, context, parameters, _runtimeConfigProvider.GetConfig());
+            }
+
+            // List of entities which are being referenced in the mutation.
+            IEnumerable<string> entityNames = entityAndFieldsToAuthorize.Keys;
+
+            // Perform authorization check at entity level.
+            foreach(string entityNameInMutation in entityNames)
+            {
+                if (!_authorizationResolver.AreRoleAndOperationDefinedForEntity(entityNameInMutation, clientRole, operation))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The client has insufficient permissions to perform the operation on the entity: {entityNameInMutation}",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        );
+                }
+            }
+
+            // Perform authorization checks at field level.
+            foreach ((string entityNameInMutation, HashSet<string> fieldsInEntity) in entityAndFieldsToAuthorize)
+            {
+                if (!AreFieldsAuthorizedForEntity(clientRole, entityNameInMutation, EntityActionOperation.Create, fieldsInEntity))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Access is forbidden to one or more fields in the entity: {entityNameInMutation} referenced in this mutation.",
+                        statusCode: HttpStatusCode.Forbidden,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                    );
+                }
             }
         }
 
         /// <summary>
-        /// Helper method to get the role with which the GraphQL API request was executed.
+        /// Helper method to collect names of all the fields referenced from every entity in a GraphQL mutation.
         /// </summary>
-        /// <param name="context">HotChocolate context for the GraphQL request</param>
-        private static string GetRoleOfGraphQLRequest(IMiddlewareContext context)
+        /// <param name="entityAndFieldsToAuthorize">Dictionary to store all the entities and their corresponding fields are stored.</param>
+        /// <param name="schema">Schema for the input field.</param>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="context">Middleware Context.</param>
+        /// <param name="parameters">Value for the input field.</param>
+        /// <param name="runtimeConfig">Runtime config.</param>
+        /// <example>       1. mutation {
+        ///                 createbook(
+        ///                     item: {
+        ///                         title: "book #1",
+        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///                         publisher: { name: "Macmillan publishers" },
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                     })
+        ///                 {
+        ///                     id
+        ///                 }
+        ///                 2. mutation {
+        ///                 createbooks(
+        ///                     items: [{
+        ///                         title: "book #1",
+        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///                         publisher: { name: "Macmillan publishers" },
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                     },
+        ///                     {
+        ///                         title: "book #2",
+        ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
+        ///                         publisher: { name: "Pearson Education" },
+        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", author_name: "William Shakespeare" }]
+        ///                     }])
+        ///                 {
+        ///                     items{
+        ///                         id
+        ///                         title
+        ///                     }
+        ///                 }</example>
+        private void PopulateMutationFieldsToAuthorize(
+            Dictionary<string, HashSet<string>> entityAndFieldsToAuthorize,
+            IInputField schema,
+            string entityName,
+            IMiddlewareContext context,
+            object? parameters,
+            RuntimeConfig runtimeConfig)
         {
-            string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
+            InputObjectType schemaObject = ResolverMiddleware.InputObjectTypeFromIInputField(schema);
+            if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
             {
-                role = stringVals.ToString();
+                // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
+                // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
+                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, listOfObjectFieldNode, entityAndFieldsToAuthorize, runtimeConfig);
+            }
+            else if (parameters is List<IValueNode> listOfIValueNode)
+            {
+                // For the example createbooks mutation written above, the list value for `items` is interpreted as a List<IValueNode>
+                // i.e. items is a list of ObjectValueNode(s).
+                listOfIValueNode.ForEach(iValueNode => PopulateMutationFieldsToAuthorize(entityAndFieldsToAuthorize, schema, entityName, context, iValueNode, runtimeConfig));
+            }
+            else if (parameters is ObjectValueNode objectValueNode)
+            {
+                // For the example createbook mutation written above, the node for publisher field is interpreted as an ObjectValueNode.
+                // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
+                ProcessObjectFieldNodesForAuthZ(context, entityName, schemaObject, objectValueNode.Fields, entityAndFieldsToAuthorize, runtimeConfig);
+            }
+            else if (parameters is ListValueNode listValueNode)
+            {
+                // For the example createbook mutation written above, the list values for reviews and authors fields are interpreted as ListValueNode.
+                // All the nodes in the ListValueNode are parsed one by one.
+                listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => PopulateMutationFieldsToAuthorize(entityAndFieldsToAuthorize, schema, entityName, context, objectValueNodeInListValueNode, runtimeConfig));
+            }
+        }
+
+        /// <summary>
+        /// Helper method to iterate over all the fields present in the input for the current field and add it to the dictionary
+        /// containing all entities and their corresponding fields.
+        /// </summary>
+        /// <param name="context">Middleware context.</param>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="schemaObject">Input object type for the field.</param>
+        /// <param name="fieldNodes">List of ObjectFieldNodes for the the input field.</param>
+        /// <param name="fieldsToAuthorize">Dictionary to store all the entities and their corresponding fields are stored.</param>
+        /// <param name="runtimeConfig">Runtime config.</param>
+        private void ProcessObjectFieldNodesForAuthZ(
+            IMiddlewareContext context,
+            string entityName,
+            InputObjectType schemaObject,
+            IReadOnlyList<ObjectFieldNode> fieldNodes,
+            Dictionary<string, HashSet<string>> fieldsToAuthorize,
+            RuntimeConfig runtimeConfig)
+        {
+            fieldsToAuthorize.TryAdd(entityName, new HashSet<string>());
+            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
+            ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            foreach (ObjectFieldNode field in fieldNodes)
+            {
+                Tuple<IValueNode?, SyntaxKind> fieldDetails = GetFieldDetails(field.Value, context.Variables);
+                SyntaxKind underlyingFieldKind = fieldDetails.Item2;
+
+                // If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column field
+                // which has an IntValue, FloatValue, StringValue, BooleanValue, NullValue or an EnumValue.
+                // In all of these cases, we do not have to recurse to process fields in the value - which is required for relationship fields.
+                if (underlyingFieldKind is not SyntaxKind.ObjectValue && underlyingFieldKind is not SyntaxKind.ListValue)
+                {
+                    // It might be the case that we are currently processing the fields for a linking input object.
+                    // Linking input objects enable users to provide input for fields belonging to the target entity and the linking entity.
+                    // Hence the backing column for fields belonging to the linking entity will not be present in the source definition of this target entity.
+                    // We need to skip such fields belonging to linking table as we do not perform authorization checks on them.
+                    if (metadataProvider.TryGetBackingColumn(entityName, field.Name.Value, out string? _))
+                    {
+                        // Only add those fields to this entity's set of fields which belong to this entity and not the linking entity.
+                        fieldsToAuthorize[entityName].Add(field.Name.Value);
+                    }
+                }
+                else
+                {
+                    string relationshipName = field.Name.Value;
+                    string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
+
+                    // Recurse to process fields in the value of this field.
+                    PopulateMutationFieldsToAuthorize(
+                        fieldsToAuthorize,
+                        schemaObject.Fields[relationshipName],
+                        targetEntityName,
+                        context,
+                        fieldDetails.Item1,
+                        runtimeConfig);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to get the field details i.e. the field value and the field kind, from the GraphQL mutation body.
+        /// If the field value is being provided as a variable in the mutation, a recursive call is made to the method
+        /// to get the actual value of the variable.
+        /// </summary>
+        /// <param name="value">Value of the field.</param>
+        /// <param name="variables">Colelction of variables declared in the GraphQL mutation request.</param>
+        /// <returns>A tuple containing a constant field value and the field kind.</returns>
+        private Tuple<IValueNode?, SyntaxKind> GetFieldDetails(IValueNode? value, IVariableValueCollection variables)
+        {
+            if (value is null)
+            {
+                return new(null, SyntaxKind.NullValue);
             }
 
-            if (string.IsNullOrEmpty(role))
+            if (value.Kind == SyntaxKind.Variable)
             {
-                throw new DataApiBuilderException(
-                    message: "No ClientRoleHeader available to perform authorization.",
-                    statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                string variableName = ((VariableNode)value).Name.Value;
+                IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
+                return GetFieldDetails(variableValue, variables);
             }
 
-            return role;
+            return new(value, value.Kind);
         }
 
         /// <summary>

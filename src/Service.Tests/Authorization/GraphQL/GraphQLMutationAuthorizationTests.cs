@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             Dictionary<string, object?> parameters = new()
             {
-                { MutationBuilder.INPUT_ARGUMENT_NAME, mutationInputRaw }
+                { MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, mutationInputRaw }
             };
 
             Dictionary<string, object?> middlewareContextData = new()
@@ -84,7 +84,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             try
             {
                 engine.AuthorizeMutationFields(
+                    MutationBuilder.ITEM_INPUT_ARGUMENT_NAME,
                     graphQLMiddlewareContext.Object,
+                    MIDDLEWARE_CONTEXT_ROLEHEADER_VALUE,
                     parameters,
                     entityName: TEST_ENTITY,
                     mutationOperation: operation

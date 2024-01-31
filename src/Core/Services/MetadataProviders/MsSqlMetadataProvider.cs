@@ -210,6 +210,33 @@ namespace Azure.DataApiBuilder.Core.Services
             GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureGraphQLFieldName(entityName, procedureEntity), entityName);
         }
 
+        /// <inheritdoc/>
+        protected override void PopulateMetadataForLinkingObject(
+            string entityName,
+            string targetEntityName,
+            string linkingObject,
+            Dictionary<string, DatabaseObject> sourceObjects)
+        {
+            if (GetDatabaseType() is DatabaseType.DWSQL)
+            {
+                // Currently we have this same class instantiated for both MsSql and DwSql.
+                // This is a refactor we need to take care of in future.
+                return;
+            }
+
+            string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(entityName, targetEntityName);
+            Entity linkingEntity = new(
+                Source: new EntitySource(Type: EntitySourceType.Table, Object: linkingObject, Parameters: null, KeyFields: null),
+                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                GraphQL: new(Singular: linkingEntityName, Plural: linkingEntityName, Enabled: false),
+                Permissions: Array.Empty<EntityPermission>(),
+                Relationships: null,
+                Mappings: new(),
+                IsLinkingEntity: true);
+            _linkingEntities.TryAdd(linkingEntityName, linkingEntity);
+            PopulateDatabaseObjectForEntity(linkingEntity, linkingEntityName, sourceObjects);
+        }
+
         /// <summary>
         /// Takes a string version of a sql date/time type and returns its corresponding DbType.
         /// </summary>

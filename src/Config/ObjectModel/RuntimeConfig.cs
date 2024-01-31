@@ -222,6 +222,11 @@ public record RuntimeConfig
 
     }
 
+    public static string GenerateLinkingEntityName(string source, string target)
+    {
+        return Entity.LINKING_ENTITY_PREFIX + source + target;
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// This constructor is to be used when dynamically setting up the config as opposed to using a cli json file.

@@ -163,7 +163,7 @@ public class ConfigGeneratorTests
                   ""path"": ""/An_"",
                   ""allow-introspection"": true,
                   ""nested-mutations"": {
-                        ""inserts"": {
+                        ""create"": {
                             ""enabled"": false
                         }
                     }

@@ -114,24 +114,24 @@ namespace Cli
                 return false;
             }
 
-            bool isNestedInsertEnabledForGraphQL;
+            bool isNestedCreateEnabledForGraphQL;
 
-            // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-insert.enabled is specified for other database types,
+            // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-create.enabled is specified for other database types,
             // a warning is logged.
-            if (dbType is not DatabaseType.MSSQL && options.NestedInsertOperationEnabled is not CliBool.None)
+            if (dbType is not DatabaseType.MSSQL && options.NestedCreateOperationEnabled is not CliBool.None)
             {
-                _logger.LogWarning($"The option --graphql.nested-insert.enabled is not supported for {dbType.ToString()} database type and will not be honored.");
+                _logger.LogWarning($"The option --graphql.nested-create.enabled is not supported for {dbType.ToString()} database type and will not be honored.");
             }
 
             if (dbType is not DatabaseType.MSSQL)
             {
-                // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-insert.enabled is specified for other database types,
+                // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-create.enabled is specified for other database types,
                 // it is not honored.
-                isNestedInsertEnabledForGraphQL = false;
+                isNestedCreateEnabledForGraphQL = false;
             }
             else
             {
-                if (!IsNestedInsertOperationEnabled(options.NestedInsertOperationEnabled, out isNestedInsertEnabledForGraphQL))
+                if (!IsNestedCreateOperationEnabled(options.NestedCreateOperationEnabled, out isNestedCreateEnabledForGraphQL))
                 {
                     return false;
                 }
@@ -256,7 +256,7 @@ namespace Cli
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
-                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, NestedMutationOptions: new(new NestedInsertOptions(enabled: isNestedInsertEnabledForGraphQL))),
+                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, NestedMutationOptions: new(new NestedCreateOptions(enabled: isNestedCreateEnabledForGraphQL))),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -310,25 +310,25 @@ namespace Cli
         }
 
         /// <summary>
-        /// Helper method to determine if the nested insert operation is enabled or not based on the inputs from dab init command.
+        /// Helper method to determine if the nested create operation is enabled or not based on the inputs from dab init command.
         /// </summary>
-        /// <param name="nestedInsertsEnabledOptionValue">Input value for --graphql.nested-insert.enabled option of the init command</param>
-        /// <param name="isNestedInsertEnabledForGraphQL">Boolean value indicating if nested insert operation is enabled.</param>
-        private static bool IsNestedInsertOperationEnabled(CliBool nestedInsertsEnabledOptionValue, out bool isNestedInsertEnabledForGraphQL)
+        /// <param name="nestedCreateEnabledOptionValue">Input value for --graphql.nested-create.enabled option of the init command</param>
+        /// <param name="isNestedCreateEnabledForGraphQL">Boolean value indicating if nested create operation is enabled.</param>
+        private static bool IsNestedCreateOperationEnabled(CliBool nestedCreateEnabledOptionValue, out bool isNestedCreateEnabledForGraphQL)
         {
-            if (nestedInsertsEnabledOptionValue is CliBool.None)
+            if (nestedCreateEnabledOptionValue is CliBool.None)
             {
-                isNestedInsertEnabledForGraphQL = false;
+                isNestedCreateEnabledForGraphQL = false;
                 return true;
             }
 
-            if (bool.TryParse(nestedInsertsEnabledOptionValue.ToString(), out isNestedInsertEnabledForGraphQL))
+            if (bool.TryParse(nestedCreateEnabledOptionValue.ToString(), out isNestedCreateEnabledForGraphQL))
             {
                 return true;
             }
             else
             {
-                _logger.LogError("Invalid value used with the option --graphql.nested-insert.enabled. Supported values are true/false.");
+                _logger.LogError("Invalid value used with the option --graphql.nested-create.enabled. Supported values are true/false.");
                 return false;
             }
         }

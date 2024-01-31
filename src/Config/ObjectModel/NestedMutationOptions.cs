@@ -7,25 +7,25 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <summary>
 /// Class that holds the options for all nested mutation operations.
 /// </summary>
-/// <param name="NestedInsertOptions"></param>
+/// <param name="NestedCreateOptions"></param>
 public class NestedMutationOptions
 {
-    // Options for nested insert operation.
+    // Options for nested create operation.
     [JsonPropertyName("insert")]
-    public NestedInsertOptions? NestedInsertOptions;
+    public NestedCreateOptions? NestedCreateOptions;
 
-    public NestedMutationOptions(NestedInsertOptions? nestedInsertOptions)
+    public NestedMutationOptions(NestedCreateOptions? nestedCreateOptions)
     {
-        NestedInsertOptions = nestedInsertOptions;
+        NestedCreateOptions = nestedCreateOptions;
     }
 
     /// <summary>
-    /// Helper function that checks if nested insert operation is enabled.
+    /// Helper function that checks if nested create operation is enabled.
     /// </summary>
-    /// <returns>True/False depending on whether nested insert operation is enabled/disabled.</returns>
-    public bool IsNestedInsertOperationEnabled()
+    /// <returns>True/False depending on whether nested create operation is enabled/disabled.</returns>
+    public bool IsNestedCreateOperationEnabled()
     {
-        return NestedInsertOptions is not null && NestedInsertOptions.Enabled;
+        return NestedCreateOptions is not null && NestedCreateOptions.Enabled;
     }
 
 }

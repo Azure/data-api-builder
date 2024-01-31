@@ -8,16 +8,16 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 namespace Azure.DataApiBuilder.Config.Converters
 {
     /// <summary>
-    /// Converter for the nested insert operation options.
+    /// Converter for the nested create operation options.
     /// </summary>
-    internal class NestedInsertOptionsConverter : JsonConverter<NestedInsertOptions>
+    internal class NestedCreateOptionsConverter : JsonConverter<NestedCreateOptions>
     {
         /// <inheritdoc/>
-        public override NestedInsertOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override NestedCreateOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                NestedInsertOptions? nestedInsertOptions = new(enabled: false);
+                NestedCreateOptions? nestedCreateOptions = new(enabled: false);
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndObject)
@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Config.Converters
                             reader.Read();
                             if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
                             {
-                                nestedInsertOptions = new(reader.GetBoolean());
+                                nestedCreateOptions = new(reader.GetBoolean());
                             }
 
                             break;
@@ -42,14 +42,14 @@ namespace Azure.DataApiBuilder.Config.Converters
                     }
                 }
 
-                return nestedInsertOptions;
+                return nestedCreateOptions;
             }
 
             throw new JsonException();
         }
 
         /// <inheritdoc/>
-        public override void Write(Utf8JsonWriter writer, NestedInsertOptions value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, NestedCreateOptions value, JsonSerializerOptions options)
         {
             writer.WritePropertyName("inserts");
 

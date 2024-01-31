@@ -13,7 +13,7 @@
       Path: /graphql,
       AllowIntrospection: true,
       NestedMutationOptions: {
-        NestedInsertOptions: {
+        NestedCreateOptions: {
           Enabled: false
         }
       }

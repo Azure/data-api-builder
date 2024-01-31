@@ -13,12 +13,12 @@ namespace Azure.DataApiBuilder.Config.Converters
     internal class NestedMutationOptionsConverter : JsonConverter<NestedMutationOptions>
     {
 
-        private readonly NestedInsertOptionsConverter _nestedInsertOptionsConverter;
+        private readonly NestedCreateOptionsConverter _nestedCreateOptionsConverter;
 
         public NestedMutationOptionsConverter(JsonSerializerOptions options)
         {
-            _nestedInsertOptionsConverter = options.GetConverter(typeof(NestedInsertOptions)) as NestedInsertOptionsConverter ??
-                                            throw new JsonException("Failed to get nested insert options converter");
+            _nestedCreateOptionsConverter = options.GetConverter(typeof(NestedCreateOptions)) as NestedCreateOptionsConverter ??
+                                            throw new JsonException("Failed to get nested create options converter");
         }
 
         /// <inheritdoc/>
@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Config.Converters
                     {
                         case "inserts":
                             reader.Read();
-                            nestedMutationOptions = new(_nestedInsertOptionsConverter.Read(ref reader, typeToConvert, options));
+                            nestedMutationOptions = new(_nestedCreateOptionsConverter.Read(ref reader, typeToConvert, options));
                             break;
 
                         default:
@@ -66,9 +66,9 @@ namespace Azure.DataApiBuilder.Config.Converters
 
             writer.WriteStartObject();
 
-            if (value.NestedInsertOptions is not null)
+            if (value.NestedCreateOptions is not null)
             {
-                _nestedInsertOptionsConverter.Write(writer, value.NestedInsertOptions, options);
+                _nestedCreateOptionsConverter.Write(writer, value.NestedCreateOptions, options);
             }
 
             writer.WriteEndObject();

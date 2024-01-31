@@ -180,13 +180,13 @@
               "type": "object",
               "description": "Feature flags for nested mutation operations",
               "properties": {
-                "inserts":{
+                "create":{
                   "type": "object",
-                  "description": "Options for nested insert operations",
+                  "description": "Options for nested create operations",
                   "properties": {
                     "enabled": {
                       "type": "boolean",
-                      "description": "Allow enabling/disabling nested insert operations for all entities.",
+                      "description": "Allow enabling/disabling nested create operations for all entities.",
                       "default": false
                     }
                   }

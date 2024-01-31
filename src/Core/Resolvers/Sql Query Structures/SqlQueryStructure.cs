@@ -302,7 +302,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 PaginationMetadata.Subqueries.Add(QueryBuilder.PAGINATION_FIELD_NAME, PaginationMetadata.MakeEmptyPaginationMetadata());
             }
 
-            EntityName = _underlyingFieldType.Name;
+            EntityName = sqlMetadataProvider.GetDatabaseType() == DatabaseType.DWSQL ? GraphQLUtils.GetEntityNameFromContext(ctx) : _underlyingFieldType.Name;
 
             if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
             {
@@ -475,7 +475,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 column.TableAlias = SourceAlias;
                 column.ParamName = column.Value is not null ?
-                     MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName))) :
+                     MakeDbConnectionParam(GetParamAsSystemType(column.Value!.ToString()!, column.ColumnName, GetColumnSystemType(column.ColumnName)), column.ColumnName) :
                      MakeDbConnectionParam(null, column.ColumnName);
             }
 

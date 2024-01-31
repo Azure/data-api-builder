@@ -2,10 +2,12 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Data.Common;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -13,6 +15,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -29,8 +32,9 @@ namespace Azure.DataApiBuilder.Core.Services
             RuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
-            string dataSourceName)
-            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName)
+            string dataSourceName,
+            bool isValidateOnly = false)
+            : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
         }
 
@@ -79,6 +83,157 @@ namespace Azure.DataApiBuilder.Core.Services
                     sourceDefinition.IsInsertDMLTriggerEnabled = true;
                     _logger.LogInformation($"An insert trigger is enabled for the entity: {entityName}");
                 }
+            }
+        }
+
+        /// <inheritdoc/>
+        protected override void PopulateColumnDefinitionWithHasDefaultAndDbType(
+            SourceDefinition sourceDefinition,
+            DataTable allColumnsInTable)
+        {
+            foreach (DataRow columnInfo in allColumnsInTable.Rows)
+            {
+                string columnName = (string)columnInfo["COLUMN_NAME"];
+                bool hasDefault =
+                    Type.GetTypeCode(columnInfo["COLUMN_DEFAULT"].GetType()) != TypeCode.DBNull;
+                if (sourceDefinition.Columns.TryGetValue(columnName, out ColumnDefinition? columnDefinition))
+                {
+                    columnDefinition.HasDefault = hasDefault;
+
+                    if (hasDefault)
+                    {
+                        columnDefinition.DefaultValue = columnInfo["COLUMN_DEFAULT"];
+                    }
+
+                    columnDefinition.DbType = TypeHelper.GetDbTypeFromSystemType(columnDefinition.SystemType);
+                    if (columnDefinition.SystemType == typeof(DateTime) || columnDefinition.SystemType == typeof(DateTimeOffset))
+                    {
+                        // MsSql types like date,smalldatetime,datetime,datetime2 are mapped to the same .NET type of DateTime.
+                        // Thus to determine the actual dbtype, we use the underlying MsSql type instead of the .NET type.
+                        DbType dbType;
+                        string sqlType = (string)columnInfo["DATA_TYPE"];
+                        if (TryResolveDbType(sqlType, out dbType))
+                        {
+                            columnDefinition.DbType = dbType;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        protected override async Task FillSchemaForStoredProcedureAsync(
+            Entity procedureEntity,
+            string entityName,
+            string schemaName,
+            string storedProcedureSourceName,
+            StoredProcedureDefinition storedProcedureDefinition)
+        {
+            using DbConnection conn = new SqlConnection();
+            conn.ConnectionString = ConnectionString;
+            await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
+            await conn.OpenAsync();
+
+            string[] procedureRestrictions = new string[NUMBER_OF_RESTRICTIONS];
+
+            // To restrict the parameters for the current stored procedure, specify its name
+            procedureRestrictions[0] = conn.Database;
+            procedureRestrictions[1] = schemaName;
+            procedureRestrictions[2] = storedProcedureSourceName;
+
+            DataTable procedureMetadata = await conn.GetSchemaAsync(collectionName: "Procedures", restrictionValues: procedureRestrictions);
+
+            // Stored procedure does not exist in DB schema
+            if (procedureMetadata.Rows.Count == 0)
+            {
+                throw new DataApiBuilderException(
+                    message: $"No stored procedure definition found for the given database object {storedProcedureSourceName}",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            // Each row in the procedureParams DataTable corresponds to a single parameter
+            DataTable parameterMetadata = await conn.GetSchemaAsync(collectionName: "ProcedureParameters", restrictionValues: procedureRestrictions);
+
+            // For each row/parameter, add an entry to StoredProcedureDefinition.Parameters dictionary
+            foreach (DataRow row in parameterMetadata.Rows)
+            {
+                // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
+                // See https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-data-type-mappings
+                string sqlType = (string)row["DATA_TYPE"];
+                Type systemType = SqlToCLRType(sqlType);
+                ParameterDefinition paramDefinition = new()
+                {
+                    SystemType = systemType,
+                    DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
+                };
+
+                if (paramDefinition.SystemType == typeof(DateTime) || paramDefinition.SystemType == typeof(DateTimeOffset))
+                {
+                    // MsSql types like date,smalldatetime,datetime,datetime2 are mapped to the same .NET type of DateTime.
+                    // Thus to determine the actual dbtype, we use the underlying MsSql type instead of the .NET type.
+                    DbType dbType;
+                    if (TryResolveDbType(sqlType, out dbType))
+                    {
+                        paramDefinition.DbType = dbType;
+                    }
+                }
+
+                // Add to parameters dictionary without the leading @ sign
+                storedProcedureDefinition.Parameters.TryAdd(((string)row["PARAMETER_NAME"])[1..], paramDefinition);
+            }
+
+            // Loop through parameters specified in config, throw error if not found in schema
+            // else set runtime config defined default values.
+            // Note: we defer type checking of parameters specified in config until request time
+            Dictionary<string, object>? configParameters = procedureEntity.Source.Parameters;
+            if (configParameters is not null)
+            {
+                foreach ((string configParamKey, object configParamValue) in configParameters)
+                {
+                    if (!storedProcedureDefinition.Parameters.TryGetValue(configParamKey, out ParameterDefinition? parameterDefinition))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Could not find parameter \"{configParamKey}\" specified in config for procedure \"{schemaName}.{storedProcedureSourceName}\"",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+                    else
+                    {
+                        parameterDefinition.HasConfigDefault = true;
+                        parameterDefinition.ConfigDefaultValue = configParamValue?.ToString();
+                    }
+                }
+            }
+
+            // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
+            GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureGraphQLFieldName(entityName, procedureEntity), entityName);
+        }
+
+        /// <summary>
+        /// Takes a string version of a sql date/time type and returns its corresponding DbType.
+        /// </summary>
+        /// <param name="sqlDbTypeName">Name of the sqlDbType.<</param>
+        /// <param name="dbType">DbType of the parameter corresponding to its sqlDbTypeName.</param>
+        /// <returns>Returns true when the given sqlDbTypeName datetime type is supported by DAB and resolve it to its corresponding DbType, else false.</returns>
+        private bool TryResolveDbType(string sqlDbTypeName, out DbType dbType)
+        {
+            if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
+            {
+                // For MsSql, all the date time types i.e. date, smalldatetime, datetime, datetime2 map to System.DateTime system type.
+                // Hence we cannot directly determine the DbType from the system type.
+                // However, to make sure that the database correctly interprets these datatypes, it is necessary to correctly
+                // populate the DbTypes.
+                return TypeHelper.TryGetDbTypeFromSqlDbDateTimeType(sqlDbType, out dbType);
+            }
+            else
+            {
+                // This code should never be hit because every sqlDbTypeName must have a corresponding sqlDbType.
+                // However, when a new data type is introduced in MsSql which maps to .NET type of DateTime, this code block
+                // will be hit. Returning false instead of throwing an exception in that case prevents the engine from crashing.
+                _logger.LogWarning("Could not determine DbType for SqlDb type of {sqlDbTypeName}", sqlDbTypeName);
+                dbType = 0;
+                return false;
             }
         }
 

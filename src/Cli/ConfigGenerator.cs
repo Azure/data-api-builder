@@ -142,7 +142,7 @@ namespace Cli
                         _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
-                    if (options.RestRequestBodyStrict is not CliBoolean.None)
+                    if (options.RestRequestBodyStrict is not CliBool.None)
                     {
                         _logger.LogWarning("Configuration option --rest.request-body-strict is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
@@ -232,7 +232,7 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBoolean.False ? false : true),
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
                     GraphQL: new(graphQLEnabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
@@ -1019,19 +1019,10 @@ namespace Cli
         /// </summary>
         public static bool TryStartEngineWithOptions(StartOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            string? configToBeUsed = options.Config;
-            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
             {
-                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
-            }
-
-            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out string runtimeConfigFile))
-            {
-                _logger.LogError("Config not provided and default config file doesn't exist.");
                 return false;
             }
-
-            loader.UpdateConfigFilePath(runtimeConfigFile);
 
             // Validates that config file has data and follows the correct json schema
             // Replaces all the environment variables while deserializing when starting DAB.
@@ -1089,6 +1080,63 @@ namespace Cli
             }
 
             return Azure.DataApiBuilder.Service.Program.StartEngine(args.ToArray());
+        }
+
+        /// <summary>
+        /// Runs all the validations on the config file and returns true if the config is valid.
+        /// </summary>
+        public static bool IsConfigValid(ValidateOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigForRuntimeEngine(options.Config, loader, fileSystem, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            // Validates that config file has data and it is properly deserialized
+            // Replaces all the environment variables while deserializing when starting DAB.
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
+            {
+                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+            else
+            {
+                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+            }
+
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+
+            ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
+            RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
+
+            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, LoggerFactoryForCli).Result;
+        }
+
+        /// <summary>
+        /// Tries to fetch the config file based on the precedence.
+        /// If config provided by the user, it will be the final config used, else will check based on the environment variable.
+        /// Returns true if the config file is found, else false.
+        /// </summary>
+        public static bool TryGetConfigForRuntimeEngine(
+            string? configToBeUsed,
+            FileSystemRuntimeConfigLoader loader,
+            IFileSystem fileSystem,
+            out string runtimeConfigFile)
+        {
+            if (string.IsNullOrEmpty(configToBeUsed) && ConfigMerger.TryMergeConfigsIfAvailable(fileSystem, loader, _logger, out configToBeUsed))
+            {
+                _logger.LogInformation("Using merged config file based on environment: {configToBeUsed}.", configToBeUsed);
+            }
+
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, configToBeUsed, out runtimeConfigFile))
+            {
+                _logger.LogError("Config not provided and default config file doesn't exist.");
+                return false;
+            }
+
+            loader.UpdateConfigFilePath(runtimeConfigFile);
+
+            return true;
         }
 
         /// <summary>
@@ -1268,6 +1316,54 @@ namespace Cli
             }
 
             return graphQLType with { Operation = graphQLOperation };
+        }
+
+        /// <summary>
+        /// This method will add the telemetry options to the config file. If the config file already has telemetry options,
+        /// it will overwrite the existing options.
+        /// Data API builder consumes the config file with provided telemetry options to send telemetry to Application Insights.
+        /// </summary>
+        public static bool TryAddTelemetry(AddTelemetryOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.Runtime is null)
+            {
+                _logger.LogError("Invalid or missing 'runtime' section in config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(options.AppInsightsConnString))
+            {
+                _logger.LogError("Invalid Application Insights connection string provided.");
+                return false;
+            }
+
+            ApplicationInsightsOptions applicationInsightsOptions = new(
+                Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
+                ConnectionString: options.AppInsightsConnString
+            );
+
+            runtimeConfig = runtimeConfig with
+            {
+                Runtime = runtimeConfig.Runtime with
+                {
+                    Telemetry = runtimeConfig.Runtime.Telemetry is null
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
+                }
+            };
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }
     }
 }

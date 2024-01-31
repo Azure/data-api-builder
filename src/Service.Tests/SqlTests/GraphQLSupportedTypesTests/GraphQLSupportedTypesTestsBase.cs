@@ -8,7 +8,8 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedDateTimeTypes;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {
@@ -16,64 +17,77 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
     [TestClass]
     public abstract class GraphQLSupportedTypesTestBase : SqlTestBase
     {
-        protected const string TYPE_TABLE = "TypeTable";
-
         #region Tests
 
         [DataTestMethod]
-        [DataRow(BYTE_TYPE, 1)]
-        [DataRow(BYTE_TYPE, 2)]
-        [DataRow(BYTE_TYPE, 3)]
-        [DataRow(BYTE_TYPE, 4)]
-        [DataRow(SHORT_TYPE, 1)]
-        [DataRow(SHORT_TYPE, 2)]
-        [DataRow(SHORT_TYPE, 3)]
-        [DataRow(SHORT_TYPE, 4)]
-        [DataRow(INT_TYPE, 1)]
-        [DataRow(INT_TYPE, 2)]
-        [DataRow(INT_TYPE, 3)]
-        [DataRow(INT_TYPE, 4)]
-        [DataRow(LONG_TYPE, 1)]
-        [DataRow(LONG_TYPE, 2)]
-        [DataRow(LONG_TYPE, 3)]
-        [DataRow(LONG_TYPE, 4)]
-        [DataRow(SINGLE_TYPE, 1)]
-        [DataRow(SINGLE_TYPE, 2)]
-        [DataRow(SINGLE_TYPE, 3)]
-        [DataRow(SINGLE_TYPE, 4)]
-        [DataRow(FLOAT_TYPE, 1)]
-        [DataRow(FLOAT_TYPE, 2)]
-        [DataRow(FLOAT_TYPE, 3)]
-        [DataRow(FLOAT_TYPE, 4)]
-        [DataRow(DECIMAL_TYPE, 1)]
-        [DataRow(DECIMAL_TYPE, 2)]
-        [DataRow(DECIMAL_TYPE, 3)]
-        [DataRow(DECIMAL_TYPE, 4)]
-        [DataRow(STRING_TYPE, 1)]
-        [DataRow(STRING_TYPE, 2)]
-        [DataRow(STRING_TYPE, 3)]
-        [DataRow(STRING_TYPE, 4)]
-        [DataRow(BOOLEAN_TYPE, 1)]
-        [DataRow(BOOLEAN_TYPE, 2)]
-        [DataRow(BOOLEAN_TYPE, 3)]
-        [DataRow(BOOLEAN_TYPE, 4)]
-        [DataRow(DATETIME_TYPE, 1)]
-        [DataRow(DATETIME_TYPE, 2)]
-        [DataRow(DATETIME_TYPE, 3)]
-        [DataRow(DATETIME_TYPE, 4)]
-        [DataRow(TIME_TYPE, 1)]
-        [DataRow(TIME_TYPE, 2)]
-        [DataRow(TIME_TYPE, 3)]
-        [DataRow(TIME_TYPE, 4)]
-        [DataRow(TIME_TYPE, 5)]
-        [DataRow(BYTEARRAY_TYPE, 1)]
-        [DataRow(BYTEARRAY_TYPE, 2)]
-        [DataRow(BYTEARRAY_TYPE, 3)]
-        [DataRow(BYTEARRAY_TYPE, 4)]
-        [DataRow(UUID_TYPE, 1)]
-        [DataRow(UUID_TYPE, 2)]
-        [DataRow(UUID_TYPE, 3)]
-        [DataRow(UUID_TYPE, 4)]
+        [DataRow(BYTE_TYPE, 1, DisplayName = "Query by PK test selecting only byte_types with typeid = 1.")]
+        [DataRow(BYTE_TYPE, 2, DisplayName = "Query by PK test selecting only byte_types with typeid = 2.")]
+        [DataRow(BYTE_TYPE, 3, DisplayName = "Query by PK test selecting only byte_types with typeid = 3.")]
+        [DataRow(BYTE_TYPE, 4, DisplayName = "Query by PK test selecting only byte_types with typeid = 4.")]
+        [DataRow(SHORT_TYPE, 1, DisplayName = "Query by PK test selecting only short_types with typeid = 1.")]
+        [DataRow(SHORT_TYPE, 2, DisplayName = "Query by PK test selecting only short_types with typeid = 2.")]
+        [DataRow(SHORT_TYPE, 3, DisplayName = "Query by PK test selecting only short_types with typeid = 3.")]
+        [DataRow(SHORT_TYPE, 4, DisplayName = "Query by PK test selecting only short_types with typeid = 4.")]
+        [DataRow(INT_TYPE, 1, DisplayName = "Query by PK test selecting only int_types with typeid = 1.")]
+        [DataRow(INT_TYPE, 2, DisplayName = "Query by PK test selecting only int_types with typeid = 2.")]
+        [DataRow(INT_TYPE, 3, DisplayName = "Query by PK test selecting only int_types with typeid = 3.")]
+        [DataRow(INT_TYPE, 4, DisplayName = "Query by PK test selecting only int_types with typeid = 4.")]
+        [DataRow(LONG_TYPE, 1, DisplayName = "Query by PK test selecting only long_types with typeid = 1.")]
+        [DataRow(LONG_TYPE, 2, DisplayName = "Query by PK test selecting only long_types with typeid = 2.")]
+        [DataRow(LONG_TYPE, 3, DisplayName = "Query by PK test selecting only long_types with typeid = 3.")]
+        [DataRow(LONG_TYPE, 4, DisplayName = "Query by PK test selecting only long_types with typeid = 4.")]
+        [DataRow(SINGLE_TYPE, 1, DisplayName = "Query by PK test selecting only single_types with typeid = 1.")]
+        [DataRow(SINGLE_TYPE, 2, DisplayName = "Query by PK test selecting only single_types with typeid = 2.")]
+        [DataRow(SINGLE_TYPE, 3, DisplayName = "Query by PK test selecting only single_types with typeid = 3.")]
+        [DataRow(SINGLE_TYPE, 4, DisplayName = "Query by PK test selecting only single_types with typeid = 4.")]
+        [DataRow(FLOAT_TYPE, 1, DisplayName = "Query by PK test selecting only float_types with typeid = 1.")]
+        [DataRow(FLOAT_TYPE, 2, DisplayName = "Query by PK test selecting only float_types with typeid = 2.")]
+        [DataRow(FLOAT_TYPE, 3, DisplayName = "Query by PK test selecting only float_types with typeid = 3.")]
+        [DataRow(FLOAT_TYPE, 4, DisplayName = "Query by PK test selecting only float_types with typeid = 4.")]
+        [DataRow(DECIMAL_TYPE, 1, DisplayName = "Query by PK test selecting only decimal_types with typeid = 1.")]
+        [DataRow(DECIMAL_TYPE, 2, DisplayName = "Query by PK test selecting only decimal_types with typeid = 2.")]
+        [DataRow(DECIMAL_TYPE, 3, DisplayName = "Query by PK test selecting only decimal_types with typeid = 3.")]
+        [DataRow(DECIMAL_TYPE, 4, DisplayName = "Query by PK test selecting only decimal_types with typeid = 4.")]
+        [DataRow(STRING_TYPE, 1, DisplayName = "Query by PK test selecting only string_types with typeid = 1.")]
+        [DataRow(STRING_TYPE, 2, DisplayName = "Query by PK test selecting only string_types with typeid = 2.")]
+        [DataRow(STRING_TYPE, 3, DisplayName = "Query by PK test selecting only string_types with typeid = 3.")]
+        [DataRow(STRING_TYPE, 4, DisplayName = "Query by PK test selecting only string_types with typeid = 4.")]
+        [DataRow(BOOLEAN_TYPE, 1, DisplayName = "Query by PK test selecting only boolean_types with typeid = 1.")]
+        [DataRow(BOOLEAN_TYPE, 2, DisplayName = "Query by PK test selecting only boolean_types with typeid = 2.")]
+        [DataRow(BOOLEAN_TYPE, 3, DisplayName = "Query by PK test selecting only boolean_types with typeid = 3.")]
+        [DataRow(BOOLEAN_TYPE, 4, DisplayName = "Query by PK test selecting only boolean_types with typeid = 4.")]
+        [DataRow(DATETIME_TYPE, 1, DisplayName = "Query by PK test selecting only datetime_types with typeid = 1.")]
+        [DataRow(DATETIME_TYPE, 2, DisplayName = "Query by PK test selecting only datetime_types with typeid = 2.")]
+        [DataRow(DATETIME_TYPE, 3, DisplayName = "Query by PK test selecting only datetime_types with typeid = 3.")]
+        [DataRow(DATETIME_TYPE, 4, DisplayName = "Query by PK test selecting only datetime_types with typeid = 4.")]
+        [DataRow(DATETIME2_TYPE, 1, DisplayName = "Query by PK test selecting only datetime2_types with typeid = 1.")]
+        [DataRow(DATETIME2_TYPE, 2, DisplayName = "Query by PK test selecting only datetime2_types with typeid = 2.")]
+        [DataRow(DATETIME2_TYPE, 3, DisplayName = "Query by PK test selecting only datetime2_types with typeid = 3.")]
+        [DataRow(DATETIME2_TYPE, 4, DisplayName = "Query by PK test selecting only datetime2_types with typeid = 4.")]
+        [DataRow(DATETIMEOFFSET_TYPE, 1, DisplayName = "Query by PK test selecting only datetimeoffset_types with typeid = 1.")]
+        [DataRow(DATETIMEOFFSET_TYPE, 2, DisplayName = "Query by PK test selecting only datetimeoffset_types with typeid = 2.")]
+        [DataRow(DATETIMEOFFSET_TYPE, 3, DisplayName = "Query by PK test selecting only datetimeoffset_types with typeid = 3.")]
+        [DataRow(DATETIMEOFFSET_TYPE, 4, DisplayName = "Query by PK test selecting only datetimeoffset_types with typeid = 4.")]
+        [DataRow(SMALLDATETIME_TYPE, 1, DisplayName = "Query by PK test selecting only smalldatetime_types with typeid = 1.")]
+        [DataRow(SMALLDATETIME_TYPE, 1, DisplayName = "Query by PK test selecting only smalldatetime_types with typeid = 1.")]
+        [DataRow(SMALLDATETIME_TYPE, 1, DisplayName = "Query by PK test selecting only smalldatetime_types with typeid = 1.")]
+        [DataRow(SMALLDATETIME_TYPE, 1, DisplayName = "Query by PK test selecting only smalldatetime_types with typeid = 1.")]
+        [DataRow(DATE_TYPE, 1, DisplayName = "Query by PK test selecting only date_types with typeid = 1.")]
+        [DataRow(DATE_TYPE, 2, DisplayName = "Query by PK test selecting only date_types with typeid = 2.")]
+        [DataRow(DATE_TYPE, 3, DisplayName = "Query by PK test selecting only date_types with typeid = 3.")]
+        [DataRow(DATE_TYPE, 4, DisplayName = "Query by PK test selecting only date_types with typeid = 4.")]
+        [DataRow(TIME_TYPE, 1, DisplayName = "Query by PK test selecting only time_types with typeid = 1.")]
+        [DataRow(TIME_TYPE, 2, DisplayName = "Query by PK test selecting only time_types with typeid = 2.")]
+        [DataRow(TIME_TYPE, 3, DisplayName = "Query by PK test selecting only time_types with typeid = 3.")]
+        [DataRow(TIME_TYPE, 4, DisplayName = "Query by PK test selecting only time_types with typeid = 4.")]
+        [DataRow(BYTEARRAY_TYPE, 1, DisplayName = "Query by PK test selecting only bytearray_types with typeid = 1.")]
+        [DataRow(BYTEARRAY_TYPE, 2, DisplayName = "Query by PK test selecting only bytearray_types with typeid = 2.")]
+        [DataRow(BYTEARRAY_TYPE, 3, DisplayName = "Query by PK test selecting only bytearray_types with typeid = 3.")]
+        [DataRow(BYTEARRAY_TYPE, 4, DisplayName = "Query by PK test selecting only bytearray_types with typeid = 4.")]
+        [DataRow(UUID_TYPE, 1, DisplayName = "Query by PK test selecting only uuid_types with typeid = 1.")]
+        [DataRow(UUID_TYPE, 2, DisplayName = "Query by PK test selecting only uuid_types with typeid = 2.")]
+        [DataRow(UUID_TYPE, 3, DisplayName = "Query by PK test selecting only uuid_types with typeid = 3.")]
+        [DataRow(UUID_TYPE, 4, DisplayName = "Query by PK test selecting only uuid_types with typeid = 4.")]
         public async Task QueryTypeColumn(string type, int id)
         {
             if (!IsSupportedType(type))
@@ -118,14 +132,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(LONG_TYPE, "lte", "-9223372036854775808", "-9223372036854775808", " <= ")]
         [DataRow(LONG_TYPE, "neq", "1", "1", "!=")]
         [DataRow(LONG_TYPE, "eq", "-1", "-1", "=")]
-        [DataRow(STRING_TYPE, "neq", "\'foo\'", "\"foo\"", "!=")]
-        [DataRow(STRING_TYPE, "eq", "\'lksa;jdflasdf;alsdflksdfkldj\'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=")]
+        [DataRow(STRING_TYPE, "neq", "'foo'", "\"foo\"", "!=")]
+        [DataRow(STRING_TYPE, "eq", "'lksa;jdflasdf;alsdflksdfkldj'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=")]
         [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
         [DataRow(SINGLE_TYPE, "gte", "-9.2", "-9.2", ">=")]
         [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
         [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
         [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
-        [DataRow(SINGLE_TYPE, "eq", "\'0.33\'", "0.33", "=")]
+        [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
         [DataRow(FLOAT_TYPE, "gt", "-9.2", "-9.2", ">")]
         [DataRow(FLOAT_TYPE, "gte", "-9.2", "-9.2", ">=")]
         [DataRow(FLOAT_TYPE, "lt", ".33", "0.33", "<")]
@@ -138,10 +152,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DECIMAL_TYPE, "lte", "0.333333", "0.333333", " <= ")]
         [DataRow(DECIMAL_TYPE, "neq", "0.0", "0.0", "!=")]
         [DataRow(DECIMAL_TYPE, "eq", "-9.292929", "-9.292929", "=")]
-        [DataRow(BOOLEAN_TYPE, "neq", "\'false\'", "false", "!=")]
-        [DataRow(BOOLEAN_TYPE, "eq", "\'false\'", "false", "=")]
         [DataRow(UUID_TYPE, "eq", "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"", "=")]
         [DataRow(UUID_TYPE, "neq", "'D1D021A8-47B4-4AE4-B718-98E89C41A161'", "\"D1D021A8-47B4-4AE4-B718-98E89C41A161\"", "!=")]
+        [DataRow(BOOLEAN_TYPE, "neq", "'false'", "false", "!=")]
+        [DataRow(BOOLEAN_TYPE, "eq", "'false'", "false", "=")]
         public async Task QueryTypeColumnFilterAndOrderBy(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             if (!IsSupportedType(type))
@@ -173,40 +187,68 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// The test checks various datetime data types such as datetime, datetimeoffset, and time.
         /// </summary>
         [DataTestMethod]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08\'", "\"1999-01-08\"", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08\'", "\"1999-01-08\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'1999-01-08\'", "\"1999-01-08\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'1999-01-08\'", "\"1999-01-08\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08\'", "\"1999-01-08\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08\'", "\"1999-01-08T01:01:01\"", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'9999-12-31 23:59:59\'", "\"9999-12-31 23:59:59\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00\'", "\"1999-01-08 10:23:00\"", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'9999-12-31 23:59:59.9999999\'", "\"9999-12-31 23:59:59.9999999\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'9999-12-31 23:59:59.9999999\'", "\"9999-12-31 23:59:59.9999999\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:00.9999999\'", "\"1999-01-08 10:23:00.9999999\"", "=")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=")]
-        [DataRow(DATETIMEOFFSET_TYPE, "neq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=")]
-        [DataRow(DATETIMEOFFSET_TYPE, "eq", "\'1999-01-08 10:23:54.9999999-14:00\'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=")]
-        [DataRow(DATETIME_TYPE, "gt", "\'1999-01-08 10:22:00\'", "\"1999-01-08 10:22:00\"", " > ")]
-        [DataRow(DATETIME_TYPE, "gte", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", " >= ")]
-        [DataRow(DATETIME_TYPE, "lt", "\'2079-06-06\'", "\"2079-06-06\"", " < ")]
-        [DataRow(DATETIME_TYPE, "lte", "\'2079-06-06\'", "\"2079-06-06\"", " <= ")]
-        [DataRow(DATETIME_TYPE, "neq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "!=")]
-        [DataRow(DATETIME_TYPE, "eq", "\'1999-01-08 10:23:54\'", "\"1999-01-08 10:23:54\"", "=")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", " = ",
+            DisplayName = "datetime type filter and orderby test with eq operator and specific value '1999-01-08'.")]
+        [DataRow(DATETIME_TYPE, "lt", "'1753-01-01'", "\"1753-01-01\"", " < ",
+            DisplayName = "datetime type filter and orderby test with lt operator and specific value '1753-01-01'.")]
+        [DataRow(DATETIME_TYPE, "lte", "'1753-01-01'", "\"1753-01-01\"", " <= ",
+            DisplayName = "datetime type filter and orderby test with lte operator and specific value '1753-01-01'.")]
+        [DataRow(DATETIME_TYPE, "neq", "'1753-01-01'", "\"1753-01-01\"", "!=",
+            DisplayName = "datetime type filter and orderby test with neq operator and specific value '1753-01-01'.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1753-01-01'", "\"1753-01-01\"", "=",
+            DisplayName = "datetime type filter and orderby test with eq operator and specific value '1753-01-01'.")]
+        [DataRow(DATETIME_TYPE, "gt", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", " > ",
+            DisplayName = "datetime type filter and orderby test with gt operator and specific value '1999-01-08 10:23:00'.")]
+        [DataRow(DATETIME_TYPE, "gte", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", " >= ",
+            DisplayName = "datetime type filter and orderby test with gte operator and specific value '1999-01-08 10:23:00'.")]
+        [DataRow(DATETIME_TYPE, "lt", "'9999-12-31 23:59:59'", "\"9999-12-31 23:59:59\"", " < ",
+            DisplayName = "datetime type filter and orderby test with lt operator and specific value '9999-12-31 23:59:59'.")]
+        [DataRow(DATETIME_TYPE, "lte", "'9999-12-31 23:59:59'", "\"9999-12-31 23:59:59\"", " <= ",
+            DisplayName = "datetime type filter and orderby test with lte operator and specific value '9999-12-31 23:59:59'.")]
+        [DataRow(DATETIME_TYPE, "neq", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", "!=",
+            DisplayName = "datetime type filter and orderby test with neq operator and specific value '1999-01-08 10:23:00'.")]
+        [DataRow(DATETIME_TYPE, "eq", "'1999-01-08 10:23:00'", "\"1999-01-08 10:23:00\"", "=",
+            DisplayName = "datetime type filter and orderby test with eq operator and specific value '1999-01-08 10:23:00'.")]
+        [DataRow(DATETIME_TYPE, "lte", "'2079-06-06'", "\"2079-06-06\"", " <= ",
+            DisplayName = "datetime type filter and orderby test with lte operator and specific value '2079-06-06'.")]
+        [DataRow(DATETIME_TYPE, "neq", "'1999-01-08 10:23:54'", "\"1999-01-08 10:23:54\"", "!=",
+            DisplayName = "datetime type filter and orderby test with neq operator and specific value '1999-01-08 10:23:54'.")]
+        [DataRow(DATETIMEOFFSET_TYPE, "neq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=",
+            DisplayName = "datetimeoffset type filter and orderby test with neq operator")]
+        [DataRow(DATETIMEOFFSET_TYPE, "lt", "'9999-12-31 23:59:59.9999999'", "\"9999-12-31 23:59:59.9999999\"", "<",
+            DisplayName = "datetimeoffset type filter and orderby test with lt operator and max value for datetimeoffset.")]
+        [DataRow(DATETIMEOFFSET_TYPE, "eq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=",
+            DisplayName = "datetimeoffset type filter and orderby test with eq operator")]
+        [DataRow(DATE_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", "=",
+            DisplayName = "date type filter and orderby test with eq operator")]
+        [DataRow(DATE_TYPE, "gte", "'1999-01-08'", "\"1999-01-08\"", ">=",
+            DisplayName = "date type filter test and orderby  with gte operator")]
+        [DataRow(DATE_TYPE, "neq", "'9998-12-31'", "\"9998-12-31\"", "!=",
+            DisplayName = "date type filter test and orderby  with ne operator")]
+        [DataRow(SMALLDATETIME_TYPE, "eq", "'1999-01-08 10:24:00'", "\"1999-01-08 10:24:00\"", "=",
+            DisplayName = "smalldatetime type filter and orderby test with eq operator")]
+        [DataRow(SMALLDATETIME_TYPE, "gte", "'1999-01-08 10:24:00'", "\"1999-01-08 10:24:00\"", ">=",
+            DisplayName = "smalldatetime type filter and orderby test with gte operator")]
+        [DataRow(SMALLDATETIME_TYPE, "neq", "'1999-01-08 10:24:00'", "\"1999-01-08 10:24:00\"", "!=",
+            DisplayName = "smalldatetime type filter and orderby test with neq operator")]
+        [DataRow(DATETIME2_TYPE, "eq", "'1999-01-08 10:23:00.9999999'", "\"1999-01-08 10:23:00.9999999\"", "=",
+            DisplayName = "datetime2 type filter and orderby test with eq operator")]
+        [DataRow(DATETIME2_TYPE, "gt", "'0001-01-08 10:23:00.9999999'", "\"0001-01-08 10:23:00.9999999\"", " > ",
+            DisplayName = "datetime2 type filter and orderby test with gt operator")]
+        [DataRow(DATETIME2_TYPE, "gte", "'0001-01-08 10:23:00.9999999'", "\"0001-01-08 10:23:00.9999999\"", " >= ",
+            DisplayName = "datetime2 type filter and orderby test with gte operator")]
+        [DataRow(DATETIME2_TYPE, "lt", "'0002-06-06'", "\"0002-06-06\"", " < ",
+            DisplayName = "datetime2 type filter and orderby test with lt operator")]
+        [DataRow(DATETIME2_TYPE, "lte", "'9999-12-31'", "\"9999-12-31\"", " <= ",
+            DisplayName = "datetime2 type filter and orderby test with lte operator")]
+        [DataRow(DATETIME2_TYPE, "neq", "'9999-12-31 23:59:59'", "\"9999-12-31 23:59:59\"", "!=",
+            DisplayName = "datetime2 type filter and orderby test with neq operator")]
         public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.0000000'
-            if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "\'9999-12-31 23:59:59.9999999\'")
+            if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "'9999-12-31 23:59:59.9999999'")
             {
-                sqlValue = "\'9999-12-31 23:59:59.0000000\'";
+                sqlValue = "'9999-12-31 23:59:59.0000000'";
                 gqlValue = "\"9999-12-31 23:59:59.0000000\"";
             }
 
@@ -217,12 +259,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Validates that usage of LocalTime values with comparison operators in GraphQL filters results in the expected filtered result set.
         /// </summary>
         [DataTestMethod]
-        [DataRow(TIME_TYPE, "gt", "\'00:00:00.000\'", "\"00:00:00.000\"", " > ")]
-        [DataRow(TIME_TYPE, "gte", "\'10:13:14.123\'", "\"10:13:14.123\"", " >= ")]
-        [DataRow(TIME_TYPE, "lt", "\'23:59:59.999\'", "\"23:59:59.999\"", " < ")]
-        [DataRow(TIME_TYPE, "lte", "\'23:59:59.999\'", "\"23:59:59.999\"", " <= ")]
-        [DataRow(TIME_TYPE, "neq", "\'10:23:54.9999999\'", "\"10:23:54.9999999\"", "!=")]
-        [DataRow(TIME_TYPE, "eq", "\'10:23:54.9999999\'", "\"10:23:54.9999999\"", "=")]
+        [DataRow(TIME_TYPE, "gt", "'00:00:00.000'", "\"00:00:00.000\"", " > ")]
+        [DataRow(TIME_TYPE, "gte", "'10:13:14.123'", "\"10:13:14.123\"", " >= ")]
+        [DataRow(TIME_TYPE, "lt", "'23:59:59.999'", "\"23:59:59.999\"", " < ")]
+        [DataRow(TIME_TYPE, "lte", "'23:59:59.999'", "\"23:59:59.999\"", " <= ")]
+        [DataRow(TIME_TYPE, "neq", "'10:23:54.9999999'", "\"10:23:54.9999999\"", "!=")]
+        [DataRow(TIME_TYPE, "eq", "'10:23:54.9999999'", "\"10:23:54.9999999\"", "=")]
         public async Task QueryTypeColumnFilterAndOrderByLocalTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
@@ -257,7 +299,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// the method constructs a GraphQL query to insert the value into the database table
+        /// The method constructs a GraphQL query to insert the value into the database table
         /// and then executes the query and compares the expected result with the actual result to verify if different types are supported.
         /// </summary>
         [DataTestMethod]
@@ -291,19 +333,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, "true")]
         [DataRow(BOOLEAN_TYPE, "false")]
         [DataRow(BOOLEAN_TYPE, "null")]
-        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54+8:00\"")]
-        [DataRow(DATETIMEOFFSET_TYPE, "\"1999-01-08 10:23:54.671287+8:00\"")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08 09:20:00\"")]
-        [DataRow(DATETIME_TYPE, "\"1999-01-08\"")]
-        [DataRow(DATETIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "\"U3RyaW5neQ==\"")]
+        [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
+        [DataRow(BYTEARRAY_TYPE, "null")]
         [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
         [DataRow(TIME_TYPE, "\"23:59:59\"")]
         [DataRow(TIME_TYPE, "\"23:59:59.9\"")]
         [DataRow(TIME_TYPE, "\"23:59\"")]
         [DataRow(TIME_TYPE, "null")]
-        [DataRow(BYTEARRAY_TYPE, "\"V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=\"")]
-        [DataRow(BYTEARRAY_TYPE, "null")]
+        [DataRow(DATETIME_TYPE, "\"1753-01-01 00:00:00.000\"")]
+        [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.997\"")]
+        [DataRow(DATETIME_TYPE, "\"9999-12-31T23:59:59.997\"")]
+        [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.997Z\"")]
+        [DataRow(DATETIME_TYPE, "null")]
+        [DataRow(SMALLDATETIME_TYPE, "\"1900-01-01\"")]
+        [DataRow(SMALLDATETIME_TYPE, "\"2079-06-06\"")]
+        [DataRow(DATETIME2_TYPE, "\"0001-01-01 00:00:00.0000000\"")]
+        [DataRow(DATETIME2_TYPE, "\"9999-12-31 23:59:59.9999999\"")]
+        [DataRow(DATETIME2_TYPE, "\"9999-12-31 23:59:59.999Z\"")]
+        [DataRow(DATETIME2_TYPE, "\"9999-12-31T23:59:59.9999999\"")]
+        [DataRow(DATE_TYPE, "\"0001-01-01\"")]
+        [DataRow(DATE_TYPE, "\"9999-12-31\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"0001-01-01 00:00:00.0000000\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"9999-12-31 23:59:59.9999999\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"9999-12-31T23:59:59.9999999\"")]
+        [DataRow(DATETIMEOFFSET_TYPE, "\"9999-12-31 23:59:59.9999999Z\"")]
         public async Task InsertIntoTypeColumn(string type, string value)
         {
             if (!IsSupportedType(type))
@@ -351,11 +405,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             Assert.IsTrue(responseMessage.Contains($"{value} cannot be resolved as column \"{field}\" with type \"TimeSpan\"."));
         }
 
-        /// <summary>
-        /// The code contains test rows that are used to test the insertion of various data types into a database table using GraphQL,
-        /// where the parameter values are passed as GraphQL request Variables. The test supports various data types such as byte, short,
-        /// int, long, string, float, decimal, boolean, datetimeoffset, datetime, time, and bytearray.
-        /// </summary>
         [DataTestMethod]
         [DataRow(BYTE_TYPE, 255)]
         [DataRow(SHORT_TYPE, 30000)]
@@ -497,29 +546,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
         {
-            if (type == SINGLE_TYPE || type == FLOAT_TYPE || type == DECIMAL_TYPE)
+            switch (type)
             {
-                CompareFloatResults(type, actual.ToString(), expected);
-            }
-            else if (type == DATETIME_TYPE)
-            {
-                CompareDateTimeResults(actual.ToString(), expected);
-            }
-            else if (type == DATETIMEOFFSET_TYPE)
-            {
-                CompareDateTimeOffsetResults(actual.ToString(), expected);
-            }
-            else if (type == TIME_TYPE)
-            {
-                CompareTimeResults(actual.ToString(), expected);
-            }
-            else if (type == UUID_TYPE)
-            {
-                CompareUuidResults(actual.ToString(), expected);
-            }
-            else
-            {
-                SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                case UUID_TYPE:
+                    CompareUuidResults(actual.ToString(), expected);
+                    break;
+                case SINGLE_TYPE:
+                case FLOAT_TYPE:
+                case DECIMAL_TYPE:
+                    CompareFloatResults(type, actual.ToString(), expected);
+                    break;
+                case TIME_TYPE:
+                    CompareTimeResults(actual.ToString(), expected);
+                    break;
+                case DATE_TYPE:
+                case SMALLDATETIME_TYPE:
+                case DATETIME_TYPE:
+                case DATETIME2_TYPE:
+                    CompareDateTimeResults(actual.ToString(), expected, type);
+                    break;
+                case DATETIMEOFFSET_TYPE:
+                    CompareDateTimeOffsetResults(actual.ToString(), expected);
+                    break;
+                default:
+                    SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+                    break;
             }
         }
 
@@ -599,12 +650,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
-        /// Required due to different format between mysql datetime and HotChocolate datetime
+        /// Required due to different format between sql datetime and HotChocolate datetime
         /// result
         /// </summary>
-        private static void CompareDateTimeResults(string actual, string expected)
+        private static void CompareDateTimeResults(string actual, string expected, string fieldType)
         {
-            string fieldName = "datetime_types";
+            string fieldName = $"{fieldType.ToLower()}_types";
 
             using JsonDocument actualJsonDoc = JsonDocument.Parse(actual);
             using JsonDocument expectedJsonDoc = JsonDocument.Parse(expected);
@@ -717,7 +768,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 // Comparing for milliseconds separately since HotChocolate time type is resolved only to 3 decimal places.
                 Assert.AreEqual(actualDateTimeOffset.Millisecond, expectedDateTimeOffset.Millisecond);
             }
-            else if (field.StartsWith(DATETIME_TYPE.ToLower()))
+            else if (field.StartsWith(DATETIME2_TYPE.ToLower()))
+            {
+                // Adjusting to universal, since DateTime doesn't account for TimeZone
+                DateTime actualDateTime = DateTime.Parse(actualElement.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                DateTime expectedDateTime = DateTime.Parse(expectedElement.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);
+                Assert.AreEqual(expectedDateTime.ToString(), actualDateTime.ToString());
+                // Comparing for milliseconds separately since HotChocolate datetime2 type is resolved only to 3 decimal places.
+                Assert.AreEqual(expectedDateTime.Millisecond, actualDateTime.Millisecond);
+            }
+            else if (field.StartsWith(DATE_TYPE.ToLower()) || field.StartsWith(SMALLDATETIME_TYPE.ToLower()) || field.StartsWith(DATETIME_TYPE.ToLower()))
             {
                 // Adjusting to universal, since DateTime doesn't account for TimeZone
                 DateTime actualDateTime = DateTime.Parse(actualElement.ToString(), CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal);

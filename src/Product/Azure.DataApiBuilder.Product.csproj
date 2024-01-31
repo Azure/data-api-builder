@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <OutputPath>$(BaseOutputPath)\engine</OutputPath>
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">

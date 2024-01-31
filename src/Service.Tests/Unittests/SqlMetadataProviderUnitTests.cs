@@ -234,6 +234,30 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestHelper.UnsetAllDABEnvironmentVariables();
         }
 
+        /// <summary>
+        /// <code>Do: </code> Load runtimeConfig and set up the source fields for the entities.
+        /// <code>Check: </code>  Verifies that source object is correctly parsed.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task CheckGetFieldMappings()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+
+            await _sqlMetadataProvider.InitializeAsync();
+
+            MsSqlMetadataProvider metadataProvider = (MsSqlMetadataProvider)_sqlMetadataProvider;
+            Assert.IsFalse(metadataProvider.TryGetBackingFieldToExposedFieldMap("InvalidEntity", out _), "Column to entity mappings should not exist for invalid entity.");
+            Assert.IsFalse(metadataProvider.TryGetExposedFieldToBackingFieldMap("invalidEntity", out _), "Entity to column mappings should not exist for invalid entity.");
+            Assert.IsTrue(metadataProvider.TryGetExposedFieldToBackingFieldMap("Publisher", out IReadOnlyDictionary<string, string> _), "Entity to column mappings should exist for valid entity.");
+            Assert.IsTrue(metadataProvider.TryGetBackingFieldToExposedFieldMap("Publisher", out IReadOnlyDictionary<string, string> _), "Column to entity mappings should exist for valid entity.");
+
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow("/mygql", "/graphql", true, DisplayName = "Entity Rest path conflicts with default path /graphql")]
         [DataRow("/mygql", "/mygql", true, DisplayName = "Entity Rest path conflicts with configured GraphQL path")]
@@ -249,7 +273,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             try
             {
-                MsSqlMetadataProvider.ValidateEntityAndGraphQLPathUniqueness(path: entityPath, graphQLGlobalPath: graphQLConfigPath);
+                DatabaseEngine = TestCategory.MSSQL;
+                TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+                RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+                RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+                SetUpSQLMetadataProvider(runtimeConfigProvider);
+                ((MsSqlMetadataProvider)_sqlMetadataProvider).ValidateEntityAndGraphQLPathUniqueness(path: entityPath, graphQLGlobalPath: graphQLConfigPath);
                 if (expectsError)
                 {
                     Assert.Fail(message: "REST and GraphQL path validation expected to fail.");

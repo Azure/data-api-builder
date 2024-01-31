@@ -27,8 +27,7 @@ namespace Cli
             DotNetEnv.Env.Load();
 
             // Setting up Logger for CLI.
-            ILoggerFactory loggerFactory = new LoggerFactory();
-            loggerFactory.AddProvider(new CustomLoggerProvider());
+            ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
 
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
@@ -53,11 +52,13 @@ namespace Cli
             });
 
             // Parsing user arguments and executing required methods.
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ExportOptions>(args)
+            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions>(args)
                 .WithParsed((Action<InitOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<AddOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<UpdateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<StartOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
+                .WithParsed((Action<ValidateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
+                .WithParsed((Action<AddTelemetryOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
                 .WithParsed((Action<ExportOptions>)(options => Exporter.Export(options, cliLogger, loader, fileSystem)))
                 .WithNotParsed(err =>
                 {

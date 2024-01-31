@@ -23,6 +23,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE id = 2 FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
+                "FindByDateTimePKTest",
+                $"SELECT categoryid, pieceid, FORMAT(instant, 'MMM dd yyyy  h:mmtt') as instant, price, is_wholesale_price FROM { _tableWithDateTimePK } " +
+                $"WHERE categoryid = 2 AND pieceid = 1 AND instant = '2023-08-21 15:11:04' FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
                 "FindEmptyTable",
                 $"SELECT * FROM { _emptyTableTableName } " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"

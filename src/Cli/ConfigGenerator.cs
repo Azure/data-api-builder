@@ -118,6 +118,8 @@ namespace Cli
 
             // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-create.enabled is specified for other database types,
             // a warning is logged.
+            // When nested mutation operations are extended for other database types, this option should be honored.
+            // Issue #2001: https://github.com/Azure/data-api-builder/issues/2001 tracks the work for the same.
             if (dbType is not DatabaseType.MSSQL && options.NestedCreateOperationEnabled is not CliBool.None)
             {
                 _logger.LogWarning($"The option --graphql.nested-create.enabled is not supported for {dbType.ToString()} database type and will not be honored.");

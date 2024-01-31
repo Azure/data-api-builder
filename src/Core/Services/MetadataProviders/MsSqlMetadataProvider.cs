@@ -118,8 +118,8 @@ namespace Azure.DataApiBuilder.Core.Services
                                     // 2. From target to source
                                     // It is not possible to determine the direction of relationship in such a case, so we throw an exception.
                                     throw new DataApiBuilderException(
-                                        message: $"Circular relationship detected between entities: {sourceEntityName} and {targetEntityName}. Cannot support nested insertion.",
-                                        statusCode: HttpStatusCode.Forbidden,
+                                        message: $"Circular relationship detected between source entity: {sourceEntityName} and target entity: {targetEntityName}. Cannot support nested insertion.",
+                                        statusCode: HttpStatusCode.Conflict,
                                         subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
                                 }
 
@@ -131,8 +131,18 @@ namespace Azure.DataApiBuilder.Core.Services
                                 // we have already gathered this information from the runtime config.
                                 if (foreignKeyDefinitionToTarget.ReferencingColumns.Count > 0 && foreignKeyDefinitionToTarget.ReferencedColumns.Count > 0)
                                 {
-                                    ForeignKeyDefinition combinedFKDefinition = ValidateAndCombineInferredAndProvidedFkDefinitions(foreignKeyDefinitionToTarget, inferredDefinition);
-                                    validateForeignKeyDefinitionsToTarget.Add(combinedFKDefinition);
+                                    if (!AreFKDefinitionsEqual(foreignKeyDefinitionToTarget, inferredDefinition))
+                                    {
+                                        throw new DataApiBuilderException(
+                                            message: $"The relationship defined between source entity: {sourceEntityName} and target entity: {targetEntityName} conflicts" +
+                                            $" with the relationship defined in the database.",
+                                            statusCode: HttpStatusCode.Conflict,
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+                                    }
+                                    else
+                                    {
+                                        validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
+                                    }
                                 }
                                 // Only add the referencing/referenced columns if they have not been
                                 // specified in the configuration file.
@@ -140,6 +150,10 @@ namespace Azure.DataApiBuilder.Core.Services
                                 {
                                     validateForeignKeyDefinitionsToTarget.Add(inferredDefinition);
                                 }
+                            }
+                            else
+                            {
+                                validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
                             }
                         }
 
@@ -150,49 +164,40 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// This method is called when a foreign key definition has been provided by the user in the config for a (source, target) pair
-        /// of entities and the database has also inferred a foreign key definition for the same pair. In such a case:
-        /// 1. Ensure that one referencing column from the source entity relates to exactly one referenced column in the target entity.
-        /// 2. Ensure that both foreign key definitions relate one referencing column from the source entity to the same referenced column in the target entity.
-        /// 3. If there are additional relationships defined in the database, then those should also be honored.
+        /// Helper method to compare two foreign key definitions for equality on the basis of the referencing -> referenced column mappings present in them.
+        /// The equality ensures that both the foreign key definitions have:
+        /// 1. Same set of referencing and referenced tables,
+        /// 2. Same number of referencing/referenced columns,
+        /// 3. Same mappings from referencing -> referenced column.
         /// </summary>
-        /// <param name="foreignKeyDefinitionToTarget">Foreign key definition defined in the runtime config for (source, target).</param>
-        /// <param name="inferredDefinition">Foreign key definition inferred from the database for (source, target).</param>
-        /// <returns>Combined foreign key definition for (source, target) containing a logical union of the above two foreign key definitions.</returns>
-        /// <exception cref="DataApiBuilderException">Thrown when one referencing column relates to multiple referenced columns.</exception>
-        private static ForeignKeyDefinition ValidateAndCombineInferredAndProvidedFkDefinitions(ForeignKeyDefinition foreignKeyDefinitionToTarget, ForeignKeyDefinition inferredDefinition)
+        /// <param name="fkDefinition1">First foreign key definition.</param>
+        /// <param name="fkDefinition2">Second foreign key definition.</param>
+        /// <returns>true if all the above mentioned conditions are met, else false.</returns>
+        private static bool AreFKDefinitionsEqual(ForeignKeyDefinition fkDefinition1, ForeignKeyDefinition fkDefinition2)
         {
-            // Dictionary to store the final relations from referencing to referenced columns. This will be initialized with the relationship
-            // defined in the config.
-            Dictionary<string, string> referencingToReferencedColumns = foreignKeyDefinitionToTarget.ReferencingColumns.Zip(
-                foreignKeyDefinitionToTarget.ReferencedColumns, (key, value) => new { Key = key, Value = value }).ToDictionary(item => item.Key, item => item.Value);
-
-            // Traverse through each (referencing, referenced) columns pair inferred by the database.
-            for (int idx = 0; idx < inferredDefinition.ReferencingColumns.Count; idx++)
+            if (!fkDefinition1.Pair.Equals(fkDefinition2.Pair) || fkDefinition1.ReferencingColumns.Count != fkDefinition2.ReferencingColumns.Count)
             {
-                string referencingColumnName = inferredDefinition.ReferencingColumns[idx];
-                if (referencingToReferencedColumns.TryGetValue(referencingColumnName, out string? referencedColumnName)
-                    && !referencedColumnName.Equals(inferredDefinition.ReferencedColumns[idx]))
+                return false;
+            }
+
+            Dictionary<string, string> referencingToReferencedColumns = fkDefinition1.ReferencingColumns.Zip(
+                fkDefinition1.ReferencedColumns, (key, value) => new { Key = key, Value = value }).ToDictionary(item => item.Key, item => item.Value);
+
+            // Traverse through each (referencing, referenced) columns pair in the second foreign key definition.
+            for (int idx = 0; idx < fkDefinition2.ReferencingColumns.Count; idx++)
+            {
+                string referencingColumnName = fkDefinition2.ReferencingColumns[idx];
+                if (!referencingToReferencedColumns.TryGetValue(referencingColumnName, out string? referencedColumnName)
+                    || !referencedColumnName.Equals(fkDefinition2.ReferencedColumns[idx]))
                 {
-                    // This indicates that the user has provided a custom relationship from a referencing column
-                    // but we also inferred a different relationship from the same referencing column in the database.
-                    // This is not supported because one column should not reference two different columns in order
-                    // for nested insertions to make sense.
-                    throw new DataApiBuilderException(
-                        message: $"Inferred multiple relationships from same referencing column.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
-                }
-                else
-                {
-                    referencingToReferencedColumns[referencingColumnName] = inferredDefinition.ReferencedColumns[idx];
+                    // This indicates that either there is no mapping defined for referencingColumnName in the second foreign key definition
+                    // or the referencing -> referenced column mapping in the second foreign key definition do not match the mapping in the first foreign key definition.
+                    // In both the cases, it is implied that the two foreign key definitions do not match.
+                    return false;
                 }
             }
 
-            return new() {
-                Pair = inferredDefinition.Pair,
-                ReferencingColumns = referencingToReferencedColumns.Keys.ToList(),
-                ReferencedColumns = referencingToReferencedColumns.Values.ToList() };
+            return true;
         }
     }
 }

@@ -25,8 +25,8 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Azure.Cosmos.Serialization.HybridRow;
-using Microsoft.Extensions.Primitives;
+using Microsoft.Azure.Cosmos.Linq;
+using Polly;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -116,6 +116,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutationFields(inputArgumentName, context, roleName, parameters, entityName, mutationOperation);
+
+            if (parameters.TryGetValue(inputArgumentName, out object? param))
+            {
+                IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
+                ProcessRequestBodyForValidation(schemaForArgument, entityName, context, param, _runtimeConfigProvider.GetConfig(), new(), 0);
+            }
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
             // READ permission is inherited by other roles from Anonymous role when present.
@@ -1328,6 +1334,414 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         runtimeConfig);
                 }
             }
+        }
+
+        private void ProcessObjectFieldNodesForRequestValidation(
+            IMiddlewareContext context,
+            string entityName,
+            InputObjectType schemaObject,
+            IReadOnlyList<ObjectFieldNode> fieldNodes,
+            RuntimeConfig runtimeConfig,
+            HashSet<string> disallowedColumns,
+            int level)
+        {
+            Dictionary<string, HashSet<string>> disallowedColumnsForReferencingEntities = new();
+            string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
+            ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            HashSet<string> derivableBackingColumns = GetBackingColumnsFromFields(context, entityName, fieldNodes, disallowedColumns, level, metadataProvider);
+
+            foreach (ObjectFieldNode field in fieldNodes)
+            {
+                Tuple<IValueNode?, SyntaxKind> fieldDetails = GetFieldDetails(field.Value, context.Variables);
+                SyntaxKind underlyingFieldKind = fieldDetails.Item2;
+                if (underlyingFieldKind is SyntaxKind.ObjectValue || underlyingFieldKind is SyntaxKind.ListValue)
+                {
+                    string relationshipName = field.Name.Value;
+                    string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
+                    Tuple<string, List<string>> referencingEntityNameAndColumns = GetReferencingEntityNameAndColumns(context, entityName, targetEntityName, metadataProvider, derivableBackingColumns, fieldDetails.Item1);
+                    string referencingEntityName = referencingEntityNameAndColumns.Item1;
+                    if (referencingEntityName.Equals(entityName))
+                    {
+                        // Meaning the current entity cannot contain values for referencing columns as the values of these columns
+                        // should be derived from the insertion in the referenced entity.
+                        foreach (string referencingColumn in referencingEntityNameAndColumns.Item2)
+                        {
+                            if (derivableBackingColumns.Contains(referencingColumn))
+                            {
+                                metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedColumnName);
+                                throw new DataApiBuilderException(
+                                    message: $"Either the field: {exposedColumnName} or the relationship field: {relationshipName} can be specified.",
+                                    statusCode: HttpStatusCode.BadRequest,
+                                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                            }
+
+                            derivableBackingColumns.Add(referencingColumn);
+                        }
+                    }
+                    else
+                    {
+                        disallowedColumnsForReferencingEntities.Add(relationshipName, new(referencingEntityNameAndColumns.Item2));
+                    }
+                }
+            }
+
+            foreach (ObjectFieldNode field in fieldNodes)
+            {
+                Tuple<IValueNode?, SyntaxKind> fieldDetails = GetFieldDetails(field.Value, context.Variables);
+                SyntaxKind underlyingFieldKind = fieldDetails.Item2;
+
+                // If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column field
+                // which has an IntValue, FloatValue, StringValue, BooleanValue, NullValue or an EnumValue.
+                // In all of these cases, we do not have to recurse to process fields in the value - which is required for relationship fields.
+                if (underlyingFieldKind is SyntaxKind.ObjectValue || underlyingFieldKind is SyntaxKind.ListValue)
+                {
+                    string relationshipName = field.Name.Value;
+                    string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
+                    HashSet<string>? disallowedColumnsForTargetEntity;
+                    disallowedColumnsForReferencingEntities.TryGetValue(relationshipName, out disallowedColumnsForTargetEntity);
+                    ProcessRequestBodyForValidation(
+                        schemaObject.Fields[relationshipName],
+                        targetEntityName,
+                        context,
+                        fieldDetails.Item1,
+                        runtimeConfig,
+                        disallowedColumnsForTargetEntity ?? new(),
+                        level);
+                }
+            }
+        }
+
+        private HashSet<string> GetBackingColumnsFromFields(
+            IMiddlewareContext context,
+            string entityName,
+            IReadOnlyList<ObjectFieldNode> fieldNodes,
+            HashSet<string> disallowedColumns,
+            int level,
+            ISqlMetadataProvider metadataProvider)
+        {
+            HashSet<string> backingColumns = new();
+            foreach (ObjectFieldNode field in fieldNodes)
+            {
+                Tuple<IValueNode?, SyntaxKind> fieldDetails = GetFieldDetails(field.Value, context.Variables);
+                SyntaxKind underlyingFieldKind = fieldDetails.Item2;
+
+                if (underlyingFieldKind is not SyntaxKind.ObjectValue && underlyingFieldKind is not SyntaxKind.ListValue)
+                {
+                    if (metadataProvider.TryGetBackingColumn(entityName, field.Name.Value, out string? backingColumnName))
+                    {
+                        if (disallowedColumns.Contains(backingColumnName))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"The field: {field.Name.Value} cannot be present for entity: {entityName} at level: {level}",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
+
+                        backingColumns.Add(backingColumnName);
+                    }
+                }
+            }
+
+            return backingColumns;
+        }
+
+        private void ProcessRequestBodyForValidation(
+            IInputField schema,
+            string entityName,
+            IMiddlewareContext context,
+            object? parameters,
+            RuntimeConfig runtimeConfig,
+            HashSet<string> disallowedColumns,
+            int level)
+        {
+            InputObjectType schemaObject = ResolverMiddleware.InputObjectTypeFromIInputField(schema);
+            if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
+            {
+                // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
+                // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
+                ProcessObjectFieldNodesForRequestValidation(context, entityName, schemaObject, listOfObjectFieldNode, runtimeConfig, disallowedColumns, level + 1);
+            }
+            else if (parameters is List<IValueNode> listOfIValueNode)
+            {
+                // For the example createbooks mutation written above, the list value for `items` is interpreted as a List<IValueNode>
+                // i.e. items is a list of ObjectValueNode(s).
+                listOfIValueNode.ForEach(iValueNode => ProcessRequestBodyForValidation(schema, entityName, context, iValueNode, runtimeConfig, disallowedColumns, level));
+            }
+            else if (parameters is ObjectValueNode objectValueNode)
+            {
+                // For the example createbook mutation written above, the node for publisher field is interpreted as an ObjectValueNode.
+                // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
+                ProcessObjectFieldNodesForRequestValidation(context, entityName, schemaObject, objectValueNode.Fields, runtimeConfig, disallowedColumns, level + 1);
+            }
+            else if (parameters is ListValueNode listValueNode)
+            {
+                // For the example createbook mutation written above, the list values for reviews and authors fields are interpreted as ListValueNode.
+                // All the nodes in the ListValueNode are parsed one by one.
+                listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => ProcessRequestBodyForValidation(schema, entityName, context, objectValueNodeInListValueNode, runtimeConfig, disallowedColumns, level));
+            }
+        }
+
+        private Tuple<string, List<string>> GetReferencingEntityNameAndColumns(
+            IMiddlewareContext context,
+            string sourceEntityName,
+            string targetEntityName,
+            ISqlMetadataProvider metadataProvider,
+            HashSet<string> derivableBackingColumnsInSource,
+            IValueNode? item1)
+        {
+            if (metadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) &&
+                metadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject? targetDbObject))
+            {
+                Dictionary<string, List<string>> entityToRelationshipFields = new();
+                DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
+                DatabaseTable targetDbTable = (DatabaseTable)targetDbObject;
+                RelationShipPair sourceTargetPair = new(sourceDbTable, targetDbTable);
+                SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+                SourceDefinition targetDefinition = targetDbObject.SourceDefinition;
+                List<ForeignKeyDefinition> foreignKeys = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+                List<string> relationshipFieldsInSource = new();
+                List<string> relationshipFieldsInTarget = new();
+
+                foreach (ForeignKeyDefinition foreignKey in foreignKeys)
+                {
+                    if (foreignKey.ReferencingColumns.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    if (foreignKey.Pair.Equals(sourceTargetPair))
+                    {
+                        relationshipFieldsInSource = new(foreignKey.ReferencingColumns);
+                        relationshipFieldsInTarget = new(foreignKey.ReferencedColumns);
+                    }
+                    else
+                    {
+                        relationshipFieldsInTarget = new(foreignKey.ReferencingColumns);
+                        relationshipFieldsInSource = new(foreignKey.ReferencedColumns);
+                    }
+
+                    break;
+                }
+
+                entityToRelationshipFields.Add(sourceEntityName, relationshipFieldsInSource);
+                entityToRelationshipFields.Add(targetEntityName, relationshipFieldsInTarget);
+
+                string referencingEntityNameBasedOnEntityMetadata = DetermineReferencingEntityBasedOnEntityMetadata(sourceEntityName, targetEntityName, sourceDbObject, targetDbObject);
+
+                if (!string.IsNullOrEmpty(referencingEntityNameBasedOnEntityMetadata))
+                {
+                    return new(referencingEntityNameBasedOnEntityMetadata, entityToRelationshipFields[referencingEntityNameBasedOnEntityMetadata]);
+                }
+
+                ObjectValueNode? objectValueNode = (ObjectValueNode?)item1;
+                HashSet<string> derivableBackingColumnsInTarget = GetBackingColumnsFromFields(context, targetEntityName, objectValueNode!.Fields, new(), 0, metadataProvider);
+
+                string referencingEntityNameBasedOnAutoGenField = DetermineReferencingEntityBasedOnAutoGenField(
+                    sourceEntityName,
+                    targetEntityName,
+                    metadataProvider);
+
+                string referencingEntityNameBasedOnPresenceInRequestBody = DetermineReferencingEntityBasedOnPresenceInRequestBody(
+                    sourceEntityName,
+                    targetEntityName,
+                    relationshipFieldsInSource,
+                    relationshipFieldsInTarget,
+                    derivableBackingColumnsInSource,
+                    derivableBackingColumnsInTarget);
+
+                if (!string.IsNullOrEmpty(referencingEntityNameBasedOnAutoGenField) || !string.IsNullOrEmpty(referencingEntityNameBasedOnPresenceInRequestBody))
+                {
+                    if (string.IsNullOrEmpty(referencingEntityNameBasedOnAutoGenField))
+                    {
+                        return new(referencingEntityNameBasedOnPresenceInRequestBody, entityToRelationshipFields[referencingEntityNameBasedOnPresenceInRequestBody]);
+                    }
+
+                    if (string.IsNullOrEmpty(referencingEntityNameBasedOnPresenceInRequestBody))
+                    {
+                        return new(referencingEntityNameBasedOnAutoGenField, entityToRelationshipFields[referencingEntityNameBasedOnAutoGenField]);
+                    }
+
+                    if (!referencingEntityNameBasedOnAutoGenField.Equals(referencingEntityNameBasedOnPresenceInRequestBody))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"No valid order exists.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
+                    return new(referencingEntityNameBasedOnAutoGenField, entityToRelationshipFields[referencingEntityNameBasedOnAutoGenField]);
+                }
+
+                // If we hit this point in code, it implies that:
+                // 1. Neither source nor target entity has an autogenerated column,
+                // 2. Neither source nor target contain a value for any relationship field. This can happen because we make all the relationship fields nullable, so that their
+                // values can be derived from the insertion in referenced entity.
+                string referencingEntityNameBasedOnAssumableValues = DetermineReferencingEntityBasedOnAssumableValues(
+                    sourceEntityName,
+                    targetEntityName,
+                    sourceDefinition,
+                    targetDefinition,
+                    relationshipFieldsInSource,
+                    relationshipFieldsInTarget);
+                return new(referencingEntityNameBasedOnAssumableValues, entityToRelationshipFields[referencingEntityNameBasedOnAssumableValues]);
+            }
+
+            return new(string.Empty, new());
+        }
+
+        private static string DetermineReferencingEntityBasedOnAssumableValues(
+            string sourceEntityName,
+            string targetEntityName,
+            SourceDefinition sourceDefinition,
+            SourceDefinition targetDefinition,
+            List<string> relationshipFieldsInSource,
+            List<string> relationshipFieldsInTarget)
+        {
+            bool canAssumeValuesForAllRelationshipFieldsInSource = true, canAssumeValuesForAllRelationshipFieldsInTarget = true;
+
+            foreach (string relationshipFieldInSource in relationshipFieldsInSource)
+            {
+                ColumnDefinition columnDefinition = sourceDefinition.Columns[relationshipFieldInSource];
+                canAssumeValuesForAllRelationshipFieldsInSource = canAssumeValuesForAllRelationshipFieldsInSource && (columnDefinition.HasDefault || columnDefinition.IsAutoGenerated);
+            }
+
+            foreach (string relationshipFieldInTarget in relationshipFieldsInTarget)
+            {
+                ColumnDefinition columnDefinition = targetDefinition.Columns[relationshipFieldInTarget];
+                canAssumeValuesForAllRelationshipFieldsInTarget = canAssumeValuesForAllRelationshipFieldsInTarget && (columnDefinition.HasDefault || columnDefinition.IsAutoGenerated);
+            }
+
+            if (canAssumeValuesForAllRelationshipFieldsInSource)
+            {
+                return sourceEntityName;
+            }
+
+            if (canAssumeValuesForAllRelationshipFieldsInTarget)
+            {
+                return targetEntityName;
+            }
+
+            throw new DataApiBuilderException(
+                message: $"Insufficient data",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+        }
+
+        private static string DetermineReferencingEntityBasedOnPresenceInRequestBody(
+            string sourceEntityName, string targetEntityName,
+            List<string> relationshipFieldsInSource,
+            List<string> relationshipFieldsInTarget,
+            HashSet<string> derivableBackingColumnsInSource,
+            HashSet<string> derivableBackingColumnsInTarget)
+        {
+            bool doesSourceContainRelationshipField = false, doesTargetContainRelationshipField = false;
+            for (int idx = 0; idx < relationshipFieldsInSource.Count; idx++)
+            {
+                string relationshipFieldInSource = relationshipFieldsInSource[idx];
+                string relationshipFieldInTarget = relationshipFieldsInTarget[idx];
+                doesSourceContainRelationshipField = doesSourceContainRelationshipField || derivableBackingColumnsInSource.Contains(relationshipFieldInSource);
+                doesTargetContainRelationshipField = doesTargetContainRelationshipField || derivableBackingColumnsInTarget.Contains(relationshipFieldInTarget);
+
+                if (doesSourceContainRelationshipField && doesTargetContainRelationshipField)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The relationship fields can be present in either source entity: {sourceEntityName} or target entity: {targetEntityName}.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+            }
+
+            if (doesSourceContainRelationshipField)
+            {
+                return targetEntityName;
+            }
+
+            if (doesTargetContainRelationshipField)
+            {
+                return sourceEntityName;
+            }
+
+            return string.Empty;
+        }
+
+        private static string DetermineReferencingEntityBasedOnAutoGenField(
+            string sourceEntityName,
+            string targetEntityName,
+            ISqlMetadataProvider metadataProvider)
+        {
+            bool doesSourceContainAutoGenColumn = false, doesTargetContainAutoGenColumn = false;
+            foreach (ColumnDefinition columnDefinition in metadataProvider.GetSourceDefinition(sourceEntityName).Columns.Values)
+            {
+                if (columnDefinition.IsAutoGenerated)
+                {
+                    doesSourceContainAutoGenColumn = true;
+                    break;
+                }
+            }
+
+            foreach (ColumnDefinition columnDefinition in metadataProvider.GetSourceDefinition(targetEntityName).Columns.Values)
+            {
+                if (columnDefinition.IsAutoGenerated)
+                {
+                    doesSourceContainAutoGenColumn = true;
+                    break;
+                }
+            }
+
+            if (doesSourceContainAutoGenColumn && doesTargetContainAutoGenColumn)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Both contain autogen columns.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            if (doesSourceContainAutoGenColumn)
+            {
+                return targetEntityName;
+            }
+
+            if (doesTargetContainAutoGenColumn)
+            {
+                return sourceEntityName;
+            }
+
+            return string.Empty;
+        }
+
+        private static string DetermineReferencingEntityBasedOnEntityMetadata(
+            string sourceEntityName,
+            string targetEntityName,
+            DatabaseObject sourceDbObject,
+            DatabaseObject targetDbObject)
+        {
+            DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
+            DatabaseTable targetDbTable = (DatabaseTable)targetDbObject;
+            RelationShipPair sourceTargetPair = new(sourceDbTable, targetDbTable);
+            RelationShipPair targetSourcePair = new(targetDbTable, sourceDbTable);
+            SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+            string referencingEntityName = string.Empty;
+            List<string> referencingColumns = new();
+            List<ForeignKeyDefinition> foreignKeys = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+            foreach (ForeignKeyDefinition foreignKey in foreignKeys)
+            {
+                if (foreignKey.ReferencingColumns.Count == 0)
+                {
+                    continue;
+                }
+
+                if (foreignKey.Pair.Equals(targetSourcePair) && referencingEntityName.Equals(sourceEntityName) ||
+                    foreignKey.Pair.Equals(sourceTargetPair) && referencingEntityName.Equals(targetEntityName))
+                {
+                    referencingEntityName = string.Empty;
+                    break; // Need to handle this logic.
+                }
+
+                referencingColumns.AddRange(foreignKey.ReferencingColumns);
+                referencingEntityName = foreignKey.Pair.Equals(sourceTargetPair) ? sourceEntityName : targetEntityName;
+            }
+
+            return referencingEntityName;
         }
 
         /// <summary>

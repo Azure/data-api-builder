@@ -969,6 +969,10 @@ namespace Azure.DataApiBuilder.Core.Services
                         continue;
                     }
                 }
+                else
+                {
+                    continue;
+                }
 
                 SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
                 HashSet<string> exposedColumnNames = GetExposedColumnNames(entityName, sourceDefinition.Columns.Keys.ToList(), metadataProvider);

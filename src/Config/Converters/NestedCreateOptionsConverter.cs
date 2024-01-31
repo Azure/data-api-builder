@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Config.Converters
         /// <inheritdoc/>
         public override void Write(Utf8JsonWriter writer, NestedCreateOptions value, JsonSerializerOptions options)
         {
-            writer.WritePropertyName("inserts");
+            writer.WritePropertyName("create");
 
             writer.WriteStartObject();
             writer.WritePropertyName("enabled");

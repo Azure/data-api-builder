@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Config.Converters
                     string? propertyName = reader.GetString();
                     switch (propertyName)
                     {
-                        case "inserts":
+                        case "create":
                             reader.Read();
                             nestedMutationOptions = new(_nestedCreateOptionsConverter.Read(ref reader, typeToConvert, options));
                             break;

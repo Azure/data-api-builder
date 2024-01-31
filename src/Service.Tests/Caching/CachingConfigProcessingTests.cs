@@ -418,7 +418,7 @@ public class CachingConfigProcessingTests
                   ""path"": ""/An_"",
                   ""allow-introspection"": true,
                   ""nested-mutations"": {
-                        ""inserts"": {
+                        ""create"": {
                             ""enabled"": false
                         }
                     }

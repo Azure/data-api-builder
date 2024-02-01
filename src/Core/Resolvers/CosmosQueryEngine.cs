@@ -64,6 +64,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
+
+            Console.WriteLine($"CosmosQueryEngine: {queryString}");
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
 

@@ -388,6 +388,39 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
+        [TestMethod]
+        public async Task TestComplicatedFilterWithoutAnd()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME + @" : {
+                                    and: [
+                                        age: {gte: 1}
+                                        age: {lt: 6}
+                                        age: {neq: 5}
+                                        name: {notContains: ""En""}
+                                        name: {startsWith: ""Ma""}
+                                        name: {endsWith: ""s""}
+                                    ]
+                                    or: [
+                                        {dimension: {eq: ""space""}}
+                                    ]
+                                })
+                {
+                    items {
+                        age
+                        name
+                        dimension
+                    }
+                }
+            }";
+
+            string dbQuery = "SELECT c.age, c.name, c.dimension FROM c " +
+                "WHERE (c.age >= 1 AND c.name NOT LIKE \"%En\" AND" +
+                " ((c.age < 6 AND c.name LIKE \"Ma%\") AND (c.name LIKE \"%s\" AND c.age != 5)) AND c.dimension = \"space\")";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
         /// <summary>
         /// Test that an empty and evaluates to False
         /// </summary>

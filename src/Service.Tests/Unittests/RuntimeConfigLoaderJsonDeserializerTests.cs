@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
@@ -12,6 +13,7 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -108,26 +110,87 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Tests the parsing of the runtime configuration with environment variables based on replaceEnvVar parameter.
+        /// Verifies the below five different cases:
+        /// 1. datasource options has a boolean value,
+        /// 2. datasource options has a string value,
+        /// 3. datasource options is empty,
+        /// 4. datasource options is null,
+        /// 5. datasource options is not given.
         /// </summary>
         /// <param name="replaceEnvVar">A boolean indicating whether to replace environment variables in the configuration.</param>
         [DataTestMethod]
-        [DataRow(false, DisplayName = "Do not replace environment variables.")]
-        [DataRow(true, DisplayName = "Replace environment variables.")]
-        public void TestConfigParsingWithEnvVarReplacement(bool replaceEnvVar)
+        [DataRow(false, "mssql", DisplayName = "Do not replace environment variables containing boolean values.")]
+        [DataRow(true, "mssql", DisplayName = "Replace environment variables containing boolean values.")]
+        [DataRow(false, "cosmosdb_nosql", DisplayName = "Do not replace environment variables containing string values.")]
+        [DataRow(true, "cosmosdb_nosql", DisplayName = "Replace environment variables containing string values.")]
+        [DataRow(false, "mysql", DisplayName = "Do not replace environment variables when datasource option is empty.")]
+        [DataRow(true, "mysql", DisplayName = "Replace environment variables when datasource option is empty.")]
+        [DataRow(false, "postgresql", DisplayName = "Do not replace environment variables when datasource option is null.")]
+        [DataRow(true, "postgresql", DisplayName = "Replace environment variables when datasource option is null.")]
+        [DataRow(false, "dwsql", DisplayName = "Do not replace environment variables when datasource option is not given.")]
+        [DataRow(true, "dwsql", DisplayName = "Replace environment variables when datasource option is not given.")]
+        public void TestConfigParsingWithEnvVarReplacement(bool replaceEnvVar, string databaseType)
         {
-            SetEnvironmentVariablesFromText(_environmentFileContent);
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-              _configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: replaceEnvVar));
-            Assert.AreEqual(runtimeConfig.DataSource.ConnectionString, GetEnvironmentVariableIfReplaced("DATABASE_CONNECTION_STRING", replaceEnvVar));
-            Assert.AreEqual(runtimeConfig.DataSource.Options["database"].ToString(), GetEnvironmentVariableIfReplaced("DATABASE_NAME", replaceEnvVar));
-            Assert.AreEqual(runtimeConfig.DataSource.Options["schema"].ToString(), GetEnvironmentVariableIfReplaced("GRAPHQL_SCHEMA_PATH", replaceEnvVar));
-            Assert.AreEqual(runtimeConfig.Runtime.Host.Authentication.Jwt.Audience, GetEnvironmentVariableIfReplaced("JWT_AUDIENCE", replaceEnvVar));
-            Assert.AreEqual(runtimeConfig.Runtime.Host.Authentication.Jwt.Issuer, GetEnvironmentVariableIfReplaced("JWT_ISSUER", replaceEnvVar));
-            Assert.AreEqual(runtimeConfig.Entities["Book"].Source.Object, GetEnvironmentVariableIfReplaced("ENTITY_SOURCE", replaceEnvVar));
-            Assert.AreEqual(runtimeConfig.Entities["Book"].Rest.Path, GetEnvironmentVariableIfReplaced("ENTITY_REST_PATH", replaceEnvVar));
-            Assert.AreEqual(runtimeConfig.Entities["Book"].Permissions[0].Role, GetEnvironmentVariableIfReplaced("ENTITY_ROLE", replaceEnvVar));
+            // Act
+            SetEnvironmentVariablesFromDictionary(_environmentFileContentDict);
+            string configWithEnvVar = _configWithVariableDataSource.Replace("{0}", GetDataSourceConfigForGivenDatabase(databaseType));
 
-            ClearEnvironmentVariablesFromText(_environmentFileContent);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+              configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: replaceEnvVar));
+
+            // Assert
+            switch (databaseType)
+            {
+                case "mssql":
+                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.MSSQL);
+                    Assert.AreEqual(runtimeConfig.DataSource.Options["set-session-context"].ToString().ToLower(), GetExpectedPropertyValue("MSSQL_SET_SESSION_CONTEXT", replaceEnvVar).ToLower());
+                    break;
+                case "cosmosdb_nosql":
+                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
+                    Assert.AreEqual(runtimeConfig.DataSource.Options["database"].ToString(), GetExpectedPropertyValue("DATABASE_NAME", replaceEnvVar));
+                    Assert.AreEqual(runtimeConfig.DataSource.Options["container"].ToString(), GetExpectedPropertyValue("DATABASE_CONTAINER", replaceEnvVar));
+                    Assert.AreEqual(runtimeConfig.DataSource.Options["schema"].ToString(), GetExpectedPropertyValue("GRAPHQL_SCHEMA_PATH", replaceEnvVar));
+                    break;
+                case "mysql":
+                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.MySQL);
+                    Assert.AreEqual(runtimeConfig.DataSource.Options.Count, 0);
+                    break;
+                case "postgresql":
+                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.PostgreSQL);
+                    Assert.AreEqual(runtimeConfig.DataSource.Options, null);
+                    break;
+                case "dwsql":
+                    Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.DWSQL);
+                    Assert.AreEqual(runtimeConfig.DataSource.Options, null);
+                    break;
+            }
+
+            // Cleanup
+            ClearEnvironmentVariablesFromDictionary(_environmentFileContentDict);
+        }
+
+        /// <summary>
+        /// Test the parsing of DataSource section in runtime config for cosmosdb_nosql
+        /// where under cosmosDb options has database as null, container is not provided, and schema is an empty string.
+        /// </summary>
+        [TestMethod]
+        public void TestConfigParsingWhenDataSourceOptionsForCosmosDBContainsInvalidValues()
+        {
+            // Act
+            SetEnvironmentVariablesFromDictionary(_environmentFileContentDict);
+            string configWithEnvVar = _configWithVariableDataSource.Replace("{0}", GetDataSourceOptionsForCosmosDBWithInvalidValues());
+
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+              configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: true));
+
+            // Assert
+            Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
+            Assert.IsTrue(runtimeConfig.DataSource.Options["database"].ToString().IsNullOrEmpty());
+            Assert.IsFalse(runtimeConfig.DataSource.Options.ContainsKey("container"));
+            Assert.AreEqual(runtimeConfig.DataSource.Options["schema"].ToString(), "");
+
+            // Cleanup
+            ClearEnvironmentVariablesFromDictionary(_environmentFileContentDict);
         }
 
         /// <summary>
@@ -139,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// If replacement is enabled, the value of the environment variable. 
         /// Otherwise, a placeholder string in the format "@env('variableName')".
         /// </returns>
-        private static string GetEnvironmentVariableIfReplaced(string envVarName, bool replaceEnvVar)
+        private static string GetExpectedPropertyValue(string envVarName, bool replaceEnvVar)
         {
             if (replaceEnvVar)
             {
@@ -424,98 +487,139 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Config containing environment variables.
+        /// Config containing variable data-source.
         /// </summary>
-        private static string _configWithEnvVar = @"
-          {
-            ""$schema"": ""/dab-schema.json"",
-            ""data-source"": {
-              ""database-type"": ""cosmosdb_nosql"",
-              ""options"": {
-                ""database"": ""@env('DATABASE_NAME')"",
-                ""schema"": ""@env('GRAPHQL_SCHEMA_PATH')""
-              },
-              ""connection-string"": ""@env('DATABASE_CONNECTION_STRING')""
-            },
-            ""runtime"": {
-              ""rest"": {
-                ""enabled"": true,
-                ""path"": ""/api""
-              },
-              ""graphql"": {
-                ""allow-introspection"": true,
-                ""enabled"": true,
-                ""path"": ""/graphql""
-              },
-              ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [],
-                  ""allow-credentials"": false
+        private static string _configWithVariableDataSource = @"
+            {
+              ""$schema"": ""/dab-schema.json"",
+              ""data-source"": {0},
+              ""runtime"": {
+                ""rest"": {
+                  ""enabled"": true,
+                  ""path"": ""/api""
                 },
-                ""authentication"": {
-                  ""provider"": ""AzureAD"",
-                  ""jwt"": {
-                    ""audience"": ""@env('JWT_AUDIENCE')"",
-                    ""issuer"": ""@env('JWT_ISSUER')""
+                ""graphql"": {
+                  ""allow-introspection"": true,
+                  ""enabled"": true,
+                  ""path"": ""/graphql""
+                },
+                ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                    ""origins"": [],
+                    ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                    ""provider"": ""AzureAD""
                   }
                 }
-              }
-            },
-            ""entities"": {
-              ""Book"": {
-                ""source"": ""@env('ENTITY_SOURCE')"",
-                ""rest"": ""@env('ENTITY_REST_PATH')"",
-                ""permissions"": [
-                    {
-                      ""role"": ""@env('ENTITY_ROLE')"",
-                      ""actions"": [ ""*"" ]
-                    }
-                ]
-              }
+              },
+              ""entities"": {}
             }
-          }
-        ";
+            ";
+
+        /// <summary>
+        /// Returns a datasource option for a given database type.
+        /// MSSQL options has a boolean value, CosmosDB options has string value,
+        /// MySQL datasource option is empty, PostgreSQL datasource option is null,
+        /// and DWSQL has no options.
+        /// </summary>
+        private static string GetDataSourceConfigForGivenDatabase(string databaseType)
+        {
+            string options = "";
+            string databaseTypeEnvVariable = "";
+
+            switch (databaseType)
+            {
+                case "mssql":
+                    databaseTypeEnvVariable = $"@env('MSSQL_DB_TYPE')";
+                    options = @",""options"": { ""set-session-context"": ""@env('MSSQL_SET_SESSION_CONTEXT')"" }";
+                    break;
+                case "cosmosdb_nosql":
+                    databaseTypeEnvVariable = $"@env('COSMOS_DB_TYPE')";
+                    options = @",
+                        ""options"": { 
+                            ""database"": ""@env('DATABASE_NAME')"",
+                            ""container"": ""@env('DATABASE_CONTAINER')"",
+                            ""schema"": ""@env('GRAPHQL_SCHEMA_PATH')"" 
+                          }";
+                    break;
+                case "mysql":
+                    databaseTypeEnvVariable = $"@env('MYSQL_DB_TYPE')";
+                    options = @",""options"": {}";
+                    break;
+                case "postgresql":
+                    databaseTypeEnvVariable = $"@env('POSTGRESQL_DB_TYPE')";
+                    options = @",""options"": null";
+                    break;
+                case "dwsql":
+                    databaseTypeEnvVariable = $"@env('DWSQL_DB_TYPE')";
+                    options = "";
+                    break;
+            }
+
+            return $@"
+            {{
+                ""database-type"": ""{databaseTypeEnvVariable}"",
+                ""connection-string"": ""@env('DATABASE_CONNECTION_STRING')""
+                {options}
+            }}";
+        }
+
+        /// <summary>
+        /// Gets the data source options for CosmosDB with no container, null database, and empty schema.
+        /// </summary>
+        private static string GetDataSourceOptionsForCosmosDBWithInvalidValues()
+        {
+            return $@"
+            {{
+                ""database-type"": ""@env('COSMOS_DB_TYPE')"",
+                ""connection-string"": ""@env('DATABASE_CONNECTION_STRING')"",
+                ""options"": {{
+                    ""database"": null,
+                    ""schema"": """"
+                }}
+            }}";
+        }
 
         /// <summary>
         /// Clears the environment variables defined in the provided text.
         /// </summary>
-        /// <param name="text">A string containing environment variables in the format "KEY=VALUE", one per line.</param>
-        private static void ClearEnvironmentVariablesFromText(string text)
+        /// <param name="environmentFileContentDict">A dictionary containing environment variables that needs to be cleared.</param>
+        private static void ClearEnvironmentVariablesFromDictionary(Dictionary<string, string> environmentFileContentDict)
         {
-            string[] lines = text.Split('\n');
-            foreach (string line in lines)
+            foreach (KeyValuePair<string, string> entry in environmentFileContentDict)
             {
-                string[] parts = line.Split('=');
-                Environment.SetEnvironmentVariable(parts[0], null);
+                Environment.SetEnvironmentVariable(entry.Key, null);
             }
         }
 
         /// <summary>
         /// A string representing environment variables for testing environment variable replacement in the config.
         /// </summary>
-        private static string _environmentFileContent =
-            "DATABASE_TYPE=cosmosdb_nosql" + "\n" +
-            "DATABASE_NAME=planet" + "\n" +
-            "GRAPHQL_SCHEMA_PATH=gql-schema.gql" + "\n" +
-            "DATABASE_CONNECTION_STRING=TEST_CONNECTION_STRING" + "\n" +
-            "JWT_AUDIENCE=TEST_AUDIENCE" + "\n" +
-            "JWT_ISSUER=TEST_ISSUER" + "\n" +
-            "ENTITY_SOURCE=books" + "\n" +
-            "ENTITY_ROLE=anonymous" + "\n" +
-            "ENTITY_REST_PATH=/books";
+        private static Dictionary<string, string> _environmentFileContentDict = new()
+        {
+            { "COSMOS_DB_TYPE", "cosmosdb_nosql" },
+            { "MSSQL_DB_TYPE", "mssql" },
+            { "MYSQL_DB_TYPE", "mysql" },
+            { "POSTGRESQL_DB_TYPE", "postgresql" },
+            { "DWSQL_DB_TYPE", "dwsql" },
+            { "MSSQL_SET_SESSION_CONTEXT", "true" },
+            { "DATABASE_CONTAINER", "xyz"},
+            { "DATABASE_NAME", "planet" },
+            { "GRAPHQL_SCHEMA_PATH", "gql-schema.gql" },
+            { "DATABASE_CONNECTION_STRING", "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;" }
+        };
 
         /// <summary>
-        /// Sets environment variables from a given text.
+        /// Sets environment variables from a given dictionary.
         /// </summary>
-        /// <param name="text">A string containing environment variables in the format "KEY=VALUE", one per line.</param>
-        private static void SetEnvironmentVariablesFromText(string text)
+        /// <param name="environmentFileContentDict">A dictionary containing environment variables.</param>
+        private static void SetEnvironmentVariablesFromDictionary(Dictionary<string, string> environmentFileContentDict)
         {
-            string[] lines = text.Split('\n');
-            foreach (string line in lines)
+            foreach (KeyValuePair<string, string> entry in environmentFileContentDict)
             {
-                string[] parts = line.Split('=');
-                Environment.SetEnvironmentVariable(parts[0], parts[1]);
+                Environment.SetEnvironmentVariable(entry.Key, entry.Value);
             }
         }
 

@@ -28,7 +28,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <seealso cref="https://spec.graphql.org/October2021/#sec-Names.Reserved-Names"/>
         public const string INTROSPECTION_FIELD_PREFIX = "__";
 
-        public const string LINKING_OBJECT_PREFIX = "LinkingObject_";
+        public const string LINKING_OBJECT_PREFIX = "linkingObject";
 
         /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
@@ -196,6 +196,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             string preformattedField = $"execute{GetDefinedSingularName(entityName, entity)}";
             return FormatNameForField(preformattedField);
+        }
+
+        /// <summary>
+        /// Helper method to generate the linking node name from source to target entities having a relationship
+        /// with cardinality M:N between them.
+        /// </summary>
+        public static string GenerateLinkingNodeName(string sourceNodeName, string targetNodeName)
+        {
+            return LINKING_OBJECT_PREFIX + sourceNodeName + targetNodeName;
         }
     }
 }

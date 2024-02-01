@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using Microsoft.Extensions.DependencyInjection;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -41,7 +42,6 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        private static readonly HashSet<DatabaseType> _relationalDbsSupportingNestedMutations = new() { DatabaseType.MSSQL };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -271,14 +271,6 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to evaluate whether DAB supports nested mutations for particular relational database type. 
-        /// </summary>
-        private static bool DoesRelationalDBSupportNestedMutations(DatabaseType databaseType)
-        {
-            return _relationalDbsSupportingNestedMutations.Contains(databaseType);
-        }
-
-        /// <summary>
         /// Helper method to generate object definitions for linking entities. These object definitions are used later
         /// to generate the object definitions for directional linking entities for (source, target) and (target, source).
         /// </summary>
@@ -382,7 +374,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
 
                     // Store object type of the linking node for (sourceEntityName, targetEntityName).
-                    NameNode sourceTargetLinkingNodeName = new(LINKING_OBJECT_PREFIX + objectTypes[sourceEntityName].Name.Value + objectTypes[targetEntityName].Name.Value);
+                    NameNode sourceTargetLinkingNodeName = new(GenerateLinkingNodeName(objectTypes[sourceEntityName].Name.Value, objectTypes[targetEntityName].Name.Value));
                     objectTypes[sourceTargetLinkingNodeName.Value] = new(
                         location: null,
                         name: sourceTargetLinkingNodeName,

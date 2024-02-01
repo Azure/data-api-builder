@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
-            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[MutationBuilder.ITEM_INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new InvalidDataException("Partition Key field is mandatory");
             }
 
-            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[MutationBuilder.ITEM_INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation

@@ -15,9 +15,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
     public static class CreateMutationBuilder
     {
-        private const string INSERT_MULTIPLE_MUTATION_SUFFIX = "_Multiple";
+        private const string INSERT_MULTIPLE_MUTATION_SUFFIX = "Multiple";
         public const string INPUT_ARGUMENT_NAME = "item";
-        public const string ARRAY_INPUT_ARGUMENT_NAME = "items";
 
         /// <summary>
         /// Generate the GraphQL input type from an object type
@@ -88,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             IEnumerable<InputValueDefinitionNode> complexInputFields =
                 objectTypeDefinitionNode.Fields
                 .Where(f => !IsBuiltInType(f.Type))
-                .Where(f => IsComplexFieldAllowedOnCreateInput(f, databaseType, definitions))
+                .Where(f => IsComplexFieldAllowedForCreateInput(f, databaseType, definitions))
                 .Select(f =>
                 {
                     string typeName = RelationshipDirectiveType.Target(f);
@@ -99,10 +98,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         throw new DataApiBuilderException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.GraphQLMapping);
                     }
 
-                    if (databaseType is DatabaseType.MSSQL && IsMToNRelationship(f, (ObjectTypeDefinitionNode)def, baseEntityName))
+                    if (DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(f, (ObjectTypeDefinitionNode)def, baseEntityName))
                     {
                         NameNode baseEntityNameForField = new(typeName);
-                        typeName = LINKING_OBJECT_PREFIX + baseEntityName.Value + typeName;
+                        typeName = GenerateLinkingNodeName(baseEntityName.Value, typeName);
                         def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == typeName)!;
 
                         // Get entity definition for this ObjectTypeDefinitionNode.
@@ -126,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType">The type of database to generate for</param>
         /// <param name="definitions">The other named types in the schema</param>
         /// <returns>true if the field is allowed, false if it is not.</returns>
-        private static bool IsComplexFieldAllowedOnCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
+        private static bool IsComplexFieldAllowedForCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
             if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
@@ -240,11 +239,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             return new(
                 location: null,
-                field.Name,
-                new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                databaseType is DatabaseType.MSSQL ? type.NullableType() : type,
+                name: field.Name,
+                description: new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
+                type: databaseType is DatabaseType.MSSQL ? type.NullableType() : type,
                 defaultValue: null,
-                databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
+                directives: databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
             );
         }
 
@@ -314,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="returnEntityName">Name of type to be returned by the mutation.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
-        public static Tuple<FieldDefinitionNode, FieldDefinitionNode> Build(
+        public static IEnumerable<FieldDefinitionNode> Build(
             NameNode name,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
@@ -325,6 +324,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string returnEntityName,
             IEnumerable<string>? rolesAllowedForMutation = null)
         {
+            List<FieldDefinitionNode> createMutationNodes = new();
             Entity entity = entities[dbEntityName];
 
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
@@ -350,45 +350,47 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // Point insertion node.
             FieldDefinitionNode createOneNode = new(
                 location: null,
-                new NameNode($"create{singularName}"),
-                new StringValueNode($"Creates a new {singularName}"),
-                new List<InputValueDefinitionNode> {
+                name: new NameNode($"create{singularName}"),
+                description: new StringValueNode($"Creates a new {singularName}"),
+                arguments: new List<InputValueDefinitionNode> {
                 new(
                     location : null,
-                    new NameNode(INPUT_ARGUMENT_NAME),
+                    new NameNode(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for creating {name}"),
                     new NonNullTypeNode(new NamedTypeNode(input.Name)),
                     defaultValue: null,
                     new List<DirectiveNode>())
                 },
-                new NamedTypeNode(returnEntityName),
-                fieldDefinitionNodeDirectives
+                type: new NamedTypeNode(returnEntityName),
+                directives: fieldDefinitionNodeDirectives
             );
+            createMutationNodes.Add(createOneNode);
 
             // Multiple insertion node.
             FieldDefinitionNode createMultipleNode = new(
                 location: null,
-                new NameNode($"create{GetInsertMultipleMutationName(singularName, GetDefinedPluralName(name.Value, entity))}"),
-                new StringValueNode($"Creates multiple new {singularName}"),
-                new List<InputValueDefinitionNode> {
+                name: new NameNode($"create{GetInsertMultipleMutationName(singularName, GetDefinedPluralName(name.Value, entity))}"),
+                description: new StringValueNode($"Creates multiple new {singularName}"),
+                arguments: new List<InputValueDefinitionNode> {
                 new(
                     location : null,
-                    new NameNode(ARRAY_INPUT_ARGUMENT_NAME),
+                    new NameNode(MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME),
                     new StringValueNode($"Input representing all the fields for creating {name}"),
                     new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(input.Name))),
                     defaultValue: null,
                     new List<DirectiveNode>())
                 },
-                new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(dbEntityName, entity))),
-                fieldDefinitionNodeDirectives
+                type: new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(dbEntityName, entity))),
+                directives: fieldDefinitionNodeDirectives
             );
-
-            return new(createOneNode, createMultipleNode);
+            createMutationNodes.Add(createMultipleNode);
+            return createMutationNodes;
         }
 
         /// <summary>
         /// Helper method to determine the name of the insert multiple mutation.
-        /// If the singular and plural graphql names for the entity match, we suffix the name with the insert multiple mutation suffix.
+        /// If the singular and plural graphql names for the entity match, we suffix the name with 'Multiple' suffix to indicate
+        /// that the mutation field is created to support insertion of multiple records in the top level entity.
         /// However if the plural and singular names are different, we use the plural name to construct the mutation.
         /// </summary>
         /// <param name="singularName">Singular name of the entity to be used for GraphQL.</param>

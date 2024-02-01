@@ -23,7 +23,7 @@ public record Entity
 {
     public const string PROPERTY_PATH = "path";
     public const string PROPERTY_METHODS = "methods";
-    public const string LINKING_ENTITY_PREFIX = "LinkingEntity_";
+    public const string LINKING_ENTITY_PREFIX = "LinkingEntity";
 
     public EntitySource Source { get; init; }
     public EntityGraphQLOptions GraphQL { get; init; }

@@ -1585,8 +1585,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestMethod]
         public async Task SanityTestForRestAndGQLRequestsWithoutNestedMutationFeatureFlagSection()
         {
-           // Hard-coded json string for Book entity
-           string entityJson =  @"
+            // Hard-coded json string for Book entity
+            string entityJson = @"
             {
               ""entities"": {
                     ""Book"": {
@@ -1609,16 +1609,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         ""role"": ""anonymous"",
                         ""actions"": [
                                 {
-                                    ""action"": ""create""
-                                },
-                                {
                                     ""action"": ""read""
-                                },
-                                {
-                                    ""action"": ""update""
-                                },
-                                {
-                                    ""action"": ""delete""
                                 }
                             ]
                         }
@@ -1643,8 +1634,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-                try{
-                    
+                try
+                {
+
                     // Perform a REST GET API request 
                     // 1. To validate that DAB engine deserialized the config without the nested mutation feature flag section correctly.
                     // 2. To validate that REST GET requests are executed correctly.
@@ -1676,9 +1668,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     string body = await graphQLResponse.Content.ReadAsStringAsync();
                     Assert.IsFalse(body.Contains("errors"));
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
-                    Assert.Fail($"Unexpected exception : {ex}" );
+                    Assert.Fail($"Unexpected exception : {ex}");
                 }
             }
         }

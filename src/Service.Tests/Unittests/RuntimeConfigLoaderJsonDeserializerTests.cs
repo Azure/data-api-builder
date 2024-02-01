@@ -313,7 +313,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
       ""path"": """ + reps[++index % reps.Length] + @""",
       ""allow-introspection"": true,
       ""nested-mutations"": {
-        ""inserts"": {
+        ""create"": {
             ""enabled"": false
         }
       }      

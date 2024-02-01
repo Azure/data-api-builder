@@ -121,42 +121,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     string targetEntityName = relationship.TargetEntity.Split('.').Last();
                     Entity referencedEntity = entities[targetEntityName];
 
-                    bool isNullableRelationship = false;
-
-                    if (// Retrieve all the relationship information for the source entity which is backed by this table definition
-                        sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
-                        &&
-                        // From the relationship information, obtain the foreign key definition for the given target entity
-                        relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
-                            out List<ForeignKeyDefinition>? listOfForeignKeys))
-                    {
-                        ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
-
-                        // Determine whether the relationship should be nullable by obtaining the nullability
-                        // of the referencing(if source entity is the referencing object in the pair)
-                        // or referenced columns (if source entity is the referenced object in the pair).
-                        if (foreignKeyInfo is not null)
-                        {
-                            RelationShipPair pair = foreignKeyInfo.Pair;
-                            // The given entity may be the referencing or referenced database object in the foreign key
-                            // relationship. To determine this, compare with the entity's database object.
-                            if (pair.ReferencingDbTable.Equals(databaseObject))
-                            {
-                                isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
-                            }
-                            else
-                            {
-                                isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
-                            }
-                        }
-                        else
-                        {
-                            throw new DataApiBuilderException(
-                                message: $"No relationship exists between {entityName} and {targetEntityName}",
-                                statusCode: HttpStatusCode.InternalServerError,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
-                        }
-                    }
+                    bool isNullableRelationship = FindNullabilityOfRelationship(entityName, databaseObject, targetEntityName);
 
                     INullableTypeNode targetField = relationship.Cardinality switch
                     {
@@ -275,6 +240,87 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             };
 
             return arg;
+        }
+
+        /// <summary>
+        /// Given the source entity name, its underlying database object and the targetEntityName,
+        /// finds if the relationship field corresponding to the target should be nullable
+        /// based on whether the source is the referencing or referenced object or both.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException">Raised no relationship exists between the source and target
+        /// entities.</exception>
+        private static bool FindNullabilityOfRelationship(
+            string entityName,
+            DatabaseObject databaseObject,
+            string targetEntityName)
+        {
+            bool isNullableRelationship = false;
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+            if (// Retrieve all the relationship information for the source entity which is backed by this table definition
+                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
+                &&
+                // From the relationship information, obtain the foreign key definition for the given target entity
+                relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
+                out List<ForeignKeyDefinition>? listOfForeignKeys))
+            {
+                // DAB optimistically adds entries to 'listOfForeignKeys' representing each relationship direction
+                // between a pair of entities when 1:1 or many:1 relationships are defined in the runtime config.
+                // Entries which don't have a matching corresponding foreign key in the database
+                // will have 0 referencing/referenced columns. So, we need to filter out these
+                // invalid entries. Non-zero referenced columns indicate valid matching foreign key definition in the
+                // database and hence only those can be used to determine the directionality.
+
+                // Find the foreignkeys in which the source entity is the referencing object.
+                IEnumerable<ForeignKeyDefinition> referencingForeignKeyInfo =
+                    listOfForeignKeys.Where(fk =>
+                        fk.ReferencingColumns.Count > 0
+                        && fk.ReferencedColumns.Count > 0
+                        && fk.Pair.ReferencingDbTable.Equals(databaseObject));
+
+                // Find the foreignkeys in which the source entity is the referenced object.
+                IEnumerable<ForeignKeyDefinition> referencedForeignKeyInfo =
+                    listOfForeignKeys.Where(fk =>
+                        fk.ReferencingColumns.Count > 0
+                        && fk.ReferencedColumns.Count > 0
+                        && fk.Pair.ReferencedDbTable.Equals(databaseObject));
+
+                // The source entity should at least be a referencing or referenced db object or both
+                // in the foreign key relationship.
+                if (referencingForeignKeyInfo.Count() > 0 || referencedForeignKeyInfo.Count() > 0)
+                {
+                    // The source entity could be both the referencing and referenced entity
+                    // in case of missing foreign keys in the db or self referencing relationships.
+                    // Use the nullability of referencing columns to determine
+                    // the nullability of the relationship field only if
+                    // 1. there is exactly one relationship where source is the referencing entity.
+                    // DAB doesn't support multiple relationships at the moment.
+                    // and
+                    // 2. when the source is not a referenced entity in any of the relationships.
+                    if (referencingForeignKeyInfo.Count() == 1 && referencedForeignKeyInfo.Count() == 0)
+                    {
+                        ForeignKeyDefinition foreignKeyInfo = referencingForeignKeyInfo.First();
+                        isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
+                    }
+                    else
+                    {
+                        // a record of the "referenced" entity may or may not have a relationship with
+                        // any other record of the referencing entity in the database
+                        // (irrespective of nullability of the referenced columns)
+                        // Setting the relationship field to nullable ensures even those records
+                        // that are not related are considered while querying.
+                        isNullableRelationship = true;
+                    }
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: $"No relationship exists between {entityName} and {targetEntityName}",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                }
+            }
+
+            return isNullableRelationship;
         }
     }
 }

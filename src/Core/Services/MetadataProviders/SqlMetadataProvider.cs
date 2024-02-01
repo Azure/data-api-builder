@@ -36,8 +36,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly DatabaseType _databaseType;
 
+        // Represents the entities exposed in the runtime config.
         private IReadOnlyDictionary<string, Entity> _entities;
 
+        // Represents the linking entities created by DAB to support nested mutations for entities having an M:N relationship between them.
         protected Dictionary<string, Entity> _linkingEntities = new();
 
         protected readonly string _dataSourceName;

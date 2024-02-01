@@ -7,7 +7,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
 {
     public class ForeignKeyDirectiveType : DirectiveType
     {
-        public static string DirectiveName { get; } = "foreignKey";
+        public static string DirectiveName { get; } = "dab_foreignKey";
 
         protected override void Configure(IDirectiveTypeDescriptor descriptor)
         {

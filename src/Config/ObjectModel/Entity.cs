@@ -68,4 +68,15 @@ public record Entity
         Cache is not null &&
         Cache.Enabled is not null &&
         Cache.Enabled is true;
+
+    /// <summary>
+    /// Helper method to generate the linking entity name using the source and target entity names.
+    /// </summary>
+    /// <param name="source">Source entity name.</param>
+    /// <param name="target">Target entity name.</param>
+    /// <returns>Name of the linking entity.</returns>
+    public static string GenerateLinkingEntityName(string source, string target)
+    {
+        return LINKING_ENTITY_PREFIX + source + target;
+    }
 }

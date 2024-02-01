@@ -47,17 +47,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             // The input fields for a create object will be a combination of:
-            // 1. Simple input fields corresponding to columns which belong to the table.
+            // 1. Scalar input fields corresponding to columns which belong to the table.
             // 2. Complex input fields corresponding to tables having a foreign key relationship with this table.
             List<InputValueDefinitionNode> inputFields = new();
 
-            // 1. Simple input fields.
+            // 1. Scalar input fields.
             IEnumerable<InputValueDefinitionNode> simpleInputFields = objectTypeDefinitionNode.Fields
                 .Where(f => IsBuiltInType(f.Type))
                 .Where(f => IsBuiltInTypeFieldAllowedForCreateInput(f, databaseType))
                 .Select(f =>
                 {
-                    return GenerateSimpleInputType(name, f, databaseType);
+                    return GenerateScalarInputType(name, f, databaseType);
                 });
 
             // Add simple input fields to list of input fields for current input type.
@@ -131,13 +131,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
                 // Support for inserting nested entities with relationship cardinalities of 1-N or N-N is only supported for MsSql.
-                switch (databaseType)
-                {
-                    case DatabaseType.MSSQL:
-                        return true;
-                    default:
-                        return false;
-                }
+                return databaseType is DatabaseType.MSSQL;
             }
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
@@ -168,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return field.Directives.Any(d => d.Name.Value.Equals(ForeignKeyDirectiveType.DirectiveName));
         }
 
-        private static InputValueDefinitionNode GenerateSimpleInputType(NameNode name, FieldDefinitionNode f, DatabaseType databaseType)
+        private static InputValueDefinitionNode GenerateScalarInputType(NameNode name, FieldDefinitionNode f, DatabaseType databaseType)
         {
             IValueNode? defaultValue = null;
 
@@ -255,29 +249,32 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Helper method to determine if there is a M:N relationship between the parent and child node.
+        /// Helper method to determine if there is a M:N relationship between the parent and child node by checking that the relationship
+        /// directive's cardinality value is Cardinality.Many for both parent -> child and child -> parent.
         /// </summary>
-        /// <param name="fieldDefinitionNode">FieldDefinition of the child node.</param>
+        /// <param name="childFieldDefinitionNode">FieldDefinition of the child node.</param>
         /// <param name="childObjectTypeDefinitionNode">Object definition of the child node.</param>
         /// <param name="parentNode">Parent node's NameNode.</param>
-        /// <returns></returns>
-        private static bool IsMToNRelationship(FieldDefinitionNode fieldDefinitionNode, ObjectTypeDefinitionNode childObjectTypeDefinitionNode, NameNode parentNode)
+        /// <returns>true if the relationship between parent and child entities has a cardinality of M:N.</returns>
+        private static bool IsMToNRelationship(FieldDefinitionNode childFieldDefinitionNode, ObjectTypeDefinitionNode childObjectTypeDefinitionNode, NameNode parentNode)
         {
-            Cardinality rightCardinality = RelationshipDirectiveType.Cardinality(fieldDefinitionNode);
+            // Determine the cardinality of the relationship from parent -> child, where parent is the entity present at a level
+            // higher than the child. Eg. For 1:N relationship from parent -> child, the right cardinality is N.
+            Cardinality rightCardinality = RelationshipDirectiveType.Cardinality(childFieldDefinitionNode);
             if (rightCardinality is not Cardinality.Many)
             {
                 return false;
             }
 
             List<FieldDefinitionNode> fieldsInChildNode = childObjectTypeDefinitionNode.Fields.ToList();
-            int index = fieldsInChildNode.FindIndex(field => field.Type.NamedType().Name.Value.Equals(QueryBuilder.GeneratePaginationTypeName(parentNode.Value)));
-            if (index == -1)
+            int indexOfParentFieldInChildDefinition = fieldsInChildNode.FindIndex(field => field.Type.NamedType().Name.Value.Equals(QueryBuilder.GeneratePaginationTypeName(parentNode.Value)));
+            if (indexOfParentFieldInChildDefinition == -1)
             {
                 // Indicates that there is a 1:N relationship between parent and child nodes.
                 return false;
             }
 
-            FieldDefinitionNode parentFieldInChildNode = fieldsInChildNode[index];
+            FieldDefinitionNode parentFieldInChildNode = fieldsInChildNode[indexOfParentFieldInChildDefinition];
 
             // Return true if left cardinality is also N.
             return RelationshipDirectiveType.Cardinality(parentFieldInChildNode) is Cardinality.Many;

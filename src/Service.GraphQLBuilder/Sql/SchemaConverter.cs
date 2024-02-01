@@ -367,6 +367,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
         /// <summary>
         /// Helper method to generate the list of directives for an entity's object type definition.
+        /// Generates and returns the authorize and model directives to be later added to the object's definition. 
         /// </summary>
         /// <param name="entityName">Name of the entity for whose object type definition, the list of directives are to be created.</param>
         /// <param name="configEntity">Entity definition.</param>

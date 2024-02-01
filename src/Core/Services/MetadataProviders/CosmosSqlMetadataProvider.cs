@@ -228,14 +228,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             if (_graphQLTypeToFieldsMap.TryGetValue(entityName, out List<FieldDefinitionNode>? fields))
             {
-                string? fieldType =  fields?.Where(x => x.Name.Value == fieldName).FirstOrDefault()?.Type.ToString();
-
-                if (fieldType is not null)
-                {
-                    fieldType = fieldType.Replace("[", "").Replace("]", "");
-                }
-
-                return fieldType;
+                return fields?.Where(x => x.Name.Value == fieldName).FirstOrDefault()?.Type.ToString();
             }
 
             return null;

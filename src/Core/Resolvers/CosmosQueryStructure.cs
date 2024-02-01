@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -17,6 +18,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private readonly IMiddlewareContext _context;
         private readonly string _containerAlias = "c";
+        private string _path = "C:\\Users\\sourabhjain\\Downloads\\dablog.txt";
 
         public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
 
@@ -28,6 +30,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
+        public List<JoinStructure>? Joins { get; internal set; }
 
         public CosmosQueryStructure(
             IMiddlewareContext context,
@@ -99,7 +102,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
 
-            Console.WriteLine($"IsPaginated: {IsPaginated}");
+            System.IO.File.AppendAllText(_path, $"IsPaginated: {IsPaginated}\n");
+
             if (IsPaginated)
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
@@ -161,13 +165,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (queryParams.ContainsKey(QueryBuilder.FILTER_FIELD_NAME))
             {
-                Console.WriteLine("Filter field found");
+                System.IO.File.AppendAllText(_path, "Filter field found\n");
 
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
                 if (filterObject is not null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
+
                     Predicates.Add(
                         GraphQLFilterParser.Parse(
                             _context,
@@ -192,6 +197,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         new PredicateOperand($"{MakeDbConnectionParam(parameter.Value)}")
                     ));
                 }
+            }
+
+            foreach (Predicate p in Predicates)
+            {
+                System.IO.File.AppendAllText(_path, $"Predicate: {p.Left} {p.Op} {p.Right}\n");
             }
         }
 
@@ -230,5 +240,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return orderByColumnsList;
         }
+
+        public record JoinStructure(DatabaseObject DbObject, string TableAlias, List<Predicate> Predicates);
     }
 }

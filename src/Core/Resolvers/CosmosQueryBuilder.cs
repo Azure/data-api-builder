@@ -21,7 +21,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             queryStringBuilder.Append($"SELECT {WrappedColumns(structure)}"
                 + $" FROM {_containerAlias}");
             string predicateString = Build(structure.Predicates);
-            if (!string.IsNullOrEmpty(predicateString))
+
+            if (structure.Joins != null && structure.Joins.Count > 0)
+            {
+                queryStringBuilder.Append($" {Build(structure.Joins)}");
+                queryStringBuilder.Append($"AND {predicateString}");
+
+            } else if (!string.IsNullOrEmpty(predicateString))
             {
                 queryStringBuilder.Append($" WHERE {predicateString}");
             }
@@ -117,6 +123,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string predicateString;
+
             if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
             {
                 predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
@@ -134,6 +141,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return predicateString;
             }
+        }
+
+        private string Build(List<CosmosQueryStructure.JoinStructure> joinstructure)
+        {
+            StringBuilder joinBuilder = new();
+
+            foreach (CosmosQueryStructure.JoinStructure structure in joinstructure)
+            {
+                joinBuilder.Append($"JOIN {structure.TableAlias} IN {structure.DbObject.SchemaName}.{structure.DbObject.Name}");
+            }
+
+            joinBuilder.Append(" WHERE ");
+            foreach (CosmosQueryStructure.JoinStructure structure in joinstructure)
+            {
+                joinBuilder.Append(Build(structure.Predicates));
+            }
+
+            return joinBuilder.ToString();
         }
 
     }

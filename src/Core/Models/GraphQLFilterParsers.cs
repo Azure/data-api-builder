@@ -213,6 +213,7 @@ public class GQLFilterParser
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
 
+                        // join structure and predicate
                         queryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldType);
 
                         System.IO.File.AppendAllText(_path, $"Nested entity name {queryStructure.EntityName}\n");

@@ -1580,6 +1580,110 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        public async Task SanityTestForRestAndGQLRequestsWithoutNestedMutationFeatureFlagSection()
+        {
+           // Hard-coded json string for Book entity
+           string entityJson =  @"
+            {
+              ""entities"": {
+                    ""Book"": {
+                    ""source"": {
+                        ""object"": ""books"",
+                        ""type"": ""table""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""type"": {
+                        ""singular"": ""book"",
+                        ""plural"": ""books""
+                        }
+                    },
+                    ""rest"":{
+                        ""enabled"": true
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                                {
+                                    ""action"": ""create""
+                                },
+                                {
+                                    ""action"": ""read""
+                                },
+                                {
+                                    ""action"": ""update""
+                                },
+                                {
+                                    ""action"": ""delete""
+                                }
+                            ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
+                    }
+                }
+            }";
+
+            // The config file is constructed by merging the hard-coded json strings to mimic the scenario where config file is
+            // hand-edited (instead of using CLI) by the users.
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
+            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+            string configFileName = "custom-config.json";
+            File.WriteAllText(configFileName, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try{
+                    
+                    // Perform a REST GET API request 
+                    // 1. To validate that DAB engine deserialized the config without the nested mutation feature flag section correctly.
+                    // 2. To validate that REST GET requests are executed correctly.
+                    HttpRequestMessage restRequest = new(HttpMethod.Get, "api/Book");
+                    HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                    Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+
+                    // Perform a GraphQL API request
+                    // 1. To validate that DAB engine successfully deserialized the config without the nested mutation feature flag section.
+                    // 2. To validate that DAB engine executes GraphQL requests successfully. 
+                    string query = @"{
+                        book_by_pk(id: 1) {
+                           id,
+                           title,
+                           publisher_id
+                        }
+                    }";
+
+                    object payload = new { query };
+
+                    HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                    {
+                        Content = JsonContent.Create(payload)
+                    };
+
+                    HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                    Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                    Assert.IsNotNull(graphQLResponse.Content);
+                    string body = await graphQLResponse.Content.ReadAsStringAsync();
+                    Assert.IsFalse(body.Contains("errors"));
+                }
+                catch(Exception ex)
+                {
+                    Assert.Fail($"Unexpected exception : {ex}" );
+                }
+            }
+        }
+
+        /// <summary>
         /// Test to validate that when an entity which will return a paginated response is queried, and a custom runtime base route is configured in the runtime configuration,
         /// then the generated nextLink in the response would contain the rest base-route just before the rest path. For the subsequent query, the rest base-route will be trimmed
         /// by the upstream before the request lands at DAB.

@@ -1580,9 +1580,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Sanity check to validate that DAB engine works fine when used with a config file without the nested 
+        /// mutations feature flag section.
+        /// The runtime graphql section of the config file used looks like this: 
+        ///
+        /// "graphql": {
+        ///    "path": "/graphql",
+        ///    "allow-introspection": true
+        ///  }
+        /// 
+        /// Without the nested mutations feature flag section, DAB engine should be able to 
+        ///  1. Successfully deserialize the config file.
+        ///  2. Process REST and GraphQL API requests.
         /// 
         /// </summary>
         [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
         public async Task SanityTestForRestAndGQLRequestsWithoutNestedMutationFeatureFlagSection()
         {
             // Hard-coded json string for Book entity

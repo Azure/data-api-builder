@@ -2,15 +2,21 @@
 // Licensed under the MIT License.
 
 # nullable disable
+using System.Configuration;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Utilities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
@@ -27,6 +33,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly CosmosQueryBuilder _queryBuilder;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly DabCacheService _cache;
 
         /// <summary>
         /// Constructor 
@@ -35,13 +43,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosClientProvider clientProvider,
             IMetadataProviderFactory metadataProviderFactory,
             IAuthorizationResolver authorizationResolver,
-            GQLFilterParser gQLFilterParser)
+            GQLFilterParser gQLFilterParser,
+            RuntimeConfigProvider runtimeConfigProvider,
+            DabCacheService cache
+            )
         {
             _clientProvider = clientProvider;
             _metadataProviderFactory = metadataProviderFactory;
             _queryBuilder = new CosmosQueryBuilder();
             _gQLFilterParser = gQLFilterParser;
             _authorizationResolver = authorizationResolver;
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _cache = cache;
         }
 
         /// <summary>
@@ -60,6 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
@@ -80,6 +94,42 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryRequestOptions.PartitionKey = new PartitionKey(partitionKeyValue);
             }
 
+            if (structure.IsPaginated)
+            {
+                queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
+                requestContinuation = Base64Decode(structure.Continuation);
+            }
+
+
+            if (runtimeConfig.CanUseCache())
+            {
+                DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
+
+                JObject result = await _cache.GetOrSetAsync2(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+
+                JsonDocument cacheServiceResponse = JsonDocument.Parse(result.ToString());
+
+                return new Tuple<JsonDocument, IMetadata>(cacheServiceResponse, null);
+            }
+
+            JObject response = await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue);
+
+            return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(response.ToString()), null);
+        }
+
+        /// <summary>
+        /// ExecuteQueryAsync Perform single parition and cross partition query. 
+        /// </summary>
+        /// <param name="structure"></param>
+        /// <param name="querySpec"></param>
+        /// <param name="queryRequestOptions"></param>
+        /// <param name="container"></param>
+        /// <param name="idValue"></param>
+        /// <param name="partitionKeyValue"></param>
+        /// <returns>JsonDocument</returns>
+        private static async Task<JObject> ExecuteQueryAsync(CosmosQueryStructure structure, QueryDefinition querySpec, QueryRequestOptions queryRequestOptions, Container container, string idValue, string partitionKeyValue)
+        {
+            string requestContinuation = null;
             if (structure.IsPaginated)
             {
                 queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
@@ -122,19 +172,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
                         // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                        return res;
                     }
 
                     if (page.Count > 0)
                     {
-                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(page.First().ToString()), null);
+                        return page.First();
                     }
                 }
                 while (query.HasMoreResults);
             }
 
-            // Return empty list when query gets no result back
-            return new Tuple<JsonDocument, IMetadata>(null, null);
+            // Return null when query gets no result back
+            return null;
         }
 
         /// <summary>
@@ -153,12 +203,57 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+            string queryString = _queryBuilder.Build(structure);
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {
                 querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value.Value);
             }
 
+            IEnumerable<JObject> result = null;
+            if (runtimeConfig.CanUseCache())
+            {
+                DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
+
+                result = await _cache.GetOrSetAsync2(async () => await ExecuteListAsync2(container, querySpec), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+
+            }
+            else
+            {
+                result = await ExecuteListAsync2(container, querySpec);
+            }
+
+            List<JsonDocument> resultsAsList = new();
+            foreach (JObject item in result)
+            {
+                resultsAsList.Add(JsonDocument.Parse(item.ToString()));
+            }
+
+            return new Tuple<IEnumerable<JsonDocument>, IMetadata>(resultsAsList, null);
+        }
+
+        private static async Task<IEnumerable<JObject>> ExecuteListAsync2(Container container, QueryDefinition querySpec)
+        {
+            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
+
+            List<JObject> resultsAsList = new();
+            while (resultSetIterator.HasMoreResults)
+            {
+                FeedResponse<JObject> nextPage = await resultSetIterator.ReadNextAsync();
+                IEnumerator<JObject> enumerator = nextPage.GetEnumerator();
+                while (enumerator.MoveNext())
+                {
+                    JObject item = enumerator.Current;
+                    resultsAsList.Add(item);
+                }
+            }
+
+            return resultsAsList;
+        }
+
+        private static async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(Container container, QueryDefinition querySpec)
+        {
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
             List<JsonDocument> resultsAsList = new();
@@ -231,7 +326,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="partitionKeyValue"></param>
         /// <param name="IsPaginated"></param>
         /// <returns></returns>
-        private static async Task<Tuple<JsonDocument, IMetadata>> QueryByIdAndPartitionKey(Container container, string idValue, string partitionKeyValue, bool IsPaginated)
+        private static async Task<JObject> QueryByIdAndPartitionKey(Container container, string idValue, string partitionKeyValue, bool IsPaginated)
         {
             try
             {
@@ -241,17 +336,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (IsPaginated)
                 {
                     JObject res = new(
-                        new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, null),
-                        new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, false),
-                        new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, new JArray { item }));
-                    return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                         new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, null),
+                         new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, false),
+                         new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, new JArray { item }));
+                    return res;
                 }
 
-                return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(item.ToString()), null);
+                return item;
             }
             catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                return new Tuple<JsonDocument, IMetadata>(null, null);
+                return null;
             }
         }
 

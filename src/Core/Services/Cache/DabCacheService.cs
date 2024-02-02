@@ -7,6 +7,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Core.Services.Cache;
@@ -76,6 +77,26 @@ public class DabCacheService
                });
 
         return result;
+    }
+
+    public async ValueTask<TResult?> GetOrSetAsync2<TResult>(Func<Task<TResult>> executeQueryAsync, DatabaseQueryMetadata queryMetadata, int cacheEntryTtl)
+    {
+        string cacheKey = CreateCacheKey(queryMetadata);
+        TResult? result = await _cache.GetOrSetAsync(
+               key: cacheKey,
+               async (FusionCacheFactoryExecutionContext<TResult> ctx, CancellationToken ct) =>
+               {
+                   TResult result = await executeQueryAsync();
+
+                   ctx.Options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: JsonSerializer.Serialize(result)));
+                   ctx.Options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));
+
+                   return result;
+
+               });
+
+        return result;
+
     }
 
     /// <summary>

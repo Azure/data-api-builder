@@ -2719,6 +2719,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher", out _));
         }
 
+        /// <summary>
+        /// This test validates that DAB properly creates and returns a nextLink with a single $after
+        /// query parameter when sending paging requests.
+        /// The first request initiates a paging workload, meaning the response is expected to have a nextLink.
+        /// The validation occurs after the second request which uses the previously acquired nextLink
+        /// This test ensures that the second request's response body contains the expected nextLink which:
+        /// - is base64 encoded and NOT URI escaped e.g. the trailing "==" are not URI escaped to "%3D%3D"
+        /// - is not the same as the first response's nextLink -> DAB is properly injecting a new $after query param
+        /// and updating the new nextLink
+        /// - does not contain a comma (,) indicating that the URI namevaluecollection tracking the query parameters
+        /// did not come across two $after query parameters. This addresses a customer raised issue where two $after
+        /// query parameters were returned by DAB.
+        /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
         public async Task ValidateNextLinkUsage()
@@ -2755,11 +2768,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             HttpRequestMessage initialPaginationRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{ENTITY_NAME}?$first=1");
             HttpResponseMessage initialPaginationResponse = await client.SendAsync(initialPaginationRequest);
 
-            // Validate response
-            // Process response body
+            // Process response body for first request and get the nextLink to use on subsequent request
+            // which represents what this test is validating.
             string responseBody = await initialPaginationResponse.Content.ReadAsStringAsync();
             Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
             string nextLinkUri = responseProperties["nextLink"].ToString();
+
             // Act - Submit request with nextLink uri as target and capture response
 
             HttpRequestMessage followNextLinkRequest = new(HttpMethod.Get, nextLinkUri);

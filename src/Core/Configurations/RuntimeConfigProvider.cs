@@ -4,7 +4,6 @@
 using System.Data.Common;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -322,7 +321,7 @@ public class RuntimeConfigProvider
             options = new(dataSource.Options)
             {
                 // push the "raw" GraphQL schema into the options to pull out later when requested
-                { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), JsonSerializer.SerializeToElement(schema) }
+                { namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema)), schema }
             };
         }
         else
@@ -336,7 +335,7 @@ public class RuntimeConfigProvider
         if (database is not null)
         {
             // Add or update the options to contain the parsed database
-            options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = JsonSerializer.SerializeToElement(database);
+            options[namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database))] = database;
         }
 
         // Update the connection string in the datasource with the one that was provided to the controller

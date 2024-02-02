@@ -89,7 +89,7 @@ namespace Cli
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
             string? runtimeBaseRoute = options.RuntimeBaseRoute;
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object?> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
 

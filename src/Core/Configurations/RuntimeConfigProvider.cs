@@ -316,7 +316,7 @@ public class RuntimeConfigProvider
 
         DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
 
-        Dictionary<string, JsonElement> options;
+        Dictionary<string, object?> options;
         if (dataSource.Options is not null)
         {
             options = new(dataSource.Options)

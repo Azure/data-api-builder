@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.UnitTests
@@ -111,11 +110,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Tests the parsing of the runtime configuration with environment variables based on replaceEnvVar parameter.
         /// Verifies the below five different cases:
-        /// 1. datasource options has a boolean value,
-        /// 2. datasource options has a string value,
-        /// 3. datasource options is empty,
-        /// 4. datasource options is null,
-        /// 5. datasource options is not given.
+        /// 1. datasource options correctly deserializes the boolean value,
+        /// 2. datasource options correctly deserializes the string value,
+        /// 3. when datasource options is empty, it is deserialized as an empty dictionary
+        /// 4. when datasource options is null, it is correctly deserialized as null.
+        /// 5. when datasource options is not given, it is correctly deserialized as null.
+        /// MySQL, PgSql, and DwSql db types are unaffected by replaceEnvVar because those db's don't support options.
         /// </summary>
         /// <param name="replaceEnvVar">A boolean indicating whether to replace environment variables in the configuration.</param>
         [DataTestMethod]
@@ -131,14 +131,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(true, "dwsql", DisplayName = "Replace environment variables when datasource option is not given.")]
         public void TestConfigParsingWithEnvVarReplacement(bool replaceEnvVar, string databaseType)
         {
-            // Act
+            // Arrange
             SetEnvironmentVariablesFromDictionary(_environmentFileContentDict);
-            string configWithEnvVar = _configWithVariableDataSource.Replace("{0}", GetDataSourceConfigForGivenDatabase(databaseType));
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-              configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: replaceEnvVar));
+            string configWithEnvVar = _configWithVariableDataSource.Replace("{0}", GetDataSourceConfigForGivenDatabase(databaseType));
+            bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
+              configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: replaceEnvVar);
 
             // Assert
+            Assert.IsTrue(isParsingSuccessful);
             switch (databaseType)
             {
                 case "mssql":
@@ -172,20 +173,23 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <summary>
         /// Test the parsing of DataSource section in runtime config for cosmosdb_nosql
         /// where under cosmosDb options has database as null, container is not provided, and schema is an empty string.
+        /// It verifies that the given config is correctly deserialized according to the given values, and invalidity or absence of values are
+        /// handled by CosmosDBMetadataProvider seperately during initialization.
         /// </summary>
         [TestMethod]
         public void TestConfigParsingWhenDataSourceOptionsForCosmosDBContainsInvalidValues()
         {
             // Act
             SetEnvironmentVariablesFromDictionary(_environmentFileContentDict);
-            string configWithEnvVar = _configWithVariableDataSource.Replace("{0}", GetDataSourceOptionsForCosmosDBWithInvalidValues());
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
-              configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: true));
+            string configWithEnvVar = _configWithVariableDataSource.Replace("{0}", GetDataSourceOptionsForCosmosDBWithInvalidValues());
+            bool isParsingSuccessful = RuntimeConfigLoader.TryParseConfig(
+              configWithEnvVar, out RuntimeConfig runtimeConfig, replaceEnvVar: true);
 
             // Assert
+            Assert.IsTrue(isParsingSuccessful);
             Assert.AreEqual(runtimeConfig.DataSource.DatabaseType, DatabaseType.CosmosDB_NoSQL);
-            Assert.IsTrue(runtimeConfig.DataSource.Options["database"].ToString().IsNullOrEmpty());
+            Assert.IsNull(runtimeConfig.DataSource.Options["database"]);
             Assert.IsFalse(runtimeConfig.DataSource.Options.ContainsKey("container"));
             Assert.AreEqual(runtimeConfig.DataSource.Options["schema"].ToString(), "");
 
@@ -487,7 +491,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Config containing variable data-source.
+        /// Config containing data-source property.
         /// </summary>
         private static string _configWithVariableDataSource = @"
             {
@@ -510,7 +514,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     ""allow-credentials"": false
                   },
                   ""authentication"": {
-                    ""provider"": ""AzureAD""
+                    ""provider"": ""EntraID""
                   }
                 }
               },
@@ -523,6 +527,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// MSSQL options has a boolean value, CosmosDB options has string value,
         /// MySQL datasource option is empty, PostgreSQL datasource option is null,
         /// and DWSQL has no options.
+        /// The role of serializer is just to correctly translate the values from the config.
+        /// This test is checking that we support different ways in which options can be provided.
         /// </summary>
         private static string GetDataSourceConfigForGivenDatabase(string databaseType)
         {
@@ -568,6 +574,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Gets the data source options for CosmosDB with no container, null database, and empty schema.
+        /// This is to test that the missing or null values are correctly deserialized.
+        /// The invalid values will be handled by CosmosDBMetadataProvider during initialization.
         /// </summary>
         private static string GetDataSourceOptionsForCosmosDBWithInvalidValues()
         {
@@ -583,7 +591,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Clears the environment variables defined in the provided text.
+        /// Clears the environment variables defined in the provided dictionary.
         /// </summary>
         /// <param name="environmentFileContentDict">A dictionary containing environment variables that needs to be cleared.</param>
         private static void ClearEnvironmentVariablesFromDictionary(Dictionary<string, string> environmentFileContentDict)
@@ -595,7 +603,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// A string representing environment variables for testing environment variable replacement in the config.
+        /// A dictionary representing environment variables for testing environment variable replacement in the config.
         /// </summary>
         private static Dictionary<string, string> _environmentFileContentDict = new()
         {

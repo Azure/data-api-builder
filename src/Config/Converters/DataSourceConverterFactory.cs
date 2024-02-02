@@ -73,12 +73,12 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                 }
                                 else
                                 {
-                                    Dictionary<string, JsonElement> optionsDict = new();
+                                    Dictionary<string, object?> optionsDict = new();
                                     while (reader.Read() && reader.TokenType is not JsonTokenType.EndObject)
                                     {
-                                        string key = reader.GetString()!;
+                                        string optionsSubproperty = reader.GetString()!;
                                         reader.Read();
-                                        JsonElement element;
+                                        object? optionsSubpropertyValue;
                                         if (reader.TokenType is JsonTokenType.String)
                                         {
                                             string stringValue = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
@@ -86,40 +86,28 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                             if (bool.TryParse(stringValue, out bool boolValue))
                                             {
                                                 // MsSqlOptions.SetSessionContext will contain a boolean value.
-                                                using (JsonDocument doc = JsonDocument.Parse(boolValue.ToString().ToLower()))
-                                                {
-                                                    element = doc.RootElement.Clone();
-                                                }
+                                                optionsSubpropertyValue = boolValue;
                                             }
                                             else
                                             {
                                                 // CosmosDbNoSQLDataSourceOptions will contain string values.
-                                                using (JsonDocument doc = JsonDocument.Parse($"\"{stringValue}\""))
-                                                {
-                                                    element = doc.RootElement.Clone();
-                                                }
+                                                optionsSubpropertyValue = stringValue;
                                             }
                                         }
                                         else if (reader.TokenType is JsonTokenType.True or JsonTokenType.False)
                                         {
-                                            using (JsonDocument doc = JsonDocument.Parse(reader.GetBoolean().ToString().ToLower()))
-                                            {
-                                                element = doc.RootElement.Clone();
-                                            }
+                                            optionsSubpropertyValue = reader.GetBoolean();
                                         }
                                         else if (reader.TokenType is JsonTokenType.Null)
                                         {
-                                            using (JsonDocument doc = JsonDocument.Parse("null"))
-                                            {
-                                                element = doc.RootElement.Clone();
-                                            }
+                                            optionsSubpropertyValue = null;
                                         }
                                         else
                                         {
-                                            throw new JsonException($"Unexpected value for options {key} while deserializing DataSource options.");
+                                            throw new JsonException($"Unexpected value for options {optionsSubproperty} while deserializing DataSource options.");
                                         }
 
-                                        optionsDict.Add(key, element);
+                                        optionsDict.Add(optionsSubproperty, optionsSubpropertyValue);
                                     }
 
                                     dataSource = dataSource with { Options = optionsDict };

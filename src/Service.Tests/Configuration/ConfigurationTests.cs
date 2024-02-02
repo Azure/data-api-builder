@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
@@ -16,6 +17,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -2715,6 +2717,74 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Validate that components were not created for the entity with REST disabled.
             Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher_NoPK", out _));
             Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher", out _));
+        }
+
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateNextLinkUsage()
+        {
+            // Arrange - Setup test server with entity that has >100 records enabling paging.
+
+            const string ENTITY_NAME = "Bookmark";
+            // At least one entity is required in the runtime config for the engine to start.
+            // Even though this entity is not under test, it must be supplied to the config
+            // file creation function.
+            Entity requiredEntity = new(
+                Source: new("bookmarks", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: true),
+                GraphQL: new(Singular: "", Plural: "", Enabled: false),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { ENTITY_NAME, requiredEntity }
+            };
+
+            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+            // Setup and send GET request
+            HttpRequestMessage initialPaginationRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{ENTITY_NAME}?$first=1");
+            HttpResponseMessage initialPaginationResponse = await client.SendAsync(initialPaginationRequest);
+
+            // Validate response
+            // Process response body
+            string responseBody = await initialPaginationResponse.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+            string nextLinkUri = responseProperties["nextLink"].ToString();
+            // Act - Submit request with nextLink uri as target and capture response
+
+            HttpRequestMessage followNextLinkRequest = new(HttpMethod.Get, nextLinkUri);
+            HttpResponseMessage followNextLinkResponse = await client.SendAsync(followNextLinkRequest);
+
+            // Assert
+
+            Assert.AreEqual(HttpStatusCode.OK, followNextLinkResponse.StatusCode, message: "Expected request to succeed.");
+
+            // Process the response body and inspect the "nextLink" property for expected contents.
+            string followNextLinkResponseBody = await followNextLinkResponse.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> followNextLinkResponseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(followNextLinkResponseBody);
+
+            string followUpResponseNextLink = followNextLinkResponseProperties["nextLink"].ToString();
+            Uri nextLink = new(uriString: followUpResponseNextLink);
+            NameValueCollection nvc = HttpUtility.ParseQueryString(query: nextLink.Query);
+            Assert.AreEqual(expected: false, actual: nvc["$after"].Contains(','), message: "nextLink erroneously contained two $after query parameters that were joined by HttpUtility.ParseQueryString(queryString).");
+            Assert.AreNotEqual(notExpected: nextLinkUri, actual: followUpResponseNextLink, message: "The follow up request erroneously returned the same nextLink value.");
+
+            // String value would be %3D%3D
+            string uriEscapedIndicator = Uri.EscapeDataString("==");
+            Assert.AreEqual(
+                expected: false,
+                actual: followUpResponseNextLink.EndsWith(uriEscapedIndicator),
+                message: "Unexpected URI escaping found in $after query parameter in the nextLink.");
         }
 
         /// <summary>

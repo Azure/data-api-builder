@@ -521,17 +521,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Create the URL that will provide for the next page of results
         /// using the same query options.
         /// </summary>
-        /// <param name="path">The request path.</param>
+        /// <param name="path">The request path excluding query parameters (e.g. https://localhost/api/myEntity)</param>
         /// <param name="queryStringParameters">Collection of query string parameters.</param>
-        /// <param name="after">The values needed for next page.</param>
+        /// <param name="newAfterPayload">The contents </param>
         /// <returns>The string representing nextLink.</returns>
-        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string after)
+        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string newAfterPayload)
         {
+            if (queryStringParameters is null)
+            {
+                queryStringParameters = new();
+            }
+            else
+            {
+                // Purge old $after value so this function can replace it.
+                queryStringParameters.Remove("$after");
+            }
+
             string queryString = FormatQueryString(queryStringParameters: queryStringParameters);
-            if (!string.IsNullOrWhiteSpace(after))
+            if (!string.IsNullOrWhiteSpace(newAfterPayload))
             {
                 string afterPrefix = string.IsNullOrWhiteSpace(queryString) ? "?" : "&";
-                queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={after}";
+                queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={newAfterPayload}";
             }
 
             // ValueKind will be array so we can differentiate from other objects in the response
@@ -580,6 +590,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (string key in queryStringParameters)
             {
+                // Whitespace or empty string query paramters are not supported.
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     continue;

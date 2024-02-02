@@ -261,10 +261,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// Helper method to generate field for a relationship for an entity. These relationship fields are populated with relationship directive
         /// which stores the (cardinality, target entity) for the relationship. This enables nested queries/mutations on the relationship fields.
         ///
-        /// While processing the relationship, it does some other things:
-        /// 1. Helps in keeping track of relationships with cardinality M:N as whenever such a relationship is encountered,
-        /// the (soure, target) pair of entities is added to the collection of entities with many to many relationship.
-        /// 2. Helps in keeping track of fields from the source entity which hold foreign key references to the target entity.
+        /// While processing the relationship, it helps in keeping track of fields from the source entity which hold foreign key references to the target entity.
         /// </summary>
         /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
         /// <param name="databaseObject">SQL database object information.</param>

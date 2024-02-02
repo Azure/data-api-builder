@@ -302,7 +302,7 @@ steps:
   displayName: "Build and push docker image to Azure Container Registry"
   condition: and(succeeded(), eq(variables.isReleaseBuild, 'false'))
   inputs:
-    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    containerRegistry: 'Data API builder Container Registry Connection'
     repository: 'dab/$(Build.SourceBranch)'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
@@ -316,7 +316,7 @@ steps:
   displayName: "Build and push docker image to Azure Container Registry tagged with releaseName and nuget release version"
   condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
-    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    containerRegistry: 'Data API builder Container Registry Connection'
     repository: 'dab'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'
@@ -333,7 +333,7 @@ steps:
   displayName: "Build and push docker image to ACR for publishing to MCR"
   condition: and(succeeded(), eq(variables.isReleaseBuild, 'true'))
   inputs:
-    containerRegistry: 'CosmosDB GraphQL/Hawaii'
+    containerRegistry: 'Data API builder Container Registry Connection'
     repository: 'public/azure-databases/data-api-builder'
     command: 'buildAndPush'
     Dockerfile: '**/Dockerfile'

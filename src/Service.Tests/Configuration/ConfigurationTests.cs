@@ -2789,16 +2789,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             string followUpResponseNextLink = followNextLinkResponseProperties["nextLink"].ToString();
             Uri nextLink = new(uriString: followUpResponseNextLink);
-            NameValueCollection nvc = HttpUtility.ParseQueryString(query: nextLink.Query);
-            Assert.AreEqual(expected: false, actual: nvc["$after"].Contains(','), message: "nextLink erroneously contained two $after query parameters that were joined by HttpUtility.ParseQueryString(queryString).");
+            NameValueCollection parsedQueryParameters = HttpUtility.ParseQueryString(query: nextLink.Query);
+            Assert.AreEqual(expected: false, actual: parsedQueryParameters["$after"].Contains(','), message: "nextLink erroneously contained two $after query parameters that were joined by HttpUtility.ParseQueryString(queryString).");
             Assert.AreNotEqual(notExpected: nextLinkUri, actual: followUpResponseNextLink, message: "The follow up request erroneously returned the same nextLink value.");
 
-            // String value would be %3D%3D
-            string uriEscapedIndicator = Uri.EscapeDataString("==");
-            Assert.AreEqual(
-                expected: false,
-                actual: followUpResponseNextLink.EndsWith(uriEscapedIndicator),
-                message: "Unexpected URI escaping found in $after query parameter in the nextLink.");
+            // Do not use SqlPaginationUtils.Base64Encode()/Decode() here to eliminate test dependency on engine code to perform an assert.
+            try
+            {
+                Convert.FromBase64String(parsedQueryParameters["$after"]);
+            }
+            catch (FormatException)
+            {
+                Assert.Fail(message: "$after query parameter was not a valid base64 encoded value.");
+            }
         }
 
         /// <summary>

@@ -31,18 +31,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// currently used to lookup relationship metadata.</param>
         /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
         /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
-        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
-        public static ObjectTypeDefinitionNode FromDatabaseObject(
+        public static ObjectTypeDefinitionNode GenerateObjectTypeDefinitionForDatabaseObject(
             string entityName,
             DatabaseObject databaseObject,
             [NotNull] Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            bool isNestedMutationSupported = false,
-            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships = null)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
             ObjectTypeDefinitionNode objectDefinitionNode;
             switch (databaseObject.SourceType)
@@ -63,9 +59,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         configEntity: configEntity,
                         entities: entities,
                         rolesAllowedForEntity: rolesAllowedForEntity,
-                        rolesAllowedForFields: rolesAllowedForFields,
-                        isNestedMutationSupported: isNestedMutationSupported,
-                        entitiesWithManyToManyRelationships: entitiesWithManyToManyRelationships);
+                        rolesAllowedForFields: rolesAllowedForFields);
                     break;
                 default:
                     throw new DataApiBuilderException(
@@ -141,8 +135,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// currently used to lookup relationship metadata.</param>
         /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
         /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
-        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
         /// <returns>A GraphQL object type for the table/view to be provided to a Hot Chocolate GraphQL document.</returns>
         private static ObjectTypeDefinitionNode CreateObjectTypeDefinitionForTableOrView(
             string entityName,
@@ -150,9 +142,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            bool isNestedMutationSupported,
-            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
             Dictionary<string, FieldDefinitionNode> fieldDefinitionNodes = new();
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
@@ -209,8 +199,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                             entityName,
                             databaseObject,
                             entities,
-                            isNestedMutationSupported,
-                            entitiesWithManyToManyRelationships,
                             foreignKeyFieldsInEntity,
                             relationshipName,
                             relationship);
@@ -281,8 +269,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
         /// <param name="databaseObject">SQL database object information.</param>
         /// <param name="entities">Key/Value Collection mapping entity name to the entity object, currently used to lookup relationship metadata.</param>
-        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
         /// <param name="foreignKeyFieldsInEntity">Set of fields from source entity holding foreign key references to a target entities.</param>
         /// <param name="relationshipName">Name of the relationship.</param>
         /// <param name="relationship">Relationship data.</param>
@@ -290,8 +276,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             string entityName,
             DatabaseObject databaseObject,
             RuntimeEntities entities,
-            bool isNestedMutationSupported,
-            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships,
             HashSet<string> foreignKeyFieldsInEntity,
             string relationshipName,
             EntityRelationship relationship)
@@ -351,11 +335,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
             };
-
-            if (isNestedMutationSupported && relationship.LinkingObject is not null && entitiesWithManyToManyRelationships is not null)
-            {
-                entitiesWithManyToManyRelationships.Add(new(entityName, targetEntityName));
-            }
 
             FieldDefinitionNode relationshipField = new(
                 location: null,

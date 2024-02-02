@@ -170,11 +170,6 @@ namespace Azure.DataApiBuilder.Core.Services
             // from source -> target and target -> source.
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
 
-            // Set of (source,target) entities with M:N relationship.
-            // A relationship has cardinality of M:N when the relationship for a target in source entity's
-            // configuration contains a linking object.
-            HashSet<Tuple<string, string>> entitiesWithManyToManyRelationships = new();
-
             // 1. Build up the object and input types for all the exposed entities in the config.
             foreach ((string entityName, Entity entity) in entities)
             {
@@ -213,15 +208,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
                     if (rolesAllowedForEntity.Any())
                     {
-                        ObjectTypeDefinitionNode node = SchemaConverter.FromDatabaseObject(
+                        ObjectTypeDefinitionNode node = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                             entityName: entityName,
                             databaseObject: databaseObject,
                             configEntity: entity,
                             entities: entities,
                             rolesAllowedForEntity: rolesAllowedForEntity,
-                            rolesAllowedForFields: rolesAllowedForFields,
-                            isNestedMutationSupported: DoesRelationalDBSupportNestedMutations(sqlMetadataProvider.GetDatabaseType()),
-                            entitiesWithManyToManyRelationships: entitiesWithManyToManyRelationships
+                            rolesAllowedForFields: rolesAllowedForFields
                             );
 
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
@@ -249,7 +242,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Create ObjectTypeDefinitionNode for linking entities. These object definitions are not exposed in the schema
             // but are used to generate the object definitions of directional linking entities for (source, target) and (target, source) entities.
             Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities();
-            GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes, entitiesWithManyToManyRelationships);
+            GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes);
 
             // Return a list of all the object types to be exposed in the schema.
             Dictionary<string, FieldDefinitionNode> fields = new();
@@ -285,7 +278,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(linkingEntityName, out DatabaseObject? linkingDbObject))
                     {
-                        ObjectTypeDefinitionNode node = SchemaConverter.FromDatabaseObject(
+                        ObjectTypeDefinitionNode node = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                                 entityName: linkingEntityName,
                                 databaseObject: linkingDbObject,
                                 configEntity: linkingEntity,
@@ -312,14 +305,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="objectTypes">Collection of object types.</param>
         /// <param name="linkingObjectTypes">Collection of object types for linking entities.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of pair of entities with M:N relationship between them.</param>
         private void GenerateSourceTargetLinkingObjectDefinitions(
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes,
-            Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes,
-            HashSet<Tuple<string, string>> entitiesWithManyToManyRelationships)
+            Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes)
         {
-            foreach ((string sourceEntityName, string targetEntityName) in entitiesWithManyToManyRelationships)
+            foreach ((string linkingEntityName, ObjectTypeDefinitionNode linkingObjectDefinition) in linkingObjectTypes)
             {
+                (string sourceEntityName, string targetEntityName) = Entity.GetSourceAndTargetEntityNameFromLinkingEntityName(linkingEntityName);
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(targetEntityName);
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbo))
@@ -338,8 +330,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     List<FieldDefinitionNode> fieldsInSourceTargetLinkingNode = targetNode.Fields.ToList();
 
                     // Get list of fields in the linking node (which represents columns present in the linking table).
-                    string linkingEntityName = Entity.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
-                    List<FieldDefinitionNode> fieldsInLinkingNode = linkingObjectTypes[linkingEntityName].Fields.ToList();
+                    List<FieldDefinitionNode> fieldsInLinkingNode = linkingObjectDefinition.Fields.ToList();
 
                     // The sourceTargetLinkingNode will contain:
                     // 1. All the fields from the target node to perform insertion on the target entity,

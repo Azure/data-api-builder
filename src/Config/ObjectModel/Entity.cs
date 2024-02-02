@@ -23,7 +23,12 @@ public record Entity
 {
     public const string PROPERTY_PATH = "path";
     public const string PROPERTY_METHODS = "methods";
-    public const string LINKING_ENTITY_PREFIX = "LinkingEntity";
+
+    // String used as a prefix for the name of a linking entity.
+    private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
+
+    // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
+    private const string ENTITY_NAME_DELIMITER = "$";
 
     public EntitySource Source { get; init; }
     public EntityGraphQLOptions GraphQL { get; init; }
@@ -77,6 +82,27 @@ public record Entity
     /// <returns>Name of the linking entity.</returns>
     public static string GenerateLinkingEntityName(string source, string target)
     {
-        return LINKING_ENTITY_PREFIX + source + target;
+        return LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER + source + ENTITY_NAME_DELIMITER + target;
+    }
+
+    /// <summary>
+    /// Helper method to decode the names of source and target entities from the name of a linking entity.
+    /// </summary>
+    public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
+    {
+        if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX+ENTITY_NAME_DELIMITER))
+        {
+            throw new Exception("The provided entity name is an invalid linking entity name.");
+        }
+
+        string entityNameWithLinkingEntityPrefix = linkingEntityName.Substring(LINKING_ENTITY_PREFIX.Length + ENTITY_NAME_DELIMITER.Length);
+        string[] sourceTargetEntityNames = entityNameWithLinkingEntityPrefix.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
+
+        if (sourceTargetEntityNames.Length != 2)
+        {
+            throw new Exception("The provided entity name is an invalid linking entity name.");
+        }
+
+        return new(sourceTargetEntityNames[0], sourceTargetEntityNames[1]);
     }
 }

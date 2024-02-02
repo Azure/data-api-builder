@@ -241,9 +241,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 name: field.Name,
                 description: new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                type: databaseType is DatabaseType.MSSQL ? type.NullableType() : type,
+                type: DoesRelationalDBSupportNestedMutations(databaseType) ? type.NullableType() : type,
                 defaultValue: null,
-                directives: databaseType is DatabaseType.MSSQL ? new List<DirectiveNode>() : field.Directives
+                directives: field.Directives
             );
         }
 
@@ -328,12 +328,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Entity entity = entities[dbEntityName];
 
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
-                inputs,
-                objectTypeDefinitionNode,
-                name,
-                name,
-                root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
-                databaseType);
+                inputs: inputs,
+                objectTypeDefinitionNode: objectTypeDefinitionNode,
+                name:name,
+                baseEntityName: name,
+                definitions: root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
+                databaseType: databaseType);
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", dbEntityName)) };

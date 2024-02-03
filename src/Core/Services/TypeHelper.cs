@@ -227,7 +227,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception>Failed type conversion.</exception>"
         public static Type GetSystemTypeFromSqlDbType(string sqlDbTypeName)
         {
-            if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
+            string baseType = sqlDbTypeName.Split('(')[0];
+            if (Enum.TryParse(baseType, ignoreCase: true, out SqlDbType sqlDbType))
             {
                 if (_sqlDbTypeToType.TryGetValue(sqlDbType, out Type? value))
                 {

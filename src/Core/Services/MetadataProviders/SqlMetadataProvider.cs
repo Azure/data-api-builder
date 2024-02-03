@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            GenerateDatabaseObjectForEntities();
+  GenerateDatabaseObjectForEntities();
             if (_isValidateOnly)
             {
                 // Currently Validate mode only support single datasource,
@@ -914,7 +914,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             GetDatabaseObjectName(entityName),
                             GetStoredProcedureDefinition(entityName));
 
-                        if (GetDatabaseType() == DatabaseType.MSSQL)
+                        if (GetDatabaseType() == DatabaseType.MSSQL || GetDatabaseType() == DatabaseType.DWSQL)
                         {
                             await PopulateResultSetDefinitionsForStoredProcedureAsync(
                                 GetSchemaName(entityName),
@@ -980,8 +980,8 @@ namespace Azure.DataApiBuilder.Core.Services
             // one row in the result set.
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
-                string resultFieldName = element.GetProperty("result_field_name").ToString();
-                Type resultFieldType = SqlToCLRType(element.GetProperty("result_type").ToString());
+                string resultFieldName = element.GetProperty("name").ToString();
+                Type resultFieldType = SqlToCLRType(element.GetProperty("system_type_name").ToString());
                 bool isResultFieldNullable = element.GetProperty("is_nullable").GetBoolean();
 
                 // Store the dictionary containing result set field with its type as Columns

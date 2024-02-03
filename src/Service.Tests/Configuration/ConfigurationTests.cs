@@ -2736,9 +2736,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCategory(TestCategory.MSSQL)]
         public async Task ValidateNextLinkUsage()
         {
-            // Arrange - Setup test server with entity that has >100 records enabling paging.
+            // Arrange - Setup test server with entity that has >1 record so that results can be paged.
+            // A short cut to using an entity with >100 records is to just include the $first=1 filter
+            // as done in this test, so that paging behavior can be invoked.
 
             const string ENTITY_NAME = "Bookmark";
+
             // At least one entity is required in the runtime config for the engine to start.
             // Even though this entity is not under test, it must be supplied to the config
             // file creation function.
@@ -2764,6 +2767,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             using TestServer server = new(Program.CreateWebHostBuilder(args));
             using HttpClient client = server.CreateClient();
+
             // Setup and send GET request
             HttpRequestMessage initialPaginationRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{ENTITY_NAME}?$first=1");
             HttpResponseMessage initialPaginationResponse = await client.SendAsync(initialPaginationRequest);

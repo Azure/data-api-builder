@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -169,6 +170,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
+            // Once we have a set of all the columns belonging to the current entity whose value can be determined, either:
+            // 1. Via the value provided in the request,
+            // 2. Via insertion in the referenced entity,
+            // we need to validate that we will indeed have the values for all the columns required to do a successful insertion.
+            ValidatePresenceOfRequiredColumnsForInsertion(derivableBackingColumns, entityName, metadataProvider.GetSourceDefinition(entityName));
+
             // Recurse to validate input data for the relationship fields.
             ValidateRelationshipFields(
                 context: context,
@@ -179,6 +186,23 @@ namespace Azure.DataApiBuilder.Core.Services
                 nestingLevel: nestingLevel,
                 sqlMetadataProviderFactory: sqlMetadataProviderFactory,
                 derivedColumnsForRelationships: derivedColumnsForRelationships);
+        }
+
+        private static void ValidatePresenceOfRequiredColumnsForInsertion(HashSet<string> derivableBackingColumns, string entityName, SourceDefinition sourceDefinition)
+        {
+            Dictionary<string, ColumnDefinition> columns = sourceDefinition.Columns;
+
+            foreach((string columnName, ColumnDefinition columnDefinition) in columns)
+            {
+                // Must specify a value for a non-nullable column which does not have a default value.
+                if (!columnDefinition.IsNullable && !columnDefinition.HasDefault && !derivableBackingColumns.Contains(columnName))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"No value found for non-null/non-default column",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+            }
         }
 
         private static void ValidateRelationshipFields(
@@ -195,7 +219,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(field.Value, context.Variables);
                 SyntaxKind fieldKind = fieldDetails.Item2;
 
-                // For non-column fields, i.e. relationship fields, we have to recurse to process fields in the relationship field -
+                // For non-scalar fields, i.e. relationship fields, we have to recurse to process fields in the relationship field -
                 // which represents input data for a related entity.
                 if (!GraphQLUtils.IsScalarField(fieldKind))
                 {

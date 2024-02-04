@@ -820,7 +820,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 if (targetEntityNameToRelationshipName.TryGetValue(targetEntityName, out string? duplicateRelationshipName))
                 {
                     HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Found multiple relationships: {duplicateRelationshipName}, {relationshipName} between source entity: {entityName} and target entity: {targetEntityName}",
+                        message: $"Defining multiple relationships: {duplicateRelationshipName}, {relationshipName} between source entity: {entityName} and target entity: {targetEntityName} is not supported.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }

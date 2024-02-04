@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (parameters.TryGetValue(inputArgumentName, out object? param))
             {
                 IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
-                ProcessRequestBodyForValidation(schemaForArgument, entityName, context, param, _runtimeConfigProvider.GetConfig(), new(), 0);
+                ProcessRequestBodyForValidation(schemaForArgument, entityName, context, param, _runtimeConfigProvider.GetConfig(), new(), 0, string.Empty);
             }
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
@@ -1343,12 +1343,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IReadOnlyList<ObjectFieldNode> fieldNodes,
             RuntimeConfig runtimeConfig,
             HashSet<string> disallowedColumns,
-            int level)
+            int nestingLevel,
+            string parentEntityName)
         {
             Dictionary<string, HashSet<string>> disallowedColumnsForReferencingEntities = new();
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
-            HashSet<string> derivableBackingColumns = GetBackingColumnsFromFields(context, entityName, fieldNodes, disallowedColumns, level, metadataProvider);
+            HashSet<string> derivableBackingColumns = GetBackingColumnsFromFields(context, entityName, fieldNodes, disallowedColumns, nestingLevel, metadataProvider);
 
             foreach (ObjectFieldNode field in fieldNodes)
             {
@@ -1358,6 +1359,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     string relationshipName = field.Name.Value;
                     string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
+                    if (targetEntityName.Equals(parentEntityName))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Woollaaa",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
                     Tuple<string, List<string>> referencingEntityNameAndColumns = GetReferencingEntityNameAndColumns(context, entityName, targetEntityName, metadataProvider, derivableBackingColumns, fieldDetails.Item1);
                     string referencingEntityName = referencingEntityNameAndColumns.Item1;
                     if (referencingEntityName.Equals(entityName))
@@ -1406,7 +1415,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         fieldDetails.Item1,
                         runtimeConfig,
                         disallowedColumnsForTargetEntity ?? new(),
-                        level);
+                        nestingLevel,
+                        entityName);
                 }
             }
         }
@@ -1452,32 +1462,65 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             object? parameters,
             RuntimeConfig runtimeConfig,
             HashSet<string> disallowedColumns,
-            int level)
+            int nestingLevel,
+            string parentEntityName)
         {
             InputObjectType schemaObject = ResolverMiddleware.InputObjectTypeFromIInputField(schema);
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
             {
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
-                ProcessObjectFieldNodesForRequestValidation(context, entityName, schemaObject, listOfObjectFieldNode, runtimeConfig, disallowedColumns, level + 1);
+                ProcessObjectFieldNodesForRequestValidation(
+                    context,
+                    entityName,
+                    schemaObject,
+                    listOfObjectFieldNode,
+                    runtimeConfig,
+                    disallowedColumns,
+                    nestingLevel + 1,
+                    parentEntityName);
             }
             else if (parameters is List<IValueNode> listOfIValueNode)
             {
                 // For the example createbooks mutation written above, the list value for `items` is interpreted as a List<IValueNode>
                 // i.e. items is a list of ObjectValueNode(s).
-                listOfIValueNode.ForEach(iValueNode => ProcessRequestBodyForValidation(schema, entityName, context, iValueNode, runtimeConfig, disallowedColumns, level));
+                listOfIValueNode.ForEach(iValueNode => ProcessRequestBodyForValidation(
+                    schema,
+                    entityName,
+                    context,
+                    iValueNode,
+                    runtimeConfig,
+                    disallowedColumns,
+                    nestingLevel,
+                    parentEntityName));
             }
             else if (parameters is ObjectValueNode objectValueNode)
             {
                 // For the example createbook mutation written above, the node for publisher field is interpreted as an ObjectValueNode.
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
-                ProcessObjectFieldNodesForRequestValidation(context, entityName, schemaObject, objectValueNode.Fields, runtimeConfig, disallowedColumns, level + 1);
+                ProcessObjectFieldNodesForRequestValidation(
+                    context,
+                    entityName,
+                    schemaObject,
+                    objectValueNode.Fields,
+                    runtimeConfig,
+                    disallowedColumns,
+                    nestingLevel + 1,
+                    parentEntityName);
             }
             else if (parameters is ListValueNode listValueNode)
             {
                 // For the example createbook mutation written above, the list values for reviews and authors fields are interpreted as ListValueNode.
                 // All the nodes in the ListValueNode are parsed one by one.
-                listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => ProcessRequestBodyForValidation(schema, entityName, context, objectValueNodeInListValueNode, runtimeConfig, disallowedColumns, level));
+                listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => ProcessRequestBodyForValidation(
+                    schema,
+                    entityName,
+                    context,
+                    objectValueNodeInListValueNode,
+                    runtimeConfig,
+                    disallowedColumns,
+                    nestingLevel,
+                    parentEntityName));
             }
         }
 

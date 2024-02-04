@@ -9,15 +9,19 @@ databaseTypes=();
 # The argument represents the database type. Valid arguments are MsSql, MySql, PostgreSql and Cosmos
 # When invoked with a database type, config file for that database type will be generated.
 # When invoked without any arguments, config files for all the database types will be generated.
+
+allowedDbTypes=("mssql" "mysql" "postgresql" "cosmosdb_nosql" "dwsql")
+databaseTypes=()
+
 if [[ $# -eq 0 ]]; then
-    databaseTypes=("mssql" "mysql" "postgresql" "cosmosdb_nosql")
+    databaseTypes=("${allowedDbTypes[@]}")
 elif [[ $# -eq 1 ]]; then
     databaseType=$1;
-    if ! { [ $databaseType == "mssql" ] || [ $databaseType == "mysql" ] || [ $databaseType == "postgresql" ] || [ $databaseType == "cosmosdb_nosql" ]; }; then
-        echo "Valid arguments are mssql, mysql, postgresql or cosmosdb_nosql";
+    if [[! " ${allowedDbTypes[@]} " =~ " ${databaseType} " ]]; then
+        echo "Valid arguments are mssql, mysql, postgresql, cosmosdb_nosql, or dwsql";
         exit 1;
     fi
-    databaseTypes+=$databaseType;    
+    databaseTypes+=$databaseType;
 else
     echo "Please run with 0 or 1 arguments";
     exit 1;
@@ -47,6 +51,9 @@ do
     elif [[ $databaseType == "postgresql" ]]; then
         commandFile="postgresql-commands.txt";
         configFile="dab-config.PostgreSql.json";
+    elif [[ $databaseType == "dwsql" ]]; then
+        commandFile="dwsql-commands.txt";
+        configFile="dab-config.DwSql.json";
     else 
         commandFile="cosmosdb_nosql-commands.txt";
         configFile="dab-config.CosmosDb_NoSql.json";

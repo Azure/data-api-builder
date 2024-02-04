@@ -34,6 +34,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public DocumentNode GraphQLSchemaRoot { get; set; }
 
+        public List<Exception> SqlMetadataExceptions { get; private set; } = new();
+
         public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
         {
             _fileSystem = fileSystem;
@@ -274,7 +276,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return true;
         }
 
-        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
+        public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
             throw new NotImplementedException();
         }
@@ -348,6 +350,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public bool IsDevelopmentMode()
         {
             return _runtimeConfig.IsDevelopmentMode();
+        }
+
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            throw new NotImplementedException();
         }
     }
 }

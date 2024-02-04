@@ -61,6 +61,8 @@ namespace Azure.DataApiBuilder.Core.Services
         // of referencing and referenced tables.
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; }
 
+        public List<Exception> SqlMetadataExceptions { get; }
+
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
 
         /// <summary>
@@ -119,7 +121,17 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Returns a dictionary of (EntityName, DatabaseObject).
         /// </summary>
         /// <returns></returns>
-        public IDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects();
+        public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects();
+
+        /// <summary>
+        /// Given entity name, gets the map of exposed field to backing field mappings.
+        /// </summary>
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
+
+        /// <summary>
+        /// Given entity name, gets the map of backing field to exposed field mappings.
+        /// </summary>
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
 
         /// <summary>
         /// Gets Partition Key Path of a database container.

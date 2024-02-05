@@ -527,7 +527,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// MSSQL options has a boolean value, CosmosDB options has string value,
         /// MySQL datasource option is empty, PostgreSQL datasource option is null,
         /// and DWSQL has no options.
-        /// The role of serializer is just to correctly translate the values from the config.
+        /// The role of deserializer is just to correctly translate the values from the config.
         /// This test is checking that we support different ways in which options can be provided.
         /// </summary>
         private static string GetDataSourceConfigForGivenDatabase(string databaseType)

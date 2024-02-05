@@ -189,3 +189,4 @@ update series --config "dab-config.MsSql.json" --permissions "TestNestedFilterMa
 update series --config "dab-config.MsSql.json" --permissions "TestNestedFilterManyOne_EntityReadForbidden:create,update,delete"
 update series --config "dab-config.MsSql.json" --permissions "TestNestedFilterOneMany_ColumnForbidden:read"
 update series --config "dab-config.MsSql.json" --permissions "TestNestedFilterOneMany_EntityReadForbidden:read"
+update DefaultBuiltInFunction --config "dab-config.MsSql.json" --permissions "anonymous:create" --fields.exclude "current_date,next_date"

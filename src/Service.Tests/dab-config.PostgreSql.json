@@ -2353,7 +2353,21 @@
         {
           "role": "anonymous",
           "actions": [
-            "*"
+            {
+              "action": "create",
+              "fields": {
+                  "include": [
+                      "*"
+                  ],
+                  "exclude": [
+                      "current_date",
+                      "next_day"
+                  ]
+              }
+            },
+            "read",
+            "update",
+            "delete"
           ]
         }
       ]

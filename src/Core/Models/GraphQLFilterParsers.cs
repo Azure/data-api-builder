@@ -28,7 +28,6 @@ public class GQLFilterParser
     private readonly RuntimeConfigProvider _configProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
 
-    private string _path = "C:\\Users\\sourabhjain\\Downloads\\dablog.txt";
     /// <summary>
     /// Constructor for GQLFilterParser
     /// </summary>
@@ -63,19 +62,13 @@ public class GQLFilterParser
 
         SourceDefinition sourceDefinition = queryStructure.GetUnderlyingSourceDefinition();
 
-        System.IO.File.AppendAllText(_path, $"GQLFilterParser: Parsing filter for schemaName: {schemaName}, sourceName: {sourceName}, sourceAlias: {sourceAlias}, entityName:{entityName}\n");
-
         string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
         ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-
-        System.IO.File.AppendAllText(_path, $"GQLFilterParser: filterArgumentSchema {filterArgumentSchema}\n");
         InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
 
         List<PredicateOperand> predicates = new();
         foreach (ObjectFieldNode field in fields)
         {
-            System.IO.File.AppendAllText(_path, $"GQLFilterParser: Got a field:  {field.Name.Value} with value {field.Value}\n");
-
             object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
                 value: field.Value,
                 argumentSchema: filterArgumentObject.Fields[field.Name.Value],
@@ -126,8 +119,6 @@ public class GQLFilterParser
             {
                 List<ObjectFieldNode> subfields = (List<ObjectFieldNode>)fieldValue;
 
-                System.IO.File.AppendAllText(_path, $"GQLFilterParser: Parsing filter field {field.Name.Value} with subfields {string.Join(",", subfields)}\n");
-
                 // Preserve the name value present in the filter.
                 // In some cases, 'name' represents a relationship field on a source entity,
                 // and not a field on a relationship target entity.
@@ -170,8 +161,6 @@ public class GQLFilterParser
                         operation: EntityActionOperation.Read,
                         columns: new[] { name });
 
-                    System.IO.File.AppendAllText(_path, $"GQLFilterParser: graphQLTypeName: {graphQLTypeName}, originalEntityName: {originalEntityName}, columnAccessPermitted: {columnAccessPermitted}\n");
-
                     if (!columnAccessPermitted)
                     {
                         throw new DataApiBuilderException(
@@ -185,7 +174,6 @@ public class GQLFilterParser
                 // Example: {entityName}FilterInput
                 if (!StandardQueryInputs.IsStandardInputType(filterInputObjectType.Name))
                 {
-                    System.IO.File.AppendAllText(_path, $"GQLFilterParser: Non Standard Query Inputs type {filterInputObjectType.Name}\n");
                     if (sourceDefinition.PrimaryKey.Count != 0)
                     {
                         // For SQL i.e. when there are primary keys on the source, we need to perform a join
@@ -207,8 +195,6 @@ public class GQLFilterParser
                         queryStructure.SourceAlias = sourceName + "." + backingColumnName;
                         string? nestedFieldType = metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
 
-                        System.IO.File.AppendAllText(_path, $"GQLFilterParser: Nested field type {nestedFieldType} with SourceAlias : {queryStructure.SourceAlias} and {queryStructure.DatabaseObject.Name}\n");
-
                         if (nestedFieldType is null)
                         {
                             throw new DataApiBuilderException(
@@ -219,8 +205,6 @@ public class GQLFilterParser
 
                         if (IsArrayType(nestedFieldType,out string fieldType))
                         {
-                            System.IO.File.AppendAllText(_path, $"GQLFilterParser:Array type found i.e. {nestedFieldType}\n");
-
                             IDictionary<string, object?>  subParameters = new Dictionary<string, object?>();
                             CosmosQueryStructure comosQueryStructure =
                                 new(ctx,
@@ -253,8 +237,7 @@ public class GQLFilterParser
                         else
                         {
                             queryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldType);
-                            System.IO.File.AppendAllText(_path, $"GQLFilterParser: Nested entity name {queryStructure.EntityName}\n");
-
+                            
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
@@ -264,12 +247,9 @@ public class GQLFilterParser
                         queryStructure.DatabaseObject.Name = sourceName;
                         queryStructure.SourceAlias = sourceAlias;
                     }
-
-                    System.IO.File.AppendAllText(_path, $"GQLFilterParser: Non Standard Predicate pushed.\n");
                 }
                 else
                 {
-                    System.IO.File.AppendAllText(_path, $"GQLFilterParser: Standard Query Inputs type {filterInputObjectType.Name}\n");
                     predicates.Push(
                         new PredicateOperand(
                             ParseScalarType(
@@ -281,7 +261,6 @@ public class GQLFilterParser
                                 sourceName,
                                 sourceAlias,
                                 queryStructure.MakeDbConnectionParam)));
-                    System.IO.File.AppendAllText(_path, $"GQLFilterParser: Standard Predicate pushed.\n");
 
                 }
             }
@@ -340,8 +319,6 @@ public class GQLFilterParser
         }
 
         string nestedFilterEntityName = metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
-
-        System.IO.File.AppendAllText(_path, $"GQLFilterParser: Nested field type {nestedFilterEntityName} with targetGraphQLTypeNameForFilter : {targetGraphQLTypeNameForFilter} and {queryStructure.DatabaseObject.Name}\n");
 
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(

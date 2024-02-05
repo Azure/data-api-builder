@@ -18,7 +18,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private readonly IMiddlewareContext _context;
         private readonly string _containerAlias = "c";
-        private string _path = "C:\\Users\\sourabhjain\\Downloads\\dablog.txt";
 
         public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
 
@@ -96,15 +95,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         [MemberNotNull(nameof(OrderByColumns))]
         private void Init(IDictionary<string, object?> queryParams)
         {
-            System.IO.File.AppendAllText(_path, $"CosmosQueryStructure: INIT\n");
-
             IFieldSelection selection = _context.Selection;
             ObjectType underlyingType = GraphQLUtils.UnderlyingGraphQLEntityType(selection.Field.Type);
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
-
-            System.IO.File.AppendAllText(_path, $"CosmosQueryStructure: IsPaginated: {IsPaginated}\n");
 
             if (IsPaginated)
             {
@@ -167,8 +162,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (queryParams.ContainsKey(QueryBuilder.FILTER_FIELD_NAME))
             {
-                System.IO.File.AppendAllText(_path, "CosmosQueryStructure: Filter field found\n");
-
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
                 if (filterObject is not null)
@@ -199,11 +192,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         new PredicateOperand($"{MakeDbConnectionParam(parameter.Value)}")
                     ));
                 }
-            }
-
-            foreach (Predicate p in Predicates)
-            {
-                System.IO.File.AppendAllText(_path, $"CosmosQueryStructure: Predicate: {p.Left} {p.Op} {p.Right}\n");
             }
         }
 

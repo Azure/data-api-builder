@@ -103,29 +103,29 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, HashSet<string>> derivedColumnsForRelationships = new();
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
-            HashSet<string> derivableBackingColumns = MutationOrderHelper.GetBackingColumnsFromFields(context, entityName, objectFieldNodes, metadataProvider);
+            Dictionary<string, IValueNode?> columnData = MutationOrderHelper.GetBackingColumnDataFromFields(context, entityName, objectFieldNodes, metadataProvider);
+            HashSet<string> derivableBackingColumns = new(columnData.Keys);
 
-            // When the parent entity is a referenced entity in a relationship, the values of the referencing columns
-            // in the current entity is derived from the insertion in the parent entity. Hence, the input data for
-            // current entity (referencing entity) must not contain values for referencing columns.
-            ValidateAbsenceOfReferencingColumnsInChild(
+           // When the parent entity is a referenced entity in a relationship, the values of the referencing columns
+           // in the current entity is derived from the insertion in the parent entity. Hence, the input data for
+           // current entity (referencing entity) must not contain values for referencing columns.
+           ValidateAbsenceOfReferencingColumnsInChild(
                 columnsInChildEntity: derivableBackingColumns,
                 derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
                 nestingLevel: nestingLevel,
                 childEntityName: entityName,
                 metadataProvider: metadataProvider);
 
-            foreach (ObjectFieldNode field in objectFieldNodes)
+            foreach (ObjectFieldNode fieldNode in objectFieldNodes)
             {
-                Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(field.Value, context.Variables);
-                SyntaxKind fieldKind = fieldDetails.Item2;
+                (IValueNode? fieldValue, SyntaxKind fieldKind) = GraphQLUtils.GetFieldDetails(fieldNode.Value, context.Variables);
                 if (GraphQLUtils.IsScalarField(fieldKind))
                 {
                     // If the current field is a column/scalar field, continue.
                     continue;
                 }
 
-                string relationshipName = field.Name.Value;
+                string relationshipName = fieldNode.Name.Value;
                 string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
 
                 // A nested insert mutation like Book(parentEntityName) -> Publisher (entityName) -> Book(targetEntityName) does not make logical sense.
@@ -138,19 +138,21 @@ namespace Azure.DataApiBuilder.Core.Services
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                (string referencingEntityName, IEnumerable<string> referencingColumns) = MutationOrderHelper.GetReferencingEntityNameAndColumns(
+                string referencingEntityName = MutationOrderHelper.GetReferencingEntityName(
                     context: context,
                     sourceEntityName: entityName,
                     targetEntityName: targetEntityName,
                     metadataProvider: metadataProvider,
-                    derivableBackingColumnsInSource: derivableBackingColumns,
-                    iValue: fieldDetails.Item1);
+                    columnDataInSourceBody: columnData,
+                    targetNodeValue: fieldValue);
+                string referencedEntityName = referencingEntityName.Equals(entityName) ? targetEntityName : entityName;
+                ForeignKeyDefinition fkDefinition = metadataProvider.GetFKDefinition(entityName, targetEntityName, referencedEntityName, referencingEntityName);
 
                 // If the current entity is the referencing entity, we need to make sure that the input data for current entry does not
                 // specify a value for a referencing column - as it's value will be derived from the insertion in the referenced (child) entity.
                 if (referencingEntityName.Equals(entityName))
                 {
-                    foreach (string referencingColumn in referencingColumns)
+                    foreach (string referencingColumn in fkDefinition.ReferencingColumns)
                     {
                         if (derivableBackingColumns.Contains(referencingColumn))
                         {
@@ -166,14 +168,14 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else
                 {
-                    derivedColumnsForRelationships.Add(relationshipName, new(referencingColumns));
+                    derivedColumnsForRelationships.Add(relationshipName, new(fkDefinition.ReferencingColumns));
                 }
             }
 
-            // Once we have a set of all the columns belonging to the current entity whose value can be determined, either:
-            // 1. Via the value provided in the request,
-            // 2. Via insertion in the referenced entity,
-            // we need to validate that we will indeed have the values for all the columns required to do a successful insertion.
+            // For nested insertion, we make the schema such that the foreign key referencing columns become optional i.e.,
+            // 1. Either the client provide the values (when it is not a nested insertion), or
+            // 2. We derive the values via insertion in the referenced entity.
+            // But we need to ensure that we either have a source (either via 1 or 2) for all the required columns required to do a successful insertion.
             ValidatePresenceOfRequiredColumnsForInsertion(derivableBackingColumns, entityName, metadataProvider.GetSourceDefinition(entityName));
 
             // Recurse to validate input data for the relationship fields.
@@ -198,7 +200,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (!columnDefinition.IsNullable && !columnDefinition.HasDefault && !derivableBackingColumns.Contains(columnName))
                 {
                     throw new DataApiBuilderException(
-                        message: $"No value found for non-null/non-default column",
+                        message: $"No value found for non-null/non-default column for entity: {entityName}",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

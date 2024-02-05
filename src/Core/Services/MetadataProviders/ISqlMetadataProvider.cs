@@ -191,5 +191,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// mode, it returns false.
         /// </summary>
         public bool IsDevelopmentMode();
+
+        public ForeignKeyDefinition GetFKDefinition(string sourceEntityName, string targetEntityName, string referencedEntityName, string referencingEntityName) => throw new NotImplementedException();
     }
 }

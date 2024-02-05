@@ -1794,6 +1794,23 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
         }
+
+        public ForeignKeyDefinition GetFKDefinition(string sourceEntityName, string targetEntityName, string referencedEntityName, string referencingEntityName)
+        {
+            if (GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencingEntityName, out DatabaseObject? referencingDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencedEntityName, out DatabaseObject? referencedDbObject))
+            {
+                DatabaseTable referencingDbTable = (DatabaseTable)referencingDbObject;
+                DatabaseTable referencedDbTable = (DatabaseTable)referencedDbObject;
+                SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+                RelationShipPair referencingReferencedPair = new(referencingDbTable, referencedDbTable);
+                List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+                return fKDefinitions.FirstOrDefault(fk => fk.Pair.Equals(referencingReferencedPair))!;
+            }
+
+            return new();
+        } 
     }
 }
 

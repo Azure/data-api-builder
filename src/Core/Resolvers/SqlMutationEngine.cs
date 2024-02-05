@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else if (mutationOperation is EntityActionOperation.Create)
                     {
-                        List<IDictionary<string, object?>> resultPKs = PerformNestedInsertOperation(
+                        List<IDictionary<string, object?>> resultPKs = PerformNestedCreateOperation(
                                     entityName,
                                     parameters,
                                     sqlMetadataProvider,
@@ -926,16 +926,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Performs the given GraphQL create mutation operation.
         /// </summary>
-        /// <param name="entityName"></param>
-        /// <param name="parameters"></param>
-        /// <param name="sqlMetadataProvider"></param>
-        /// <param name="context"></param>
-        /// <param name="multipleInputType"></param>
-        /// <returns></returns>
+        /// <param name="entityName">Name of the top level entity</param>
+        /// <param name="parameters">Mutation parameter arguments</param>
+        /// <param name="sqlMetadataProvider">SqlMetadaprovider</param>
+        /// <param name="context">Hotchocolate's context for the graphQL request.</param>
+        /// <param name="multipleInputType">Boolean indicating whether the create operation is for multiple items.</param>
+        /// <returns>Primary keys of the created records (in the top level entity).</returns>
         /// <exception cref="DataApiBuilderException"></exception>
-        private List<IDictionary<string, object?>> PerformNestedInsertOperation(
+        private List<IDictionary<string, object?>> PerformNestedCreateOperation(
                 string entityName,
                 IDictionary<string, object?> parameters,
                 ISqlMetadataProvider sqlMetadataProvider,
@@ -943,7 +943,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 bool multipleInputType = false)
         {
             string fieldName = multipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
-            object? inputParams = GQLNestedInsertArguementToDictParams(context, fieldName, parameters);
+            object? inputParams = GQLNestedInsertArgumentToDictParams(context, fieldName, parameters);
 
             if (inputParams is null)
             {
@@ -972,6 +972,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else
             {
                 IDictionary<string, object?> input = (IDictionary<string, object?>)inputParams;
+
                 Dictionary<string, Dictionary<string, object?>> resultPKs = new();
                 NestedInsertStructure nestedInsertStructure = new(entityName, entityName, null, input);
 
@@ -986,13 +987,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Builds and executes the INSERT SQL statements necessary for the nested create mutation operation.
         /// </summary>
-        /// <param name="entityName"></param>
-        /// <param name="parameters"></param>
-        /// <param name="sqlMetadaProvider"></param>
-        /// <param name="resultPKs"></param>
-        /// <param name="context"></param>
+        /// <param name="sqlMetadataProvider">SqlMetadataprovider for the given database type.</param>
+        /// <param name="nestedInsertStructure">Wrapper object for the current entity</param>
+        /// <param name="resultPKs">Dictionary containing the PKs of the created items.</param>
+        /// <param name="context">Hotchocolate's context for the graphQL request.</param>
         private void PerformDbInsertOperation(
             ISqlMetadataProvider sqlMetadataProvider,
             NestedInsertStructure nestedInsertStructure,
@@ -1246,7 +1246,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (Tuple<string, object?> dependentEntity in nestedInsertStructure.DependentEntities)
                 {
                     string relatedEntityName = GetRelatedEntityNameInRelationship(entity, dependentEntity.Item1);
-                    NestedInsertStructure dependentEntityNestedInsertStructure = new(relatedEntityName, entityName, nestedInsertStructure.CurrentEntityPKs, dependentEntity.Item2, IsLinkingTableInsertionRequired(entity, dependentEntity.Item1));
+                    NestedInsertStructure dependentEntityNestedInsertStructure = new(relatedEntityName, entityName, nestedInsertStructure.CurrentEntityPKs, dependentEntity.Item2, IsManyToManyRelationship(entity, dependentEntity.Item1));
                     PerformDbInsertOperation(sqlMetadataProvider, dependentEntityNestedInsertStructure, resultPKs, context);
                 }
             }
@@ -1282,18 +1282,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Helper method to determine whether the relationship is a M:N relationship.
         /// </summary>
-        /// <param name="topLevelEntity"></param>
-        /// <param name="relationshipName"></param>
-        /// <returns></returns>
-        public static bool IsLinkingTableInsertionRequired(Entity topLevelEntity, string relationshipName)
+        /// <param name="entity">Entity </param>
+        /// <param name="relationshipName">Name of the relationship</param>
+        /// <returns>True/False indicating whther a record should be created in the linking table</returns>
+        public static bool IsManyToManyRelationship(Entity entity, string relationshipName)
         {
-            return topLevelEntity is not null &&
-                   topLevelEntity.Relationships is not null &&
-                   topLevelEntity.Relationships[relationshipName] is not null &&
-                   topLevelEntity.Relationships[relationshipName].Cardinality is Cardinality.Many &&
-                   topLevelEntity.Relationships[relationshipName].LinkingObject is not null;
+            return entity is not null &&
+                   entity.Relationships is not null &&
+                   entity.Relationships[relationshipName] is not null &&
+                   entity.Relationships[relationshipName].Cardinality is Cardinality.Many &&
+                   entity.Relationships[relationshipName].LinkingObject is not null;
         }
 
         /// <summary>
@@ -1374,13 +1374,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Function to parse the mutation parameters from Hotchocolate input types to Dictionary of field names and values.
         /// </summary>
-        /// <param name="context"></param>
-        /// <param name="fieldName"></param>
-        /// <param name="mutationParameters"></param>
+        /// <param name="context">GQL middleware context used to resolve the values of arguments</param>
+        /// <param name="fieldName">GQL field from which to extract the parameters</param>
+        /// <param name="mutationParameters">Dictionary of mutation parameters</param>
         /// <returns></returns>
-        internal static object? GQLNestedInsertArguementToDictParams(IMiddlewareContext context, string fieldName, IDictionary<string, object?> mutationParameters)
+        internal static object? GQLNestedInsertArgumentToDictParams(IMiddlewareContext context, string fieldName, IDictionary<string, object?> mutationParameters)
         {
 
             if (mutationParameters.TryGetValue(fieldName, out object? inputParameters))
@@ -1388,7 +1388,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IObjectField fieldSchema = context.Selection.Field;
                 IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
                 InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
-                return GQLNestedInsertArguementToDictParamsUtil(context, itemsArgumentObject, inputParameters);
+                return GQLNestedInsertArgumentToDictParamsHelper(context, itemsArgumentObject, inputParameters);
             }
             else
             {
@@ -1401,21 +1401,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Helper function to parse the mutation parameters from Hotchocolate input types to Dictionary of field names and values.
+        /// For nested create mutation, the input types of a field can be a scalar, object or list type.
+        /// This function recursively parses for each input type.
         /// </summary>
-        /// <param name="context"></param>
-        /// <param name="rawInput"></param>
+        /// <param name="context">GQL middleware context used to resolve the values of arguments.</param>
+        /// <param name="rawInput">Hotchocolate input object type.</param>
         /// <returns></returns>
-        internal static object? GQLNestedInsertArguementToDictParamsUtil(IMiddlewareContext context, InputObjectType itemsArgumentObject, object? inputParameters)
+        internal static object? GQLNestedInsertArgumentToDictParamsHelper(IMiddlewareContext context, InputObjectType itemsArgumentObject, object? inputParameters)
         {
-
+            // This condition is met for input types that accepts an array of values.
+            // Ex: 1. Multiple nested create operation ---> createbooks_multiple.   
+            //     2. Input types for 1:N and M:N relationships.
             if (inputParameters is List<IValueNode> inputList)
             {
                 List<IDictionary<string, object?>> resultList = new();
 
                 foreach (IValueNode input in inputList)
                 {
-                    object? resultItem = GQLNestedInsertArguementToDictParamsUtil(context, itemsArgumentObject, input.Value);
+                    object? resultItem = GQLNestedInsertArgumentToDictParamsHelper(context, itemsArgumentObject, input.Value);
 
                     if (resultItem is not null)
                     {
@@ -1425,6 +1429,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 return resultList;
             }
+            // This condition is met for input types that accept input for a single item.
+            // Ex: 1. Simple nested create operation --> createbook.
+            //     2. Input types for 1:1 and N:1 relationships.
             else if (inputParameters is List<ObjectFieldNode> nodes)
             {
                 Dictionary<string, object?> result = new();
@@ -1434,25 +1441,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string name = node.Name.Value;
                     if (node.Value.Kind == SyntaxKind.ListValue)
                     {
-                        result.Add(name, GQLNestedInsertArguementToDictParamsUtil(context, itemsArgumentObject, node.Value.Value));
+                        result.Add(name, GQLNestedInsertArgumentToDictParamsHelper(context, GetInputObjectTypeForAField(name, itemsArgumentObject.Fields), node.Value.Value));
                     }
                     else if (node.Value.Kind == SyntaxKind.ObjectValue)
                     {
-                        result.Add(name, GQLNestedInsertArguementToDictParamsUtil(context, itemsArgumentObject, node.Value.Value));
+                        result.Add(name, GQLNestedInsertArgumentToDictParamsHelper(context, GetInputObjectTypeForAField(name, itemsArgumentObject.Fields), node.Value.Value));
                     }
                     else
                     {
-                        if (node.Value.Value is not null)
-                        {
-                            if (node.Value.Kind == SyntaxKind.Variable)
-                            {
-                                result.Add(name, context.Variables!.GetVariable<IValueNode>((string)node.Value.Value)!);
-                            }
-                            else
-                            {
-                                result.Add(name, node.Value.Value);
-                            }
-                        }
+                        object? value = ResolverMiddleware.ExtractValueFromIValueNode(value: node.Value,
+                                                                                      argumentSchema: itemsArgumentObject.Fields[name],
+                                                                                      variables: context.Variables);
+
+                        result.Add(name, value);
                     }
                 }
 
@@ -1460,6 +1461,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Extracts the InputObjectType for a given field.
+        /// </summary>
+        /// <param name="fieldName">Field name for which the input object type is to be extracted.</param>
+        /// <param name="fields">Fields present in the input object type.</param>
+        /// <returns>The input object type for the given field.</returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private static InputObjectType GetInputObjectTypeForAField(string fieldName, FieldCollection<InputField> fields)
+        {
+            if (fields.TryGetField(fieldName, out IInputField? field))
+            {
+                return ResolverMiddleware.InputObjectTypeFromIInputField(field);
+            }
+
+            throw new DataApiBuilderException(message: $"Field {fieldName} not found.",
+                                              subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError,
+                                              statusCode: HttpStatusCode.InternalServerError);
         }
 
         internal static IDictionary<string, object?> GQLMutArgumentToDictParams(

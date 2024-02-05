@@ -30,6 +30,11 @@ DROP TABLE IF EXISTS GQLmappings;
 DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS publishers;
+DROP PROCEDURE IF EXISTS get_books;
+DROP PROCEDURE IF EXISTS get_book_by_id;
+DROP PROCEDURE IF EXISTS get_publisher_by_id;
+DROP PROCEDURE IF EXISTS count_books;
+DROP PROCEDURE IF EXISTS get_authors_history_by_first_name;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -196,6 +201,29 @@ CREATE TABLE type_table(
     uuid_types uniqueidentifier
 );
 
+EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
+      SELECT * FROM dbo.publishers
+      WHERE id = @id');
+EXEC('CREATE PROCEDURE get_books AS
+      SELECT * FROM dbo.books');
+EXEC('CREATE PROCEDURE get_book_by_id @id int AS
+      SELECT * FROM dbo.books
+      WHERE id = @id');
+EXEC('CREATE PROCEDURE count_books AS
+	  SELECT COUNT(*) AS total_books FROM dbo.books');
+EXEC('CREATE PROCEDURE get_authors_history_by_first_name @firstName varchar(100) AS
+      BEGIN
+        SELECT
+          concat(first_name, '' '', (middle_name + '' ''), last_name) as author_name,
+          min(year_of_publish) as first_publish_year,
+          sum(books_published) as total_books_published
+        FROM
+          authors_history
+        WHERE
+          first_name=@firstName
+        GROUP BY
+          concat(first_name, '' '', (middle_name + '' ''), last_name)
+      END');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');

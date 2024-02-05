@@ -22,6 +22,7 @@ namespace Azure.DataApiBuilder.Core.Services
             object? parameters,
             RuntimeConfig runtimeConfig,
             HashSet<string> derivedColumnsFromParentEntity,
+            HashSet<string> columnsToBeDerivedFromEntity,
             int nestingLevel,
             string parentEntityName,
             IMetadataProviderFactory sqlMetadataProviderFactory)
@@ -38,6 +39,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     objectFieldNodes: listOfObjectFieldNode,
                     runtimeConfig: runtimeConfig,
                     derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                    columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel + 1,
                     parentEntityName: parentEntityName,
                     sqlMetadataProviderFactory: sqlMetadataProviderFactory);
@@ -53,6 +55,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     parameters: iValueNode,
                     runtimeConfig: runtimeConfig,
                     derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                    columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel,
                     parentEntityName: parentEntityName,
                     sqlMetadataProviderFactory: sqlMetadataProviderFactory));
@@ -68,6 +71,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     objectFieldNodes: objectValueNode.Fields,
                     runtimeConfig: runtimeConfig,
                     derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                    columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel + 1,
                     parentEntityName: parentEntityName,
                     sqlMetadataProviderFactory: sqlMetadataProviderFactory);
@@ -83,6 +87,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     parameters: objectValueNodeInListValueNode,
                     runtimeConfig: runtimeConfig,
                     derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                    columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel,
                     parentEntityName: parentEntityName,
                     sqlMetadataProviderFactory: sqlMetadataProviderFactory));
@@ -96,26 +101,70 @@ namespace Azure.DataApiBuilder.Core.Services
             IReadOnlyList<ObjectFieldNode> objectFieldNodes,
             RuntimeConfig runtimeConfig,
             HashSet<string> derivedColumnsFromParentEntity,
+            HashSet<string> columnsToBeDerivedFromEntity,
             int nestingLevel,
             string parentEntityName,
             IMetadataProviderFactory sqlMetadataProviderFactory)
         {
-            Dictionary<string, HashSet<string>> derivedColumnsForRelationships = new();
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
             Dictionary<string, IValueNode?> columnData = MutationOrderHelper.GetBackingColumnDataFromFields(context, entityName, objectFieldNodes, metadataProvider);
-            HashSet<string> derivableBackingColumns = new(columnData.Keys);
 
-           // When the parent entity is a referenced entity in a relationship, the values of the referencing columns
-           // in the current entity is derived from the insertion in the parent entity. Hence, the input data for
-           // current entity (referencing entity) must not contain values for referencing columns.
-           ValidateAbsenceOfReferencingColumnsInChild(
-                columnsInChildEntity: derivableBackingColumns,
-                derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
-                nestingLevel: nestingLevel,
-                childEntityName: entityName,
-                metadataProvider: metadataProvider);
+            // Set of columns in the current entity whose values can be derived via:
+            // a. User input,
+            // b. Insertion in the parent referenced entity (if current entity is a referencing entity for a relationship with its parent entity),
+            // c. Insertion in the child referenced entity (if the current entity is a referencing entity for a relationship with its child entity),
+            //
+            // Initiliazed with the set of columns whose value is specified in the input (a).
+            HashSet<string> derivableColumnsFromRequestBody = new(columnData.Keys);
 
+            // When the parent entity is a referenced entity in a relationship, the values of the referencing columns
+            // in the current entity is derived from the insertion in the parent entity. Hence, the input data for
+            // current entity (referencing entity) must not contain values for referencing columns.
+            ValidateAbsenceOfReferencingColumnsInChild(
+                 columnsInChildEntity: derivableColumnsFromRequestBody,
+                 derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                 nestingLevel: nestingLevel,
+                 childEntityName: entityName,
+                 metadataProvider: metadataProvider);
+
+            // Add all the columns whose value(s) will be derived from insertion in parent entity to the set of derivable columns (b).
+            derivableColumnsFromRequestBody.UnionWith(derivedColumnsFromParentEntity);
+
+            // For the relationships with the parent entity, where the current entity is a referenced entity,
+            // we need to make sure that we have non-null values for all the referenced columns - since the values for all those
+            // columns will be used for insertion in the parent entity. We can get the referenced column value:
+            // Case 1. Via an absolute value
+            // Case 2. Via another relationship where a referenced column by the parent of the current entity is a referencing column for a child of the current entity.
+
+            // Case 1: Remove from columnsToBeDerivedFromEntity, the columns which are autogenerated or
+            // have been provided a non-null value in the input for the current entity.
+            foreach (string columnToBeDerivedFromEntity in columnsToBeDerivedFromEntity)
+            {
+                if (sourceDefinition.Columns[columnToBeDerivedFromEntity].IsAutoGenerated)
+                {
+                    // The value for an autogenerated column is derivable.
+                    columnsToBeDerivedFromEntity.Remove(columnToBeDerivedFromEntity);
+                }
+                else if (columnData.TryGetValue(columnToBeDerivedFromEntity, out IValueNode? value))
+                {
+                    if (value is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Value cannot be null for referenced column.!!!",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
+                    columnsToBeDerivedFromEntity.Remove(columnToBeDerivedFromEntity);
+                }
+            }
+
+            Dictionary<string, HashSet<string>> columnsDerivedForRelationships = new();
+            Dictionary<string, HashSet<string>> columnsToBeDerivedFromRelationships = new();
+
+            // Loop over all the relationship fields input provided for the current entity.
             foreach (ObjectFieldNode fieldNode in objectFieldNodes)
             {
                 (IValueNode? fieldValue, SyntaxKind fieldKind) = GraphQLUtils.GetFieldDetails(fieldNode.Value, context.Variables);
@@ -138,6 +187,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
+                // Determine the referencing entity for the current relationship field input.
                 string referencingEntityName = MutationOrderHelper.GetReferencingEntityName(
                     context: context,
                     sourceEntityName: entityName,
@@ -145,16 +195,28 @@ namespace Azure.DataApiBuilder.Core.Services
                     metadataProvider: metadataProvider,
                     columnDataInSourceBody: columnData,
                     targetNodeValue: fieldValue);
-                string referencedEntityName = referencingEntityName.Equals(entityName) ? targetEntityName : entityName;
-                ForeignKeyDefinition fkDefinition = metadataProvider.GetFKDefinition(entityName, targetEntityName, referencedEntityName, referencingEntityName);
 
-                // If the current entity is the referencing entity, we need to make sure that the input data for current entry does not
-                // specify a value for a referencing column - as it's value will be derived from the insertion in the referenced (child) entity.
+                // Determine the referenced entity.
+                string referencedEntityName = referencingEntityName.Equals(entityName) ? targetEntityName : entityName;
+
+                // Get the required foreign key definition with the above inferred referencing and referenced entities.
+                ForeignKeyDefinition fkDefinition = metadataProvider.GetFKDefinition(
+                    sourceEntityName: entityName,
+                    targetEntityName: targetEntityName,
+                    referencedEntityName: referencedEntityName,
+                    referencingEntityName: referencingEntityName);
+
+                // The current entity is the referencing entity.
                 if (referencingEntityName.Equals(entityName))
                 {
-                    foreach (string referencingColumn in fkDefinition.ReferencingColumns)
+                    for (int idx = 0; idx < fkDefinition.ReferencingColumns.Count; idx++)
                     {
-                        if (derivableBackingColumns.Contains(referencingColumn))
+                        string referencingColumn = fkDefinition.ReferencingColumns[idx];
+                        string referencedColumn = fkDefinition.ReferencedColumns[idx];
+
+                        // The input data for current entity should not specify a value for a referencing column -
+                        // as it's value will be derived from the insertion in the referenced (child) entity.
+                        if (derivableColumnsFromRequestBody.Contains(referencingColumn))
                         {
                             metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedColumnName);
                             throw new DataApiBuilderException(
@@ -163,20 +225,49 @@ namespace Azure.DataApiBuilder.Core.Services
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
 
-                        derivableBackingColumns.Add(referencingColumn);
+                        // Case 2: When a column whose value is to be derived from the insertion in current entity
+                        // (happens when the parent entity is a referencing entity in a relationship with current entity),
+                        // is a referencing column in the current relationship, we pass on the responsibility of getting the value
+                        // of such a column to the child entity in the current relationship.
+                        if (columnsToBeDerivedFromEntity.Contains(referencingColumn))
+                        {
+                            // We optimistically assume that we will get the value of the referencing column
+                            // from the insertion in the child entity.
+                            columnsToBeDerivedFromEntity.Remove(referencingColumn);
+
+                            // Populate the set of fields for which the child entity for the current relationship needs to provide a value.
+                            columnsToBeDerivedFromRelationships.TryAdd(relationshipName, new());
+                            columnsToBeDerivedFromRelationships[relationshipName].Add(referencedColumn);
+                        }
+
+                        // All the referencing columns in the current entity can get a value via insertion in the child entity (c).
+                        derivableColumnsFromRequestBody.Add(referencingColumn);
                     }
                 }
                 else
                 {
-                    derivedColumnsForRelationships.Add(relationshipName, new(fkDefinition.ReferencingColumns));
+                    columnsDerivedForRelationships.Add(relationshipName, new(fkDefinition.ReferencingColumns));
                 }
             }
 
-            // For nested insertion, we make the schema such that the foreign key referencing columns become optional i.e.,
+            // After determining all the fields that can be derived for the current entity either:
+            // 1. Via absolute value,
+            // 2. Via an autogenerated value from the database,
+            // 3. Via Insertion in a referenced child entity in a relationship,
+            // if there are still columns which are yet to be derived, this means we don't have sufficient data to perform insertion.
+            if (columnsToBeDerivedFromEntity.Count > 0)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Insufficient data provided for insertion.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            // For nested insertion, we generate the schema such that the foreign key referencing columns become optional i.e.,
             // 1. Either the client provide the values (when it is not a nested insertion), or
             // 2. We derive the values via insertion in the referenced entity.
             // But we need to ensure that we either have a source (either via 1 or 2) for all the required columns required to do a successful insertion.
-            ValidatePresenceOfRequiredColumnsForInsertion(derivableBackingColumns, entityName, metadataProvider.GetSourceDefinition(entityName));
+            ValidatePresenceOfRequiredColumnsForInsertion(derivableColumnsFromRequestBody, entityName, metadataProvider.GetSourceDefinition(entityName));
 
             // Recurse to validate input data for the relationship fields.
             ValidateRelationshipFields(
@@ -187,7 +278,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 runtimeConfig: runtimeConfig,
                 nestingLevel: nestingLevel,
                 sqlMetadataProviderFactory: sqlMetadataProviderFactory,
-                derivedColumnsForRelationships: derivedColumnsForRelationships);
+                columnsDerivedForRelationships: columnsDerivedForRelationships,
+                columnsToBeDerivedFromRelationships: columnsToBeDerivedFromRelationships);
         }
 
         private static void ValidatePresenceOfRequiredColumnsForInsertion(HashSet<string> derivableBackingColumns, string entityName, SourceDefinition sourceDefinition)
@@ -197,7 +289,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach((string columnName, ColumnDefinition columnDefinition) in columns)
             {
                 // Must specify a value for a non-nullable column which does not have a default value.
-                if (!columnDefinition.IsNullable && !columnDefinition.HasDefault && !derivableBackingColumns.Contains(columnName))
+                if (!columnDefinition.IsNullable && !columnDefinition.HasDefault && !columnDefinition.IsAutoGenerated && !derivableBackingColumns.Contains(columnName))
                 {
                     throw new DataApiBuilderException(
                         message: $"No value found for non-null/non-default column for entity: {entityName}",
@@ -214,7 +306,8 @@ namespace Azure.DataApiBuilder.Core.Services
             IReadOnlyList<ObjectFieldNode> objectFieldNodes,
             RuntimeConfig runtimeConfig, int nestingLevel,
             IMetadataProviderFactory sqlMetadataProviderFactory,
-            Dictionary<string, HashSet<string>> derivedColumnsForRelationships)
+            Dictionary<string, HashSet<string>> columnsDerivedForRelationships,
+            Dictionary<string, HashSet<string>> columnsToBeDerivedFromRelationships)
         {
             foreach (ObjectFieldNode field in objectFieldNodes)
             {
@@ -227,18 +320,23 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     string relationshipName = field.Name.Value;
                     string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
-                    HashSet<string>? derivedColumnsForTargetEntity;
+                    HashSet<string>? derivedColumnsForEntity, columnsToBeDerivedFromEntity;
 
-                    // When the target entity is a referenced entity, there will be no corresponding entry for the relationship
+                    // When the current entity is a referenced entity, there will be no corresponding entry for the relationship
                     // in the derivedColumnsForRelationships dictionary.
-                    derivedColumnsForRelationships.TryGetValue(relationshipName, out derivedColumnsForTargetEntity);
+                    columnsDerivedForRelationships.TryGetValue(relationshipName, out derivedColumnsForEntity);
+
+                    // When the current entity is a referencing entity, there will be no corresponding entry for the relationship
+                    // in the columnsToBeDerivedFromRelationships dictionary.
+                    columnsToBeDerivedFromRelationships.TryGetValue(relationshipName, out columnsToBeDerivedFromEntity);
                     ValidateGraphQLValueNode(
                         schema: schemaObject.Fields[relationshipName],
                         entityName: targetEntityName,
                         context: context,
                         parameters: fieldDetails.Item1,
                         runtimeConfig: runtimeConfig,
-                        derivedColumnsFromParentEntity: derivedColumnsForTargetEntity ?? new(),
+                        derivedColumnsFromParentEntity: derivedColumnsForEntity ?? new(),
+                        columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity ?? new(),
                         nestingLevel: nestingLevel,
                         parentEntityName: entityName,
                         sqlMetadataProviderFactory: sqlMetadataProviderFactory);

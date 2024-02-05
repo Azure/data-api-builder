@@ -106,6 +106,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     param,
                     _runtimeConfigProvider.GetConfig(),
                     new(),
+                    new(),
                     0,
                     string.Empty,
                     _sqlMetadataProviderFactory);

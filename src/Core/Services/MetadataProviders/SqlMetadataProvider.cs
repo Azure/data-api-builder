@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-  GenerateDatabaseObjectForEntities();
+            GenerateDatabaseObjectForEntities();
             if (_isValidateOnly)
             {
                 // Currently Validate mode only support single datasource,

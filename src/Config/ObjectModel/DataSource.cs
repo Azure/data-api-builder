@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 
@@ -13,7 +12,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="DatabaseType">Type of database to use.</param>
 /// <param name="ConnectionString">Connection string to access the database.</param>
 /// <param name="Options">Custom options for the specific database. If there are no options, this could be null.</param>
-public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dictionary<string, JsonElement>? Options)
+public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dictionary<string, object?>? Options)
 {
     /// <summary>
     /// Converts the <c>Options</c> dictionary into a typed options object.
@@ -49,9 +48,9 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
 
     private string? ReadStringOption(string option)
     {
-        if (Options is not null && Options.TryGetValue(option, out JsonElement value))
+        if (Options is not null && Options.TryGetValue(option, out object? value) && value is string stringValue)
         {
-            return value.GetString();
+            return stringValue;
         }
 
         return null;
@@ -59,9 +58,9 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
 
     private bool ReadBoolOption(string option)
     {
-        if (Options is not null && Options.TryGetValue(option, out JsonElement value))
+        if (Options is not null && Options.TryGetValue(option, out object? value) && value is bool boolValue)
         {
-            return value.GetBoolean();
+            return boolValue;
         }
 
         return false;

@@ -69,46 +69,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         [TestMethod]
         public async Task OneToOneJoinQuery()
         {
-            string msSqlQuery = @"
-                SELECT
-                  TOP 1 [table0].[id] AS [id],
-                  JSON_QUERY ([table1_subq].[data]) AS [websiteplacement]
-                FROM
-                  [books] AS [table0]
-                  OUTER APPLY (
-                    SELECT
-                      TOP 1 [table1].[id] AS [id],
-                      [table1].[price] AS [price],
-                      JSON_QUERY ([table2_subq].[data]) AS [books]
-                    FROM
-                      [book_website_placements] AS [table1]
-                      OUTER APPLY (
-                        SELECT
-                          TOP 1 [table2].[id] AS [id]
-                        FROM
-                          [books] AS [table2]
-                        WHERE
-                          [table1].[book_id] = [table2].[id]
-                        ORDER BY
-                          [table2].[id] Asc FOR JSON PATH,
-                          INCLUDE_NULL_VALUES,
-                          WITHOUT_ARRAY_WRAPPER
-                      ) AS [table2_subq]([data])
-                    WHERE
-                      [table1].[book_id] = [table0].[id]
-                    ORDER BY
-                      [table1].[id] Asc FOR JSON PATH,
-                      INCLUDE_NULL_VALUES,
-                      WITHOUT_ARRAY_WRAPPER
-                  ) AS [table1_subq]([data])
-                WHERE
-                  [table0].[id] = 1
-                ORDER BY
-                  [table0].[id] Asc FOR JSON PATH,
-                  INCLUDE_NULL_VALUES,
-                  WITHOUT_ARRAY_WRAPPER";
+            string dwSqlQuery = @"
+                SELECT COALESCE('[' + STRING_AGG('{' + N'""id"":' + ISNULL(STRING_ESCAPE(CAST([id] AS NVARCHAR(MAX)), 'json'), 
+                                'null') + ',' + N'""title"":' + ISNULL('""' + STRING_ESCAPE([title], 'json') + '""', 'null') + ',' + 
+                            N'""websiteplacement"":' + ISNULL([websiteplacement], 'null') + 
+                            '}', ', ') + ']', '[]')
+                FROM (
+                    SELECT TOP 100 [table0].[id] AS [id],
+                        [table0].[title] AS [title],
+                        ([table1_subq].[data]) AS [websiteplacement]
+                    FROM [dbo].[books] AS [table0]
+                    OUTER APPLY (
+                        SELECT STRING_AGG('{' + N'""price"":' + ISNULL(STRING_ESCAPE(CAST([price] AS NVARCHAR(MAX)), 'json'), 
+                                    'null') + '}', ', ')
+                        FROM (
+                            SELECT TOP 1 [table1].[price] AS [price]
+                            FROM [dbo].[book_website_placements] AS [table1]
+                            WHERE [table0].[id] = [table1].[book_id]
+                                AND [table1].[book_id] = [table0].[id]
+                            ORDER BY [table1].[id] ASC
+                            ) AS [table1]
+                        ) AS [table1_subq]([data])
+                    WHERE 1 = 1
+                    ORDER BY [table0].[id] ASC
+                    ) AS [table0]";
 
-            await OneToOneJoinQuery(msSqlQuery);
+            await OneToOneJoinQuery(dwSqlQuery);
         }
 
         /// <summary>

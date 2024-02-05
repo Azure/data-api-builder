@@ -556,14 +556,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             foreach (IDictionary<string, object?> queryParam in queryParams)
             {
-                AddPrimaryKeyPredicates(queryParam);
+                AddPrimaryKeyPredicates(queryParam, isNestedInsertOperation: true);
             }
         }
 
         ///<summary>
         /// Adds predicates for the primary keys in the parameters of the GraphQL query
         ///</summary>
-        private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams)
+        private void AddPrimaryKeyPredicates(IDictionary<string, object?> queryParams, bool isNestedInsertOperation = false)
         {
             foreach (KeyValuePair<string, object?> parameter in queryParams)
             {
@@ -581,7 +581,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                     columnName: columnName,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeDbConnectionParam(parameter.Value, columnName)}")
+                    new PredicateOperand($"{MakeDbConnectionParam(parameter.Value, columnName)}"),
+                    isNestedInsertOperation
                 ));
             }
         }

@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 predicates = JoinPredicateStrings(
                                 structure.GetDbPolicyForOperation(EntityActionOperation.Read),
                                 structure.FilterPredicates,
-                                Build(structure.Predicates, " OR "),
+                                Build(structure.Predicates, " OR ", true),
                                 Build(structure.PaginationMetadata.PaginationPredicate));
             }
             else

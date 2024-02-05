@@ -81,6 +81,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                         object? optionsSubpropertyValue;
                                         if (reader.TokenType is JsonTokenType.String)
                                         {
+                                            // Determine whether to resolve the environment variable or keep as-is.
                                             string stringValue = reader.DeserializeString(replaceEnvVar: _replaceEnvVar)!;
 
                                             if (bool.TryParse(stringValue, out bool boolValue))

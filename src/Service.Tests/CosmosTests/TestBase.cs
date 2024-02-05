@@ -91,7 +91,7 @@ type AdditionalAttribute @model(name:""AdditionalAttribute"") {
 
     private HttpClient _client;
     internal WebApplicationFactory<Startup> _application;
-    internal string _containerName = "planet";
+    internal string _containerName = Guid.NewGuid().ToString();
 
     [TestInitialize]
     public void Init()

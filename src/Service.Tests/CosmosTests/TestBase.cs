@@ -39,8 +39,7 @@ type Character @model(name:""Character"") {
     type: String,
     homePlanet: Int,
     primaryFunction: String,
-    star: Star,
-    moons: [Moon],
+    star: Star
 }
 
 type Planet @model {
@@ -50,7 +49,6 @@ type Planet @model {
     age : Int,
     dimension : String,
     earth: Earth,
-    stars: [Star],
     tags: [String!],
     additionalAttributes: [AdditionalAttribute]
 }

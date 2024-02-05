@@ -30,7 +30,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
-        public List<JoinStructure>? Joins { get; internal set; }
 
         public CosmosQueryStructure(
             IMiddlewareContext context,
@@ -96,13 +95,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         [MemberNotNull(nameof(OrderByColumns))]
         private void Init(IDictionary<string, object?> queryParams)
         {
+            System.IO.File.AppendAllText(_path, $"CosmosQueryStructure: INIT\n");
+
             IFieldSelection selection = _context.Selection;
             ObjectType underlyingType = GraphQLUtils.UnderlyingGraphQLEntityType(selection.Field.Type);
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
 
-            System.IO.File.AppendAllText(_path, $"IsPaginated: {IsPaginated}\n");
+            System.IO.File.AppendAllText(_path, $"CosmosQueryStructure: IsPaginated: {IsPaginated}\n");
 
             if (IsPaginated)
             {
@@ -165,7 +166,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (queryParams.ContainsKey(QueryBuilder.FILTER_FIELD_NAME))
             {
-                System.IO.File.AppendAllText(_path, "Filter field found\n");
+                System.IO.File.AppendAllText(_path, "CosmosQueryStructure: Filter field found\n");
 
                 object? filterObject = queryParams[QueryBuilder.FILTER_FIELD_NAME];
 
@@ -201,7 +202,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (Predicate p in Predicates)
             {
-                System.IO.File.AppendAllText(_path, $"Predicate: {p.Left} {p.Op} {p.Right}\n");
+                System.IO.File.AppendAllText(_path, $"CosmosQueryStructure: Predicate: {p.Left} {p.Op} {p.Right}\n");
             }
         }
 
@@ -240,7 +241,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return orderByColumnsList;
         }
-
-        public record JoinStructure(DatabaseObject DbObject, string TableAlias, List<Predicate> Predicates);
     }
 }

@@ -22,9 +22,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 + $" FROM {_containerAlias}");
             string predicateString = Build(structure.Predicates);
 
-            if (structure.Joins != null && structure.Joins.Count > 0)
+            if (structure.CosmosJoins != null && structure.CosmosJoins.Count > 0)
             {
-                queryStringBuilder.Append($" {Build(structure.Joins)}");
+                queryStringBuilder.Append($" {Build(structure.CosmosJoins)}");
                 queryStringBuilder.Append($"AND {predicateString}");
 
             } else if (!string.IsNullOrEmpty(predicateString))
@@ -130,7 +130,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)}";
+                predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)} ";
             }
 
             if (predicate.AddParenthesis)

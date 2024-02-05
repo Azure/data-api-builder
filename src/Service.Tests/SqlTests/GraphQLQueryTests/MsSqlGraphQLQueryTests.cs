@@ -83,43 +83,23 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToOneJoinQuery()
         {
             string msSqlQuery = @"
-                SELECT
-                  TOP 1 [table0].[id] AS [id],
-                  JSON_QUERY ([table1_subq].[data]) AS [websiteplacement]
-                FROM
-                  [books] AS [table0]
-                  OUTER APPLY (
-                    SELECT
-                      TOP 1 [table1].[id] AS [id],
-                      [table1].[price] AS [price],
-                      JSON_QUERY ([table2_subq].[data]) AS [books]
-                    FROM
-                      [book_website_placements] AS [table1]
-                      OUTER APPLY (
-                        SELECT
-                          TOP 1 [table2].[id] AS [id]
-                        FROM
-                          [books] AS [table2]
-                        WHERE
-                          [table1].[book_id] = [table2].[id]
-                        ORDER BY
-                          [table2].[id] Asc FOR JSON PATH,
-                          INCLUDE_NULL_VALUES,
-                          WITHOUT_ARRAY_WRAPPER
-                      ) AS [table2_subq]([data])
-                    WHERE
-                      [table1].[book_id] = [table0].[id]
-                    ORDER BY
-                      [table1].[id] Asc FOR JSON PATH,
-                      INCLUDE_NULL_VALUES,
-                      WITHOUT_ARRAY_WRAPPER
-                  ) AS [table1_subq]([data])
-                WHERE
-                  [table0].[id] = 1
-                ORDER BY
-                  [table0].[id] Asc FOR JSON PATH,
-                  INCLUDE_NULL_VALUES,
-                  WITHOUT_ARRAY_WRAPPER";
+                SELECT TOP 100 [table0].[id] AS [id]
+                    ,[table0].[title] AS [title]
+                    ,JSON_QUERY([table1_subq].[data]) AS [websiteplacement]
+                FROM [dbo].[books] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[price] AS [price]
+                    FROM [dbo].[book_website_placements] AS [table1]
+                    WHERE [table1].[book_id] = [table0].[id]
+                    ORDER BY [table1].[id] ASC
+                    FOR JSON PATH
+                        ,INCLUDE_NULL_VALUES
+                        ,WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE 1 = 1
+                ORDER BY [table0].[id] ASC
+                FOR JSON PATH
+                    ,INCLUDE_NULL_VALUES";
 
             await OneToOneJoinQuery(msSqlQuery);
         }

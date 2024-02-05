@@ -4,7 +4,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -89,7 +88,7 @@ namespace Cli
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
             string? runtimeBaseRoute = options.RuntimeBaseRoute;
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object?> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
 
@@ -148,14 +147,14 @@ namespace Cli
                     }
 
                     restPath = null;
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement(cosmosDatabase));
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(cosmosContainer));
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement(graphQLSchemaPath));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), cosmosDatabase);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), cosmosContainer);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), graphQLSchemaPath);
                     break;
 
                 case DatabaseType.DWSQL:
                 case DatabaseType.MSSQL:
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), JsonSerializer.SerializeToElement(options.SetSessionContext));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.SetSessionContext);
 
                     break;
                 case DatabaseType.MySQL:

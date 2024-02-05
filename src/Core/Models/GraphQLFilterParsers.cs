@@ -81,11 +81,6 @@ public class GQLFilterParser
                 argumentSchema: filterArgumentObject.Fields[field.Name.Value],
                 variables: ctx.Variables);
 
-            if(fieldValue is not null)
-            {
-                System.IO.File.AppendAllText(_path, $"GQLFilterParser: FieldValue is {string.Join(",", ((List<ObjectFieldNode>)fieldValue).Select(x => x.Name))}\n");
-            }
-            
             if (fieldValue is null)
             {
                 continue;
@@ -175,6 +170,8 @@ public class GQLFilterParser
                         operation: EntityActionOperation.Read,
                         columns: new[] { name });
 
+                    System.IO.File.AppendAllText(_path, $"GQLFilterParser: graphQLTypeName: {graphQLTypeName}, originalEntityName: {originalEntityName}, columnAccessPermitted: {columnAccessPermitted}\n");
+
                     if (!columnAccessPermitted)
                     {
                         throw new DataApiBuilderException(
@@ -220,34 +217,38 @@ public class GQLFilterParser
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
 
-                        if (nestedFieldType.Contains("["))
+                        if (IsArrayType(nestedFieldType,out string fieldType))
                         {
                             System.IO.File.AppendAllText(_path, $"GQLFilterParser:Array type found i.e. {nestedFieldType}\n");
 
-                            string newTableName = nestedFieldType.Replace("[", "").Replace("]", "");
+                            IDictionary<string, object?>  subParameters = new Dictionary<string, object?>();
+                            CosmosQueryStructure comosQueryStructure =
+                                new(ctx,
+                                subParameters,
+                                metadataProvider,
+                                queryStructure.AuthorizationResolver,
+                                this,
+                                queryStructure.Counter);
 
-                            queryStructure.DatabaseObject.SchemaName = sourceAlias;
-                            queryStructure.SourceAlias = newTableName;
-                            queryStructure.EntityName = newTableName;
+                            comosQueryStructure.DatabaseObject.SchemaName = sourceAlias;
+                            comosQueryStructure.SourceAlias = fieldType;
+                            comosQueryStructure.EntityName = fieldType;
 
-                            List<Predicate> joinpredicatelist = new();
                             PredicateOperand joinpredicate = new(Parse(ctx,
                                                                         filterArgumentObject.Fields[name],
                                                                         subfields,
-                                                                        queryStructure));
+                                                                        comosQueryStructure));
                             predicates.Push(joinpredicate);
-                            Predicate? p = joinpredicate.AsPredicate();
-                            if (p is not null)
+
+                            queryStructure.CosmosJoins?.Add(new BaseQueryStructure.JoinStructure(
+                                                                new DatabaseTable(schemaName: sourceAlias, tableName: field.Name.Value),
+                                                                fieldType));
+
+                            // Add all parameters from the exists subquery to the main queryStructure.
+                            foreach ((string key, DbConnectionParam value) in comosQueryStructure.Parameters)
                             {
-                                joinpredicatelist.Add(p);
-
-                                queryStructure.CosmosJoins?.Add(new BaseQueryStructure.JoinStructure(
-                                                                   new DatabaseTable(schemaName: sourceAlias, tableName: field.Name.Value),
-                                                                   newTableName,
-                                                                   joinpredicatelist));
-
+                                queryStructure.Parameters.Add(key, value);
                             }
-                           
                         }
                         else
                         {
@@ -289,6 +290,21 @@ public class GQLFilterParser
         return MakeChainPredicate(predicates, PredicateOperation.AND);
     }
 
+    private static bool IsArrayType(string nestedFieldType, out string fieldType)
+    {
+        bool isArrayType = nestedFieldType.Contains("[");
+        if(isArrayType)
+        {
+            fieldType = nestedFieldType.Replace("[", "").Replace("]", "");
+        }
+        else
+        {
+            fieldType = nestedFieldType;
+        }
+
+        return isArrayType;
+    }
+
     /// <summary>
     /// For SQL, a nested filter represents an EXISTS clause with a join between
     /// the parent entity being filtered and the related entity representing the
@@ -324,6 +340,8 @@ public class GQLFilterParser
         }
 
         string nestedFilterEntityName = metadataProvider.GetEntityName(targetGraphQLTypeNameForFilter);
+
+        System.IO.File.AppendAllText(_path, $"GQLFilterParser: Nested field type {nestedFilterEntityName} with targetGraphQLTypeNameForFilter : {targetGraphQLTypeNameForFilter} and {queryStructure.DatabaseObject.Name}\n");
 
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(

@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
+
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
     public static class CosmosTestHelper
@@ -39,11 +41,20 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         name = name + "_star"
                     }
                 },
-                moon = new
+                moons = new[]
                 {
-                    id = id,
-                    name = "first moon",
-                    details = "12 Craters"
+                    new
+                    {
+                        id = id,
+                        name = numericVal + " moon",
+                        details = "12 Craters"
+                    },
+                     new
+                    {
+                        id = id,
+                        name = (numericVal + 1) + " moon",
+                        details = "11 Craters"
+                    }
                 },
                 earth = new
                 {
@@ -55,14 +66,15 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     new
                     {
                         id = id + "v1",
-                        name = "volcano1"
+                        name = "volcano" + numericVal
                     },
                     new
                     {
                         id = id + "v2",
-                        name = "volcano2"
+                        name = "volcano" +  (numericVal + 1)
                     }
                 },
+
                 tags = new[] { "tag1", "tag2" }
             };
         }

@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Humanizer;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -79,11 +78,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests eq of StringFilterInput where volcano is an array
+        /// Tests eq of StringFilterInput where additionalAttributes is an array
         /// </summary>
         [TestMethod]
-        public async Task TestStringMultiLevelFiltersWithArrayType()
+        public async Task TestStringFiltersOnArrayType()
         {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
             string gqlQuery = @"{
                 planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {additionalAttributes: {name: {eq: ""volcano1""}}})
@@ -95,10 +95,61 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.additionalAttributes WHERE a.name = \"volcano1\"";
-            string dbQueryWithArrayLike = "SELECT c.name FROM c WHERE ARRAY_CONTAINS(c.additionalAttributes, { \"name\": \"volcano1\" }, true)";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithArrayLike);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where additionalAttributes is an array
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringMultiFiltersOnMultiArrayTypeWithAndCondition()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {additionalAttributes: {name: {eq: ""volcano1""}}
+                and: { moons: {name: {eq: ""1 moon""}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.additionalAttributes " +
+                "JOIN b IN c.moons " +
+                "WHERE a.name = \"volcano1\" and b.name = \"1 moon\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where additionalAttributes is an array
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringMultiFiltersOnMultiArrayTypeWithOrCondition()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : { or: [
+                {additionalAttributes: {name: {eq: ""volcano1""}}}
+                { moons: {name: {eq: ""1 moon""}}}]})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.additionalAttributes " +
+                "JOIN b IN c.moons " +
+                "WHERE a.name = \"volcano1\" OR b.name = \"1 moon\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
 
         private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)

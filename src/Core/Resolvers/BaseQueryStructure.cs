@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public List<JoinStructure>? CosmosJoins { get; protected set; } = new List<BaseQueryStructure.JoinStructure>();
 
-        public record JoinStructure(DatabaseObject DbObject, string TableAlias, List<Predicate> Predicates);
+        public record JoinStructure(DatabaseObject DbObject, string TableAlias);
 
         public const string PARAM_NAME_PREFIX = "@";
 

@@ -36,8 +36,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object?> parameters,
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
-            GQLFilterParser gQLFilterParser)
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, entityName: string.Empty)
+            GQLFilterParser gQLFilterParser,
+            IncrementingInteger? counter = null)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, entityName: string.Empty, counter: counter)
         {
             _context = context;
             SourceAlias = _containerAlias;

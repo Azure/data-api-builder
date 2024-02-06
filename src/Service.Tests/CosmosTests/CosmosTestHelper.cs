@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
-
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
     public static class CosmosTestHelper

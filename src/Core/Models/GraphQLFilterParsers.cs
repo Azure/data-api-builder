@@ -59,11 +59,11 @@ public class GQLFilterParser
         string sourceName = queryStructure.DatabaseObject.Name;
         string sourceAlias = queryStructure.SourceAlias;
         string entityName = queryStructure.EntityName;
-
         SourceDefinition sourceDefinition = queryStructure.GetUnderlyingSourceDefinition();
 
         string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
         ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
+
         InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
 
         List<PredicateOperand> predicates = new();
@@ -224,7 +224,7 @@ public class GQLFilterParser
                                                                         comosQueryStructure));
                             predicates.Push(joinpredicate);
 
-                            queryStructure.CosmosJoins?.Add(new BaseQueryStructure.JoinStructure(
+                            queryStructure.CosmosJoins?.Add(new BaseQueryStructure.CosmosJoinStructure(
                                                                 new DatabaseTable(schemaName: sourceAlias, tableName: field.Name.Value),
                                                                 fieldType));
 
@@ -261,7 +261,6 @@ public class GQLFilterParser
                                 sourceName,
                                 sourceAlias,
                                 queryStructure.MakeDbConnectionParam)));
-
                 }
             }
         }

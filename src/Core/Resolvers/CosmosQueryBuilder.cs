@@ -25,7 +25,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.CosmosJoins != null && structure.CosmosJoins.Count > 0)
             {
                 queryStringBuilder.Append($" {Build(structure.CosmosJoins)}");
-
             }
 
             if (!string.IsNullOrEmpty(predicateString))
@@ -124,7 +123,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string predicateString;
-
             if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
             {
                 predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
@@ -144,11 +142,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
-        private static string Build(List<CosmosQueryStructure.JoinStructure> joinstructure)
+        private static string Build(List<CosmosQueryStructure.CosmosJoinStructure> joinstructure)
         {
             StringBuilder joinBuilder = new();
 
-            foreach (CosmosQueryStructure.JoinStructure structure in joinstructure)
+            foreach (CosmosQueryStructure.CosmosJoinStructure structure in joinstructure)
             {
                 joinBuilder.Append($" JOIN {structure.TableAlias} IN {structure.DbObject.SchemaName}.{structure.DbObject.Name}");
             }

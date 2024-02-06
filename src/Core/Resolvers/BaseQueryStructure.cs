@@ -8,7 +8,6 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
-using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -68,9 +67,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public IAuthorizationResolver AuthorizationResolver { get; }
 
-        public List<JoinStructure>? CosmosJoins { get; protected set; } = new List<BaseQueryStructure.JoinStructure>();
+        public List<CosmosJoinStructure>? CosmosJoins { get; protected set; } = new List<BaseQueryStructure.CosmosJoinStructure>();
 
-        public record JoinStructure(DatabaseObject DbObject, string TableAlias);
+        public record CosmosJoinStructure(DatabaseObject DbObject, string TableAlias);
 
         public const string PARAM_NAME_PREFIX = "@";
 

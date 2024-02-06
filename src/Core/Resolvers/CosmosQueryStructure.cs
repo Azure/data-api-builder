@@ -3,7 +3,6 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -167,7 +166,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (filterObject is not null)
                 {
                     List<ObjectFieldNode> filterFields = (List<ObjectFieldNode>)filterObject;
-
                     Predicates.Add(
                         GraphQLFilterParser.Parse(
                             _context,

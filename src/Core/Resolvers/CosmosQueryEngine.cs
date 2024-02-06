@@ -28,8 +28,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly IAuthorizationResolver _authorizationResolver;
 
-        private string _path = "C:\\Users\\sourabhjain\\Downloads\\dablog.txt";
-
         /// <summary>
         /// Constructor 
         /// </summary>
@@ -66,9 +64,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
-
-            System.IO.File.AppendAllText(_path, $"CosmosQueryEngine: Generated Cosmos Query {queryString}\n");
-
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
 
@@ -78,7 +73,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {
-                System.IO.File.AppendAllText(_path, $"CosmosQueryEngine: ParamList : {parameterEntry.Key} - {parameterEntry.Value.Value}\n");
                 querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value.Value);
             }
 

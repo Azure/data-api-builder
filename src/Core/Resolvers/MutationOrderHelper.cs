@@ -75,8 +75,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 if (foreignKey.Pair.Equals(targetSourcePair) && referencingEntityName.Equals(sourceEntityName) ||
-                foreignKey.Pair.Equals(sourceTargetPair) && referencingEntityName.Equals(targetEntityName))
+                    foreignKey.Pair.Equals(sourceTargetPair) && referencingEntityName.Equals(targetEntityName))
                 {
+                    // This indicates that we have 2 ForeignKeyDefinitions in which for one of them, the referencing entity is the source entity
+                    // and for the other, the referencing entity is the target entity. This is only possible when the relationship is defined in the config
+                    // and the right cardinality for the relationship between (source, target) is 1. In such a case, we cannot determine which entity is going
+                    // to be considered as referencing entity based on the relationship metadata. Instead, we will have to rely on the input data for source/target entities.
                     referencingEntityName = string.Empty;
                     break;
                 }

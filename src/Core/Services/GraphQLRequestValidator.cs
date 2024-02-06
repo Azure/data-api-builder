@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Core.Services
             IMiddlewareContext context,
             object? parameters,
             RuntimeConfig runtimeConfig,
-            HashSet<string> derivedColumnsFromParentEntity,
+            HashSet<string> columnsDerivedFromParentEntity,
             HashSet<string> columnsToBeDerivedFromEntity,
             int nestingLevel,
             string parentEntityName,
@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schemaObject: schemaObject,
                     objectFieldNodes: listOfObjectFieldNode,
                     runtimeConfig: runtimeConfig,
-                    derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                    columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
                     columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel + 1,
                     parentEntityName: parentEntityName,
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     context: context,
                     parameters: iValueNode,
                     runtimeConfig: runtimeConfig,
-                    derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                    columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
                     columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel,
                     parentEntityName: parentEntityName,
@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schemaObject: schemaObject,
                     objectFieldNodes: objectValueNode.Fields,
                     runtimeConfig: runtimeConfig,
-                    derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                    columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
                     columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel + 1,
                     parentEntityName: parentEntityName,
@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     context: context,
                     parameters: objectValueNodeInListValueNode,
                     runtimeConfig: runtimeConfig,
-                    derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                    columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
                     columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel,
                     parentEntityName: parentEntityName,
@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Core.Services
             InputObjectType schemaObject,
             IReadOnlyList<ObjectFieldNode> objectFieldNodes,
             RuntimeConfig runtimeConfig,
-            HashSet<string> derivedColumnsFromParentEntity,
+            HashSet<string> columnsDerivedFromParentEntity,
             HashSet<string> columnsToBeDerivedFromEntity,
             int nestingLevel,
             string parentEntityName,
@@ -124,13 +124,13 @@ namespace Azure.DataApiBuilder.Core.Services
             // current entity (referencing entity) must not contain values for referencing columns.
             ValidateAbsenceOfReferencingColumnsInChild(
                  columnsInChildEntity: derivableColumnsFromRequestBody,
-                 derivedColumnsFromParentEntity: derivedColumnsFromParentEntity,
+                 derivedColumnsFromParentEntity: columnsDerivedFromParentEntity,
                  nestingLevel: nestingLevel,
                  childEntityName: entityName,
                  metadataProvider: metadataProvider);
 
             // Add all the columns whose value(s) will be derived from insertion in parent entity to the set of derivable columns (b).
-            derivableColumnsFromRequestBody.UnionWith(derivedColumnsFromParentEntity);
+            derivableColumnsFromRequestBody.UnionWith(columnsDerivedFromParentEntity);
 
             // For the relationships with the parent entity, where the current entity is a referenced entity,
             // we need to make sure that we have non-null values for all the referenced columns - since the values for all those
@@ -335,7 +335,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         context: context,
                         parameters: fieldDetails.Item1,
                         runtimeConfig: runtimeConfig,
-                        derivedColumnsFromParentEntity: derivedColumnsForEntity ?? new(),
+                        columnsDerivedFromParentEntity: derivedColumnsForEntity ?? new(),
                         columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity ?? new(),
                         nestingLevel: nestingLevel,
                         parentEntityName: entityName,

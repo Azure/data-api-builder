@@ -2585,7 +2585,22 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    current_date,
+                    next_date
+                  ]
+                }
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
               }
             ]
           }

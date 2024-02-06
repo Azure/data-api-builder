@@ -78,7 +78,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to determine the referencing entity from the pair of (source, target) entities based on the metadata collected during startup.
+        /// Helper method to determine the referencing entity from a pair of (source, target) entities based on the metadata collected during startup.
         /// The method successfully determines the referencing entity if the relationship between the (source, target) entities is defined in the database
         /// via a Foreign Key constraint.
         /// </summary>
@@ -125,6 +125,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return referencingEntityName;
         }
 
+        /// <summary>
+        /// Helper method to determine the referencing entity from a pair of (source, target) entities for which the relationship is defined in the config,
+        /// but no relationship exists in the database. In such a case, we rely on the request input data for the source and target entities to determine the referencing entity.
+        /// </summary>
+        /// <param name="sourceEntityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="sourceDbObject">Database object for source entity.</param>
+        /// <param name="targetDbObject">Database object for target entity.</param>
+        /// <param name="columnDataInSourceBody">Column name/value for backing columns present in the request input for the source entity.</param>
+        /// <param name="columnDataInTargetBody">Column name/value for backing columns present in the request input for the target entity.</param>
+        /// <returns>Name of the referencing entity.</returns>
+        /// <exception cref="DataApiBuilderException">Thrown when:
+        /// 1. Either the provided input data for source/target entities is insufficient.
+        /// 2. A conflict occurred such that both entities need to be considered as referencing entity.</exception>
         private static string DetermineReferencingEntityBasedOnRequestBody(
             string sourceEntityName,
             string targetEntityName,
@@ -225,6 +239,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return canSourceAssumeAllRelationshipFieldValues ? targetEntityName : sourceEntityName;
         }
 
+        /// <summary>
+        /// Helper method to determine the relationship fields in the source and the target entities. Here, we don't really care about which of the entities between
+        /// source and target are referencing/referenced entities. We just want to determine what all columns from the entity are involved in the relationship.
+        /// </summary>
+        /// <param name="sourceEntityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="sourceDbObject">Database object for source entity.</param>
+        /// <param name="targetDbObject">Database object for target entity.</param>
+        /// <returns>Tuple of relationship fields in source, target entities.</returns>
         private static Tuple<List<string>, List<string> > GetRelationshipFieldsInSourceAndTarget(
             string sourceEntityName,
             string targetEntityName,
@@ -261,6 +284,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             throw new Exception("Did not find FK definition");
         }
 
+        /// <summary>
+        /// Helper method to determine the backing column name/value for all the columns which have been assigned a value by the user in the request input data
+        /// for the entity.
+        /// </summary>
+        /// <param name="context">GraphQL request context.</param>
+        /// <param name="entityName">Name of the entity.</param>
+        /// <param name="fieldNodes">Set of fields belonging to the input value for the entity.</param>
+        /// <param name="metadataProvider">Metadata provider</param>
         public static Dictionary<string, IValueNode?> GetBackingColumnDataFromFields(
             IMiddlewareContext context,
             string entityName,

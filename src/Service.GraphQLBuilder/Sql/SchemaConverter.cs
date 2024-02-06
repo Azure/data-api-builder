@@ -296,7 +296,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     listOfForeignKeys.Where(fk =>
                         fk.ReferencingColumns.Count > 0
                         && fk.ReferencedColumns.Count > 0
-                        && fk.Pair.ReferencedDbTable.Equals(databaseObject));
+                        && fk.Pair.ReferencingDbTable.Equals(databaseObject));
 
                 ForeignKeyDefinition? foreignKeyInfo = referencedForeignKeyInfo.FirstOrDefault();
                 if (foreignKeyInfo is not null)

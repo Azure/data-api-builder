@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public  class MutationOrderHelper
     {
         /// <summary>
-        /// The only public api exposed from this class. Given a source and target entity with their metadata and request input data,
+        /// Given a source and target entity with their metadata and request input data,
         /// returns the referencing entity's name for the pair of (source, target) entities.
         /// This method handles the logic to determine the referencing entity for relationships from (source, target) with cardinalities:
         /// 1. 1:N - Target entity is the referencing entity
@@ -31,7 +31,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="metadataProvider">Metadata provider.</param>
         /// <param name="columnDataInSourceBody">Column name/value for backing columns present in the request input for the source entity.</param>
         /// <param name="targetNodeValue">Input GraphQL value for target node (could be an object or array).</param>
-        /// <returns>Referencing entity name.</returns>
         public static string GetReferencingEntityName(
             IMiddlewareContext context,
             string sourceEntityName,

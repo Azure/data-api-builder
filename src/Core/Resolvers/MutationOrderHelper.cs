@@ -11,8 +11,23 @@ using System.Net;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
+    /// <summary>
+    /// Helper class to determine the order of insertion for a nested insertion. For a nested insertion, the insertion needs to be performed first
+    /// in the referenced entity followed by insertion in the referencing entity.
+    /// </summary>
     public  class MutationOrderHelper
     {
+        /// <summary>
+        /// The only public api exposed from this class. Given a source and target entity with their metadata and request input,
+        /// returns the referencing entity's name for the pair of (source, target) entity.
+        /// </summary>
+        /// <param name="context">GraphQL request context.</param>
+        /// <param name="sourceEntityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="metadataProvider">Metadata provider.</param>
+        /// <param name="columnDataInSourceBody">Column name/value for backing columns present in the request input for the source entity.</param>
+        /// <param name="targetNodeValue">Input GraphQL value for target node (could be an object or array).</param>
+        /// <returns>Referencing entity name.</returns>
         public static string GetReferencingEntityName(
             IMiddlewareContext context,
             string sourceEntityName,
@@ -24,6 +39,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (!metadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) ||
                 !metadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject? targetDbObject))
             {
+                // This should not be hit ideally.
                 throw new Exception("Could not determine definition for source/target entities");
             }
 
@@ -38,6 +54,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return referencingEntityNameBasedOnEntityMetadata;
             }
 
+            // Had the target node represented an array value, it would have been either a 1:1 or 1:N relationship with the source.
             ObjectValueNode? objectValueNode = (ObjectValueNode?)targetNodeValue;
             Dictionary<string, IValueNode?> columnDataInTargetBody = GetBackingColumnDataFromFields(
                 context: context,

@@ -106,7 +106,7 @@ type Sun @model(name:""Sun"") {
             throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
         }
 
-        Dictionary<string, JsonElement> updatedOptions = baseConfig.DataSource.Options;
+        Dictionary<string, object> updatedOptions = baseConfig.DataSource.Options;
         updatedOptions["container"] = JsonDocument.Parse($"\"{_containerName}\"").RootElement;
 
         RuntimeConfig updatedConfig = baseConfig

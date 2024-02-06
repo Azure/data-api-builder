@@ -2,9 +2,7 @@
   DataSource: {
     DatabaseType: MSSQL,
     Options: {
-      set-session-context: {
-        ValueKind: False
-      }
+      set-session-context: false
     }
   },
   Runtime: {

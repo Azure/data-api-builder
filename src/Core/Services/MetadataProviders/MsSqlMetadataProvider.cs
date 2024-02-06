@@ -224,7 +224,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 return;
             }
 
-            string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(entityName, targetEntityName);
+            string linkingEntityName = Entity.GenerateLinkingEntityName(entityName, targetEntityName);
             Entity linkingEntity = new(
                 Source: new EntitySource(Type: EntitySourceType.Table, Object: linkingObject, Parameters: null, KeyFields: null),
                 Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),

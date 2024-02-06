@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Tests the Rest Api to validate that queries work
-        /// when there are is the same table name in two different
+        /// when there is the same table name in two different
         /// schemas.
         /// </summary>
         /// <returns></returns>

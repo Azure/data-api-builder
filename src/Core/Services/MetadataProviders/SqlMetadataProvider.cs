@@ -17,7 +17,9 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
@@ -1240,14 +1242,13 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            // MySQL does not use schema
-            string schemaAndTableName = _databaseType is DatabaseType.MySQL ? tableName : $"{schemaName}.{tableName}";
-            DataTable? dataTable = EntitiesDataSet.Tables[schemaAndTableName];
+            string tableNameWithPrefix = GetTableNameWithPrefix(schemaName, tableName);
+            DataTable? dataTable = EntitiesDataSet.Tables[tableNameWithPrefix];
             if (dataTable is null)
             {
                 try
                 {
-                    dataTable = await FillSchemaForTableAsync(schemaName, tableName, schemaAndTableName);
+                    dataTable = await FillSchemaForTableAsync(schemaName, tableName);
                 }
                 catch (Exception ex) when (ex is not DataApiBuilderException)
                 {
@@ -1317,8 +1318,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         private async Task<DataTable> FillSchemaForTableAsync(
             string schemaName,
-            string tableName,
-            string schemaAndTableName)
+            string tableName)
         {
             using ConnectionT conn = new();
             // If connection string is set to empty string
@@ -1363,18 +1363,19 @@ namespace Azure.DataApiBuilder.Core.Services
                 Connection = conn
             };
 
-            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
-            string queryPrefix = string.IsNullOrEmpty(tablePrefix) ? string.Empty : $"{tablePrefix}.";
+            string tableNameWithPrefix = GetTableNameWithPrefix(schemaName, tableName);
             selectCommand.CommandText
-                = $"SELECT * FROM {queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
+                = $"SELECT * FROM {tableNameWithPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, schemaAndTableName);
+            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithPrefix);
             return dataTable[0];
         }
 
-        internal string GetTablePrefix(string databaseName, string schemaName)
+        internal string GetTableNameWithPrefix(string schemaName, string tableName)
         {
+            SqlConnectionStringBuilder connectionStringBuilder = new(ConnectionString);
+            string databaseName = connectionStringBuilder.InitialCatalog;
             IQueryBuilder queryBuilder = GetQueryBuilder();
             StringBuilder tablePrefix = new();
 
@@ -1399,7 +1400,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 tablePrefix.Append(schemaName);
             }
 
-            return tablePrefix.ToString();
+            string queryPrefix = string.IsNullOrEmpty(tablePrefix.ToString()) ? string.Empty : $"{tablePrefix}.";
+            return $"{queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
         }
 
         /// <summary>

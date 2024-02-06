@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 # nullable disable
-using System.Configuration;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
@@ -15,8 +14,6 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using HotChocolate.Utilities;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
@@ -75,7 +72,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
-            string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
@@ -94,18 +90,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryRequestOptions.PartitionKey = new PartitionKey(partitionKeyValue);
             }
 
-            if (structure.IsPaginated)
-            {
-                queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
-                requestContinuation = Base64Decode(structure.Continuation);
-            }
-
-
             if (runtimeConfig.CanUseCache())
             {
-                DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
+                StringBuilder dataSourceKey = new( dataSourceName);
 
-                JObject result = await _cache.GetOrSetAsync2(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+                // to support caching for paginated query adding continuation token in the datasource
+                if (structure.IsPaginated)
+                {
+                    dataSourceKey.Append(":");
+                    dataSourceKey.Append(structure.IsPaginated);
+                    dataSourceKey.Append(":");
+                    dataSourceKey.Append(structure.Continuation);
+                }
+
+                DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceKey.ToString(), queryParameters: structure.Parameters);
+
+                JObject result = await _cache.GetOrSetAsync<JObject>(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
 
                 JsonDocument cacheServiceResponse = JsonDocument.Parse(result.ToString());
 
@@ -203,57 +203,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
-            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            string queryString = _queryBuilder.Build(structure);
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {
                 querySpec = querySpec.WithParameter(parameterEntry.Key, parameterEntry.Value.Value);
             }
 
-            IEnumerable<JObject> result = null;
-            if (runtimeConfig.CanUseCache())
-            {
-                DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
-
-                result = await _cache.GetOrSetAsync2(async () => await ExecuteListAsync2(container, querySpec), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
-
-            }
-            else
-            {
-                result = await ExecuteListAsync2(container, querySpec);
-            }
-
-            List<JsonDocument> resultsAsList = new();
-            foreach (JObject item in result)
-            {
-                resultsAsList.Add(JsonDocument.Parse(item.ToString()));
-            }
-
-            return new Tuple<IEnumerable<JsonDocument>, IMetadata>(resultsAsList, null);
-        }
-
-        private static async Task<IEnumerable<JObject>> ExecuteListAsync2(Container container, QueryDefinition querySpec)
-        {
-            FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
-
-            List<JObject> resultsAsList = new();
-            while (resultSetIterator.HasMoreResults)
-            {
-                FeedResponse<JObject> nextPage = await resultSetIterator.ReadNextAsync();
-                IEnumerator<JObject> enumerator = nextPage.GetEnumerator();
-                while (enumerator.MoveNext())
-                {
-                    JObject item = enumerator.Current;
-                    resultsAsList.Add(item);
-                }
-            }
-
-            return resultsAsList;
-        }
-
-        private static async Task<Tuple<IEnumerable<JsonDocument>, IMetadata>> ExecuteListAsync(Container container, QueryDefinition querySpec)
-        {
             FeedIterator<JObject> resultSetIterator = container.GetItemQueryIterator<JObject>(querySpec);
 
             List<JsonDocument> resultsAsList = new();
@@ -270,7 +225,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return new Tuple<IEnumerable<JsonDocument>, IMetadata>(resultsAsList, null);
         }
-
+ 
         /// <inheritdoc />
         public Task<JsonDocument> ExecuteAsync(FindRequestContext context)
         {

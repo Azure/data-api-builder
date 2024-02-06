@@ -79,7 +79,16 @@ public class DabCacheService
         return result;
     }
 
-    public async ValueTask<TResult?> GetOrSetAsync2<TResult>(Func<Task<TResult>> executeQueryAsync, DatabaseQueryMetadata queryMetadata, int cacheEntryTtl)
+    /// <summary>
+    /// Attempts to fetch response from cache. If there is a cache miss, invoke executeQueryAsync Func to get a response
+    /// </summary>
+    /// <typeparam name="TResult">Response payload Type</typeparam>
+    /// <param name="executeQueryAsync">Func with a result of type TResult. Only executed after a cache miss.</param>
+    /// <param name="queryMetadata">Metadata used to create a cache key or fetch a response from the database.</param>
+    /// <param name="cacheEntryTtl">Number of seconds the cache entry should be valid before eviction.</param>
+    /// <returns>JSON Response</returns>
+    /// <exception cref="Exception">Throws when the cache-miss factory method execution fails.</exception>
+    public async ValueTask<TResult?> GetOrSetAsync<TResult>(Func<Task<TResult>> executeQueryAsync, DatabaseQueryMetadata queryMetadata, int cacheEntryTtl)
     {
         string cacheKey = CreateCacheKey(queryMetadata);
         TResult? result = await _cache.GetOrSetAsync(
@@ -96,7 +105,6 @@ public class DabCacheService
                });
 
         return result;
-
     }
 
     /// <summary>

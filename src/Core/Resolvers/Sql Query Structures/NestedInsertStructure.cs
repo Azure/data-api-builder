@@ -15,12 +15,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         public bool IsLinkingTableInsertionRequired;
 
         /// <summary>
-        /// 
+        /// Entities that need to be inserted before the current entity. Current entity needs the PKs of the entites to construct the INSERT SQL statement.
         /// </summary>
         public List<Tuple<string, object?>> DependencyEntities;
 
         /// <summary>
-        /// 
+        /// Entities that need to be inserted after the current entity. PKs of the current entity needs to be passed to these entities to construct the INSERT SQL statement.
         /// </summary>
         public List<Tuple<string, object?>> DependentEntities;
 

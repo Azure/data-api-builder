@@ -8,6 +8,9 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// <param name="Enabled"> Indicates whether nested create operation is enabled.</param>
 public class NestedCreateOptions
 {
+    /// <summary>
+    /// Indicates whether nested create operation is enabled.
+    /// </summary>
     public bool Enabled;
 
     public NestedCreateOptions(bool enabled)

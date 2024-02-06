@@ -47,18 +47,18 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
         {
             if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
             {
-                return new GraphQLRuntimeOptions(NestedMutationOptions: new(nestedCreateOptions: new(enabled: false)));
+                return new GraphQLRuntimeOptions();
             }
 
             if (reader.TokenType == JsonTokenType.False)
             {
-                return new GraphQLRuntimeOptions(Enabled: false, NestedMutationOptions: new(nestedCreateOptions: new(enabled: false)));
+                return new GraphQLRuntimeOptions(Enabled: false);
             }
 
             if (reader.TokenType == JsonTokenType.StartObject)
             {
                 // Initialize with Nested Mutation operations disabled by default
-                GraphQLRuntimeOptions graphQLRuntimeOptions = new(NestedMutationOptions: new(nestedCreateOptions: new(enabled: false)));
+                GraphQLRuntimeOptions graphQLRuntimeOptions = new();
                 NestedMutationOptionsConverter nestedMutationOptionsConverter = options.GetConverter(typeof(NestedMutationOptions)) as NestedMutationOptionsConverter ??
                                             throw new JsonException("Failed to get nested mutation options converter");
 

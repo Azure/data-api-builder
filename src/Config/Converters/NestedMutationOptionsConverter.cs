@@ -26,12 +26,12 @@ namespace Azure.DataApiBuilder.Config.Converters
         {
             if (reader.TokenType == JsonTokenType.Null)
             {
-                return new NestedMutationOptions(new(enabled: false));
+                return null;
             }
 
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                NestedMutationOptions? nestedMutationOptions = new(new(enabled: false));
+                NestedMutationOptions? nestedMutationOptions = null;
 
                 while (reader.Read())
                 {
@@ -60,8 +60,14 @@ namespace Azure.DataApiBuilder.Config.Converters
         }
 
         /// <inheritdoc/>
-        public override void Write(Utf8JsonWriter writer, NestedMutationOptions value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, NestedMutationOptions? value, JsonSerializerOptions options)
         {
+            // If the nested mutation options is null, it is not written to the config file.
+            if(value is null)
+            {
+                return;
+            }
+
             writer.WritePropertyName("nested-mutations");
 
             writer.WriteStartObject();

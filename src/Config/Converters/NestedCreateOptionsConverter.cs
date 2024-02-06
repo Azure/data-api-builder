@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Config.Converters
         {
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                NestedCreateOptions? nestedCreateOptions = new(enabled: false);
+                NestedCreateOptions? nestedCreateOptions = null;
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndObject)
@@ -49,8 +49,14 @@ namespace Azure.DataApiBuilder.Config.Converters
         }
 
         /// <inheritdoc/>
-        public override void Write(Utf8JsonWriter writer, NestedCreateOptions value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, NestedCreateOptions? value, JsonSerializerOptions options)
         {
+            // If the value is null, it is not written to the config file.
+            if(value is null)
+            {
+                return;
+            }
+
             writer.WritePropertyName("create");
 
             writer.WriteStartObject();

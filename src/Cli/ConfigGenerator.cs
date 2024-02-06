@@ -119,24 +119,24 @@ namespace Cli
             // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-create.enabled is specified for other database types,
             // a warning is logged.
             // When nested mutation operations are extended for other database types, this option should be honored.
-            // Issue #2001: https://github.com/Azure/data-api-builder/issues/2001 tracks the work for the same.
+            // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
             if (dbType is not DatabaseType.MSSQL && options.NestedCreateOperationEnabled is not CliBool.None)
             {
                 _logger.LogWarning($"The option --graphql.nested-create.enabled is not supported for {dbType.ToString()} database type and will not be honored.");
             }
 
-            if (dbType is not DatabaseType.MSSQL)
-            {
-                // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-create.enabled is specified for other database types,
-                // it is not honored.
-                isNestedCreateEnabledForGraphQL = false;
-            }
-            else
+            NestedMutationOptions? nestedMutationOptions = null;
+
+            // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-create.enabled is specified for other database types,
+            // it is not honored.
+            if (dbType is DatabaseType.MSSQL && options.NestedCreateOperationEnabled is not CliBool.None)
             {
                 if (!IsNestedCreateOperationEnabled(options.NestedCreateOperationEnabled, out isNestedCreateEnabledForGraphQL))
                 {
                     return false;
                 }
+
+                nestedMutationOptions = new(nestedCreateOptions: new NestedCreateOptions(enabled: isNestedCreateEnabledForGraphQL));
             }
 
             switch (dbType)
@@ -258,7 +258,7 @@ namespace Cli
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
-                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, NestedMutationOptions: new(new NestedCreateOptions(enabled: isNestedCreateEnabledForGraphQL))),
+                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, NestedMutationOptions: nestedMutationOptions),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(

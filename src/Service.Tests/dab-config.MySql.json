@@ -2081,7 +2081,7 @@
                   ],
                   "exclude": [
                       "current_date",
-                      "next_day"
+                      "next_date"
                   ]
               }
             },

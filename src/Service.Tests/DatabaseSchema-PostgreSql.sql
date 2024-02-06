@@ -234,7 +234,7 @@ CREATE TABLE default_with_function_table
     "current_date" TIMESTAMP DEFAULT CURRENT_DATE NOT NULL,
     "current_timestamp" TIMESTAMP DEFAULT NOW() NOT NULL,
     random_number INT DEFAULT FLOOR(RANDOM() * 1000),
-    next_day TIMESTAMP DEFAULT (CURRENT_DATE + INTERVAL '1 day'),
+    next_date TIMESTAMP DEFAULT (CURRENT_DATE + INTERVAL '1 day'),
     default_string_with_parenthesis VARCHAR(100) DEFAULT '()',
     default_function_string_with_parenthesis VARCHAR(100) DEFAULT 'NOW()',
     default_integer INT DEFAULT 100,

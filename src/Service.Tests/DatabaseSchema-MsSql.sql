@@ -293,7 +293,7 @@ CREATE TABLE default_with_function_table
     [current_date] DATETIME DEFAULT GETDATE() NOT NULL,
     [current_timestamp] DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     random_number INT DEFAULT RAND() NOT NULL,
-    next_day DATETIME DEFAULT DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()) + 1, 0) NOT NULL,
+    next_date DATETIME DEFAULT DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()) + 1, 0) NOT NULL,
     default_string_with_parenthesis VARCHAR(100) DEFAULT '()',
     default_function_string_with_parenthesis VARCHAR(100) DEFAULT 'NOW()',
     default_integer INT DEFAULT 100,

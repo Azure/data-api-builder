@@ -130,9 +130,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 {
                     case EntityActionOperation.Create:
                         // Get the point/batch fields for the create mutation.
-                        Tuple<FieldDefinitionNode, FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, returnEntityName, rolesAllowedForMutation);
-                        mutationFields.Add(createMutationNodes.Item1); // Add field corresponding to point insertion.
-                        mutationFields.Add(createMutationNodes.Item2); // Add field corresponding to multiple insertion.
+                        IEnumerable<FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, returnEntityName, rolesAllowedForMutation);
+                        mutationFields.AddRange(createMutationNodes);
                         break;
                     case EntityActionOperation.Update:
                         mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));

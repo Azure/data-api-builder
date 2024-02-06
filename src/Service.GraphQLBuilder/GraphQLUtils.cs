@@ -31,6 +31,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string OBJECT_TYPE_QUERY = "query";
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
         public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
+        public static HashSet<DatabaseType> RELATIONAL_DB_SUPPORTING_NESTED_MUTATIONS = new() { DatabaseType.MSSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -65,6 +66,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether DAB supports nested mutations for particular database type.
+        /// </summary>
+        public static bool DoesRelationalDBSupportNestedMutations(DatabaseType databaseType)
+        {
+            return RELATIONAL_DB_SUPPORTING_NESTED_MUTATIONS.Contains(databaseType);
         }
 
         /// <summary>

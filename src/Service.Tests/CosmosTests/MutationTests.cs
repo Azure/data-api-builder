@@ -421,12 +421,12 @@ type Planet @model(name:""Planet"") {
 }";
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object> dbOptions = new();
             HyphenatedNamingPolicy namingPolicy = new();
 
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement("graphqldb"));
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(_containerName));
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement("custom-schema.gql"));
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), _containerName);
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
             DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
                 ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
 
@@ -550,12 +550,12 @@ type Planet @model(name:""Planet"") {
 }";
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object> dbOptions = new();
             HyphenatedNamingPolicy namingPolicy = new();
 
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement("graphqldb"));
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(_containerName));
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement("custom-schema.gql"));
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), _containerName);
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
             DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
                 ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
 

@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using Microsoft.Extensions.DependencyInjection;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -41,7 +42,6 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        private static readonly HashSet<DatabaseType> _relationalDbsSupportingNestedMutations = new() { DatabaseType.MSSQL };
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -166,14 +166,9 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             // Dictionary to store object types for:
             // 1. Every entity exposed for MySql/PgSql/MsSql/DwSql in the config file.
-            // 2. Directional linking entities to support nested insertions for N:N relationships for MsSql. We generate the directional linking object types
+            // 2. Directional linking entities to support nested insertions for M:N relationships for MsSql. We generate the directional linking object types
             // from source -> target and target -> source.
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
-
-            // Set of (source,target) entities with N:N relationship.
-            // If we entries of (source, target) and (target, source) both in relationshipsWithRightCardinalityMany,
-            // this indicates the overall cardinality for the relationship is N:N.
-            HashSet<Tuple<string, string>> entitiesWithManyToManyRelationships = new();
 
             // 1. Build up the object and input types for all the exposed entities in the config.
             foreach ((string entityName, Entity entity) in entities)
@@ -213,15 +208,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Only add objectTypeDefinition for GraphQL if it has a role definition defined for access.
                     if (rolesAllowedForEntity.Any())
                     {
-                        ObjectTypeDefinitionNode node = SchemaConverter.FromDatabaseObject(
+                        ObjectTypeDefinitionNode node = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                             entityName: entityName,
                             databaseObject: databaseObject,
                             configEntity: entity,
                             entities: entities,
                             rolesAllowedForEntity: rolesAllowedForEntity,
-                            rolesAllowedForFields: rolesAllowedForFields,
-                            isNestedMutationSupported: DoesRelationalDBSupportNestedMutations(sqlMetadataProvider.GetDatabaseType()),
-                            entitiesWithManyToManyRelationships: entitiesWithManyToManyRelationships
+                            rolesAllowedForFields: rolesAllowedForFields
                             );
 
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
@@ -249,7 +242,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Create ObjectTypeDefinitionNode for linking entities. These object definitions are not exposed in the schema
             // but are used to generate the object definitions of directional linking entities for (source, target) and (target, source) entities.
             Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities();
-            GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes, entitiesWithManyToManyRelationships);
+            GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes);
 
             // Return a list of all the object types to be exposed in the schema.
             Dictionary<string, FieldDefinitionNode> fields = new();
@@ -271,19 +264,9 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to evaluate whether DAB supports nested mutations for particular relational database type. 
-        /// </summary>
-        private static bool DoesRelationalDBSupportNestedMutations(DatabaseType databaseType)
-        {
-            return _relationalDbsSupportingNestedMutations.Contains(databaseType);
-        }
-
-        /// <summary>
         /// Helper method to generate object definitions for linking entities. These object definitions are used later
         /// to generate the object definitions for directional linking entities for (source, target) and (target, source).
         /// </summary>
-        /// <param name="linkingEntityNames">List of linking entity names.</param>
-        /// <param name="entities">Collection of all entities - Those present in runtime config + linking entities generated by us.</param>
         /// <returns>Object definitions for linking entities.</returns>
         private Dictionary<string, ObjectTypeDefinitionNode> GenerateObjectDefinitionsForLinkingEntities()
         {
@@ -295,7 +278,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(linkingEntityName, out DatabaseObject? linkingDbObject))
                     {
-                        ObjectTypeDefinitionNode node = SchemaConverter.FromDatabaseObject(
+                        ObjectTypeDefinitionNode node = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                                 entityName: linkingEntityName,
                                 databaseObject: linkingDbObject,
                                 configEntity: linkingEntity,
@@ -314,41 +297,46 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Helper method to generate object types for linking nodes from (source, target) using
-        /// simple linking nodes which relate the source/target entities with M:N relationship between them.
+        /// simple linking nodes which represent a linking table linking the source and target tables which have an M:N relationship between them.
+        /// A 'sourceTargetLinkingNode' will contain:
+        /// 1. All the fields (column/relationship) from the target node,
+        /// 2. Column fields from the linking node which are not part of the Foreign key constraint (or relationship fields when the relationship
+        /// is defined in the config).
         /// </summary>
         /// <param name="objectTypes">Collection of object types.</param>
         /// <param name="linkingObjectTypes">Collection of object types for linking entities.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of pair of entities with M:N relationship between them.</param>
         private void GenerateSourceTargetLinkingObjectDefinitions(
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes,
-            Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes,
-            HashSet<Tuple<string, string>> entitiesWithManyToManyRelationships)
+            Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes)
         {
-            foreach ((string sourceEntityName, string targetEntityName) in entitiesWithManyToManyRelationships)
+            foreach ((string linkingEntityName, ObjectTypeDefinitionNode linkingObjectDefinition) in linkingObjectTypes)
             {
+                (string sourceEntityName, string targetEntityName) = Entity.GetSourceAndTargetEntityNameFromLinkingEntityName(linkingEntityName);
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(targetEntityName);
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 if (sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbo))
                 {
-                    string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
-                    ObjectTypeDefinitionNode targetNode = objectTypes[targetEntityName];
-                    IEnumerable<ForeignKeyDefinition> foreignKeyDefinitions = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+                    IEnumerable<ForeignKeyDefinition> foreignKeyDefinitionsFromSourceToTarget = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
 
                     // Get list of all referencing columns in the linking entity.
-                    List<string> referencingColumnNames = foreignKeyDefinitions.SelectMany(foreignKeyDefinition => foreignKeyDefinition.ReferencingColumns).ToList();
-
-                    NameNode sourceTargetLinkingNodeName = new(LINKING_OBJECT_PREFIX + objectTypes[sourceEntityName].Name.Value + objectTypes[targetEntityName].Name.Value);
-                    List<FieldDefinitionNode> fieldsInSourceTargetLinkingNode = targetNode.Fields.ToList();
-                    List<FieldDefinitionNode> fieldsInLinkingNode = linkingObjectTypes[linkingEntityName].Fields.ToList();
+                    List<string> referencingColumnNames = foreignKeyDefinitionsFromSourceToTarget.SelectMany(foreignKeyDefinition => foreignKeyDefinition.ReferencingColumns).ToList();
 
                     // Store the names of relationship/column fields in the target entity to prevent conflicting names
                     // with the linking table's column fields.
+                    ObjectTypeDefinitionNode targetNode = objectTypes[targetEntityName];
                     HashSet<string> fieldNamesInTarget = targetNode.Fields.Select(field => field.Name.Value).ToHashSet();
+
+                    // Initialize list of fields in the sourceTargetLinkingNode with the set of fields present in the target node.
+                    List<FieldDefinitionNode> fieldsInSourceTargetLinkingNode = targetNode.Fields.ToList();
+
+                    // Get list of fields in the linking node (which represents columns present in the linking table).
+                    List<FieldDefinitionNode> fieldsInLinkingNode = linkingObjectDefinition.Fields.ToList();
 
                     // The sourceTargetLinkingNode will contain:
                     // 1. All the fields from the target node to perform insertion on the target entity,
-                    // 2. Fields from the linking node which are not a foreign key reference to source or target node. This is required to get values for
-                    // all the columns in the linking entity other than FK references so that insertion can be performed on the linking entity.
+                    // 2. Fields from the linking node which are not a foreign key reference to source or target node. This is needed to perform
+                    // an insertion in the linking table. For the foreign key columns in linking table, the values are derived from the insertions in the
+                    // source and the target table. For the rest of the columns, the value will be provided via a field exposed in the sourceTargetLinkingNode.
                     foreach (FieldDefinitionNode fieldInLinkingNode in fieldsInLinkingNode)
                     {
                         string fieldName = fieldInLinkingNode.Name.Value;
@@ -366,7 +354,7 @@ namespace Azure.DataApiBuilder.Core.Services
                                     $"Consider using the 'relationships' section of the {targetEntityName} entity configuration to provide some other name for the relationship: '{fieldName}'.";
                                 throw new DataApiBuilderException(
                                     message: infoMsg + actionableMsg,
-                                    statusCode: HttpStatusCode.Conflict,
+                                    statusCode: HttpStatusCode.ServiceUnavailable,
                                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                             }
                             else
@@ -377,6 +365,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
 
                     // Store object type of the linking node for (sourceEntityName, targetEntityName).
+                    NameNode sourceTargetLinkingNodeName = new(GenerateLinkingNodeName(objectTypes[sourceEntityName].Name.Value, objectTypes[targetEntityName].Name.Value));
                     objectTypes[sourceTargetLinkingNodeName.Value] = new(
                         location: null,
                         name: sourceTargetLinkingNodeName,

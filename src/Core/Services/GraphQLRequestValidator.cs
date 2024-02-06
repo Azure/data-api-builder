@@ -187,6 +187,17 @@ namespace Azure.DataApiBuilder.Core.Services
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
+                string? linkingObject = runtimeConfig.Entities![entityName].Relationships![relationshipName].LinkingObject;
+                if (!string.IsNullOrWhiteSpace(linkingObject))
+                {
+                    // When a linking object is present, it indicates an M:N relationship between current entity and the target entity.
+                    // For such a case, there is no referencing/referenced entity between the source/target entities.
+                    // Rather the linking table act as a referencing table for both the source/target entities, which act as referenced entities.
+                    // In such a case, no column values for the child entity could be derived from insertion in the current entity,
+                    // and no column values for the current entity could be derived from the insertion in the child entity.
+                    continue;
+                }
+
                 // Determine the referencing entity for the current relationship field input.
                 string referencingEntityName = MutationOrderHelper.GetReferencingEntityName(
                     context: context,

@@ -18,8 +18,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public  class MutationOrderHelper
     {
         /// <summary>
-        /// The only public api exposed from this class. Given a source and target entity with their metadata and request input,
-        /// returns the referencing entity's name for the pair of (source, target) entity.
+        /// The only public api exposed from this class. Given a source and target entity with their metadata and request input data,
+        /// returns the referencing entity's name for the pair of (source, target) entities.
+        /// This method handles the logic to determine the referencing entity for relationships from (source, target) with cardinalities:
+        /// 1. 1:N - Target entity is the referencing entity
+        /// 2. N:1 - Source entity is the referencing entity
+        /// 3. 1:1 - Determined based on foreign key constraint/request input data.
         /// </summary>
         /// <param name="context">GraphQL request context.</param>
         /// <param name="sourceEntityName">Source entity name.</param>
@@ -43,7 +47,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new Exception("Could not determine definition for source/target entities");
             }
 
-                string referencingEntityNameBasedOnEntityMetadata = DetermineReferencingEntityBasedOnEntityRelationshipMetadata(
+            string referencingEntityNameBasedOnEntityMetadata = DetermineReferencingEntityBasedOnEntityRelationshipMetadata(
                     sourceEntityName: sourceEntityName,
                     targetEntityName: targetEntityName,
                     sourceDbObject: sourceDbObject,
@@ -54,7 +58,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return referencingEntityNameBasedOnEntityMetadata;
             }
 
-            // Had the target node represented an array value, it would have been either a 1:1 or 1:N relationship with the source.
+            // Had the target node represented an array value, it would have been an 1:N relationship from (source, target).
+            // For that case, we would not hit this code because the entity metadata would have been sufficient to tell us that the target entity
+            // is the referencing entity. Hence we conclude that the target node must represent a single input object corresponding to N:1 or 1:1 relationship types.
             ObjectValueNode? objectValueNode = (ObjectValueNode?)targetNodeValue;
             Dictionary<string, IValueNode?> columnDataInTargetBody = GetBackingColumnDataFromFields(
                 context: context,
@@ -71,6 +77,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 columnDataInTargetBody: columnDataInTargetBody);
         }
 
+        /// <summary>
+        /// Helper method to determine the referencing entity from the pair of (source, target) entities based on the metadata collected during startup.
+        /// The method successfully determines the referencing entity if the relationship between the (source, target) entities is defined in the database
+        /// via a Foreign Key constraint.
+        /// </summary>
+        /// <param name="sourceEntityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="sourceDbObject">Database object for source entity.</param>
+        /// <param name="targetDbObject">Database object for target entity.</param>
+        /// <returns>Referencing entity name (when the relationship is defined in the database),
+        /// or an empty string (when the relationship is defined only in the config).</returns>
         private static string DetermineReferencingEntityBasedOnEntityRelationshipMetadata(
             string sourceEntityName,
             string targetEntityName,
@@ -95,7 +112,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     foreignKey.Pair.Equals(sourceTargetPair) && referencingEntityName.Equals(targetEntityName))
                 {
                     // This indicates that we have 2 ForeignKeyDefinitions in which for one of them, the referencing entity is the source entity
-                    // and for the other, the referencing entity is the target entity. This is only possible when the relationship is defined in the config
+                    // and for the other, the referencing entity is the target entity. This is only possible when the relationship is defined only in the config
                     // and the right cardinality for the relationship between (source, target) is 1. In such a case, we cannot determine which entity is going
                     // to be considered as referencing entity based on the relationship metadata. Instead, we will have to rely on the input data for source/target entities.
                     referencingEntityName = string.Empty;

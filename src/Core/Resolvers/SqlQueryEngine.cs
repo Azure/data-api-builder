@@ -218,8 +218,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 bool dbPolicyConfigured = !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
                 bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
 
-                // If a db policy is resolved for the read operation, skip the cache. We want to avoid caching token metadata
-                // because token metadata can change frequently and we want to avoid caching it.
+                // If a db policy is configured for the read operation in the context of the executing role, skip the cache.
+                // We want to avoid caching token metadata because token metadata can change frequently and we want to avoid caching it.
                 if (!dbPolicyConfigured && entityCacheEnabled)
                 {
                     DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);

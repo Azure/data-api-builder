@@ -122,7 +122,7 @@ namespace Cli
             // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
             if (dbType is not DatabaseType.MSSQL && options.NestedCreateOperationEnabled is not CliBool.None)
             {
-                _logger.LogWarning($"The option --graphql.nested-create.enabled is not supported for {dbType.ToString()} database type and will not be honored.");
+                _logger.LogWarning($"The option --graphql.nested-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
             }
 
             NestedMutationOptions? nestedMutationOptions = null;
@@ -131,11 +131,7 @@ namespace Cli
             // it is not honored.
             if (dbType is DatabaseType.MSSQL && options.NestedCreateOperationEnabled is not CliBool.None)
             {
-                if (!IsNestedCreateOperationEnabled(options.NestedCreateOperationEnabled, out isNestedCreateEnabledForGraphQL))
-                {
-                    return false;
-                }
-
+                isNestedCreateEnabledForGraphQL = IsNestedCreateOperationEnabled(options.NestedCreateOperationEnabled);
                 nestedMutationOptions = new(nestedCreateOptions: new NestedCreateOptions(enabled: isNestedCreateEnabledForGraphQL));
             }
 
@@ -315,24 +311,15 @@ namespace Cli
         /// Helper method to determine if the nested create operation is enabled or not based on the inputs from dab init command.
         /// </summary>
         /// <param name="nestedCreateEnabledOptionValue">Input value for --graphql.nested-create.enabled option of the init command</param>
-        /// <param name="isNestedCreateEnabledForGraphQL">Boolean value indicating if nested create operation is enabled.</param>
-        private static bool IsNestedCreateOperationEnabled(CliBool nestedCreateEnabledOptionValue, out bool isNestedCreateEnabledForGraphQL)
+        /// <returns>True/False</returns>
+        private static bool IsNestedCreateOperationEnabled(CliBool nestedCreateEnabledOptionValue)
         {
             if (nestedCreateEnabledOptionValue is CliBool.None)
             {
-                isNestedCreateEnabledForGraphQL = false;
-                return true;
-            }
-
-            if (bool.TryParse(nestedCreateEnabledOptionValue.ToString(), out isNestedCreateEnabledForGraphQL))
-            {
-                return true;
-            }
-            else
-            {
-                _logger.LogError("Invalid value used with the option --graphql.nested-create.enabled. Supported values are true/false.");
                 return false;
             }
+
+            return bool.Parse(nestedCreateEnabledOptionValue.ToString());
         }
 
         /// <summary>

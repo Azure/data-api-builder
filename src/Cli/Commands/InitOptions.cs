@@ -122,7 +122,7 @@ namespace Cli.Commands
         [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
         public CliBool RestRequestBodyStrict { get; }
 
-        [Option("graphql.nested-create.enabled", Required = false, HelpText = "Enables Nested Create operation for GraphQL. Supported values: true, false.")]
+        [Option("graphql.nested-create.enabled", Required = false, HelpText = "(Default: false) Enables nested create operation for GraphQL. Supported values: true, false.")]
         public CliBool NestedCreateOperationEnabled { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

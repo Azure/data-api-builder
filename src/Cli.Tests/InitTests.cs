@@ -410,7 +410,7 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to validate the config is correctly generated with different database types and various options for --graphql.nested-create.enabled flag.
+        /// Test to validate the contents of the config file generated when init command is used with --graphql.nested-create.enabled flag option for different database types.
         /// </summary>
         [DataTestMethod]
         [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for MsSQL database type")]
@@ -437,7 +437,7 @@ namespace Cli.Tests
 
             if (databaseType is DatabaseType.CosmosDB_NoSQL)
             {
-                // A scheme file is added since its mandatory for CosmosDB_NoSQL 
+                // A schema file is added since its mandatory for CosmosDB_NoSQL 
                 ((MockFileSystem)_fileSystem!).AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
 
                 options = new(

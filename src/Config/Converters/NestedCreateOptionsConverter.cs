@@ -38,7 +38,6 @@ namespace Azure.DataApiBuilder.Config.Converters
                             break;
                         default:
                             throw new JsonException($"Unexpected property {propertyName}");
-
                     }
                 }
 

@@ -90,9 +90,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryRequestOptions.PartitionKey = new PartitionKey(partitionKeyValue);
             }
 
+            JObject executeQueryResult = null;
+
             if (runtimeConfig.CanUseCache())
             {
-                StringBuilder dataSourceKey = new( dataSourceName);
+                StringBuilder dataSourceKey = new(dataSourceName);
 
                 // to support caching for paginated query adding continuation token in the datasource
                 if (structure.IsPaginated)
@@ -105,16 +107,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceKey.ToString(), queryParameters: structure.Parameters);
 
-                JObject result = await _cache.GetOrSetAsync<JObject>(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
-
-                JsonDocument cacheServiceResponse = JsonDocument.Parse(result.ToString());
-
-                return new Tuple<JsonDocument, IMetadata>(cacheServiceResponse, null);
+                executeQueryResult = await _cache.GetOrSetAsync<JObject>(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, 10);//runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+            }
+            else
+            {
+                executeQueryResult = await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue);
             }
 
-            JObject response = await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue);
+            JsonDocument response = executeQueryResult != null ? JsonDocument.Parse(executeQueryResult.ToString()) : null;
 
-            return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(response.ToString()), null);
+            return new Tuple<JsonDocument, IMetadata>(response, null);
         }
 
         /// <summary>
@@ -225,7 +227,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return new Tuple<IEnumerable<JsonDocument>, IMetadata>(resultsAsList, null);
         }
- 
+
         /// <inheritdoc />
         public Task<JsonDocument> ExecuteAsync(FindRequestContext context)
         {

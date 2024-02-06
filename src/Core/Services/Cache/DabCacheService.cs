@@ -7,7 +7,6 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace Azure.DataApiBuilder.Core.Services.Cache;
@@ -90,6 +89,7 @@ public class DabCacheService
     /// <exception cref="Exception">Throws when the cache-miss factory method execution fails.</exception>
     public async ValueTask<TResult?> GetOrSetAsync<TResult>(Func<Task<TResult>> executeQueryAsync, DatabaseQueryMetadata queryMetadata, int cacheEntryTtl)
     {
+
         string cacheKey = CreateCacheKey(queryMetadata);
         TResult? result = await _cache.GetOrSetAsync(
                key: cacheKey,
@@ -97,7 +97,7 @@ public class DabCacheService
                {
                    TResult result = await executeQueryAsync();
 
-                   ctx.Options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: JsonSerializer.Serialize(result)));
+                   ctx.Options.SetSize(EstimateCacheEntrySize(cacheKey: cacheKey, cacheValue: JsonSerializer.Serialize(result?.ToString())));
                    ctx.Options.SetDuration(duration: TimeSpan.FromSeconds(cacheEntryTtl));
 
                    return result;

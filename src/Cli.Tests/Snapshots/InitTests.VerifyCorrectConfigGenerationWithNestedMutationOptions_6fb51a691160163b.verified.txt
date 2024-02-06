@@ -1,16 +1,11 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL,
-    Options: {
-      set-session-context: {
-        ValueKind: False
-      }
-    }
+    DatabaseType: MySQL
   },
   Runtime: {
     Rest: {
       Enabled: true,
-      Path: /api,
+      Path: /rest-api,
       RequestBodyStrict: true
     },
     GraphQL: {
@@ -20,12 +15,15 @@
     },
     Host: {
       Cors: {
+        Origins: [
+          http://localhost:3000,
+          http://nolocalhost:80
+        ],
         AllowCredentials: false
       },
       Authentication: {
-        Provider: AppService
-      },
-      Mode: Production
+        Provider: StaticWebApps
+      }
     }
   },
   Entities: []

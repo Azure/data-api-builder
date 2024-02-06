@@ -1,32 +1,22 @@
 ﻿{
   DataSource: {
+    DatabaseType: MSSQL,
     Options: {
-      container: {
-        ValueKind: String
-      },
-      database: {
-        ValueKind: String
-      },
-      schema: {
-        ValueKind: String
+      set-session-context: {
+        ValueKind: True
       }
     }
   },
   Runtime: {
     Rest: {
-      Enabled: false,
-      Path: /api,
+      Enabled: true,
+      Path: /rest-api,
       RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,
       Path: /graphql,
-      AllowIntrospection: true,
-      NestedMutationOptions: {
-        NestedCreateOptions: {
-          Enabled: false
-        }
-      }
+      AllowIntrospection: true
     },
     Host: {
       Cors: {

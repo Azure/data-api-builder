@@ -431,17 +431,17 @@ namespace Cli.Tests
         [DataRow(DatabaseType.DWSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for DWSQL database type")]
         [DataRow(DatabaseType.DWSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-create.enabled false' for DWSQL database type")]
         [DataRow(DatabaseType.DWSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-create.enabled' option for DWSQL database type")]
-        public Task VerifyCorrectConfigGenerationWithNestedMutationOptions(DatabaseType databaseTye, CliBool isNestedCreateEnabled)
+        public Task VerifyCorrectConfigGenerationWithNestedMutationOptions(DatabaseType databaseType, CliBool isNestedCreateEnabled)
         {
             InitOptions options;
 
-            if (databaseTye is DatabaseType.CosmosDB_NoSQL)
+            if (databaseType is DatabaseType.CosmosDB_NoSQL)
             {
                 // A scheme file is added since its mandatory for CosmosDB_NoSQL 
                 ((MockFileSystem)_fileSystem!).AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
 
                 options = new(
-                databaseType: databaseTye,
+                databaseType: databaseType,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: "testdb",
                 cosmosNoSqlContainer: "testcontainer",
@@ -457,7 +457,7 @@ namespace Cli.Tests
             else
             {
                 options = new(
-                databaseType: databaseTye,
+                databaseType: databaseType,
                 connectionString: "testconnectionstring",
                 cosmosNoSqlDatabase: null,
                 cosmosNoSqlContainer: null,
@@ -472,7 +472,7 @@ namespace Cli.Tests
             }
 
             VerifySettings verifySettings = new();
-            verifySettings.UseHashedParameters(databaseTye, isNestedCreateEnabled);
+            verifySettings.UseHashedParameters(databaseType, isNestedCreateEnabled);
             return ExecuteVerifyTest(options, verifySettings);
         }
 

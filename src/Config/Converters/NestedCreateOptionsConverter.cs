@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Config.Converters
         public override void Write(Utf8JsonWriter writer, NestedCreateOptions? value, JsonSerializerOptions options)
         {
             // If the value is null, it is not written to the config file.
-            if(value is null)
+            if (value is null)
             {
                 return;
             }

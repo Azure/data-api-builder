@@ -1,32 +1,17 @@
 ﻿{
   DataSource: {
-    Options: {
-      container: {
-        ValueKind: String
-      },
-      database: {
-        ValueKind: String
-      },
-      schema: {
-        ValueKind: String
-      }
-    }
+    DatabaseType: CosmosDB_PostgreSQL
   },
   Runtime: {
     Rest: {
-      Enabled: false,
-      Path: /api,
+      Enabled: true,
+      Path: /rest-api,
       RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,
       Path: /graphql,
-      AllowIntrospection: true,
-      NestedMutationOptions: {
-        NestedCreateOptions: {
-          Enabled: false
-        }
-      }
+      AllowIntrospection: true
     },
     Host: {
       Cors: {

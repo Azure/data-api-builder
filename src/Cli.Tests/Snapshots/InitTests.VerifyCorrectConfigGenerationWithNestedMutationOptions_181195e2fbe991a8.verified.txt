@@ -1,27 +1,27 @@
 ﻿{
   DataSource: {
-    DatabaseType: DWSQL,
     Options: {
-      set-session-context: {
-        ValueKind: True
+      container: {
+        ValueKind: String
+      },
+      database: {
+        ValueKind: String
+      },
+      schema: {
+        ValueKind: String
       }
     }
   },
   Runtime: {
     Rest: {
-      Enabled: true,
-      Path: /rest-api,
+      Enabled: false,
+      Path: /api,
       RequestBodyStrict: true
     },
     GraphQL: {
       Enabled: true,
       Path: /graphql,
-      AllowIntrospection: true,
-      NestedMutationOptions: {
-        NestedCreateOptions: {
-          Enabled: false
-        }
-      }
+      AllowIntrospection: true
     },
     Host: {
       Cors: {

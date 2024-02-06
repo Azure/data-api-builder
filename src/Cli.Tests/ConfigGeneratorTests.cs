@@ -161,12 +161,7 @@ public class ConfigGeneratorTests
                 ""graphql"": {
                   ""enabled"": true,
                   ""path"": ""/An_"",
-                  ""allow-introspection"": true,
-                  ""nested-mutations"": {
-                        ""create"": {
-                            ""enabled"": false
-                        }
-                    }
+                  ""allow-introspection"": true
                  },
                 ""host"": {
                   ""cors"": {

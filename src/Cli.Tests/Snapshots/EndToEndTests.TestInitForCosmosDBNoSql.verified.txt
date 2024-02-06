@@ -21,12 +21,7 @@
     GraphQL: {
       Enabled: true,
       Path: /graphql,
-      AllowIntrospection: true,
-      NestedMutationOptions: {
-        NestedCreateOptions: {
-          Enabled: false
-        }
-      }
+      AllowIntrospection: true
     },
     Host: {
       Cors: {

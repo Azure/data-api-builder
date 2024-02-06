@@ -1,11 +1,6 @@
 ﻿{
   DataSource: {
-    DatabaseType: MSSQL,
-    Options: {
-      set-session-context: {
-        ValueKind: True
-      }
-    }
+    DatabaseType: MySQL
   },
   Runtime: {
     Rest: {
@@ -16,12 +11,7 @@
     GraphQL: {
       Enabled: true,
       Path: /graphql,
-      AllowIntrospection: true,
-      NestedMutationOptions: {
-        NestedCreateOptions: {
-          Enabled: false
-        }
-      }
+      AllowIntrospection: true
     },
     Host: {
       Cors: {

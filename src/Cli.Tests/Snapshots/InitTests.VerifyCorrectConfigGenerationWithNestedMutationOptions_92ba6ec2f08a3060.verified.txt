@@ -1,6 +1,11 @@
 ﻿{
   DataSource: {
-    DatabaseType: MySQL
+    DatabaseType: DWSQL,
+    Options: {
+      set-session-context: {
+        ValueKind: True
+      }
+    }
   },
   Runtime: {
     Rest: {
@@ -11,12 +16,7 @@
     GraphQL: {
       Enabled: true,
       Path: /graphql,
-      AllowIntrospection: true,
-      NestedMutationOptions: {
-        NestedCreateOptions: {
-          Enabled: false
-        }
-      }
+      AllowIntrospection: true
     },
     Host: {
       Cors: {

@@ -259,78 +259,102 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // Enumerate all the foreign keys required for all the target entities
                     // that this source is related to.
-                    foreach ((string targetEntityName, List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
+                    foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget = new();
+                        // List of validated FK definitions from source to target which contains:
+                        // 1. One entry for relationships defined between source to target in the database  (via FK constraint)
+                        // in the right order of referencing/referenced entity.
+                        // 2. Two entries for relationships defined in the config between source to target (which don't exist in the database).
+                        // For such relationships, the referencing/referenced entities are determined during request execution, and hence we keep 2 entries
+                        // for such relationships at this stage.
+                        List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = new();
 
                         // Loop over all the foreign key definitions defined from source to target entity.
-                        // Add to the set validateForeignKeyDefinitionsToTarget, all the FK definitions which actually map
+                        // Add to the set validatedFKDefinitionsToTarget, all the FK definitions which actually map
                         // to a foreign key constraint defined in the database- unless the FK constraint causes a circular relationship
                         // between source and target - in which case, throw an appropriate exception.
-                        foreach (ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
-                        {
-                            // Add the referencing and referenced columns for this foreign key definition for the target.
-                            if (PairToFkDefinition is not null &&
-                                PairToFkDefinition.TryGetValue(foreignKeyDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredDefinition))
-                            {
-                                if (prohibitedRelationshipPairs.Contains(foreignKeyDefinitionToTarget.Pair))
-                                {
-                                    // This means that there are 2 relationships defined in the database:
-                                    // 1. From source to target
-                                    // 2. From target to source
-                                    // It is not possible to determine the direction of relationship in such a case, so we throw an exception.
-                                    throw new DataApiBuilderException(
-                                        message: $"Circular relationship detected between source entity: {sourceEntityName} and target entity: {targetEntityName}. Cannot support nested insertion.",
-                                        statusCode: HttpStatusCode.ServiceUnavailable,
-                                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                                }
-
-                                // Add an entry to inverseFKPairs to track what all (target, source) pairings are not allowed to
-                                // have a relationship in the database in order to support nested insertion.
-                                prohibitedRelationshipPairs.Add(new(foreignKeyDefinitionToTarget.Pair.ReferencedDbTable, foreignKeyDefinitionToTarget.Pair.ReferencingDbTable));
-
-                                // if the referencing and referenced columns count > 0,
-                                // we have already gathered this information from the runtime config.
-                                if (foreignKeyDefinitionToTarget.ReferencingColumns.Count > 0 && foreignKeyDefinitionToTarget.ReferencedColumns.Count > 0)
-                                {
-                                    if (!AreFKDefinitionsEqual(foreignKeyDefinitionToTarget, inferredDefinition))
-                                    {
-                                        throw new DataApiBuilderException(
-                                            message: $"The relationship defined between source entity: {sourceEntityName} and target entity: {targetEntityName} in the config conflicts" +
-                                            $" with the relationship defined in the database.",
-                                            statusCode: HttpStatusCode.ServiceUnavailable,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                                    }
-                                    else
-                                    {
-                                        validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
-                                    }
-                                }
-                                // Only add the referencing/referenced columns if they have not been
-                                // specified in the configuration file.
-                                else
-                                {
-                                    validateForeignKeyDefinitionsToTarget.Add(inferredDefinition);
-                                }
-                            }
-                        }
+                        AddInferredDatabaseFKs(prohibitedRelationshipPairs, sourceEntityName, targetEntityName, fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
 
                         // At this point, we will have all the valid FK definitions present in the database added to the set of valid FK definitions.
                         // However, for custom relationships defined in config, we still need to add them to the set of valid FK definitions.
-                        foreach(ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
-                        {
-                            if (PairToFkDefinition is not null &&
-                                !PairToFkDefinition.ContainsKey(foreignKeyDefinitionToTarget.Pair) &&
-                                // This check ensures that for a custom relationship defined in config from source->target which is identical to the database relationship,
-                                // we don't add an entry for that relationship from target->source.
-                                !prohibitedRelationshipPairs.Contains(foreignKeyDefinitionToTarget.Pair))
-                            {
-                                validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
-                            }
-                        }
+                        AddConfigRelationships(prohibitedRelationshipPairs, fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
 
-                        relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validateForeignKeyDefinitionsToTarget;
+                        relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }
+                }
+            }
+        }
+
+        private void AddInferredDatabaseFKs(
+            HashSet<RelationShipPair> prohibitedRelationshipPairs,
+            string sourceEntityName,
+            string targetEntityName,
+            List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget,
+            List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget)
+        {
+            foreach (ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
+            {
+                // Add the referencing and referenced columns for this foreign key definition for the target.
+                if (PairToFkDefinition is not null &&
+                    PairToFkDefinition.TryGetValue(foreignKeyDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredDefinition))
+                {
+                    if (prohibitedRelationshipPairs.Contains(foreignKeyDefinitionToTarget.Pair))
+                    {
+                        // This means that there are 2 relationships defined in the database:
+                        // 1. From source to target
+                        // 2. From target to source
+                        // It is not possible to determine the direction of relationship in such a case, so we throw an exception.
+                        throw new DataApiBuilderException(
+                            message: $"Circular relationship detected between source entity: {sourceEntityName} and target entity: {targetEntityName}. Cannot support nested insertion.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    // Add an entry to inverseFKPairs to track what all (target, source) pairings are not allowed to
+                    // have a relationship in the database in order to support nested insertion.
+                    prohibitedRelationshipPairs.Add(new(foreignKeyDefinitionToTarget.Pair.ReferencedDbTable, foreignKeyDefinitionToTarget.Pair.ReferencingDbTable));
+
+                    // if the referencing and referenced columns count > 0,
+                    // we have already gathered this information from the runtime config.
+                    if (foreignKeyDefinitionToTarget.ReferencingColumns.Count > 0 && foreignKeyDefinitionToTarget.ReferencedColumns.Count > 0)
+                    {
+                        if (!AreFKDefinitionsEqual(foreignKeyDefinitionToTarget, inferredDefinition))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"The relationship defined between source entity: {sourceEntityName} and target entity: {targetEntityName} in the config conflicts" +
+                                $" with the relationship defined in the database.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
+                        else
+                        {
+                            validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
+                        }
+                    }
+                    // Only add the referencing/referenced columns if they have not been
+                    // specified in the configuration file.
+                    else
+                    {
+                        validateForeignKeyDefinitionsToTarget.Add(inferredDefinition);
+                    }
+                }
+            }
+        }
+
+        private void AddConfigRelationships(
+            HashSet<RelationShipPair> prohibitedRelationshipPairs,
+            List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget,
+            List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget)
+        {
+            foreach (ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
+            {
+                if (PairToFkDefinition is not null &&
+                    !PairToFkDefinition.ContainsKey(foreignKeyDefinitionToTarget.Pair) &&
+                    // This check ensures that for a custom relationship defined in config from source->target which is identical to the database relationship,
+                    // we don't add an entry for that relationship from target->source.
+                    !prohibitedRelationshipPairs.Contains(foreignKeyDefinitionToTarget.Pair))
+                {
+                    validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
                 }
             }
         }

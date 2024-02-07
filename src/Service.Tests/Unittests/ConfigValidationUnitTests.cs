@@ -337,8 +337,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test to validate that we throw a validation error when GraphQL is enabled on the source entity and
-        /// the user defines multiple relationships between the same source and target entities.
+        /// Testing the RuntimeCOnfigValidator.ValidateRelationshipsInConfig() method to ensure that we throw a validation error
+        /// when GraphQL is enabled on the source entity and the user defines multiple relationships between the same source and target entities.
         /// </summary>
         [DataTestMethod]
         [DataRow(true, DisplayName = "Validate that an exception is thrown when GQL is enabled and user defines multiple relationship between source and target entities.")]

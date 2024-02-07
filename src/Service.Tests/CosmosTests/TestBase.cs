@@ -91,7 +91,7 @@ type AdditionalAttribute @model(name:""AdditionalAttribute"") {
 type MoonAdditionalAttribute @model(name:""MoonAdditionalAttribute"") {
     id : ID,
     name : String,
-    MoreAttributes: [MoreAttribute!]
+    moreAttributes: [MoreAttribute!]
 }
 
 type MoreAttribute @model(name:""MoreAttrAlias"") {

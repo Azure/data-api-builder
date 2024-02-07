@@ -29,9 +29,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
-
+        // Order of the join matters
         public Stack<CosmosJoinStructure>? Joins { get; internal set; }
 
+        /// <summary>
+        /// A simple class that is used to hold the information about joins that
+        /// are part of a Cosmos query.
+        /// <summary>
+        /// <param name="DbObject">The name of the database object containing table metadata like joined tables.</param>
+        /// <param name="TableAlias">The alias of the table that is joined with.</param>
         public record CosmosJoinStructure(DatabaseObject DbObject, string TableAlias);
 
         public CosmosQueryStructure(

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Models;
 using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
@@ -143,13 +144,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <summary>
+        /// Build JOIN statements which will be used in the query.
+        /// It makes sure that the same table is not joined multiple times by maintaining a set of table names.
+        /// </summary>
+        /// <param name="joinstructure"></param>
+        /// <returns></returns>
         private static string Build(Stack<CosmosJoinStructure> joinstructure)
         {
             StringBuilder joinBuilder = new();
 
+            HashSet<DatabaseObject> tableNames = new();
             foreach (CosmosJoinStructure structure in joinstructure)
             {
+                if (tableNames.Contains(structure.DbObject))
+                {
+                    continue;
+                }
+
                 joinBuilder.Append($" JOIN {structure.TableAlias} IN {structure.DbObject.SchemaName}.{structure.DbObject.Name}");
+                tableNames.Add(structure.DbObject);
             }
 
             return joinBuilder.ToString();

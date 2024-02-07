@@ -80,6 +80,37 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Tests eq of StringFilterInput where additionalAttributes is an array
         /// </summary>
         [TestMethod]
+        public async Task TestStringMultiFiltersWithAndCondition()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {
+                        and: [
+                            { additionalAttributes: {name: {eq: ""volcano1""}}}
+                            { moons: {name: {eq: ""1 moon""}}}
+                            { moons: {details: {contains: ""v1""}}}
+                        ]   
+                     })
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.additionalAttributes " +
+                "JOIN b IN c.moons " +
+                "WHERE a.name = \"volcano1\" and b.name = \"1 moon\" and b.details LIKE \"%v1%\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where additionalAttributes is an array
+        /// </summary>
+        [TestMethod]
         public async Task TestStringFiltersOnArrayType()
         {
             string gqlQuery = @"{

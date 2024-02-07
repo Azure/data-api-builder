@@ -274,8 +274,8 @@ namespace Azure.DataApiBuilder.Core.Services
                                     // It is not possible to determine the direction of relationship in such a case, so we throw an exception.
                                     throw new DataApiBuilderException(
                                         message: $"Circular relationship detected between source entity: {sourceEntityName} and target entity: {targetEntityName}. Cannot support nested insertion.",
-                                        statusCode: HttpStatusCode.Conflict,
-                                        subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+                                        statusCode: HttpStatusCode.ServiceUnavailable,
+                                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                                 }
 
                                 // Add an entry to inverseFKPairs to track what all (target, source) pairings are not allowed to
@@ -289,10 +289,10 @@ namespace Azure.DataApiBuilder.Core.Services
                                     if (!AreFKDefinitionsEqual(foreignKeyDefinitionToTarget, inferredDefinition))
                                     {
                                         throw new DataApiBuilderException(
-                                            message: $"The relationship defined between source entity: {sourceEntityName} and target entity: {targetEntityName} conflicts" +
+                                            message: $"The relationship defined between source entity: {sourceEntityName} and target entity: {targetEntityName} in the config conflicts" +
                                             $" with the relationship defined in the database.",
-                                            statusCode: HttpStatusCode.Conflict,
-                                            subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+                                            statusCode: HttpStatusCode.ServiceUnavailable,
+                                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                                     }
                                     else
                                     {

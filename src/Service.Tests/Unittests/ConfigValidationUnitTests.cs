@@ -351,7 +351,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             EntityRelationship relationship = new(
                 Cardinality: Cardinality.One,
                 TargetEntity: targetEntityName,
-                SourceFields: new string[]{ "abc" },
+                SourceFields: new string[] { "abc" },
                 TargetFields: new string[] { "xyz" },
                 LinkingObject: null,
                 LinkingSourceFields: null,

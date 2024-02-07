@@ -262,10 +262,11 @@ namespace Azure.DataApiBuilder.Core.Services
                     foreach ((string targetEntityName, List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
                         List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget = new();
-                        // For each foreign key between this pair of source and target entities
-                        // which needs the referencing columns,
-                        // find the fk inferred for this pair the backend and
-                        // equate the referencing columns and referenced columns.
+
+                        // Loop over all the foreign key definitions defined from source to target entity.
+                        // Add to the set validateForeignKeyDefinitionsToTarget, all the FK definitions which actually map
+                        // to a foreign key constraint defined in the database- unless the FK constraint causes a circular relationship
+                        // between source and target - in which case, throw an appropriate exception.
                         foreach (ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
                         {
                             // Add the referencing and referenced columns for this foreign key definition for the target.
@@ -314,10 +315,14 @@ namespace Azure.DataApiBuilder.Core.Services
                             }
                         }
 
+                        // At this point, we will have all the valid FK definitions present in the database added to the set of valid FK definitions.
+                        // However, for custom relationships defined in config, we still need to add them to the set of valid FK definitions.
                         foreach(ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
                         {
                             if (PairToFkDefinition is not null &&
                                 !PairToFkDefinition.ContainsKey(foreignKeyDefinitionToTarget.Pair) &&
+                                // This check ensures that for a custom relationship defined in config from source->target which is identical to the database relationship,
+                                // we don't add an entry for that relationship from target->source.
                                 !prohibitedRelationshipPairs.Contains(foreignKeyDefinitionToTarget.Pair))
                             {
                                 validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);

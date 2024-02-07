@@ -241,6 +241,13 @@ namespace Azure.DataApiBuilder.Core.Services
         protected override void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
+            // Maintain a set of relationship pairs for which an FK constraint should not exist in the database.
+            // We don't want circular FK constraints i.e. both an FK constraint from source -> target and from target -> source for nested insertions.
+            // If we find an FK constraint for source -> target, we add an entry to this set for target -> source, indicating
+            // we should not have an FK constraint from target -> source, as that would lead to circular relationships, in which case
+            // we cannot perform nested insertion.
+            HashSet<RelationShipPair> prohibitedRelationshipPairs = new();
+
             // For each table definition that has to be populated with the inferred
             // foreign key information.
             foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)
@@ -255,7 +262,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     foreach ((string targetEntityName, List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
                         List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget = new();
-                        HashSet<RelationShipPair> inverseFKPairs = new();
                         // For each foreign key between this pair of source and target entities
                         // which needs the referencing columns,
                         // find the fk inferred for this pair the backend and
@@ -266,7 +272,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             if (PairToFkDefinition is not null &&
                                 PairToFkDefinition.TryGetValue(foreignKeyDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredDefinition))
                             {
-                                if (inverseFKPairs.Contains(foreignKeyDefinitionToTarget.Pair))
+                                if (prohibitedRelationshipPairs.Contains(foreignKeyDefinitionToTarget.Pair))
                                 {
                                     // This means that there are 2 relationships defined in the database:
                                     // 1. From source to target
@@ -280,7 +286,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                                 // Add an entry to inverseFKPairs to track what all (target, source) pairings are not allowed to
                                 // have a relationship in the database in order to support nested insertion.
-                                inverseFKPairs.Add(new(foreignKeyDefinitionToTarget.Pair.ReferencedDbTable, foreignKeyDefinitionToTarget.Pair.ReferencingDbTable));
+                                prohibitedRelationshipPairs.Add(new(foreignKeyDefinitionToTarget.Pair.ReferencedDbTable, foreignKeyDefinitionToTarget.Pair.ReferencingDbTable));
 
                                 // if the referencing and referenced columns count > 0,
                                 // we have already gathered this information from the runtime config.
@@ -306,7 +312,13 @@ namespace Azure.DataApiBuilder.Core.Services
                                     validateForeignKeyDefinitionsToTarget.Add(inferredDefinition);
                                 }
                             }
-                            else
+                        }
+
+                        foreach(ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
+                        {
+                            if (PairToFkDefinition is not null &&
+                                !PairToFkDefinition.ContainsKey(foreignKeyDefinitionToTarget.Pair) &&
+                                !prohibitedRelationshipPairs.Contains(foreignKeyDefinitionToTarget.Pair))
                             {
                                 validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
                             }

@@ -396,6 +396,48 @@
           ]
         }
       ]
+    },
+    "MoonAdditionalAttribute": {
+      "source": "graphqldb.moonAdditionalAttribute",
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "MoonAdditionalAttribute",
+          "plural": "MoonAdditionalAttributes"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
+    },
+    "MoreAttrAlias": {
+      "source": "graphqldb.moreAttribute",
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "MoreAttribute",
+          "plural": "MoreAttributes"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "*"
+          ]
+        }
+      ]
     }
   }
 }

@@ -99,10 +99,81 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
+        /// Tests eq of StringFilterInput where moons is an array and moonAdditionalAttributes is a subarray
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersOnNestedArrayType()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {moons: {moonAdditionalAttributes: {name: {eq: ""moonattr0""}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.moons JOIN b IN a.moonAdditionalAttributes WHERE b.name = \"moonattr0\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where moons is an array and moonAdditionalAttributes is a subarray
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersOnTwoLevelNestedArrayType()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {moons: {moonAdditionalAttributes: {moreAttributes: {name: {eq: ""moonattr0""}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.moons JOIN b IN a.moonAdditionalAttributes JOIN c IN b.moreAttributes WHERE c.name = \"moonattr0\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where moons is an array and moonAdditionalAttributes is a subarray With AND condition
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersOnNestedArrayTypeHavingAndCondition()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {moons: {
+                                and:[
+                                      {moonAdditionalAttributes: {name: {eq: ""moonattr0""}}}
+                                      {name: {eq: ""0 moon""}}
+                                ]
+                     })
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.moons JOIN b IN a.moonAdditionalAttributes WHERE b.name = \"moonattr0\" and a.name = \"0 moon\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
         /// Tests eq of StringFilterInput where additionalAttributes is an array
         /// </summary>
         [TestMethod]
-        public async Task TestStringMultiFiltersOnMultiArrayTypeWithAndCondition()
+        public async Task TestStringMultiFiltersOnArrayTypeWithAndCondition()
         {
             // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
             string gqlQuery = @"{
@@ -128,7 +199,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// Tests eq of StringFilterInput where additionalAttributes is an array
         /// </summary>
         [TestMethod]
-        public async Task TestStringMultiFiltersOnMultiArrayTypeWithOrCondition()
+        public async Task TestStringMultiFiltersOnArrayTypeWithOrCondition()
         {
             // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
             string gqlQuery = @"{

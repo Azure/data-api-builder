@@ -15,6 +15,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using static Azure.DataApiBuilder.Core.Authorization.AuthorizationResolver;
+using static Azure.DataApiBuilder.Core.Resolvers.BaseQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Models;
 
@@ -191,11 +192,9 @@ public class GQLFilterParser
                     {
                         // This path will never get called for sql since the primary key will always required
                         // This path will only be exercised for CosmosDb_NoSql
-                        queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
-                        queryStructure.SourceAlias = sourceName + "." + backingColumnName;
-                        string? nestedFieldType = metadataProvider.GetSchemaGraphQLFieldTypeFromFieldName(queryStructure.EntityName, name);
+                        FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(queryStructure.EntityName, name);
 
-                        if (nestedFieldType is null)
+                        if (fieldDefinitionNode is null)
                         {
                             throw new DataApiBuilderException(
                                 message: "Invalid filter object used as a nested field input value type.",
@@ -203,49 +202,38 @@ public class GQLFilterParser
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }
 
-                        if (IsArrayType(nestedFieldType,out string fieldType))
+                        if (fieldDefinitionNode.Type.IsListType())
                         {
-                            IDictionary<string, object?>  subParameters = new Dictionary<string, object?>();
-                            CosmosQueryStructure comosQueryStructure =
-                                new(ctx,
-                                subParameters,
-                                metadataProvider,
-                                queryStructure.AuthorizationResolver,
-                                this,
-                                queryStructure.Counter);
+                            string nestedFieldTypeName = fieldDefinitionNode.Type.NamedType().Name.Value;
 
-                            comosQueryStructure.DatabaseObject.SchemaName = sourceAlias;
-                            comosQueryStructure.SourceAlias = fieldType;
-                            comosQueryStructure.EntityName = fieldType;
-
-                            PredicateOperand joinpredicate = new(Parse(ctx,
-                                                                        filterArgumentObject.Fields[name],
-                                                                        subfields,
-                                                                        comosQueryStructure));
-                            predicates.Push(joinpredicate);
-
-                            queryStructure.CosmosJoins?.Add(new BaseQueryStructure.CosmosJoinStructure(
-                                                                new DatabaseTable(schemaName: sourceAlias, tableName: field.Name.Value),
-                                                                fieldType));
-
-                            // Add all parameters from the exists subquery to the main queryStructure.
-                            foreach ((string key, DbConnectionParam value) in comosQueryStructure.Parameters)
-                            {
-                                queryStructure.Parameters.Add(key, value);
-                            }
+                            HandleNestedFilterForCosmos(
+                                ctx,
+                                filterArgumentObject.Fields[name],
+                                subfields,
+                                backingColumnName,
+                                nestedFieldTypeName,
+                                predicates,
+                                queryStructure,
+                                metadataProvider);
                         }
                         else
                         {
+                            queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
+                            queryStructure.SourceAlias = sourceName + "." + backingColumnName;
+
+                            string nestedFieldType = fieldDefinitionNode.Type.ToString();
+
                             queryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldType);
                             
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
                                 queryStructure)));
-                        }
 
-                        queryStructure.DatabaseObject.Name = sourceName;
-                        queryStructure.SourceAlias = sourceAlias;
+                            queryStructure.DatabaseObject.Name = sourceName;
+                            queryStructure.SourceAlias = sourceAlias;
+                        }
+                      
                     }
                 }
                 else
@@ -268,19 +256,50 @@ public class GQLFilterParser
         return MakeChainPredicate(predicates, PredicateOperation.AND);
     }
 
-    private static bool IsArrayType(string nestedFieldType, out string fieldType)
+    private void HandleNestedFilterForCosmos(
+        IMiddlewareContext ctx,
+        IInputField filterArgumentSchema,
+        List<ObjectFieldNode> subfields,
+        string backingColumnName,
+        string fieldType,
+        List<PredicateOperand> predicates,
+        BaseQueryStructure queryStructure,
+        ISqlMetadataProvider metadataProvider)
     {
-        bool isArrayType = nestedFieldType.Contains("[");
-        if(isArrayType)
-        {
-            fieldType = nestedFieldType.Replace("[", "").Replace("]", "");
-        }
-        else
-        {
-            fieldType = nestedFieldType;
-        }
+        IDictionary<string, object?> subParameters = new Dictionary<string, object?>();
+        CosmosQueryStructure comosQueryStructure =
+            new(
+                context: ctx,
+                parameters: subParameters,
+                metadataProvider: metadataProvider,
+                authorizationResolver: queryStructure.AuthorizationResolver,
+                gQLFilterParser: this,
+                counter: queryStructure.Counter);
 
-        return isArrayType;
+        comosQueryStructure.DatabaseObject.SchemaName = queryStructure.SourceAlias;
+        comosQueryStructure.SourceAlias = fieldType;
+        comosQueryStructure.EntityName = fieldType;
+
+        PredicateOperand joinpredicate = new(
+            Parse(
+                ctx: ctx,
+                filterArgumentSchema: filterArgumentSchema,
+                fields: subfields,
+                queryStructure: comosQueryStructure));
+        predicates.Push(joinpredicate);
+
+        queryStructure
+            .CosmosJoins?
+            .Add(
+                new CosmosJoinStructure(
+                    DbObject: new DatabaseTable(schemaName: queryStructure.SourceAlias, tableName: backingColumnName),
+                    TableAlias: fieldType));
+
+        // Add all parameters from the exists subquery to the main queryStructure.
+        foreach ((string key, DbConnectionParam value) in comosQueryStructure.Parameters)
+        {
+            queryStructure.Parameters.Add(key, value);
+        }
     }
 
     /// <summary>

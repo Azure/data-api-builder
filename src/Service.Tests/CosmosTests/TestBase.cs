@@ -50,7 +50,7 @@ type Planet @model {
     dimension : String,
     earth: Earth,
     tags: [String!],
-    additionalAttributes: [AdditionalAttribute]
+    additionalAttributes: [AdditionalAttribute],
     moons: [Moon]
 }
 
@@ -68,7 +68,8 @@ type Tag @model(name:""TagAlias"") {
 type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
     id : ID,
     name : String,
-    details : String
+    details : String,
+    moonAdditionalAttributes: [MoonAdditionalAttribute]
 }
 
 type Earth @model(name:""Earth"") {
@@ -83,6 +84,17 @@ type Sun @model(name:""Sun"") {
 }
 
 type AdditionalAttribute @model(name:""AdditionalAttribute"") {
+    id : ID,
+    name : String
+}
+
+type MoonAdditionalAttribute @model(name:""MoonAdditionalAttribute"") {
+    id : ID,
+    name : String,
+    MoreAttributes: [MoreAttribute!]
+}
+
+type MoreAttribute @model(name:""MoreAttrAlias"") {
     id : ID,
     name : String
 }";

@@ -78,6 +78,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="actual">The actual JSON string.</param>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
+            // If either of the strings is null or empty, no need to parse them to JToken. Assert their equality directly.
+            if(string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(actual))
+            {
+                Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
+                $"\nExpected:<{expected}>\nActual:<{actual}>");
+                return;
+            }
+
             JToken expectedJObject = JToken.Parse(expected);
             JToken actualJObject = JToken.Parse(actual);
 

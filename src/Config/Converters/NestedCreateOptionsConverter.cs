@@ -15,6 +15,11 @@ namespace Azure.DataApiBuilder.Config.Converters
         /// <inheritdoc/>
         public override NestedCreateOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
+            if (reader.TokenType == JsonTokenType.Null)
+            {
+                return null;
+            }
+
             if (reader.TokenType is JsonTokenType.StartObject)
             {
                 NestedCreateOptions? nestedCreateOptions = null;

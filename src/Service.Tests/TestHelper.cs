@@ -194,6 +194,130 @@ namespace Azure.DataApiBuilder.Service.Tests
             ""entities"": {}" +
           "}";
 
+        /// <summary>
+        /// A minimal valid config json with nested mutations section as null.
+        /// </summary>
+        public const string BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD =
+          "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true,
+                ""nested-mutations"": null
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [""http://localhost:5000""],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
+
+        /// <summary>
+        /// A minimal valid config json with an empty nested mutations section.
+        /// </summary>
+        public const string BASE_CONFIG_EMPTY_NESTED_MUTATIONS_FIELD =
+          "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true,
+                ""nested-mutations"": {}
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [""http://localhost:5000""],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
+
+        /// <summary>
+        /// A minimal valid config json with the create field within nested mutation as null.
+        /// </summary>
+        public const string BASE_CONFIG_NULL_NESTED_CREATE_FIELD =
+          "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true,
+                 ""nested-mutations"": {
+                      ""create"": null
+                 }
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [""http://localhost:5000""],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
+
+        /// <summary>
+        /// A minimal valid config json with an empty create field within nested mutation.
+        /// </summary>
+        public const string BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD =
+          "{" +
+            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+            @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true,
+                ""nested-mutations"": {
+                      ""create"": {}
+                }
+              },
+              ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [""http://localhost:5000""],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            },
+            ""entities"": {}" +
+          "}";
+
         public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
         {
             MockFileSystem fileSystem = new();

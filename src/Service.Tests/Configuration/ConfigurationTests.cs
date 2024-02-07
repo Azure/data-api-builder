@@ -69,6 +69,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const int RETRY_WAIT_SECONDS = 1;
 
         /// <summary>
+        /// 
+        /// </summary>
+        public const string BOOK_ENTITY_JSON = @"
+            {
+              ""entities"": {
+                    ""Book"": {
+                    ""source"": {
+                        ""object"": ""books"",
+                        ""type"": ""table""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""type"": {
+                        ""singular"": ""book"",
+                        ""plural"": ""books""
+                        }
+                    },
+                    ""rest"":{
+                        ""enabled"": true
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                                {
+                                    ""action"": ""read""
+                                }
+                            ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
+                    }
+                }
+            }";
+
+        /// <summary>
         /// A valid REST API request body with correct parameter types for all the fields.
         /// </summary>
         public const string REQUEST_BODY_WITH_CORRECT_PARAM_TYPES = @"
@@ -1580,6 +1617,49 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Validates that deserialization of config file is successful for the following scenarios:
+        /// 1. Nested Mutations section is null
+        /// {
+        ///     "nested-mutations": null
+        /// }
+        /// 
+        /// 2. Nested Mutations section is empty.
+        /// {
+        ///     "nested-mutations": {}
+        /// }
+        ///
+        /// 3. Create field within Nested Mutation section is null.
+        /// {
+        ///     "nested-mutations": {
+        ///         "create": null
+        ///     }
+        /// }
+        ///
+        /// 4. Create field within Nested Mutation section is empty.
+        /// {
+        ///     "nested-mutations": {
+        ///         "create": {}
+        ///     }
+        /// }
+        /// 
+        /// For all the above mentioned scenarios, the expected value for NestedMutationOptions field in null.
+        /// </summary>
+        /// <param name="baseConfig">Base Config Json string.</param>
+        [DataTestMethod]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD, DisplayName = "Validate successful deserialization when nested mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_MUTATIONS_FIELD, DisplayName = "Validate successful deserialization when nested mutation section is empty")]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_NESTED_CREATE_FIELD, DisplayName = "Validate successful deserialization when create field within nested mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD, DisplayName = "Validate successful deserialization when create field within nested mutation section is empty")]
+        public void ValidateDeserializationOfConfigWithNullOrEmptyInvalidNestedMutationSection(string baseConfig)
+        {
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
+            Assert.IsNotNull(deserializedConfig.Runtime);
+            Assert.IsNotNull(deserializedConfig.Runtime.GraphQL);
+            Assert.IsNull(deserializedConfig.Runtime.GraphQL.NestedMutationOptions);
+        }
+
+        /// <summary>
         /// Sanity check to validate that DAB engine works fine when used with a config file without the nested 
         /// mutations feature flag section.
         /// The runtime graphql section of the config file used looks like this: 
@@ -1598,44 +1678,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCategory(TestCategory.MSSQL)]
         public async Task SanityTestForRestAndGQLRequestsWithoutNestedMutationFeatureFlagSection()
         {
-            // Hard-coded json string for Book entity
-            string entityJson = @"
-            {
-              ""entities"": {
-                    ""Book"": {
-                    ""source"": {
-                        ""object"": ""books"",
-                        ""type"": ""table""
-                    },
-                    ""graphql"": {
-                        ""enabled"": true,
-                        ""type"": {
-                        ""singular"": ""book"",
-                        ""plural"": ""books""
-                        }
-                    },
-                    ""rest"":{
-                        ""enabled"": true
-                    },
-                    ""permissions"": [
-                        {
-                        ""role"": ""anonymous"",
-                        ""actions"": [
-                                {
-                                    ""action"": ""read""
-                                }
-                            ]
-                        }
-                    ],
-                    ""mappings"": null,
-                    ""relationships"": null
-                    }
-                }
-            }";
-
             // The config file is constructed by merging the hard-coded json strings to mimic the scenario where config file is
             // hand-edited (instead of using CLI) by the users.
-            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, entityJson);
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
             RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());

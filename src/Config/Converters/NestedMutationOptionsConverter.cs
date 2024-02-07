@@ -45,7 +45,12 @@ namespace Azure.DataApiBuilder.Config.Converters
                     {
                         case "create":
                             reader.Read();
-                            nestedMutationOptions = new(_nestedCreateOptionsConverter.Read(ref reader, typeToConvert, options));
+                            NestedCreateOptions? nestedCreateOptions = _nestedCreateOptionsConverter.Read(ref reader, typeToConvert, options);
+                            if (nestedCreateOptions is not null)
+                            {
+                                nestedMutationOptions = new(nestedCreateOptions);
+                            }
+
                             break;
 
                         default:

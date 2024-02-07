@@ -63,23 +63,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Adds a useful failure message around the expected == actual operation.
-        /// <summary>
-        // public static void PerformTestEqualJsonStrings(string expected, string actual)
-        // {
-        //     Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
-        //     $"\nExpected:<{expected}>\nActual:<{actual}>");
-        // }
-
-        /// <summary>
         /// Compares two JSON strings for equality after converting all DateTime values if present to a consistent format.
+        /// Also Adds a useful failure message around the expected == actual operation.
         /// </summary>
         /// <param name="expected">The expected JSON string.</param>
         /// <param name="actual">The actual JSON string.</param>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
             // If either of the strings is null or empty, no need to parse them to JToken. Assert their equality directly.
-            if(string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(actual))
+            if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(actual))
             {
                 Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
                 $"\nExpected:<{expected}>\nActual:<{actual}>");
@@ -93,9 +85,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             // Function to convert all DateTime values to a consistent format
             // The convertDateTime function is a local function inside the PerformTestEqualJsonStrings method.
-            // It's used to encapsulate the logic for converting DateTime values to a consistent format.
+            // It's used to encapsulate the logic for converting DateTime values to ISO 8601 format.
             // This makes the PerformTestEqualJsonStrings method easier to read and understand.
-            void convertDateTime(JToken token)
+            void convertDateTimeToIsoFormat(JToken token)
             {
                 switch (token.Type)
                 {
@@ -108,7 +100,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                             }
                             else
                             {
-                                convertDateTime(prop.Value);
+                                convertDateTimeToIsoFormat(prop.Value);
                             }
                         }
 
@@ -116,15 +108,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     case JTokenType.Array:
                         foreach (JToken child in token.Children())
                         {
-                            convertDateTime(child);
+                            convertDateTimeToIsoFormat(child);
                         }
 
                         break;
                 }
             }
 
-            convertDateTime(expectedJObject);
-            convertDateTime(actualJObject);
+            convertDateTimeToIsoFormat(expectedJObject);
+            convertDateTimeToIsoFormat(actualJObject);
 
             Assert.IsTrue(JsonStringsDeepEqual(expectedJObject.ToString(), actualJObject.ToString()),
                 $"\nExpected:<{expectedJObject.ToString()}>\nActual:<{actualJObject.ToString()}>");

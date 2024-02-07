@@ -78,8 +78,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <param name="actual">The actual JSON string.</param>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
-            JObject expectedJObject = JObject.Parse(expected);
-            JObject actualJObject = JObject.Parse(actual);
+            JToken expectedJObject = JToken.Parse(expected);
+            JToken actualJObject = JToken.Parse(actual);
 
             string dateTimeFormat = "yyyy-MM-ddTHH:mm:ss.fffZ"; // ISO 8601 format
 

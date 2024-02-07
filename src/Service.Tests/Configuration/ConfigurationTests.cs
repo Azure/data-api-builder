@@ -1678,8 +1678,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCategory(TestCategory.MSSQL)]
         public async Task SanityTestForRestAndGQLRequestsWithoutNestedMutationFeatureFlagSection()
         {
-            // The config file is constructed by merging the hard-coded json strings to mimic the scenario where config file is
-            // hand-edited (instead of using CLI) by the users.
+            // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the            
+            // configuration file (instead of using CLI).
             string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
             string configFileName = "custom-config.json";

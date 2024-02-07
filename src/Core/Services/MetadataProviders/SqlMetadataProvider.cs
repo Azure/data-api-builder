@@ -1681,7 +1681,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         // to a foreign key constraint defined in the database.
                         AddInferredDatabaseFKs(sourceEntityName, targetEntityName, fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
 
-                        // At this point, we will have all the valid FK definitions present in the database added to the set of valid FK definitions.
+                        // At this point, we will have the FK definition between source and target present in the database added to the set of valid FK definitions.
                         // However, for custom relationships defined in config, we still need to add them to the set of valid FK definitions.
                         AddConfigRelationships(fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
 
@@ -1694,18 +1694,18 @@ namespace Azure.DataApiBuilder.Core.Services
         private void AddInferredDatabaseFKs(
             string sourceEntityName,
             string targetEntityName,
-            List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget,
-            List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget)
+            List<ForeignKeyDefinition> fKDefinitionsToTarget,
+            List<ForeignKeyDefinition> validatedFKDefinitionsToTarget)
         {
             // Value to be derived from config.
             bool isNestedInsertSupported = false;
-            foreach (ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
+            foreach (ForeignKeyDefinition fKDefinitionToTarget in fKDefinitionsToTarget)
             {
                 // Add the referencing and referenced columns for this foreign key definition for the target.
                 if (PairToFkDefinition is not null &&
-                    PairToFkDefinition.TryGetValue(foreignKeyDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredDefinition))
+                    PairToFkDefinition.TryGetValue(fKDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredFKDefinition))
                 {
-                    RelationShipPair inverseFKPair = new(foreignKeyDefinitionToTarget.Pair.ReferencedDbTable, foreignKeyDefinitionToTarget.Pair.ReferencingDbTable);
+                    RelationShipPair inverseFKPair = new(fKDefinitionToTarget.Pair.ReferencedDbTable, fKDefinitionToTarget.Pair.ReferencingDbTable);
                     if (isNestedInsertSupported && PairToFkDefinition.ContainsKey(inverseFKPair))
                     {
                         // This means that there are 2 relationships defined in the database:
@@ -1721,9 +1721,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // If the referencing and referenced columns count > 0,
                     // we have already gathered this information from the runtime config.
-                    if (foreignKeyDefinitionToTarget.ReferencingColumns.Count > 0 && foreignKeyDefinitionToTarget.ReferencedColumns.Count > 0)
+                    if (fKDefinitionToTarget.ReferencingColumns.Count > 0 && fKDefinitionToTarget.ReferencedColumns.Count > 0)
                     {
-                        if (isNestedInsertSupported && !AreFKDefinitionsEqual(foreignKeyDefinitionToTarget, inferredDefinition))
+                        if (isNestedInsertSupported && !AreFKDefinitionsEqual(fKDefinitionToTarget, inferredFKDefinition))
                         {
                             throw new DataApiBuilderException(
                                 message: $"The relationship defined between source entity: {sourceEntityName} and target entity: {targetEntityName} in the config conflicts" +
@@ -1733,32 +1733,32 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
                         else
                         {
-                            validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
+                            validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
                         }
                     }
                     // Only add the referencing/referenced columns if they have not been
                     // specified in the configuration file.
                     else
                     {
-                        validateForeignKeyDefinitionsToTarget.Add(inferredDefinition);
+                        validatedFKDefinitionsToTarget.Add(inferredFKDefinition);
                     }
                 }
             }
         }
 
         private void AddConfigRelationships(
-            List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget,
-            List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget)
+            List<ForeignKeyDefinition> fKDefinitionsToTarget,
+            List<ForeignKeyDefinition> validatedFKDefinitionsToTarget)
         {
-            foreach (ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
+            foreach (ForeignKeyDefinition fKDefinitionToTarget in fKDefinitionsToTarget)
             {
-                RelationShipPair inverseFKPair = new(foreignKeyDefinitionToTarget.Pair.ReferencedDbTable, foreignKeyDefinitionToTarget.Pair.ReferencingDbTable);
+                RelationShipPair inverseFKPair = new(fKDefinitionToTarget.Pair.ReferencedDbTable, fKDefinitionToTarget.Pair.ReferencingDbTable);
 
                 // Add FK definition to the set of validated FKs only if no relationship is defined for the source and target entities
                 // either from source -> target or target -> source.
-                if (PairToFkDefinition is not null && !PairToFkDefinition.ContainsKey(foreignKeyDefinitionToTarget.Pair) && !PairToFkDefinition.ContainsKey(inverseFKPair))
+                if (PairToFkDefinition is not null && !PairToFkDefinition.ContainsKey(fKDefinitionToTarget.Pair) && !PairToFkDefinition.ContainsKey(inverseFKPair))
                 {
-                    validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
+                    validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
                 }
             }
         }

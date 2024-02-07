@@ -98,15 +98,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// <code>Do: </code> Tests with different combinations of connection string to ensure
-        /// tableprefix generated is correctly.
-        /// <code>Check: </code> Making sure table prefix matches expected prefix.
+        /// tableprefix generated is correct and forms the correct table name with said prefix.
+        /// <code>Check: </code> Making sure table name with prefix matches expected name with prefix.
         /// </summary>
         [DataTestMethod]
-        [DataRow("", "", "")]
-        [DataRow("", "model", "[model]")]
-        [DataRow("TestDB", "", "[TestDB]")]
-        [DataRow("TestDB", "model", "[TestDB].[model]")]
-        public void CheckTablePrefix(string databaseName, string schemaName, string expectedPrefix)
+        [DataRow("", "", "", "[]")]
+        [DataRow("", "model", "TrainedModel", "[model].[TrainedModel]")]
+        [DataRow("TestDB", "", "TestTable", "[TestDB].[TestTable]")]
+        [DataRow("TestDB", "model", "TrainedModel", "[TestDB].[model].[TrainedModel]")]
+        public void CheckTablePrefix(string databaseName, string schemaName, string tableName, string expectedTableNameWithPrefix)
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
@@ -120,9 +120,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
 
-            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().GetDefaultDataSourceName());
-            string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
-            Assert.AreEqual(tableprefix, expectedPrefix);
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(
+                runtimeConfigProvider,
+                queryManagerFactory.Object,
+                sqlMetadataLogger,
+                runtimeConfigProvider.GetConfig().GetDefaultDataSourceName())
+            {
+                DatabaseName = databaseName
+            };
+            string tableNameWithPrefix = provider.GetTableNameWithPrefix(schemaName, tableName);
+            Assert.AreEqual(expectedTableNameWithPrefix, tableNameWithPrefix);
         }
 
         /// <summary>

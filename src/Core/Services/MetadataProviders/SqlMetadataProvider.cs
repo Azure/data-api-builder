@@ -19,7 +19,6 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
-using Microsoft.IdentityModel.Tokens;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
@@ -55,6 +54,8 @@ namespace Azure.DataApiBuilder.Core.Services
         protected const int NUMBER_OF_RESTRICTIONS = 4;
 
         protected string ConnectionString { get; init; }
+
+        public string DatabaseName { get; set; }
 
         protected IQueryBuilder SqlQueryBuilder { get; init; }
 
@@ -121,6 +122,8 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
+            SqlConnectionStringBuilder connectionStringBuilder = new(ConnectionString);
+            DatabaseName = connectionStringBuilder.InitialCatalog;
             EntitiesDataSet = new();
             QueryManagerFactory = engineFactory;
             SqlQueryBuilder = QueryManagerFactory.GetQueryBuilder(_databaseType);
@@ -1373,17 +1376,15 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         internal string GetTableNameWithPrefix(string schemaName, string tableName)
-        {
-            SqlConnectionStringBuilder connectionStringBuilder = new(ConnectionString);
-            string databaseName = connectionStringBuilder.InitialCatalog;
+        {   
             IQueryBuilder queryBuilder = GetQueryBuilder();
             StringBuilder tablePrefix = new();
 
-            if (!string.IsNullOrEmpty(databaseName))
+            if (!string.IsNullOrEmpty(DatabaseName))
             {
                 // Determine databaseName for prefix.
-                databaseName = queryBuilder.QuoteIdentifier(databaseName);
-                tablePrefix.Append(databaseName);
+                string quotedDatabaseName = queryBuilder.QuoteIdentifier(DatabaseName);
+                tablePrefix.Append(quotedDatabaseName);
 
                 if (!string.IsNullOrEmpty(schemaName))
                 {

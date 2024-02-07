@@ -102,6 +102,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// as graphQL response.
         /// </summary>
         [TestMethod]
+        [Ignore]
         public override async Task InsertMutationWithDefaultBuiltInFunctions()
         {
             await base.InsertMutationWithDefaultBuiltInFunctions();

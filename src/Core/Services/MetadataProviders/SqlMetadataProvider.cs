@@ -1652,7 +1652,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
         /// whose definition has to be populated with foreign key information.</param>
-        protected virtual void FillInferredFkInfo(
+        private void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
             // For each table definition that has to be populated with the inferred
@@ -1661,52 +1661,143 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // For each source entities, which maps to this table definition
                 // and has a relationship metadata to be filled.
-                foreach ((_, RelationshipMetadata relationshipData)
+                foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
                     // Enumerate all the foreign keys required for all the target entities
                     // that this source is related to.
-                    IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities =
-                        relationshipData.TargetEntityToFkDefinitionMap.Values;
-                    // For each target, loop through each foreign key
-                    foreach (List<ForeignKeyDefinition> foreignKeysForTarget in foreignKeysForAllTargetEntities)
+                    foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        // For each foreign key between this pair of source and target entities
-                        // which needs the referencing columns,
-                        // find the fk inferred for this pair the backend and
-                        // equate the referencing columns and referenced columns.
-                        foreach (ForeignKeyDefinition fk in foreignKeysForTarget)
-                        {
-                            // if the referencing and referenced columns count > 0,
-                            // we have already gathered this information from the runtime config.
-                            if (fk.ReferencingColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
-                            {
-                                continue;
-                            }
+                        // List of validated FK definitions from source to target which contains:
+                        // 1. One entry for relationships defined between source to target in the database  (via FK constraint)
+                        // in the right order of referencing/referenced entity.
+                        // 2. Two entries for relationships defined in the config between source to target (which don't exist in the database).
+                        // For such relationships, the referencing/referenced entities are determined during request execution, and hence we keep 2 entries
+                        // for such relationships at this stage.
+                        List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = new();
 
-                            // Add the referencing and referenced columns for this foreign key definition
-                            // for the target.
-                            if (PairToFkDefinition is not null && PairToFkDefinition.TryGetValue(
-                                    fk.Pair, out ForeignKeyDefinition? inferredDefinition))
-                            {
-                                // Only add the referencing columns if they have not been
-                                // specified in the configuration file.
-                                if (fk.ReferencingColumns.Count == 0)
-                                {
-                                    fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
-                                }
+                        // Loop over all the foreign key definitions defined from source to target entity.
+                        // Add to the set validatedFKDefinitionsToTarget, all the FK definitions which actually map
+                        // to a foreign key constraint defined in the database.
+                        AddInferredDatabaseFKs(sourceEntityName, targetEntityName, fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
 
-                                // Only add the referenced columns if they have not been
-                                // specified in the configuration file.
-                                if (fk.ReferencedColumns.Count == 0)
-                                {
-                                    fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
-                                }
-                            }
-                        }
+                        // At this point, we will have all the valid FK definitions present in the database added to the set of valid FK definitions.
+                        // However, for custom relationships defined in config, we still need to add them to the set of valid FK definitions.
+                        AddConfigRelationships(fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
+
+                        relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }
                 }
             }
+        }
+
+        private void AddInferredDatabaseFKs(
+            string sourceEntityName,
+            string targetEntityName,
+            List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget,
+            List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget)
+        {
+            // Value to be derived from config.
+            bool isNestedInsertSupported = false;
+            foreach (ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
+            {
+                // Add the referencing and referenced columns for this foreign key definition for the target.
+                if (PairToFkDefinition is not null &&
+                    PairToFkDefinition.TryGetValue(foreignKeyDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredDefinition))
+                {
+                    RelationShipPair inverseFKPair = new(foreignKeyDefinitionToTarget.Pair.ReferencedDbTable, foreignKeyDefinitionToTarget.Pair.ReferencingDbTable);
+                    if (isNestedInsertSupported && PairToFkDefinition.ContainsKey(inverseFKPair))
+                    {
+                        // This means that there are 2 relationships defined in the database:
+                        // 1. From source to target
+                        // 2. From target to source
+                        // It is not possible to determine the direction of relationship in such a case. Thus, we cannot support nested inserts, so we throw an exception.
+                        throw new DataApiBuilderException(
+                            message: $"Circular relationship detected between source entity: {sourceEntityName} and target entity: {targetEntityName}. " +
+                            $"Cannot support nested insertion.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    // If the referencing and referenced columns count > 0,
+                    // we have already gathered this information from the runtime config.
+                    if (foreignKeyDefinitionToTarget.ReferencingColumns.Count > 0 && foreignKeyDefinitionToTarget.ReferencedColumns.Count > 0)
+                    {
+                        if (isNestedInsertSupported && !AreFKDefinitionsEqual(foreignKeyDefinitionToTarget, inferredDefinition))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"The relationship defined between source entity: {sourceEntityName} and target entity: {targetEntityName} in the config conflicts" +
+                                $" with the relationship defined in the database.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
+                        else
+                        {
+                            validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
+                        }
+                    }
+                    // Only add the referencing/referenced columns if they have not been
+                    // specified in the configuration file.
+                    else
+                    {
+                        validateForeignKeyDefinitionsToTarget.Add(inferredDefinition);
+                    }
+                }
+            }
+        }
+
+        private void AddConfigRelationships(
+            List<ForeignKeyDefinition> foreignKeyDefinitionsToTarget,
+            List<ForeignKeyDefinition> validateForeignKeyDefinitionsToTarget)
+        {
+            foreach (ForeignKeyDefinition foreignKeyDefinitionToTarget in foreignKeyDefinitionsToTarget)
+            {
+                RelationShipPair inverseFKPair = new(foreignKeyDefinitionToTarget.Pair.ReferencedDbTable, foreignKeyDefinitionToTarget.Pair.ReferencingDbTable);
+
+                // Add FK definition to the set of validated FKs only if no relationship is defined for the source and target entities
+                // either from source -> target or target -> source.
+                if (PairToFkDefinition is not null && !PairToFkDefinition.ContainsKey(foreignKeyDefinitionToTarget.Pair) && !PairToFkDefinition.ContainsKey(inverseFKPair))
+                {
+                    validateForeignKeyDefinitionsToTarget.Add(foreignKeyDefinitionToTarget);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to compare two foreign key definitions for equality on the basis of the referencing -> referenced column mappings present in them.
+        /// The equality ensures that both the foreign key definitions have:
+        /// 1. Same set of referencing and referenced tables,
+        /// 2. Same number of referencing/referenced columns,
+        /// 3. Same mappings from referencing -> referenced column.
+        /// </summary>
+        /// <param name="fkDefinition1">First foreign key definition.</param>
+        /// <param name="fkDefinition2">Second foreign key definition.</param>
+        /// <returns>true if all the above mentioned conditions are met, else false.</returns>
+        private static bool AreFKDefinitionsEqual(ForeignKeyDefinition fkDefinition1, ForeignKeyDefinition fkDefinition2)
+        {
+            if (!fkDefinition1.Pair.Equals(fkDefinition2.Pair) || fkDefinition1.ReferencingColumns.Count != fkDefinition2.ReferencingColumns.Count)
+            {
+                return false;
+            }
+
+            Dictionary<string, string> referencingToReferencedColumns = fkDefinition1.ReferencingColumns.Zip(
+                fkDefinition1.ReferencedColumns, (key, value) => new { Key = key, Value = value }).ToDictionary(item => item.Key, item => item.Value);
+
+            // Traverse through each (referencing, referenced) columns pair in the second foreign key definition.
+            for (int idx = 0; idx < fkDefinition2.ReferencingColumns.Count; idx++)
+            {
+                string referencingColumnName = fkDefinition2.ReferencingColumns[idx];
+                if (!referencingToReferencedColumns.TryGetValue(referencingColumnName, out string? referencedColumnName)
+                    || !referencedColumnName.Equals(fkDefinition2.ReferencedColumns[idx]))
+                {
+                    // This indicates that either there is no mapping defined for referencingColumnName in the second foreign key definition
+                    // or the referencing -> referenced column mapping in the second foreign key definition do not match the mapping in the first foreign key definition.
+                    // In both the cases, it is implied that the two foreign key definitions do not match.
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

@@ -1670,7 +1670,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         ///  }
         /// 
         /// Without the nested mutations feature flag section, DAB engine should be able to 
-        ///  1. Successfully deserialize the config file.
+        ///  1. Successfully deserialize the config file without nested mutation section.
         ///  2. Process REST and GraphQL API requests.
         /// 
         /// </summary>
@@ -1681,7 +1681,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // The config file is constructed by merging the hard-coded json strings to mimic the scenario where config file is
             // hand-edited (instead of using CLI) by the users.
             string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
-            RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL));
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
             string configFileName = "custom-config.json";
             File.WriteAllText(configFileName, deserializedConfig.ToJson());
             string[] args = new[]
@@ -1695,16 +1695,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 try
                 {
 
-                    // Perform a REST GET API request 
-                    // 1. To validate that DAB engine deserialized the config without the nested mutation feature flag section correctly.
-                    // 2. To validate that REST GET requests are executed correctly.
+                    // Perform a REST GET API request to validate that REST GET API requests are executed correctly.
                     HttpRequestMessage restRequest = new(HttpMethod.Get, "api/Book");
                     HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                     Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
 
-                    // Perform a GraphQL API request
-                    // 1. To validate that DAB engine successfully deserialized the config without the nested mutation feature flag section.
-                    // 2. To validate that DAB engine executes GraphQL requests successfully. 
+                    // Perform a GraphQL API request to validate that DAB engine executes GraphQL requests successfully. 
                     string query = @"{
                         book_by_pk(id: 1) {
                            id,

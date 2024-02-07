@@ -19,7 +19,7 @@
       "allow-introspection": true,
       "nested-mutations": {
         "create": {
-          "enabled": false
+          "enabled": true
         }
       }
     },

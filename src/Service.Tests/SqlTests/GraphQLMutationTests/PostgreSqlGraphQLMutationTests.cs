@@ -118,9 +118,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// as graphQL response.
         /// </summary>
         [TestMethod]
-        public override async Task InsertMutationWithDefaultBuiltInFunctions()
+        public async Task InsertMutationWithDefaultBuiltInFunctions()
         {
-            await base.InsertMutationWithDefaultBuiltInFunctions();
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT *
+                   FROM default_with_function_table AS table0
+                   WHERE id = 5001
+                     AND user_value = 1234
+                   ORDER BY id asc
+                   LIMIT 1) AS subq
+            ";
+
+            await base.InsertMutationWithDefaultBuiltInFunctions(postgresQuery);
         }
 
         /// <summary>

@@ -103,9 +103,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// </summary>
         [TestMethod]
         [Ignore]
-        public override async Task InsertMutationWithDefaultBuiltInFunctions()
+        public Task InsertMutationWithDefaultBuiltInFunctions()
         {
-            await base.InsertMutationWithDefaultBuiltInFunctions();
+            // FIXME: This test is failing because of incorrect SQL query. Issue: https://github.com/Azure/data-api-builder/issues/1696
+            throw new NotImplementedException();
         }
 
         /// <summary>

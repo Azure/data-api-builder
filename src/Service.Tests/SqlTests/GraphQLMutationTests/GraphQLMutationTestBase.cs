@@ -59,12 +59,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         ///   "default_date_string": "1999-01-08T10:23:54.000Z"
         /// }
         /// </summary>
-        public virtual async Task InsertMutationWithDefaultBuiltInFunctions()
+        public virtual async Task InsertMutationWithDefaultBuiltInFunctions(string dbQuery)
         {
             string graphQLMutationName = "createDefaultBuiltInFunction";
             string graphQLMutation = @"
                 mutation {
                     createDefaultBuiltInFunction(item: { user_value: 1234 }) {
+                        id
+                        user_value
                         current_date
                         current_timestamp
                         random_number
@@ -78,6 +80,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
             ";
 
             JsonElement result = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            // Assert that the values inserted in the DB is same as the values returned by the mutation
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, result.ToString());
 
             // Assert the values
             Assert.IsFalse(string.IsNullOrEmpty(result.GetProperty("current_date").GetString()));

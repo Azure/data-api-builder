@@ -65,10 +65,61 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         /// <summary>
         /// Adds a useful failure message around the expected == actual operation.
         /// <summary>
+        // public static void PerformTestEqualJsonStrings(string expected, string actual)
+        // {
+        //     Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
+        //     $"\nExpected:<{expected}>\nActual:<{actual}>");
+        // }
+
+        /// <summary>
+        /// Compares two JSON strings for equality after converting all DateTime values if present to a consistent format.
+        /// </summary>
+        /// <param name="expected">The expected JSON string.</param>
+        /// <param name="actual">The actual JSON string.</param>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
-            Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
-            $"\nExpected:<{expected}>\nActual:<{actual}>");
+            JObject expectedJObject = JObject.Parse(expected);
+            JObject actualJObject = JObject.Parse(actual);
+
+            string dateTimeFormat = "yyyy-MM-ddTHH:mm:ss.fffZ"; // ISO 8601 format
+
+            // Function to convert all DateTime values to a consistent format
+            // The convertDateTime function is a local function inside the PerformTestEqualJsonStrings method.
+            // It's used to encapsulate the logic for converting DateTime values to a consistent format.
+            // This makes the PerformTestEqualJsonStrings method easier to read and understand.
+            void convertDateTime(JToken token)
+            {
+                switch (token.Type)
+                {
+                    case JTokenType.Object:
+                        foreach (JProperty prop in token.Children<JProperty>())
+                        {
+                            if (DateTime.TryParse(prop.Value.ToString(), out DateTime date))
+                            {
+                                prop.Value = date.ToString(dateTimeFormat);
+                            }
+                            else
+                            {
+                                convertDateTime(prop.Value);
+                            }
+                        }
+
+                        break;
+                    case JTokenType.Array:
+                        foreach (JToken child in token.Children())
+                        {
+                            convertDateTime(child);
+                        }
+
+                        break;
+                }
+            }
+
+            convertDateTime(expectedJObject);
+            convertDateTime(actualJObject);
+
+            Assert.IsTrue(JsonStringsDeepEqual(expectedJObject.ToString(), actualJObject.ToString()),
+                $"\nExpected:<{expectedJObject.ToString()}>\nActual:<{actualJObject.ToString()}>");
         }
 
         /// <summary>

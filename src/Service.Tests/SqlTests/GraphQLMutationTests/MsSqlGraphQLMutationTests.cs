@@ -64,9 +64,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// as graphQL response.
         /// </summary>
         [TestMethod]
-        public override async Task InsertMutationWithDefaultBuiltInFunctions()
+        public async Task InsertMutationWithDefaultBuiltInFunctions()
         {
-            await base.InsertMutationWithDefaultBuiltInFunctions();
+            string msSqlQuery = @"
+                SELECT *
+                FROM [default_with_function_table] AS [table0]
+                WHERE [table0].[id] = 5001
+                    AND [table0].[user_value] = 1234
+                ORDER BY [id] asc
+                FOR JSON PATH,
+                    INCLUDE_NULL_VALUES,
+                    WITHOUT_ARRAY_WRAPPER
+            ";
+            await base.InsertMutationWithDefaultBuiltInFunctions(msSqlQuery);
         }
 
         /// <summary>

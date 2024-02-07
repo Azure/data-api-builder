@@ -515,10 +515,6 @@ INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 
 
 INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GETDATE());
 
-SET IDENTITY_INSERT default_with_function_table ON
-INSERT INTO default_with_function_table(id, user_value) VALUES (1, 1234), (2, 5678);
-SET IDENTITY_INSERT default_with_function_table OFF
-
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW stocks_view_selected AS SELECT

@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -28,6 +29,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
+
+        public Stack<CosmosJoinStructure>? Joins { get; internal set; }
+
+        public record CosmosJoinStructure(DatabaseObject DbObject, string TableAlias);
 
         public CosmosQueryStructure(
             IMiddlewareContext context,

@@ -82,7 +82,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public async Task TestStringFiltersOnArrayType()
         {
-            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
             string gqlQuery = @"{
                 planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {additionalAttributes: {name: {eq: ""volcano1""}}})
@@ -93,7 +92,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.additionalAttributes WHERE a.name = \"volcano1\"";
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.additionalAttributes " +
+                "WHERE a.name = \"volcano1\"";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -104,7 +105,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public async Task TestStringFiltersOnNestedArrayType()
         {
-            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
             string gqlQuery = @"{
                 planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
                 @" : {moons: {moonAdditionalAttributes: {name: {eq: ""moonattr0""}}}})
@@ -115,21 +115,23 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.moons JOIN b IN a.moonAdditionalAttributes WHERE b.name = \"moonattr0\"";
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.moons " +
+                "JOIN b IN a.moonAdditionalAttributes " +
+                "WHERE b.name = \"moonattr0\"";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
 
         /// <summary>
-        /// Tests eq of StringFilterInput where moons is an array and moonAdditionalAttributes is a subarray
+        /// Tests eq of StringFilterInput where moons is an array and moonAdditionalAttributes is a subarray and moreAttributes is subarray with Alias
         /// </summary>
         [TestMethod]
         public async Task TestStringFiltersOnTwoLevelNestedArrayType()
         {
-            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
             string gqlQuery = @"{
                 planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
-                @" : {moons: {moonAdditionalAttributes: {moreAttributes: {name: {eq: ""moonattr0""}}}})
+               @" : {moons: {moonAdditionalAttributes: {moreAttributes: {name: {eq: ""moonattr0""}}}}})
                 {
                     items {
                         name
@@ -137,7 +139,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.moons JOIN b IN a.moonAdditionalAttributes JOIN c IN b.moreAttributes WHERE c.name = \"moonattr0\"";
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.moons " +
+                "JOIN b IN a.moonAdditionalAttributes " +
+                "JOIN d IN b.moreAttributes " +
+                "WHERE d.name = \"moonattr0\"";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -156,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                                       {moonAdditionalAttributes: {name: {eq: ""moonattr0""}}}
                                       {name: {eq: ""0 moon""}}
                                 ]
-                     })
+                     }})
                 {
                     items {
                         name
@@ -164,7 +170,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQueryWithJoin = "SELECT c.name FROM c JOIN a IN c.moons JOIN b IN a.moonAdditionalAttributes WHERE b.name = \"moonattr0\" and a.name = \"0 moon\"";
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.moons " +
+                "JOIN b IN a.moonAdditionalAttributes " +
+                "WHERE b.name = \"moonattr0\" and a.name = \"0 moon\"";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }

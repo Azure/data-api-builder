@@ -67,10 +67,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public IAuthorizationResolver AuthorizationResolver { get; }
 
-        public List<CosmosJoinStructure>? CosmosJoins { get; protected set; } = new List<BaseQueryStructure.CosmosJoinStructure>();
-
-        public record CosmosJoinStructure(DatabaseObject DbObject, string TableAlias);
-
         public const string PARAM_NAME_PREFIX = "@";
 
         public BaseQueryStructure(

@@ -3,6 +3,7 @@
 
 using System.Text;
 using Azure.DataApiBuilder.Core.Models;
+using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -22,9 +23,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 + $" FROM {_containerAlias}");
             string predicateString = Build(structure.Predicates);
 
-            if (structure.CosmosJoins != null && structure.CosmosJoins.Count > 0)
+            if (structure.Joins != null && structure.Joins.Count > 0)
             {
-                queryStringBuilder.Append($" {Build(structure.CosmosJoins)}");
+                queryStringBuilder.Append($" {Build(structure.Joins)}");
             }
 
             if (!string.IsNullOrEmpty(predicateString))
@@ -142,11 +143,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
-        private static string Build(List<CosmosQueryStructure.CosmosJoinStructure> joinstructure)
+        private static string Build(Stack<CosmosJoinStructure> joinstructure)
         {
             StringBuilder joinBuilder = new();
 
-            foreach (CosmosQueryStructure.CosmosJoinStructure structure in joinstructure)
+            foreach (CosmosJoinStructure structure in joinstructure)
             {
                 joinBuilder.Append($" JOIN {structure.TableAlias} IN {structure.DbObject.SchemaName}.{structure.DbObject.Name}");
             }

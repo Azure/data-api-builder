@@ -15,7 +15,7 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using static Azure.DataApiBuilder.Core.Authorization.AuthorizationResolver;
-using static Azure.DataApiBuilder.Core.Resolvers.BaseQueryStructure;
+using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Models;
 
@@ -188,11 +188,11 @@ public class GQLFilterParser
                             queryStructure,
                             metadataProvider);
                     }
-                    else
+                    else if (queryStructure is CosmosQueryStructure cosmosQueryStructure)
                     {
                         // This path will never get called for sql since the primary key will always required
                         // This path will only be exercised for CosmosDb_NoSql
-                        FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(queryStructure.EntityName, name);
+                        FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(cosmosQueryStructure.EntityName, name);
 
                         if (fieldDefinitionNode is null)
                         {
@@ -213,25 +213,25 @@ public class GQLFilterParser
                                 backingColumnName,
                                 nestedFieldTypeName,
                                 predicates,
-                                queryStructure,
+                                cosmosQueryStructure,
                                 metadataProvider);
                         }
                         else
                         {
-                            queryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
-                            queryStructure.SourceAlias = sourceName + "." + backingColumnName;
+                            cosmosQueryStructure.DatabaseObject.Name = sourceName + "." + backingColumnName;
+                            cosmosQueryStructure.SourceAlias = sourceName + "." + backingColumnName;
 
                             string nestedFieldType = fieldDefinitionNode.Type.ToString();
 
-                            queryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldType);
+                            cosmosQueryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldType);
                             
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
-                                queryStructure)));
+                                cosmosQueryStructure)));
 
-                            queryStructure.DatabaseObject.Name = sourceName;
-                            queryStructure.SourceAlias = sourceAlias;
+                            cosmosQueryStructure.DatabaseObject.Name = sourceName;
+                            cosmosQueryStructure.SourceAlias = sourceAlias;
                         }
                       
                     }
@@ -263,7 +263,7 @@ public class GQLFilterParser
         string backingColumnName,
         string fieldType,
         List<PredicateOperand> predicates,
-        BaseQueryStructure queryStructure,
+        CosmosQueryStructure queryStructure,
         ISqlMetadataProvider metadataProvider)
     {
         IDictionary<string, object?> subParameters = new Dictionary<string, object?>();
@@ -288,9 +288,16 @@ public class GQLFilterParser
                 queryStructure: comosQueryStructure));
         predicates.Push(joinpredicate);
 
+        queryStructure.Joins ??= new Stack<CosmosJoinStructure>();
+
+        if (comosQueryStructure.Joins is not null and { Count: > 0 })
+        {
+            queryStructure.Joins = comosQueryStructure.Joins;
+        }
+
         queryStructure
-            .CosmosJoins?
-            .Add(
+            .Joins
+            .Push(
                 new CosmosJoinStructure(
                     DbObject: new DatabaseTable(schemaName: queryStructure.SourceAlias, tableName: backingColumnName),
                     TableAlias: fieldType));
@@ -470,7 +477,7 @@ public class GQLFilterParser
         BaseQueryStructure baseQuery,
         PredicateOperation op)
     {
-        if (fields.Count == 0 && baseQuery.CosmosJoins?.Count == 0)
+        if (fields.Count == 0 && (baseQuery is CosmosQueryStructure cosmosQueryStructure && cosmosQueryStructure.Joins?.Count == 0))
         {
             return Predicate.MakeFalsePredicate();
         }

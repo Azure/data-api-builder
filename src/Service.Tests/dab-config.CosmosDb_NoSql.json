@@ -377,7 +377,9 @@
       ]
     },
     "AdditionalAttribute": {
-      "source": "graphqldb.additionalAttribute",
+      "source": {
+        "object": "graphqldb.additionalAttribute"
+      },
       "graphql": {
         "enabled": true,
         "type": {
@@ -392,13 +394,17 @@
         {
           "role": "anonymous",
           "actions": [
-            "*"
+            {
+              "action": "*"
+            }
           ]
         }
       ]
     },
     "MoonAdditionalAttribute": {
-      "source": "graphqldb.moonAdditionalAttribute",
+      "source": {
+        "object": "graphqldb.moonAdditionalAttributes"
+      },
       "graphql": {
         "enabled": true,
         "type": {
@@ -413,13 +419,17 @@
         {
           "role": "anonymous",
           "actions": [
-            "*"
+            {
+              "action": "*"
+            }
           ]
         }
       ]
     },
     "MoreAttrAlias": {
-      "source": "graphqldb.moreAttribute",
+      "source": {
+        "object": "graphqldb.moreAttribute"
+      },
       "graphql": {
         "enabled": true,
         "type": {
@@ -434,7 +444,9 @@
         {
           "role": "anonymous",
           "actions": [
-            "*"
+            {
+              "action": "*"
+            }
           ]
         }
       ]

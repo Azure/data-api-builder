@@ -261,12 +261,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         [TestMethod]
         public async Task FirstCacheServiceInvocationCallsFuncAndReturnResult()
         {
-            // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
             JObject expectedDatabaseResponse = JObject.Parse(@"{""key"": ""value""}");
 
             Mock<Func<Task<JObject>>> mockExecuteQuery = new();
-            mockExecuteQuery.Setup(e => e.Invoke()).Returns( Task.FromResult(expectedDatabaseResponse));
+            mockExecuteQuery.Setup(e => e.Invoke()).Returns(Task.FromResult(expectedDatabaseResponse));
 
             Dictionary<string, DbConnectionParam> parameters = new()
             {
@@ -320,7 +319,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Validates that the expected database response is returned by the cache service.
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
 
-          
             // Assert
             Assert.IsFalse(mockExecuteQuery.Invocations.Count is 2, message: "Expected a cache hit, but observed two cache misses.");
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);

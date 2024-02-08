@@ -50,6 +50,7 @@ type Planet @model {
     dimension : String,
     earth: Earth,
     tags: [String!],
+    stars: [Star],
     additionalAttributes: [AdditionalAttribute],
     moons: [Moon]
 }

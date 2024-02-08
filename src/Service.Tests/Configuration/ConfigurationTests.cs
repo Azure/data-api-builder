@@ -1660,7 +1660,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Sanity check to validate that DAB engine works fine when used with a config file without the nested 
+        /// Sanity check to validate that DAB engine starts successfully when used with a config file without the nested 
         /// mutations feature flag section.
         /// The runtime graphql section of the config file used looks like this: 
         ///

@@ -370,6 +370,78 @@
           }
         ]
       }
+    },
+   {
+    AdditionalAttribute: {
+        Source: {
+            Object: graphqldb.additionalAttribute
+        },
+        GraphQL: {
+            Singular: AdditionalAttribute,
+            Plural: AdditionalAttributes
+            Enabled: true
+         },
+         Rest: {
+           Enabled: false
+         },
+         
+         Permissions: [
+           {
+             Role: anonymous,
+             Actions: [
+               *
+             ]
+           }
+         ]
     }
+  },
+   {
+    MoonAdditionalAttribute: {
+        Source: {
+            Object: graphqldb.moonAdditionalAttribute
+        },
+        GraphQL: {
+            Singular: MoonAdditionalAttribute,
+            Plural: MoonAdditionalAttributes
+            Enabled: true
+         },
+         Rest: {
+           Enabled: false
+         },
+         
+         Permissions: [
+           {
+             Role: anonymous,
+             Actions: [
+               *
+             ]
+           }
+         ]
+    }
+   },
+    {
+    MoreAttrAlias: {
+        Source: {
+            Object: graphqldb.moreAttribute
+        },
+        GraphQL: {
+            Singular: MoreAttribute,
+            Plural: MoreAttributes
+            Enabled: true
+         },
+         Rest: {
+           Enabled: false
+         },
+         
+         Permissions: [
+           {
+             Role: anonymous,
+             Actions: [
+               *
+             ]
+           }
+         ]
+    }
+  }
   ]
 }

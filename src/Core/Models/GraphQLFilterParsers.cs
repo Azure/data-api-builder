@@ -203,7 +203,6 @@ public class GQLFilterParser
                         }
 
                         string nestedFieldTypeName = fieldDefinitionNode.Type.NamedType().Name.Value;
-                    
                         if (fieldDefinitionNode.Type.IsListType())
                         {
                             HandleNestedFilterForCosmos(
@@ -230,7 +229,6 @@ public class GQLFilterParser
                             cosmosQueryStructure.DatabaseObject.Name = sourceName;
                             cosmosQueryStructure.SourceAlias = sourceAlias;
                         }
-                      
                     }
                 }
                 else

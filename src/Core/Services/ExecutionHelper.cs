@@ -257,7 +257,7 @@ namespace Azure.DataApiBuilder.Service.Services
             IPureResolverContext context,
             out JsonElement propertyValue)
         {
-            JsonElement parent = context.Parent<JsonElement>().Clone();
+            JsonElement parent = context.Parent<JsonElement>();
 
             if (parent.ValueKind is JsonValueKind.Undefined or JsonValueKind.Null)
             {
@@ -314,27 +314,42 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Extract parameters from the schema and the actual instance (query) of the field
-        /// Extracts default parameter values from the schema or null if no default
-        /// Overrides default values with actual values of parameters provided
+        /// First: Creates parameters using the GraphQL schema's ObjectTypeDefinition metadata
+        /// and metadata from the request's (query) field.
+        /// Then: Creates parameters from schema argument fields when they have default values.
+        /// Lastly: Gets the user provided argument values from the query to either:
+        /// 1. Overwrites the parameter value if it exists in the collectedParameters dictionary
+        /// or
+        /// 2. Adds the parameter/parameter value to the dictionary.
+        /// </summary>
+        /// <returns>
+        /// Dictionary of parameters
         /// Key: (string) argument field name
         /// Value: (object) argument value
-        /// </summary>
+        /// </returns>
         public static IDictionary<string, object?> GetParametersFromSchemaAndQueryFields(
             IObjectField schema,
             FieldNode query,
             IVariableValueCollection variables)
         {
-            IDictionary<string, object?> parameters = new Dictionary<string, object?>();
+            IDictionary<string, object?> collectedParameters = new Dictionary<string, object?>();
 
             // Fill the parameters dictionary with the default argument values
-            IFieldCollection<IInputField> argumentSchemas = schema.Arguments;
+            IFieldCollection<IInputField> schemaArguments = schema.Arguments;
 
-            foreach (IInputField argument in argumentSchemas)
+            // Example 'argumentSchemas' IInputField objects of type 'HotChocolate.Types.Argument':
+            // These are all default arguments defined in the schema for queries.
+            // {first:int}
+            // {after:String}
+            // {filter:entityFilterInput}
+            // {orderBy:entityOrderByInput}
+            // The values in schemaArguments will have default values when the backing
+            // entity is a stored procedure with runtime config defined default parameter values.
+            foreach (IInputField argument in schemaArguments)
             {
                 if (argument.DefaultValue != null)
                 {
-                    parameters.Add(
+                    collectedParameters.Add(
                         argument.Name.Value,
                         ExtractValueFromIValueNode(
                             value: argument.DefaultValue,
@@ -344,33 +359,28 @@ namespace Azure.DataApiBuilder.Service.Services
             }
 
             // Overwrite the default values with the passed in arguments
+            // Example: { myEntity(first: $first, orderBy: {entityField: ASC) { items { entityField } } }
+            // User supplied $first filter variable overwrites the default value of 'first'.
+            // User supplied 'orderBy' filter overwrites the default value of 'orderBy'.
             IReadOnlyList<ArgumentNode> passedArguments = query.Arguments;
 
             foreach (ArgumentNode argument in passedArguments)
             {
                 string argumentName = argument.Name.Value;
-                IInputField argumentSchema = argumentSchemas[argumentName];
+                IInputField argumentSchema = schemaArguments[argumentName];
 
-                if (parameters.ContainsKey(argumentName))
-                {
-                    parameters[argumentName] =
-                        ExtractValueFromIValueNode(
+                object? nodeValue = ExtractValueFromIValueNode(
                             value: argument.Value,
                             argumentSchema: argumentSchema,
                             variables: variables);
-                }
-                else
+
+                if (!collectedParameters.TryAdd(argumentName, nodeValue))
                 {
-                    parameters.Add(
-                        argumentName,
-                        ExtractValueFromIValueNode(
-                            value: argument.Value,
-                            argumentSchema: argumentSchema,
-                            variables: variables));
+                    collectedParameters[argumentName] = nodeValue;
                 }
             }
 
-            return parameters;
+            return collectedParameters;
         }
 
         /// <summary>
@@ -398,6 +408,14 @@ namespace Azure.DataApiBuilder.Service.Services
             return (InputObjectType)(InnerMostType(field.Type));
         }
 
+        /// <summary>
+        /// Creates a dictionary of parameters and associated values from
+        /// the GraphQL request's MiddlewareContext from arguments provided
+        /// in the request. e.g. first, after, filter, orderBy, and stored procedure
+        /// parameters.
+        /// </summary>
+        /// <param name="context">GraphQL HotChocolate MiddlewareContext</param>
+        /// <returns>Dictionary of parameters and their values.</returns>
         private static IDictionary<string, object?> GetParametersFromContext(
             IMiddlewareContext context)
         {
@@ -408,13 +426,19 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Get metadata from context.
+        /// Get metadata from HotChocolate's GraphQL request MiddlewareContext.
         /// The metadata key is the root field name + _PURE_RESOLVER_CTX + :: + PathDepth.
         /// </summary>
         private static IMetadata GetMetadata(IPureResolverContext context)
         {
             if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Parent is not null)
             {
+                // entering this block means that:
+                // context.Selection.ResponseName: items
+                // context.Path: /books/items (Depth: 1)
+                // context.Path.Parent: /books (Depth: 0)
+                // The parent's metadata will be stored in ContextData with a depth of context.Path minus 1.
+                // In this example, the resolved metadata key is books_PURE_RESOLVER_CTX::0
                 string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth;
                 return (IMetadata)context.ContextData[paginationObjectParentName]!;
             }
@@ -487,9 +511,12 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Set new metadata and reset the depth that the metadata has persisted
-        /// The pagination metadata persisted here aligns with the top-level object type.
-        /// e.g. /books/items/... -> pagination metadata for /books.
+        /// Persist new metadata with a key denoting the depth of the current path.
+        /// The pagination metadata persisted here correlates to the top-level object type
+        /// denoted in the request.
+        /// e.g. books_PURE_RESOLVER_CTX::0 for:
+        /// context.Path -> /books depth(0)
+        /// context.Selection -> books { items {id, title}}
         /// </summary>
         private static void SetNewMetadata(IPureResolverContext context, IMetadata? metadata)
         {
@@ -506,8 +533,8 @@ namespace Azure.DataApiBuilder.Service.Services
         {
             string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
 
-            // it's okay to reset the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
-            // context for books/items/item[0]/publishers processing is done and that context isn't needed anymore.
+            // It's okay to reset the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
+            // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.
             if (!context.ContextData.TryAdd(contextKey, metadata))
             {
                 context.ContextData[contextKey] = metadata;

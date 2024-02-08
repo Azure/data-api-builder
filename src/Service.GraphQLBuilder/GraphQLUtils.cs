@@ -278,7 +278,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Generates the datasource name from the GraphQL context.
         /// </summary>
         /// <param name="context">Middleware context.</param>
-        /// <returns></returns>
+        /// <returns>Datasource name used to execute request.</returns>
         public static string GetDataSourceNameFromGraphQLContext(IPureResolverContext context, RuntimeConfig runtimeConfig)
         {
             string rootNode = context.Selection.Field.Coordinate.TypeName.Value;

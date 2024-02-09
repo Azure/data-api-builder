@@ -35,6 +35,10 @@ DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
 DROP PROCEDURE IF EXISTS count_books;
 DROP PROCEDURE IF EXISTS get_authors_history_by_first_name;
+DROP PROCEDURE IF EXISTS insert_book;
+DROP PROCEDURE IF EXISTS delete_last_inserted_book;
+DROP PROCEDURE IF EXISTS update_book_title;
+DROP PROCEDURE IF EXISTS insert_and_display_all_books_for_given_publisher;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -223,6 +227,28 @@ EXEC('CREATE PROCEDURE get_authors_history_by_first_name @firstName varchar(100)
           first_name=@firstName
         GROUP BY
           concat(first_name, '' '', (middle_name + '' ''), last_name)
+      END');
+EXEC('CREATE PROCEDURE insert_book @book_id int, @title varchar(max), @publisher_id int AS
+      INSERT INTO dbo.books(id, title, publisher_id) VALUES (@book_id, @title, @publisher_id)');
+EXEC('CREATE PROCEDURE delete_last_inserted_book AS
+      BEGIN
+        DELETE FROM dbo.books
+        WHERE
+        id = (select max(id) from dbo.books)
+      END');
+EXEC('CREATE PROCEDURE update_book_title @id int, @title varchar(max) AS
+      BEGIN
+        UPDATE dbo.books SET title = @title WHERE id = @id
+        SELECT * from dbo.books WHERE id = @id
+      END');
+EXEC('CREATE PROCEDURE insert_and_display_all_books_for_given_publisher @book_id int,@title varchar(max), @publisher_name varchar(max) AS
+      BEGIN
+        DECLARE @publisher_id AS INT;
+        SET @publisher_id = (SELECT id FROM dbo.publishers WHERE name = @publisher_name);
+        INSERT INTO dbo.books(id, title, publisher_id)
+        VALUES(@book_id, @title, @publisher_id);
+
+        SELECT * FROM dbo.books WHERE publisher_id = @publisher_id;
       END');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 

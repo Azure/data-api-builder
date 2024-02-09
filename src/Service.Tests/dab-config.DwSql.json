@@ -2303,47 +2303,6 @@
         }
       ]
     },
-    "GetAuthorsHistoryByFirstName": {
-      "source": {
-        "object": "get_authors_history_by_first_name",
-        "type": "stored-procedure",
-        "parameters": {
-          "firstName": "Aaron"
-        }
-      },
-      "graphql": {
-        "enabled": true,
-        "operation": "mutation",
-        "type": {
-          "singular": "SearchAuthorByFirstName",
-          "plural": "SearchAuthorByFirstNames"
-        }
-      },
-      "rest": {
-        "enabled": true,
-        "methods": [
-          "post"
-        ]
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "execute"
-            }
-          ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [
-            {
-              "action": "execute"
-            }
-          ]
-        }
-      ]
-    },
     "InsertBook": {
       "source": {
         "object": "insert_book",

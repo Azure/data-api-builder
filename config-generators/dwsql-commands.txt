@@ -31,6 +31,9 @@ add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.
 add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "query"
 add CountBooks --config "dab-config.MsSql.json" --source "count_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
 add GetAuthorsHistoryByFirstName --config "dab-config.MsSql.json" --source "get_authors_history_by_first_name" --source.type "stored-procedure" --source.params "firstName:Aaron" --permissions "anonymous:execute" --rest true --graphql SearchAuthorByFirstName
+add DeleteLastInsertedBook --config "dab-config.MsSql.json" --source "delete_last_inserted_book" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
+add UpdateBookTitle --config "dab-config.MsSql.json" --source "update_book_title" --source.type "stored-procedure" --source.params "id:1,title:Testing Tonight" --permissions "anonymous:execute" --rest true --graphql true
+add InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.MsSql.json" --source "insert_and_display_all_books_for_given_publisher" --source.type "stored-procedure" --source.params "title:MyTitle,publisher_name:MyPublisher" --permissions "anonymous:execute" --rest true --graphql true
 update stocks_price --config "dab-config.DwSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
 update stocks_price --config "dab-config.DwSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"

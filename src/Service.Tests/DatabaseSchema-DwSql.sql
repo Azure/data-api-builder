@@ -30,6 +30,7 @@ DROP TABLE IF EXISTS GQLmappings;
 DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS publishers;
+DROP TABLE IF EXISTS authors_history;
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -205,6 +206,15 @@ CREATE TABLE type_table(
     uuid_types uniqueidentifier
 );
 
+CREATE TABLE authors_history (
+    id int NOT NULL,
+    first_name varchar(100) NOT NULL,
+    middle_name varchar(100),
+    last_name varchar(100) NOT NULL,
+    year_of_publish int,
+    books_published int
+);
+
 EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
       SELECT * FROM dbo.publishers
       WHERE id = @id');
@@ -251,6 +261,19 @@ EXEC('CREATE PROCEDURE insert_and_display_all_books_for_given_publisher @book_id
         SELECT * FROM dbo.books WHERE publisher_id = @publisher_id;
       END');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
+
+INSERT INTO authors_history(id, first_name, middle_name, last_name, year_of_publish, books_published)
+VALUES
+(1, 'Isaac', null, 'Asimov', 1993, 6),
+(2, 'Robert', 'A.', 'Heinlein', 1886, null),
+(3, 'Robert', null, 'Silvenberg', null, null),
+(4, 'Dan', null, 'Simmons', 1759, 3),
+(5, 'Isaac', null, 'Asimov', 2000, null),
+(6, 'Robert', 'A.', 'Heinlein', 1899, 2),
+(7, 'Isaac', null, 'Silvenberg', 1664, null),
+(8, 'Dan', null, 'Simmons', 1799, 3),
+(9, 'Aaron', null, 'Mitchells', 2001, 1),
+(10, 'Aaron', 'F.', 'Burtle', null, null)
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');

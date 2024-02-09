@@ -1,8 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.ObjectModel;
+
 namespace Azure.DataApiBuilder.Config;
 
+/// <summary>
+/// This class is responsible for monitoring the config file from the
+/// local file system, and if changes are detected, triggering the
+/// required logic to begin a hot reload scenario.
+/// </summary>
 public class ConfigFileWatcher
 {
     private FileSystemWatcher? _fileWatcher;
@@ -33,7 +40,7 @@ public class ConfigFileWatcher
         {
             if (_configLoader is null)
             {
-                throw new ArgumentNullException("_configProvider can not be null.");
+                throw new ArgumentNullException("ConfigLoader can not be null.");
             }
 
             if (_configLoader.RuntimeConfig is null)
@@ -43,7 +50,7 @@ public class ConfigFileWatcher
 
             if (_configLoader.RuntimeConfig.IsDevelopmentMode())
             {
-                _configLoader.HotReloadConfig();
+                _configLoader.HotReloadConfig(_configLoader.RuntimeConfig.DefaultDataSourceName);
             }
         }
         catch (Exception ex)

@@ -130,7 +130,7 @@ public record RuntimeConfig
         }
     }
 
-    private string _defaultDataSourceName;
+    public string DefaultDataSourceName;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
@@ -169,18 +169,18 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        _defaultDataSourceName = DataSource.ConnectionString.GetHashCode().ToString();
+        DefaultDataSourceName = Guid.NewGuid().ToString(); //DataSource.ConnectionString.GetHashCode().ToString();
 
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>
         {
-            { _defaultDataSourceName, this.DataSource }
+            { DefaultDataSourceName, this.DataSource }
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
+            _entityNameToDataSourceName.TryAdd(entity.Key, DefaultDataSourceName);
         }
 
         // Process data source and entities information for each database in multiple database scenario.
@@ -241,7 +241,7 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        _defaultDataSourceName = DefaultDataSourceName;
+        DefaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
         this.DataSourceFiles = DataSourceFiles;
@@ -311,7 +311,7 @@ public record RuntimeConfig
     public string GetDefaultDataSourceName()
 #pragma warning restore CA1024 // Use properties where appropriate
     {
-        return _defaultDataSourceName;
+        return DefaultDataSourceName;
     }
 
     /// <summary>

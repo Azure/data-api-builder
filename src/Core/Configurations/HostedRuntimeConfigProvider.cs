@@ -16,8 +16,9 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 
 /// <summary>
 /// This class is responsible for exposing the runtime config to the rest of the service when in a hosted scenario.
-/// The <c>HostedRuntimeConfigProvider</c> won't directly load the config, but will instead rely on the <see cref="FileSystemRuntimeConfigLoader"/> to do so.
-/// </summary>
+/// The HostedRuntimeConfigProvider does not rely on the local file system and therefore has logic that handles
+/// the parsing and loading of the config from a string using <see cref="RuntimeConfigLoader"/>, as is required
+/// when we are in a hosted scenario.
 /// <remarks>
 /// The <c>HostedRuntimeConfigProvider</c> will maintain internal state of the config, and will only load it once.
 ///
@@ -64,11 +65,13 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
         }
     }
 
+    // Not currently used in hosted scenario, but needed for interface
     public bool TryGetConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
         throw new NotImplementedException();
     }
 
+    // Not currently used in hosted scenario, but needed for interface
     public bool TryGetLoadedConfig([NotNullWhen(true)] out RuntimeConfig? runtimeConfig)
     {
         throw new NotImplementedException();
@@ -197,22 +200,22 @@ public class HostedRuntimeConfigProvider : IRuntimeConfigProvider
         return false;
     }
 
-    public async Task<bool> InvokeConfigLoadedHandlersAsync()
-    {
-        List<Task<bool>> configLoadedTasks = new();
-        if (_runtimeConfig is not null)
-        {
-            foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
-            {
-                configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
-            }
-        }
+    //public async Task<bool> InvokeConfigLoadedHandlersAsync()
+    //{
+    //    List<Task<bool>> configLoadedTasks = new();
+    //    if (_runtimeConfig is not null)
+    //    {
+    //        foreach (RuntimeConfigLoadedHandler configLoadedHandler in RuntimeConfigLoadedHandlers)
+    //        {
+    //            configLoadedTasks.Add(configLoadedHandler(this, _runtimeConfig));
+    //        }
+    //    }
 
-        bool[] results = await Task.WhenAll(configLoadedTasks);
+    //    bool[] results = await Task.WhenAll(configLoadedTasks);
 
-        // Verify that all tasks succeeded.
-        return results.All(x => x);
-    }
+    //    // Verify that all tasks succeeded.
+    //    return results.All(x => x);
+    //}
 
     private static RuntimeConfig HandleCosmosNoSqlConfiguration(string? schema, RuntimeConfig runtimeConfig, string connectionString, string dataSourceName = "")
     {

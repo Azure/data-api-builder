@@ -22,7 +22,7 @@ public abstract class RuntimeConfigLoader
 {
     protected readonly string? _connectionString;
 
-    public RuntimeConfig? RuntimeConfig;
+    public RuntimeConfig? RuntimeConfig { get; set; }
 
     public RuntimeConfigLoader(string? connectionString = null)
     {
@@ -36,7 +36,7 @@ public abstract class RuntimeConfigLoader
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
+    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string? defaultDataSourceName = null);
 
     /// <summary>
     /// Returns the link to the published draft schema.
@@ -56,6 +56,7 @@ public abstract class RuntimeConfigLoader
     /// value or not while deserializing. By default, no replacement happens.</param>
     /// <param name="dataSourceName"> datasource name for which to add connection string</param>
     /// <param name="datasourceNameToConnectionString"> dictionary of datasource name to connection string</param>
+    /// <param name="replacementFailureMode">Determines failure mode for env variable replacement.</param>
     public static bool TryParseConfig(string json,
         [NotNullWhen(true)] out RuntimeConfig? config,
         ILogger? logger = null,

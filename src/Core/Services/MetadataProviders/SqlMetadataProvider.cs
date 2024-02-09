@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -890,6 +891,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <inheritdoc />
         public string? GetSchemaGraphQLFieldTypeFromFieldName(string graphQLType, string fieldName)
+            => throw new NotImplementedException();
+
+        /// <inheritdoc />
+        public FieldDefinitionNode? GetSchemaGraphQLFieldFromFieldName(string graphQLType, string fieldName)
             => throw new NotImplementedException();
 
         /// <summary>

@@ -337,6 +337,110 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
+        /// Testing the RuntimeCOnfigValidator.ValidateRelationshipsInConfig() method to ensure that we throw a validation error
+        /// when GraphQL is enabled on the source entity and the user defines multiple relationships between the same source and target entities.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(true, DisplayName = "Validate that an exception is thrown when GQL is enabled and user defines multiple relationship between source and target entities.")]
+        [DataRow(false, DisplayName = "Validate that no exception is thrown when GQL is disabled and user defines multiple relationship between source and target entities.")]
+        public void TestMultipleRelationshipsBetweenSourceAndTargetEntities(bool isGQLEnabledForSource)
+        {
+            string sourceEntityName = "SourceEntity", targetEntityName = "TargetEntity";
+
+            // Create relationship between source and target entities.
+            EntityRelationship relationship = new(
+                Cardinality: Cardinality.One,
+                TargetEntity: targetEntityName,
+                SourceFields: new string[] { "abc" },
+                TargetFields: new string[] { "xyz" },
+                LinkingObject: null,
+                LinkingSourceFields: null,
+                LinkingTargetFields: null
+            );
+
+            // Add another relationship between the same source and target entities.
+            EntityRelationship duplicateRelationship = new(
+                Cardinality: Cardinality.Many,
+                TargetEntity: targetEntityName,
+                SourceFields: null,
+                TargetFields: null,
+                LinkingObject: null,
+                LinkingSourceFields: null,
+                LinkingTargetFields: null
+            );
+
+            string relationshipName = "relationship", duplicateRelationshipName = "duplicateRelationship";
+            Dictionary<string, EntityRelationship> relationshipMap = new()
+            {
+                { relationshipName, relationship },
+                { duplicateRelationshipName, duplicateRelationship }
+            };
+
+            // Creating source entity with enabled graphQL
+            Entity sourceEntity = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE1",
+                relationshipMap: relationshipMap,
+                graphQLDetails: new(Singular: "", Plural: "", Enabled: isGQLEnabledForSource)
+            );
+
+            // Creating target entity.
+            Entity targetEntity = GetSampleEntityUsingSourceAndRelationshipMap(
+                source: "TEST_SOURCE2",
+                relationshipMap: null,
+                graphQLDetails: new("", "", true)
+            );
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { sourceEntityName, sourceEntity },
+                { targetEntityName, targetEntity }
+            };
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap)
+            );
+
+            RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    sourceEntityName,
+                    new DatabaseTable("dbo", "TEST_SOURCE1")
+                },
+
+                {
+                    targetEntityName,
+                    new DatabaseTable("dbo", "TEST_SOURCE2")
+                }
+            };
+
+            _sqlMetadataProvider.Setup(x => x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            if (isGQLEnabledForSource)
+            {
+                // Assert for expected exception.
+                DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                    configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                Assert.AreEqual($"Defining multiple relationships: {relationshipName}, {duplicateRelationshipName} between source entity: {sourceEntityName} and target entity: {targetEntityName} is not supported.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            }
+            else
+            {
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
+            }
+        }
+
+        /// <summary>
         /// Test method to check that an exception is thrown when LinkingObject was provided
         /// while either LinkingSourceField or SourceField is null, and either targetFields or LinkingTargetField is null.
         /// And the relationship is not defined in the database.

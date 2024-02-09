@@ -228,7 +228,9 @@ namespace Azure.DataApiBuilder.Core.Services
         public static Type GetSystemTypeFromSqlDbType(string sqlDbTypeName)
         {
             // Remove the length specifier from the type name if it exists.Example: varchar(50) -> varchar
-            string baseType = sqlDbTypeName.Split('(')[0];
+            int separatorIndex = sqlDbTypeName.IndexOf('(');
+            string baseType = separatorIndex == -1 ? sqlDbTypeName : sqlDbTypeName.Substring(0, separatorIndex);
+
             if (Enum.TryParse(baseType, ignoreCase: true, out SqlDbType sqlDbType))
             {
                 if (_sqlDbTypeToType.TryGetValue(sqlDbType, out Type? value))

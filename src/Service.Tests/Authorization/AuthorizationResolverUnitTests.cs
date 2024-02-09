@@ -970,10 +970,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         [DataRow(ClaimValueTypes.UInteger64,    "18446744073709551615",               true, DisplayName = "ulong")]
         [DataRow(ClaimValueTypes.Double,        "12.34",                              true, DisplayName = "decimal")]
         [DataRow(ClaimValueTypes.Double,        "12.345",                             true, DisplayName = "double")]
-        [DataRow(Microsoft.IdentityModel.JsonWebTokens.JsonClaimValueTypes.JsonNull,  "null",                               true, DisplayName = "Json null literal")]
+        [DataRow(JsonClaimValueTypes.JsonNull,  "null",                               true, DisplayName = "Json null literal")]
         [DataRow(ClaimValueTypes.DateTime,      "2022-11-30T22:57:57.5847834Z",       false, DisplayName = "DateTime")]
-        [DataRow(Microsoft.IdentityModel.JsonWebTokens.JsonClaimValueTypes.Json,      "{\"\"ext1\"\":\"\"ext1Value\"\"}",   false, DisplayName = "Json object")]
-        [DataRow(Microsoft.IdentityModel.JsonWebTokens.JsonClaimValueTypes.JsonArray, "[{\"\"ext1\"\":\"\"ext1Value\"\"}]", false, DisplayName = "Json array")]
+        [DataRow(JsonClaimValueTypes.Json,      "{\"\"ext1\"\":\"\"ext1Value\"\"}",   false, DisplayName = "Json object")]
+        [DataRow(JsonClaimValueTypes.JsonArray, "[{\"\"ext1\"\":\"\"ext1Value\"\"}]", false, DisplayName = "Json array")]
         #pragma warning restore format
         public void DbPolicy_ClaimValueTypeParsing(string claimValueType, string claimValue, bool supportedValueType)
         {
@@ -1160,12 +1160,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate the AuthorizationResolver.GetAllUserClaims() successfully adds role claim to the claimsInRequestContext dictionary.
-        /// Only the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
+        /// Test to validate the AuthorizationResolver.GetAllAuthenticatedUserClaims() successfully adds role claim to the claimsInRequestContext dictionary.
+        /// Only one "roles" claim is added to the dictionary claimsInRequestContext and only one Claim is added to the list maintained
+        /// for the key "roles" where the value corresponds to the X-MS-API-ROLE header.
+        /// e.g [key: "roles"] -> [value: List (Claim) { Claim(type: "roles", value: "{x-ms-api-role value") }]
         /// The role claim will be sourced by DAB when the user is not already a member of a system role(authenticated/anonymous),
         /// or the role claim will be sourced from a user's access token issued by an identity provider.
         /// </summary>
-/*        [TestMethod]
+        [TestMethod]
         public void ValidateClientRoleHeaderClaimIsAddedToClaimsInRequestContext()
         {
             Mock<HttpContext> context = new();
@@ -1188,64 +1190,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Execute the method to be tested - GetAllUserClaims().
-            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+            Dictionary<string, List<Claim>> claimsInRequestContext = AuthorizationResolver.GetAllAuthenticatedUserClaims(context.Object);
 
             // Assert that only the role claim corresponding to clientRoleHeader is added to the claims dictionary.
-            Assert.IsTrue(claimsInRequestContext.Count == 1);
-            Assert.IsTrue(claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE));
-            Assert.IsTrue(TEST_ROLE.Equals(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Value));
-        }*/
+            // Assert
+            Assert.AreEqual(claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), true, message: "Only the claim, roles, should be present.");
+            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Count, 1, message: "Only one claim should be present to represent the client role header context.");
+            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].First().Value, TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+        }
 
         /// <summary>
-        /// JWT token JSON payloads may not be flat and may contain nested JSON objects or arrays.
-        /// This test validates that when dotnet (authentication jwt processing code) flattens the JWT token payload,
-        /// DAB is able to ignore duplicate claims (same claim name, different values) because multiple claims with the same name
-        /// are not supported in DAB.
-        /// DAB's Database Policies and Session context features utilize access token claims and there is no mechanism
-        /// to specify which claim value should be used when there are multiple claims with the same name.
+        /// Validates that AuthorizationResolver.GetProcessedUserClaims(...)
+        /// -> returns a dictionary (string, string) where each key is a claim's name and each value is a claim's value.
+        /// -> Resolves scope/scp claims to a single string value with scopes delimited by spaces.
+        /// -> Resolves multiple instances of a claim into a JSON array mirroring the format
+        /// of the claim in the original JWT token. The JSON array's type depends on the value type
+        /// present in the original JWT token.
         /// </summary>
-        /*[TestMethod]
-        public void DuplicateClaimsExcludedFromDbPolicy_SessionCtx_Usage()
-        {
-            // Arrange
-            Mock<HttpContext> context = new();
-
-            // Creat list of claims for testing
-            List<Claim> claims = new()
-            {
-                new("scp", "openid"),
-                new("scp", "profile"),
-                new("scp", "GraphQLEndpoint"),
-                new("scope", "openid"),
-                new("scope", "profile"),
-                new("scope", "GraphQLEndpoint"),
-                new("group", "g1"),
-                new("group", "g2"),
-                new("group", "g3"),
-                new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE)
-            };
-
-            //Add identity object to the Mock context object.
-            ClaimsIdentity identityWithClientRoleHeaderClaim = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
-            identityWithClientRoleHeaderClaim.AddClaims(claims);
-
-            ClaimsPrincipal principal = new();
-            principal.AddIdentity(identityWithClientRoleHeaderClaim);
-
-            context.Setup(x => x.User).Returns(principal);
-            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
-
-            // Act
-            Dictionary<string, List<Claim>> claimsInRequestContextte = AuthorizationResolver.GetAllUserClaims(context.Object);
-
-            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaimsForDbPolicy(context.Object);
-
-            // Assert
-            Assert.AreEqual(claimsInRequestContext.Count, 1, message: "Only one claim should be present to represent the client role header context.");
-            Assert.AreEqual(claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), true, message: "Only the claim, roles, should be present.");
-            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Value, TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
-        }*/
-
         [TestMethod]
         public async Task TestClaimsParsingToJson()
         {

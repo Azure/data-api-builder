@@ -35,7 +35,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Wrapper for CreatePaginationConnectionFromJsonElement
-        /// Disposes the JsonDocument passed to it
         /// </summary>
         public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
         {
@@ -59,7 +58,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // in dw we wrap array with "" and hence jsonValueKind is string instead of array.
             if (root.ValueKind is JsonValueKind.String)
             {
-                JsonDocument document = JsonDocument.Parse(root.GetString()!);
+                using JsonDocument document = JsonDocument.Parse(root.GetString()!);
                 root = document.RootElement.Clone();
             }
 

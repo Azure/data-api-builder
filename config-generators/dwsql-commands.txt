@@ -144,3 +144,8 @@ update Journal --config "dab-config.DwSql.json" --permissions "policy_tester_upd
 update Journal --config "dab-config.DwSql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.DwSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
 update stocks_view_selected --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete"
+update InsertBook --config "dab-config.DwSql.json" --permissions "authenticated:execute"
+update DeleteLastInsertedBook --config "dab-config.DwSql.json" --permissions "authenticated:execute"
+update UpdateBookTitle --config "dab-config.DwSql.json" --permissions "authenticated:execute"
+update GetAuthorsHistoryByFirstName --config "dab-config.DwSql.json" --permissions "authenticated:execute"
+update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.DwSql.json" --permissions "authenticated:execute"

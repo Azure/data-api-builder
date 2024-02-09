@@ -1,15 +1,9 @@
 ﻿{
   DataSource: {
     Options: {
-      container: {
-        ValueKind: String
-      },
-      database: {
-        ValueKind: String
-      },
-      schema: {
-        ValueKind: String
-      }
+      container: planet,
+      database: graphqldb,
+      schema: schema.gql
     }
   },
   Runtime: {
@@ -371,6 +365,81 @@
               },
               {
                 Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      AdditionalAttribute: {
+        Source: {
+          Object: graphqldb.additionalAttribute
+        },
+        GraphQL: {
+          Singular: AdditionalAttribute,
+          Plural: AdditionalAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      MoonAdditionalAttribute: {
+        Source: {
+          Object: graphqldb.moonAdditionalAttributes
+        },
+        GraphQL: {
+          Singular: MoonAdditionalAttribute,
+          Plural: MoonAdditionalAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      MoreAttrAlias: {
+        Source: {
+          Object: graphqldb.moreAttribute
+        },
+        GraphQL: {
+          Singular: MoreAttribute,
+          Plural: MoreAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
               }
             ]
           }

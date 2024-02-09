@@ -17,9 +17,12 @@ jobs:
       solution: '**/*.sln'
       buildPlatform: 'Any CPU'
       buildConfiguration: 'Release'
+      dbPassword: ''
+      data-source.connection-string: ''
+      testDatabaseName: 'PostgreSqlTestDb'
 
   steps:
-  - task: NuGetAuthenticate@0
+  - task: NuGetAuthenticate@1
     displayName: 'NuGet Authenticate'
 
   - task: UseDotNet@2
@@ -43,10 +46,26 @@ jobs:
       dockerVersion: 17.09.0-ce
       releaseType: stable
 
+  - task: Bash@3
+    displayName: 'Generate password'
+    inputs:
+      targetType: 'inline'
+      script: |
+        password=$(cat /dev/urandom | tr -dc 'A-Za-z0-9' | head -c24)
+        echo "##vso[task.setvariable variable=dbPassword;]$password"
+
+  - task: PowerShell@2
+    displayName: 'Set Connection String'
+    inputs:
+      targetType: 'inline'
+      script: |
+        $connectionString="Host=localhost;Database=$(testDatabaseName);username=postgres;password=$(dbPassword)"
+        Write-Host "##vso[task.setvariable variable=data-source.connection-string]$connectionString"
+
   - bash: |
       docker run --name postgres-container -p 5432:5432 \
-      -e POSTGRES_PASSWORD=$(PostgresPassword) \
-      -e POSTGRES_DB=$(TestDatabaseName) \
+      -e POSTGRES_PASSWORD=$(dbPassword) \
+      -e POSTGRES_DB=$(testDatabaseName) \
       -d postgres
     condition: eq( variables['Agent.OS'], 'Linux' )
     displayName: Get and Start Ubuntu Postgres Image Docker

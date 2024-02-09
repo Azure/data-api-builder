@@ -2233,7 +2233,7 @@
         "type": "stored-procedure"
       },
       "graphql": {
-        "enabled": false,
+        "enabled": true,
         "operation": "mutation",
         "type": {
           "singular": "GetBook",

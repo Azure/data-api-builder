@@ -191,11 +191,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return element;
         }
 
-        /// <inheritdoc />
-        public object ResolveList(
-                    JsonElement array,
-                    IObjectField fieldSchema,
-                    ref IMetadata metadata)
+        /// <summary>
+        /// Resolves the JsonElement, an array, into a list of jsonelements where each element represents
+        /// an entry in the original array.
+        /// </summary>
+        /// <param name="array">JsonElement representing a JSON array. The possible representations:
+        /// JsonValueKind.Array -> ["item1","itemN"]
+        /// JsonValueKind.String (array of objects) -> [ { "field1": "field1Value", "field2": "field2Value" }, { ... } ]
+        /// The passed in JSON element's value kind may be an array or string.</param>
+        /// <param name="fieldSchema">Definition of field being resolved. For lists: [/]items:[entity!]!]</param>
+        /// <param name="metadata">PaginationMetadata of the parent field of the currently processed field in HC middlewarecontext.</param>
+        /// <returns>List of JsonElements parsed from the provided JSON array.</returns>
+        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];

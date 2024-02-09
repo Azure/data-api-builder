@@ -216,6 +216,14 @@ namespace Azure.DataApiBuilder.Service.Services
             return null;
         }
 
+        /// <summary>
+        /// The ListField pure resolver is executed when processing "list" fields.
+        /// For example, when executing the query { myEntity { items { entityField1 } } }
+        /// this pure resolver will be executed when processing the field "items" because
+        /// it will contain the "list" of results.
+        /// </summary>
+        /// <param name="context">PureResolver context provided by HC middleware.</param>
+        /// <returns>The resolved list, a JSON array.</returns>
         public object? ExecuteListField(IPureResolverContext context)
         {
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
@@ -245,6 +253,9 @@ namespace Azure.DataApiBuilder.Service.Services
             if (result is not null)
             {
                 context.RegisterForCleanup(() => result.Dispose());
+                // Since the JsonDocument instance is registered for disposal,
+                // we don't need to clone the root element. Since the JsonDocument
+                // won't be disposed of after this code block.
                 context.Result = result.RootElement;
             }
             else
@@ -318,7 +329,7 @@ namespace Azure.DataApiBuilder.Service.Services
         /// and metadata from the request's (query) field.
         /// Then: Creates parameters from schema argument fields when they have default values.
         /// Lastly: Gets the user provided argument values from the query to either:
-        /// 1. Overwrites the parameter value if it exists in the collectedParameters dictionary
+        /// 1. Overwrite the parameter value if it exists in the collectedParameters dictionary
         /// or
         /// 2. Adds the parameter/parameter value to the dictionary.
         /// </summary>
@@ -435,36 +446,64 @@ namespace Azure.DataApiBuilder.Service.Services
             {
                 // entering this block means that:
                 // context.Selection.ResponseName: items
-                // context.Path: /books/items (Depth: 1)
-                // context.Path.Parent: /books (Depth: 0)
-                // The parent's metadata will be stored in ContextData with a depth of context.Path minus 1.
-                // In this example, the resolved metadata key is books_PURE_RESOLVER_CTX::0
+                // context.Path: /entityA/items (Depth: 1)
+                // context.Path.Parent: /entityA (Depth: 0)
+                // The parent's metadata will be stored in ContextData with a depth of context.Path minus 1. -> "::0"
+                // The resolved metadata key is entityA_PURE_RESOLVER_CTX and is appended with "::0"
+                // Another case would be:
+                // context.Path: /books/items[0]/authors/items
+                // context.Path.Parent: /books/items[0]/authors
+                // The nuance here is that HC counts the depth when the path is expanded as
+                // /books/items/items[idx]/authors -> Depth: 3 (0-indexed) which maps to the
+                // pagination metadata for the "authors/items" subquery.
                 string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth;
                 return (IMetadata)context.ContextData[paginationObjectParentName]!;
             }
 
+            // This section would be reached when processing a Cosmos query of the form:
+            // { planet_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue) { tags } }
+            // where nested entities like the entity 'tags' are not nested within an "items" field
+            // like for SQL databases.
             string metadataKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
 
-            if (context.ContextData.ContainsKey(metadataKey))
+            if (context.ContextData.TryGetValue(key: metadataKey, out object? paginationMetadata) && paginationMetadata is not null)
             {
-                return (IMetadata)context.ContextData[metadataKey]!;
+                return (IMetadata)paginationMetadata;
             }
             else
             {
-                return null!;
+                // CosmosDB database type does not utilize pagination metadata.
+                return PaginationMetadata.MakeEmptyPaginationMetadata();
             }
         }
 
+        /// <summary>
+        /// Get the pagination metadata object for the field represented by the
+        /// pure resolver context.
+        /// e.g. when Context.Path is "/books/items[0]/authors", this function gets
+        /// the pagination metadata for authors, which is stored in the global middleware
+        /// context under key: "books_PURE_RESOLVER_CTX::1", where "books" is the parent object
+        /// and depth of "1" implicitly represents the path "/books/items". When "/books/items"
+        /// is processed by the pure resolver, the available pagination metadata maps to the object
+        /// type that enumerated in "items"
+        /// </summary>
+        /// <param name="context">Pure resolver context</param>
+        /// <returns>Pagination metadata</returns>
         private static IMetadata GetMetadataObjectField(IPureResolverContext context)
         {
             // Depth Levels:  / 0   /  1  /   2    /   3
             // Example Path: /books/items/items[0]/publishers
             // Depth of 1 should have key in context.ContextData
-            // Depth of 2 will not have context.ContextData entry because non-Indexer path is the path that is cached.
+            // Depth of 2 will not have context.ContextData entry because non-Indexed path element is the path that is cached.
             // PaginationMetadata for items will be consistent across each subitem. So we can use the same metadata for each subitem.
             // An indexer path segment is a segment that looks like -> items[n]
             if (context.Path.Parent is IndexerPathSegment)
             {
+                // When context.Path is "/books/items[0]/authors"
+                // Parent -> "/books/items[0]"
+                // Parent -> "/books/items" -> Depth of this path is used to create the key to get
+                // paginationmetadata from context.ContextData
+                // The PaginationMetadata fetched has subquery metadata for "authors" from path "/books/items/authors"
                 string objectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent!.Parent!.Depth;
                 return (IMetadata)context.ContextData[objectParentName]!;
             }
@@ -489,15 +528,18 @@ namespace Azure.DataApiBuilder.Service.Services
 
             if (current.Parent is RootPathSegment or null)
             {
+                // current: "/entity/items -> "items"
                 return ((NamePathSegment)current).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
             }
-
+            // current: "/entity/items -> current.Parent: "entity"
             while (current.Parent is not null)
             {
                 current = current.Parent;
 
                 if (current.Parent is RootPathSegment or null)
                 {
+                    // current: "/entity"
+                    // Resolved NamePathSegment.Name -> "entity"
                     return ((NamePathSegment)current).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
                 }
             }
@@ -505,6 +547,13 @@ namespace Azure.DataApiBuilder.Service.Services
             throw new InvalidOperationException("The path is not rooted.");
         }
 
+        /// <summary>
+        /// Resolves the name of the root object of a selection set to
+        /// use as the beginning of a key used to index pagination metadata in the
+        /// global HC middleware context.
+        /// </summary>
+        /// <param name="rootSelection">Root object field of query.</param>
+        /// <returns>"rootObjectName_PURE_RESOLVER_CTX"</returns>
         private static string GetMetadataKey(IFieldSelection rootSelection)
         {
             return rootSelection.ResponseName + PURE_RESOLVER_CONTEXT_SUFFIX;
@@ -525,15 +574,23 @@ namespace Azure.DataApiBuilder.Service.Services
         }
 
         /// <summary>
-        /// Sets the pagination metadata for child fields.
+        /// Stores the pagination metadata in the global context.ContextData accessible to
+        /// all pure resolvers for query fields references nested entities.
         /// </summary>
-        /// <param name="context"></param>
-        /// <param name="metadata"></param>
+        /// <param name="context">Pure resolver context</param>
+        /// <param name="metadata">Pagination metadata</param>
         private static void SetNewMetadataChildren(IPureResolverContext context, IMetadata? metadata)
         {
+            // When context.Path is /entity/items the metadata key is "entity"
+            // The context key will use the depth of "items" so that the provided
+            // pagination metadata (which holds the subquery metadata for "/entity/items/nestedEntity")
+            // can be stored for future access when the "/entity/items/nestedEntity" pur resolver executes.
+            // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
+            // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
+            // is 3 because depth is 0-indexed.
             string contextKey = GetMetadataKey(context.Path) + "::" + context.Path.Depth;
 
-            // It's okay to reset the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
+            // It's okay to overwrite the context when we are visiting a different item in items e.g. books/items/items[1]/publishers since
             // context for books/items/items[0]/publishers processing is done and that context isn't needed anymore.
             if (!context.ContextData.TryAdd(contextKey, metadata))
             {

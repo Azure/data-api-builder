@@ -29,6 +29,8 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <NoWarn>NU1603</NoWarn>
+    <Version>0.11</Version>
+    <FileVersion>0.11</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">

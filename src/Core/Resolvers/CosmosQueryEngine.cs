@@ -54,7 +54,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName)
         {
             // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
-            // TODO: add support for nesting
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 

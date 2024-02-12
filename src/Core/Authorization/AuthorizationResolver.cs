@@ -562,12 +562,15 @@ public class AuthorizationResolver : IAuthorizationResolver
             // When resolving claims, DAB should explicitly recognize a single instance of the 'roles' claim
             // which represents the role resolved in the x-ms-api-role http header.
             // DAB authentication middleware validates the x-ms-api-role value.
+
+            // Check to see if we've already resolved the role claim from the authenticated user's claims,
+            // and if not, 
             if (!claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
                 identity.HasClaim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader))
             {
                 List<Claim> roleClaim = new()
                 {
-                    new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String)
+                    new Claim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader, valueType: ClaimValueTypes.String)
                 };
 
                 claimsInRequestContext.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, roleClaim);
@@ -583,13 +586,9 @@ public class AuthorizationResolver : IAuthorizationResolver
                     continue;
                 }
 
-                if (claimsInRequestContext.ContainsKey(claim.Type))
+                if (!claimsInRequestContext.TryAdd(key: claim.Type, value: new List<Claim>() { claim }))
                 {
                     claimsInRequestContext[claim.Type].Add(claim);
-                }
-                else
-                {
-                    claimsInRequestContext.Add(claim.Type, new List<Claim>() { claim });
                 }
             }
         }

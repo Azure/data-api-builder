@@ -83,7 +83,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
 
             string dateTimeFormat = "yyyy-MM-ddTHH:mm:ss.fffZ"; // ISO 8601 format
 
-            // Function to convert all DateTime values to a consistent format
+            // Function to convert different DateTime values to a consistent format
+            // Example: "2021-10-01T00:00:00.000Z" and "2021-10-01T00:00:00.000+00:00" are equivalent.
+            // So, we convert it to a consistent format to make the comparison easier.
             // The convertDateTime function is a local function inside the PerformTestEqualJsonStrings method.
             // It's used to encapsulate the logic for converting DateTime values to ISO 8601 format.
             // This makes the PerformTestEqualJsonStrings method easier to read and understand.

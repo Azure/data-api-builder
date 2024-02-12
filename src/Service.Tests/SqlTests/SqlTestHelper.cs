@@ -63,12 +63,65 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         }
 
         /// <summary>
-        /// Adds a useful failure message around the expected == actual operation.
-        /// <summary>
+        /// Compares two JSON strings for equality after converting all DateTime values if present to a consistent format.
+        /// Also Adds a useful failure message around the expected == actual operation.
+        /// </summary>
+        /// <param name="expected">The expected JSON string.</param>
+        /// <param name="actual">The actual JSON string.</param>
         public static void PerformTestEqualJsonStrings(string expected, string actual)
         {
-            Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
-            $"\nExpected:<{expected}>\nActual:<{actual}>");
+            // If either of the strings is null or empty, no need to parse them to JToken. Assert their equality directly.
+            if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(actual))
+            {
+                Assert.IsTrue(JsonStringsDeepEqual(expected, actual),
+                $"\nExpected:<{expected}>\nActual:<{actual}>");
+                return;
+            }
+
+            JToken expectedJObject = JToken.Parse(expected);
+            JToken actualJObject = JToken.Parse(actual);
+
+            string dateTimeFormat = "yyyy-MM-ddTHH:mm:ss.fffZ"; // ISO 8601 format
+
+            // Function to convert different DateTime values to a consistent format
+            // Example: "2021-10-01T00:00:00.000Z" and "2021-10-01T00:00:00.000+00:00" are equivalent.
+            // So, we convert it to a consistent format to make the comparison easier.
+            // The convertDateTime function is a local function inside the PerformTestEqualJsonStrings method.
+            // It's used to encapsulate the logic for converting DateTime values to ISO 8601 format.
+            // This makes the PerformTestEqualJsonStrings method easier to read and understand.
+            void convertDateTimeToIsoFormat(JToken token)
+            {
+                switch (token.Type)
+                {
+                    case JTokenType.Object:
+                        foreach (JProperty prop in token.Children<JProperty>())
+                        {
+                            if (DateTime.TryParse(prop.Value.ToString(), out DateTime date))
+                            {
+                                prop.Value = date.ToString(dateTimeFormat);
+                            }
+                            else
+                            {
+                                convertDateTimeToIsoFormat(prop.Value);
+                            }
+                        }
+
+                        break;
+                    case JTokenType.Array:
+                        foreach (JToken child in token.Children())
+                        {
+                            convertDateTimeToIsoFormat(child);
+                        }
+
+                        break;
+                }
+            }
+
+            convertDateTimeToIsoFormat(expectedJObject);
+            convertDateTimeToIsoFormat(actualJObject);
+
+            Assert.IsTrue(JsonStringsDeepEqual(expectedJObject.ToString(), actualJObject.ToString()),
+                $"\nExpected:<{expectedJObject.ToString()}>\nActual:<{actualJObject.ToString()}>");
         }
 
         /// <summary>

@@ -236,7 +236,6 @@ CREATE TABLE default_with_function_table
     default_date_string DATETIME DEFAULT ("1999-01-08 10:23:54")
 );
 
-
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)

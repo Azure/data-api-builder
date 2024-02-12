@@ -176,7 +176,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 "JOIN d IN b.moreAttributes " +
                 "WHERE d.name = \"moonattr0\"";
 
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+            await ExecuteAndValidateResult(
+                _graphQLQueryName,
+                gqlQuery,
+                dbQueryWithJoin,
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()));
         }
 
         /// <summary>
@@ -262,9 +266,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
 
-        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
+        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, string authToken = null)
         {
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             ValidateResults(actual.GetProperty("items"), expected.RootElement);
         }
@@ -1001,6 +1005,32 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+        }
+
+        [TestMethod]
+        public async Task TestQueryFilterNestedArrayFieldAuth_UnauthorizedNestedField()
+        {
+            // Run query
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+               @" : {moons: {moonAdditionalAttributes: {moreAttributes: {name: {eq: ""moonattr0""}}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQuery,
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 

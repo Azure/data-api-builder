@@ -100,6 +100,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                     if (DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(f, (ObjectTypeDefinitionNode)def, baseEntityName))
                     {
+                        // The field can represent a related entity with M:N relationship with the parent.
                         NameNode baseEntityNameForField = new(typeName);
                         typeName = GenerateLinkingNodeName(baseEntityName.Value, typeName);
                         def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == typeName)!;
@@ -186,8 +187,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="inputs">Dictionary of all input types, allowing reuse where possible.</param>
         /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
         /// <param name="field">Field that the input type is being generated for.</param>
-        /// <param name="typeName">Name of the input type in the dictionary.</param>
-        /// <param name="baseObjectTypeName">Name of the underlying object type of the field for which the input type is to be created.</param>
+        /// <param name="typeName">In case of relationships with M:N cardinality, typeName = type name of linking object, else typeName = type name of target entity.</param>
+        /// <param name="baseObjectTypeName">Object type name of the target entity.</param>
         /// <param name="childObjectTypeDefinitionNode">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
         /// <param name="entities">Runtime configuration information for entities.</param>
@@ -215,8 +216,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             ITypeNode type = new NamedTypeNode(node.Name);
             if (databaseType is DatabaseType.MSSQL && RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
             {
-                // For *:N relationships, we need to create a list type.
-                type = new ListTypeNode(new NonNullTypeNode((INullableTypeNode)type));
+                // For *:N relationships, we need to create a list type. Since providing input for a relationship field is optional,
+                // the type should be nullable.
+                type = (INullableTypeNode)GenerateListType(type, field.Type.InnerType());
             }
             // For a type like [Bar!]! we have to first unpack the outer non-null
             else if (field.Type.IsNonNullType())
@@ -241,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 name: field.Name,
                 description: new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                type: DoesRelationalDBSupportNestedMutations(databaseType) ? type.NullableType() : type,
+                type: type,
                 defaultValue: null,
                 directives: field.Directives
             );

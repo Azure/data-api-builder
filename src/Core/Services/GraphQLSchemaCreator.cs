@@ -20,7 +20,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using Microsoft.Extensions.DependencyInjection;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
-using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -365,7 +364,9 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
 
                     // Store object type of the linking node for (sourceEntityName, targetEntityName).
-                    NameNode sourceTargetLinkingNodeName = new(GenerateLinkingNodeName(objectTypes[sourceEntityName].Name.Value, objectTypes[targetEntityName].Name.Value));
+                    NameNode sourceTargetLinkingNodeName = new(GenerateLinkingNodeName(
+                        objectTypes[sourceEntityName].Name.Value,
+                        objectTypes[targetEntityName].Name.Value));
                     objectTypes[sourceTargetLinkingNodeName.Value] = new(
                         location: null,
                         name: sourceTargetLinkingNodeName,

@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <summary>
         /// <code>Do: </code> Inserts new row in a table containing default values as built_in methods.
         /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
-        /// as graphQL response.
+        /// as GraphQL response.
         /// </summary>
         [TestMethod]
         public async Task InsertMutationWithDefaultBuiltInFunctions()

@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         /// <summary>
         /// <code>Do: </code> Inserts new row and return all its columns
         /// <code>Check: </code> A row is inserted in the table that has rows with default values as built_in methods.
-        /// it should insert it correctly with default values correctly handled by database.
+        /// it should insert it correctly with default values handled by database.
         /// current_date, current_timestamp, random_number, next_date have default value as built_in methods GETDATE(), NOW(), RAND(), DATEADD(), resp.
         /// default_string_with_parenthesis has default value "()", default_function_string_with_parenthesis has default value "NOW()".
         /// default_integer has default value 100, default_date_string has default value "1999-01-08 10:23:54".

@@ -252,8 +252,6 @@
               "default": 5
             }
           }
-        }
-      }
         },
         "telemetry": {
           "type": "object",

@@ -33,7 +33,6 @@ public class AuthorizationResolver : IAuthorizationResolver
     public const string AUTHORIZATION_HEADER = "Authorization";
     public const string ROLE_ANONYMOUS = "anonymous";
     public const string ROLE_AUTHENTICATED = "authenticated";
-    public const string ENTRA_ID_SCP_CLAIM = "scp";
 
     public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -487,11 +486,13 @@ public class AuthorizationResolver : IAuthorizationResolver
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => int.Parse(claim.Value))));
                         break;
                     // Per Microsoft Docs: UInt32's CLS compliant alternative is Integer64
+                    // https://learn.microsoft.com/dotnet/api/system.uint32?view=net-6.0#remarks
                     case ClaimValueTypes.UInteger32:
                     case ClaimValueTypes.Integer64:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => long.Parse(claim.Value))));
                         break;
                     // Per Microsoft Docs: UInt64's CLS compliant alternative is decimal
+                    // https://learn.microsoft.com/dotnet/api/system.uint64?view=net-6.0#remarks
                     case ClaimValueTypes.UInteger64:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => decimal.Parse(claim.Value))));
                         break;
@@ -621,7 +622,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// </summary>
     /// <param name="claimTypeMatch">The claimType present in policy with a prefix of @claims..</param>
     /// <param name="claimsInRequestContext">Dictionary populated with all the user claims.</param>
-    /// <returns>The claim value for the given claimTypeMatch.</returns>
+    /// <returns>The claim value of the first claim whose claimType matches 'claimTypeMatch'.</returns>
     /// <exception cref="DataApiBuilderException"> Throws exception when the user does not possess the given claim.</exception>
     private static string GetClaimValueFromClaim(Match claimTypeMatch, Dictionary<string, List<Claim>> claimsInRequestContext)
     {

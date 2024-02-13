@@ -38,11 +38,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
         private const string LOCAL_ISSUER = "https://fabrikam.com";
 
         /// <summary>
-        /// Creates customized webhost
+        /// Creates customized webhost with:
+        /// - DAB's Simulator/ EasyAuth authentication middleware and ClientRoleHeader middleware
+        /// - dotnet's authorization middleware.
         /// </summary>
         /// <param name="provider">Runtime configured identity provider name.</param>
         /// <param name="useAuthorizationMiddleware">Whether to include authorization middleware in request pipeline.</param>
-        /// <returns>IHost</returns>
+        /// <returns>IHost to be used to create a TestServer</returns>
         public static async Task<IHost> CreateWebHost(
             string provider,
             bool useAuthorizationMiddleware)
@@ -107,6 +109,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                 .StartAsync();
         }
 
+        /// <summary>
+        /// Creates a webhost with
+        /// - dotnet's authentication/authorization middleware configured with
+        /// the JwtBearer authentication scheme. Expects a key to be
+        /// provided which is used to validate the JWT token.
+        /// - DAB's ClientRoleHeader middleware
+        /// </summary>
+        /// <param name="key">Issuer Signing key for JwtBearerOptions</param>
+        /// <returns>IHost to be used to create a TestServer</returns>
         public static async Task<IHost> CreateWebHostCustomIssuer(SecurityKey key)
         {
             // Setup RuntimeConfigProvider object for the pipeline.

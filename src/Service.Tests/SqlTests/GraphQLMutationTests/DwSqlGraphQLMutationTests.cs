@@ -577,7 +577,7 @@ FROM [books] AS [table0]
             // Stored Procedure didn't return anything
             Assert.AreEqual("[]", graphQLResponse.ToString());
 
-            // check to verify new element is inserted
+            // check to verify new element is deleted
             string maxIdAfterDeletion = await GetDatabaseResultAsync(dbQueryToVerifyDeletion);
             Assert.AreNotEqual(maxIdBeforeDeletion, maxIdAfterDeletion, "Last inserted book should be deleted");
         }

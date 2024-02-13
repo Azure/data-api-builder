@@ -514,7 +514,7 @@ SELECT CASE
         }
 
         /// <summary>
-        /// <code>Do: </code>Book title updation and return the updated row
+        /// <code>Do: </code>Update book title and return the updated row
         /// <code>Check: </code>if the result returned from the mutation is correct and
         /// updated value exists in the database
         /// </summary>

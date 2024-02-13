@@ -2060,6 +2060,47 @@
       }
     },
     {
+      DefaultBuiltInFunction: {
+        Source: {
+          Object: default_with_function_table,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: DefaultBuiltInFunction,
+          Plural: DefaultBuiltInFunctions,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    current_date,
+                    next_date
+                  ]
+                }
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       PublisherNF: {
         Source: {
           Object: publishers,

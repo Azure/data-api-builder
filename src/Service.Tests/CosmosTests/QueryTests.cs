@@ -2,13 +2,20 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
+using Azure.DataApiBuilder.Service.Tests.Configuration;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -470,6 +477,152 @@ fragment p on Planet { id }
             JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query, new() { { "id", id }, { "partitionKeyValue", id } });
 
             Assert.AreEqual(id, response.GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task QueryWithCacheEnabledShouldReturnCachedResponse()
+        {
+            const string SCHEMA = @"
+type Planet @model(name:""Planet"") {
+    id : ID!,
+    name : String,
+    age : Int,
+}";
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            Dictionary<string, object> dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), _containerName);
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
+            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
+                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityAction deleteAction = new(
+                Action: EntityActionOperation.Delete,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { createAction, readAction, deleteAction }) };
+
+            Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Rest: null,
+                                  GraphQL: new(Singular: "Planet", Plural: "Planets"),
+                                  Permissions: permissions,
+                                  Relationships: null,
+                                  Mappings: null,
+                                  Cache: new EntityCacheOptions()
+                                  {
+                                      Enabled = true,
+                                      TtlSeconds = 5,
+                                  }
+                                  );
+
+            string entityName = "Planet";
+
+            // cache configuration
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName, new EntityCacheOptions() { Enabled = true, TtlSeconds = 5 }); 
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            const string CUSTOM_SCHEMA = "custom-schema.gql";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            File.WriteAllText(CUSTOM_SCHEMA, SCHEMA);
+
+            string id = _idList[0];
+            string name;
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
+    updatePlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+     }
+}";
+
+                string graphQLQuery = @$"
+query {{
+    planet_by_pk (id: ""{id}"") {{
+        id
+        name
+    }}
+}}";
+                string queryName = "planet_by_pk";
+
+                // First query
+                JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                            client,
+                                            server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                            query: graphQLQuery,
+                                            queryName: queryName
+                                            );
+                name = queryResponse.GetProperty("name").GetString();
+
+                var update = new
+                {
+                    id = id,
+                    name = "new_name",
+                };
+
+                // Mutated name property
+                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                client,
+                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                query: mutation,
+                                queryName: "updatePlanet",
+                                variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } },
+                                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
+                                );
+
+                // Asserting name is mutated
+                Assert.IsFalse(queryResponse.GetProperty("name").GetString().Equals(update.name), "Mutation didn't change the name successfully");
+
+                // Second query - the data returned is from the cache, not the mutated one
+                JsonElement queryResponse2 = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                             client,
+                                             server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                             query: graphQLQuery,
+                                             queryName: queryName
+                                             );
+
+                // Asserting cached data is returned
+                Assert.IsFalse(queryResponse.GetProperty("name").GetString() != name, "Query didn't return cached value");
+
+                update = new
+                {
+                    id = id,
+                    name = name,
+                };
+
+                // Clean up setting document name back to original value
+                _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                client,
+                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                query: mutation,
+                                queryName: "updatePlanet",
+                                variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } },
+                                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
+                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
+                                );
+            }
         }
 
         [TestMethod]

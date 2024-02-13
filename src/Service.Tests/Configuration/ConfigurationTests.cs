@@ -36,6 +36,7 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
+using HotChocolate.Utilities;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -3184,7 +3185,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             GraphQLRuntimeOptions graphqlOptions,
             RestRuntimeOptions restOptions,
             Entity entity = null,
-            string entityName = null)
+            string entityName = null,
+            EntityCacheOptions cacheOptions =null
+            )
         {
             entity ??= new(
                 Source: new("books", EntitySourceType.Table, null, null),
@@ -3217,7 +3220,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
                 Runtime: new(restOptions, graphqlOptions,
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: cacheOptions),
                 Entities: new(entityMap)
             );
         }

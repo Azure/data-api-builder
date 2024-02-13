@@ -551,7 +551,7 @@ SELECT CASE
         }
 
         /// <summary>
-        /// <code>Do: </code>deletes a Book and return nothing
+        /// <code>Do: </code>deletes a Book and return an empty array.
         /// <code>Check: </code>the intended book is deleted
         /// </summary>
         [TestMethod]

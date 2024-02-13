@@ -440,18 +440,22 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
-    /// Returns a dictionary (string, string) where a key is a claim's name and
-    /// a value is a claim's value.
+    /// Returns a dictionary (string, string) where a key is a claim's name and a value is a claim's value.
     /// Resolves multiple claim objects of the same claim type into a JSON array mirroring the format
     /// of the claim in the original JWT token. The JSON array's type depends on the value type
     /// present in the original JWT token.
     /// </summary>
     /// <remarks>
-    /// DotNet will resolve a claim with value type JSON array to multiple Claim objects with the same type and different values.
-    /// e.g. roles and groups claim, which are arrays of strings and are flattened to: roles: role1, roles: role2, groups: group1, groups: group2
-    /// "Claims are name valued pairs and nothing more." per https://github.com/dotnet/aspnetcore/issues/13647#issuecomment-527523224
-    /// The library that parses the JWT token into claims is the one that decides *how* to resolve the claims from the token's JSON payload.
-    /// dotnet   flattens the claims into a list: https://github.com/dotnet/aspnetcore/blob/282bfc1b486ae235a3395150a8d53073a57b7f43/src/Security/Authentication/OAuth/src/JsonKeyClaimAction.cs#L39-L53
+    /// DotNet will resolve a claim with value type JSON array to multiple Claim objects
+    /// with the same type and different values.
+    /// e.g. roles and groups claim, which are arrays of strings and are flattened to:
+    /// roles: role1, roles: role2, groups: group1, groups: group2
+    /// "Claims are name valued pairs and nothing more."
+    /// Ref: https://github.com/dotnet/aspnetcore/issues/13647#issuecomment-527523224
+    /// The library that parses the JWT token into claims is the one that decides
+    /// *how* to resolve the claims from the token's JSON payload.
+    /// dotnet flattens the claims into a list:
+    /// https://github.com/dotnet/aspnetcore/blob/282bfc1b486ae235a3395150a8d53073a57b7f43/src/Security/Authentication/OAuth/src/JsonKeyClaimAction.cs#L39-L53
     /// </remarks>
     /// <param name="context">HttpContext which contains a ClaimsPrincipal</param>
     /// <returns>Processed claims and claim values.</returns>
@@ -470,7 +474,7 @@ public class AuthorizationResolver : IAuthorizationResolver
         {
             // Some identity providers (other than Entra ID) may emit a 'scope' claim as a JSON string array. dotnet will
             // create claim objects for each value in the array. DAB will honor that format
-            // and pass the 'scope' claim objects to MSSQL's session context as a JSON string array.
+            // and processes the 'scope' claim objects as a JSON array serialized to a string.
             if (claimValues.Count > 1)
             {
                 switch (claimValues.First().ValueType)

@@ -1063,23 +1063,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// HappyPath: Duplicate claim types gracefully handled and request does not fail.
+        /// HappyPath: Duplicate claim types resolved into:
+        /// key -> claimType (name)
+        /// value -> scalar as string
         /// Database policies do not support operators like "in" or "contains" so when a
         /// list of claims (count > 1) exists, return the first value in the list of claims.
-        /// While not ideal behavior, this is not a breaking change and an improvement since historically,
-        /// if a user had >1 role AND dab config defined a db policy to include the token '@claims.role',
-        /// DAB would fail the request. Now, the request won't fail but the value resolved
-        /// for `@claims.role` is the first claim encountered (when there are multiple claim instances).
+        /// While not ideal behavior, this is *not* a breaking change and an "improvement" since historically,
+        /// DAB would fail the request if a user had >1 role AND dab config defined a db policy
+        /// to include the token '@claims.role'. While this test validates the expected behavior of
+        /// not failing the request, the value resolved for `@claims.groups` is the first claim encountered
+        /// (when there are multiple claim instances like when 'groups' is a JSON array in the JWT token.
         /// </summary>
         [TestMethod]
         public void ParsePolicyWithDuplicateUserClaims()
         {
+            // Arrange
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: TEST_ENTITY,
                 roleName: TEST_ROLE,
                 operation: TEST_OPERATION,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
-                databasePolicy: "@claims.scope eq @item.col2"
+                databasePolicy: "@claims.scope eq @item.col2 and @claims.groups eq @item.col3"
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
             Mock<HttpContext> context = new();
@@ -1088,6 +1092,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
             identity.AddClaim(new Claim(type: "scope", value: "profile", ClaimValueTypes.String));
             identity.AddClaim(new Claim(type: "scope", value: "openid", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "scope", value: "openid", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "groups", value: "1111", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "groups", value: "2222", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "groups", value: "3333", ClaimValueTypes.String));
 
             // Add roles claim that matches client role header value. (x-ms-api-role)
             identity.AddClaim(new Claim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: TEST_ROLE, ClaimValueTypes.String));
@@ -1096,9 +1104,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
-            // If the role claim was the only duplicate, simply verify policy parsed as expected
-            string expectedPolicy = $"'profile' eq col2";
+            // Act
+            string expectedPolicy = $"'profile' eq col2 and '1111' eq col3";
             string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+
+            // Assert
             Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
         }
 
@@ -1160,15 +1170,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate the AuthorizationResolver.GetAllAuthenticatedUserClaims() successfully adds role claim to the claimsInRequestContext dictionary.
-        /// Only one "roles" claim is added to the dictionary claimsInRequestContext and only one Claim is added to the list maintained
+        /// Test to validate the AuthorizationResolver.GetAllAuthenticatedUserClaims() successfully adds role claim to the resolvedClaims dictionary.
+        /// Only one "roles" claim is added to the dictionary resolvedClaims and only one Claim is added to the list maintained
         /// for the key "roles" where the value corresponds to the X-MS-API-ROLE header.
         /// e.g [key: "roles"] -> [value: List (Claim) { Claim(type: "roles", value: "{x-ms-api-role value") }]
         /// The role claim will be sourced by DAB when the user is not already a member of a system role(authenticated/anonymous),
         /// or the role claim will be sourced from a user's access token issued by an identity provider.
         /// </summary>
         [TestMethod]
-        public void ValidateClientRoleHeaderClaimIsAddedToClaimsInRequestContext()
+        public void ValidateClientRoleHeaderClaimIsAddedToResolvedClaims()
         {
             Mock<HttpContext> context = new();
 
@@ -1190,13 +1200,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Execute the method to be tested - GetAllUserClaims().
-            Dictionary<string, List<Claim>> claimsInRequestContext = AuthorizationResolver.GetAllAuthenticatedUserClaims(context.Object);
+            Dictionary<string, List<Claim>> resolvedClaims = AuthorizationResolver.GetAllAuthenticatedUserClaims(context.Object);
 
             // Assert that only the role claim corresponding to clientRoleHeader is added to the claims dictionary.
             // Assert
-            Assert.AreEqual(claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), true, message: "Only the claim, roles, should be present.");
-            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Count, 1, message: "Only one claim should be present to represent the client role header context.");
-            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].First().Value, TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+            Assert.AreEqual(resolvedClaims.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), true, message: "Only the claim, roles, should be present.");
+            Assert.AreEqual(resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE].Count, 1, message: "Only one claim should be present to represent the client role header context.");
+            Assert.AreEqual(resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE].First().Value, TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
         }
 
         /// <summary>
@@ -1257,12 +1267,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
 
         /// <summary>
         /// JWT token JSON payloads may not be flat and may contain nested JSON objects or arrays.
-        /// This test validates that when dotnet (authentication jwt processing code) flattens the JWT token payload,
-        /// This test also protects against regression in current functionality because
-        /// this scenario works today. If we ignored any claim that *may* result in duplicate claims using the same name,
-        /// we would be making a breaking change.
-        /// DAB's Database Policies and Session context features utilize access token claims and those features
-        /// can utilize the claims that occur only once.
+        /// This test validates that when dotnet's JWT processing code flattens the JWT token payload
+        /// into Claim objects, the AuthorizationResolver.GetProcessedUserClaims(...) method correctly
+        /// returns a dictionary where key=claimType and value= scalar value or serialized JSON array.
+        /// This test enforces that DAB only processes one 'roles' claim whose value matches the x-ms-api-role
+        /// header, which protects against regression.
         /// </summary>
         [TestMethod]
         public void UniqueClaimsResolvedForDbPolicy_SessionCtx_Usage()
@@ -1317,6 +1326,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             List<Claim> authenticatedUserclaims = new()
             {
                 new("scp", "openid", ClaimValueTypes.String),
+                new("oid", "55296aad-ea7f-4c44-9a4c-bb1e8d43a005", ClaimValueTypes.String),
                 new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE, ClaimValueTypes.String),
             };
 
@@ -1328,6 +1338,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             List<Claim> unauthenticatedClaims = new()
             {
                 new("scp", "invalidScope", ClaimValueTypes.String),
+                new("oid", "1337", ClaimValueTypes.String),
                 new(AuthenticationOptions.ROLE_CLAIM_TYPE, "Don't_Parse_This_Role",ClaimValueTypes.String)
             };
 
@@ -1344,13 +1355,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Act
-            Dictionary<string, string> claimsInRequestContext = AuthorizationResolver.GetProcessedUserClaims(context.Object);
+            Dictionary<string, string> resolvedClaims = AuthorizationResolver.GetProcessedUserClaims(context.Object);
 
             // Assert
-            Assert.AreEqual(expected: authenticatedUserclaims.Count, actual: claimsInRequestContext.Count, message: "Only two claims should be present.");
-            Assert.AreEqual(expected: "openid", actual: claimsInRequestContext["scp"], message: "Unexpected scp claim returned.");
-            Assert.AreEqual(expected: TEST_ROLE, actual: claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE], message: "Unexpected roles claim returned.");
-            ;
+            Assert.AreEqual(expected: authenticatedUserclaims.Count, actual: resolvedClaims.Count, message: "Only two claims should be present.");
+            Assert.AreEqual(expected: "openid", actual: resolvedClaims["scp"], message: "Unexpected scp claim returned.");
+
+            bool didResolveUnauthenticatedRoleClaim = resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE] == "Don't_Parse_This_Role";
+            Assert.AreEqual(expected: false, actual: didResolveUnauthenticatedRoleClaim, message: "Unauthenticated roles claim erroneously resolved.");
+
+            bool didResolveUnauthenticatedOidClaim = resolvedClaims["oid"] == "1337";
+            Assert.AreEqual(expected: false, actual: didResolveUnauthenticatedRoleClaim, message: "Unauthenticated oid claim erroneously resolved.");
         }
         #endregion
 
@@ -1366,7 +1381,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="requestPolicy">Request authorization policy. (Support TBD)</param>
         /// <param name="databasePolicy">Database authorization policy.</param>
         /// <returns>Mocked RuntimeConfig containing metadata provided in method arguments.</returns>
-        public static RuntimeConfig InitRuntimeConfig(
+        private static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
             EntityActionOperation operation = EntityActionOperation.Create,
@@ -1429,7 +1444,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// claimsCollection or a default claimsCollection capturing various value types of possible claims.
         /// Value types include:
         /// - space delimited string for scp claim
-        /// - JSON String array (roles, groups)
+        /// - JSON String array (roles)
         /// - JSON object (distributed groups claim)
         /// - JSON int/bool array (theoretical, though not in EntraID access token)
         /// </summary>

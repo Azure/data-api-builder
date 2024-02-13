@@ -2243,7 +2243,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "post"
+          "get"
         ]
       },
       "permissions": [
@@ -2284,7 +2284,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "post"
+          "get"
         ]
       },
       "permissions": [
@@ -2322,7 +2322,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "post"
+          "get"
         ]
       },
       "permissions": [

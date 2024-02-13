@@ -472,8 +472,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
+            // The columns are renamed to match names across different sql implementations.
+            // This is because deserialization of the result set is common across all implementations.
             string query = "SELECT " +
-                            "name, TYPE_NAME(system_type_id) as system_type_name, is_nullable " +
+                            $"{STOREDPROC_COLUMN_NAME}, TYPE_NAME(system_type_id) as {STOREDPROC_COLUMN_SYSTEMTYPENAME}, {STOREDPROC_COLUMN_ISNULLABLE} " +
                             "FROM " +
                             "sys.dm_exec_describe_first_result_set_for_object (" +
                             $"OBJECT_ID('{databaseObjectName}'), 0) " +

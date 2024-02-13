@@ -484,10 +484,16 @@ public class AuthorizationResolver : IAuthorizationResolver
                         break;
                     case ClaimValueTypes.Integer:
                     case ClaimValueTypes.Integer32:
-                    case ClaimValueTypes.Integer64:
-                    case ClaimValueTypes.UInteger32:
-                    case ClaimValueTypes.UInteger64:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => int.Parse(claim.Value))));
+                        break;
+                    // Per Microsoft Docs: UInt32's CLS compliant alternative is Integer64
+                    case ClaimValueTypes.UInteger32:
+                    case ClaimValueTypes.Integer64:
+                        processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => long.Parse(claim.Value))));
+                        break;
+                    // Per Microsoft Docs: UInt64's CLS compliant alternative is decimal
+                    case ClaimValueTypes.UInteger64:
+                        processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => decimal.Parse(claim.Value))));
                         break;
                     case ClaimValueTypes.Double:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => double.Parse(claim.Value))));
@@ -567,7 +573,8 @@ public class AuthorizationResolver : IAuthorizationResolver
                 resolvedClaims.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, roleClaim);
             }
 
-            // Process all remaining claims and consolidate duplicate claim types into a list of claims.
+            // Process all remaining claims adding all `Claim` objects with the same claimType (claim name)
+            // into a list and storing that in resolvedClaims using the claimType as the key.
             foreach (Claim claim in identity.Claims)
             {
                 // 'roles' claim has already been processed.
@@ -620,7 +627,8 @@ public class AuthorizationResolver : IAuthorizationResolver
     {
         // Gets <claimType> from @claims.<claimType>
         string claimType = claimTypeMatch.Value.ToString().Substring(CLAIM_PREFIX.Length);
-        if (claimsInRequestContext.TryGetValue(claimType, out List<Claim>? claims))
+        if (claimsInRequestContext.TryGetValue(claimType, out List<Claim>? claims)
+            && claims is not null && claims.Count > 0)
         {
             // Database policies do not support operators like "in" or "contains".
             // Return the first value in the list of claims.

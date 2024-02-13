@@ -142,7 +142,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                                         // See https://learn.microsoft.com/en-us/dotnet/api/system.security.claims.claimsprincipal.isinrole?view=net-6.0#remarks
                                         RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                                     };
-                                    //options.MapInboundClaims = false;
                                 });
                             services.AddAuthorization();
                             services.AddSingleton(runtimeConfigProvider);

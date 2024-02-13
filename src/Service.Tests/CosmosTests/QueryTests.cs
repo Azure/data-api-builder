@@ -532,7 +532,7 @@ type Planet @model(name:""Planet"") {
             string entityName = "Planet";
 
             // cache configuration
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName, new EntityCacheOptions() { Enabled = true, TtlSeconds = 5 }); 
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName, new EntityCacheOptions() { Enabled = true, TtlSeconds = 5 } ); 
 
             const string CUSTOM_CONFIG = "custom-config.json";
             const string CUSTOM_SCHEMA = "custom-schema.gql";

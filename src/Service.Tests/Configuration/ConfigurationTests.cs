@@ -36,7 +36,6 @@ using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate;
-using HotChocolate.Utilities;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -3186,7 +3185,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             RestRuntimeOptions restOptions,
             Entity entity = null,
             string entityName = null,
-            EntityCacheOptions cacheOptions =null
+            EntityCacheOptions cacheOptions = null
             )
         {
             entity ??= new(

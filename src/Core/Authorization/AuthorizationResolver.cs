@@ -4,7 +4,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
-using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
@@ -34,6 +33,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     public const string AUTHORIZATION_HEADER = "Authorization";
     public const string ROLE_ANONYMOUS = "anonymous";
     public const string ROLE_AUTHENTICATED = "authenticated";
+    public const string ENTRA_ID_SCP_CLAIM = "scp";
 
     public Dictionary<string, EntityMetadata> EntityPermissionsMap { get; private set; } = new();
 
@@ -442,17 +442,16 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <summary>
     /// Returns a dictionary (string, string) where a key is a claim's name and
     /// a value is a claim's value.
-    /// Resolves scope/scp claims to a single string value with scopes delimited by spaces.
-    /// Resolves multiple instances of a claim into a JSON array mirroring the format
+    /// Resolves multiple claim objects of the same claim type into a JSON array mirroring the format
     /// of the claim in the original JWT token. The JSON array's type depends on the value type
     /// present in the original JWT token.
     /// </summary>
     /// <remarks>
     /// DotNet will resolve a claim with value type JSON array to multiple Claim objects with the same type and different values.
     /// e.g. roles and groups claim, which are arrays of strings and are flattened to: roles: role1, roles: role2, groups: group1, groups: group2
-    /// Claims are name valued pairs and nothing more. https://github.com/dotnet/aspnetcore/issues/13647#issuecomment-527523224
-    /// The library that parses the jwt token into claims is the one that decides *how* to resolve the claims from the token's JSON payload.
-    /// DotNet flattens the claims into a list: https://github.com/dotnet/aspnetcore/blob/282bfc1b486ae235a3395150a8d53073a57b7f43/src/Security/Authentication/OAuth/src/JsonKeyClaimAction.cs#L39-L53
+    /// "Claims are name valued pairs and nothing more." per https://github.com/dotnet/aspnetcore/issues/13647#issuecomment-527523224
+    /// The library that parses the JWT token into claims is the one that decides *how* to resolve the claims from the token's JSON payload.
+    /// dotnet   flattens the claims into a list: https://github.com/dotnet/aspnetcore/blob/282bfc1b486ae235a3395150a8d53073a57b7f43/src/Security/Authentication/OAuth/src/JsonKeyClaimAction.cs#L39-L53
     /// </remarks>
     /// <param name="context">HttpContext which contains a ClaimsPrincipal</param>
     /// <returns>Processed claims and claim values.</returns>
@@ -469,29 +468,13 @@ public class AuthorizationResolver : IAuthorizationResolver
 
         foreach ((string claimName, List<Claim> claimValues) in userClaims)
         {
-            // Special case to accommodate historical versions of Duende IdentityServer which emitted
-            // the scope claim as a JSON array in the access token.
-            // Entra ID emits the scope claim as 'scp' whose value is a string of values separated by spaces
-            // as described in the Entra ID Access Token Claims Reference
-            // When >1 scope/scp claim exists, DAB resolves the values into a single string where scopes are delimited by spaces.
-            // https://learn.microsoft.com/entra/identity-platform/access-token-claims-reference#payload-claims
-            // https://docs.duendesoftware.com/identityserver/v5/apis/aspnetcore/authorization/#scope-claim-format
-            if ((claimName == "scp" || claimName == "scope") && claimValues.Count > 1)
-            {
-                StringBuilder spaceDelimitedClaimPayload = new();
-                for (int i = 0; i < claimValues.Count - 1; i++)
-                {
-                    spaceDelimitedClaimPayload.Append(claimValues[i].Value + " ");
-                }
-
-                spaceDelimitedClaimPayload.Append(claimValues[claimValues.Count - 1].Value);
-                processedClaims.Add(claimName, spaceDelimitedClaimPayload.ToString());
-            }
-            else if (claimValues.Count > 1)
+            // Some identity providers (other than Entra ID) may emit a 'scope' claim as a JSON string array. dotnet will
+            // create claim objects for each value in the array. DAB will honor that format
+            // and pass the 'scope' claim objects to MSSQL's session context as a JSON string array.
+            if (claimValues.Count > 1)
             {
                 switch (claimValues.First().ValueType)
                 {
-
                     case ClaimValueTypes.Boolean:
                         processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => bool.Parse(claim.Value))));
                         break;
@@ -514,12 +497,16 @@ public class AuthorizationResolver : IAuthorizationResolver
                         break;
                 }
             }
-            // Remaining claims will be collected as string scalar values.
-            // While Claim.ValueType may indicate the token value was not a string (int, bool),
-            // resolving the actual type here would be a breaking change because 
-            // DAB has historically sent single instance claims as value type string.
             else
             {
+                // Remaining claims will be collected as string scalar values.
+                // While Claim.ValueType may indicate the token value was not a string (int, bool),
+                // resolving the actual type here would be a breaking change because 
+                // DAB has historically sent single instance claims as value type string.
+                // This block also accommodates Entra ID access tokens to avoid a breaking change because
+                // the 'scp' claim is a space delimited string which is not broken up into separate claim objects
+                // by dotnet. The Entra ID 'scp' claim should be passed to MSSQL's session context as-is.
+                // https://learn.microsoft.com/entra/identity-platform/access-token-claims-reference#payload-claims
                 processedClaims.Add(claimName, value: claimValues[0].Value);
             }
         }
@@ -530,6 +517,8 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <summary>
     /// Helper method to extract all claims available in the HttpContext's user object (from authenticated ClaimsIdentity objects)
     /// and add the claims to the claimsInRequestContext dictionary to be used for claimType -> claim lookups.
+    /// This method only resolves one `roles` claim from the authenticated user's claims: the `roles` claim whose
+    /// value matches the x-ms-api-role` header value.
     /// </summary>
     /// <remarks>
     /// DotNet will resolve a claim with value type JSON array to multiple Claim objects with the same type and different values.
@@ -542,10 +531,10 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <returns>Dictionary with claimType -> list of claim mappings.</returns>
     public static Dictionary<string, List<Claim>> GetAllAuthenticatedUserClaims(HttpContext? context)
     {
-        Dictionary<string, List<Claim>> claimsInRequestContext = new();
+        Dictionary<string, List<Claim>> resolvedClaims = new();
         if (context is null)
         {
-            return claimsInRequestContext;
+            return resolvedClaims;
         }
 
         string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
@@ -559,13 +548,11 @@ public class AuthorizationResolver : IAuthorizationResolver
                 continue;
             }
 
-            // When resolving claims, DAB should explicitly recognize a single instance of the 'roles' claim
-            // which represents the role resolved in the x-ms-api-role http header.
-            // DAB authentication middleware validates the x-ms-api-role value.
-
-            // Check to see if we've already resolved the role claim from the authenticated user's claims,
-            // and if not, 
-            if (!claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
+            // DAB will only resolve one 'roles' claim whose value matches the x-ms-api-role header value
+            // because DAB executes requests in the context of a single role. The `roles` claim
+            // resolved here can be forwarded to MSSQL's set-session-context. Modifying this behavior
+            // is a breaking change.
+            if (!resolvedClaims.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
                 identity.HasClaim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader))
             {
                 List<Claim> roleClaim = new()
@@ -573,27 +560,26 @@ public class AuthorizationResolver : IAuthorizationResolver
                     new Claim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader, valueType: ClaimValueTypes.String)
                 };
 
-                claimsInRequestContext.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, roleClaim);
+                resolvedClaims.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, roleClaim);
             }
 
-            // Process all remaining claims and consolidate duplicate claim
-            // types into a list of claims.
+            // Process all remaining claims and consolidate duplicate claim types into a list of claims.
             foreach (Claim claim in identity.Claims)
             {
-                // Roles claim has already been processed.
+                // 'roles' claim has already been processed.
                 if (claim.Type == AuthenticationOptions.ROLE_CLAIM_TYPE)
                 {
                     continue;
                 }
 
-                if (!claimsInRequestContext.TryAdd(key: claim.Type, value: new List<Claim>() { claim }))
+                if (!resolvedClaims.TryAdd(key: claim.Type, value: new List<Claim>() { claim }))
                 {
-                    claimsInRequestContext[claim.Type].Add(claim);
+                    resolvedClaims[claim.Type].Add(claim);
                 }
             }
         }
 
-        return claimsInRequestContext;
+        return resolvedClaims;
     }
 
     /// <summary>

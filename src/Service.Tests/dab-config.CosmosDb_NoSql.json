@@ -277,27 +277,27 @@
       },
       "permissions": [
         {
-          "role": "anonymous",
+          "role": "authenticated",
           "actions": [
             {
-              "action": "update",
-              "fields": {
-                "exclude": [
-                  "*"
-                ]
-              }
+              "action": "create"
             },
             {
-              "action": "read",
-              "fields": {
-                "exclude": [
-                  "name"
-                ],
-                "include": [
-                  "id",
-                  "type"
-                ]
-              }
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "field-mutation-with-read-permission",
+          "actions": [
+            {
+              "action": "read"
             },
             {
               "action": "create",
@@ -311,22 +311,80 @@
               }
             },
             {
-              "action": "delete"
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id",
+                  "type"
+                ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id",
+                  "type"
+                ]
+              }
             }
           ]
         },
         {
-          "role": "authenticated",
+          "role": "wildcard-exclude-fields-role",
+          "actions": [
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
+              }
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
+              }
+            },
+            {
+              "action": "delete",
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
+              }
+            }
+
+          ]
+        },
+        {
+          "role": "only-create-role",
           "actions": [
             {
               "action": "create"
-            },
-            {
-              "action": "read"
-            },
+            }
+          ]
+        },
+        {
+          "role": "only-update-role",
+          "actions": [
             {
               "action": "update"
-            },
+            }
+          ]
+        },
+        {
+          "role": "only-delete-role",
+          "actions": [
             {
               "action": "delete"
             }

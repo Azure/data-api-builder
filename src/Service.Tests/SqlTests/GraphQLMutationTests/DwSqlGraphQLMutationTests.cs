@@ -474,7 +474,7 @@ SELECT CASE
         }
 
         /// <summary>
-        /// <code>Do: </code>insert new Book and return nothing
+        /// <code>Do: </code>insert new Book and return an empty array.
         /// <code>Check: </code>if the intended book is inserted in books table
         /// </summary>
         [TestMethod]

@@ -575,7 +575,7 @@ namespace Azure.DataApiBuilder.Service.Services
 
         /// <summary>
         /// Stores the pagination metadata in the global context.ContextData accessible to
-        /// all pure resolvers for query fields references nested entities.
+        /// all pure resolvers for query fields referencing nested entities.
         /// </summary>
         /// <param name="context">Pure resolver context</param>
         /// <param name="metadata">Pagination metadata</param>
@@ -584,7 +584,7 @@ namespace Azure.DataApiBuilder.Service.Services
             // When context.Path is /entity/items the metadata key is "entity"
             // The context key will use the depth of "items" so that the provided
             // pagination metadata (which holds the subquery metadata for "/entity/items/nestedEntity")
-            // can be stored for future access when the "/entity/items/nestedEntity" pur resolver executes.
+            // can be stored for future access when the "/entity/items/nestedEntity" pure resolver executes.
             // When context.Path takes the form: "/entity/items[index]/nestedEntity" HC counts the depth as
             // if the path took the form: "/entity/items/items[index]/nestedEntity" -> Depth of "nestedEntity"
             // is 3 because depth is 0-indexed.

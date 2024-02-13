@@ -578,7 +578,7 @@ public class AuthorizationResolver : IAuthorizationResolver
             foreach (Claim claim in identity.Claims)
             {
                 // 'roles' claim has already been processed.
-                if (claim.Type == AuthenticationOptions.ROLE_CLAIM_TYPE)
+                if (claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE))
                 {
                     continue;
                 }

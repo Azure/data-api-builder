@@ -1105,10 +1105,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Act
-            string expectedPolicy = $"'profile' eq col2 and '1111' eq col3";
             string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
 
             // Assert
+            string expectedPolicy = $"'profile' eq col2 and '1111' eq col3";
             Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
         }
 
@@ -1260,6 +1260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             Assert.AreEqual(expected: @"[""d74b8d81-39eb-4201-bd9f-9f1c4011e3c9"",""18d14519-c4da-4ad4-936d-9a2de69d33cf"",""9e513fc0-e8af-43b1-a6c7-949edb1967a3""]", claimsInRequestContext["wids"]);
             Assert.AreEqual(expected: "[1,2,3]", actual: claimsInRequestContext["int_array"]);
             Assert.AreEqual(expected: "[true,false,true]", actual: claimsInRequestContext["bool_array"]);
+            Assert.AreEqual(expected: @"src1", actual: claimsInRequestContext["groups"]);
             Assert.AreEqual(expected: @"{""src1"":{""endpoint"":""https://graph.microsoft.com/v1.0/users/{userID}/getMemberObjects""}}", actual: claimsInRequestContext["_claim_sources"]);
             Assert.AreEqual(expected: "1706816426", actual: claimsInRequestContext["iat"]);
             Assert.AreEqual(expected: "", actual: claimsInRequestContext["nullValuedClaim"]);

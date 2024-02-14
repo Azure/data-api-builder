@@ -257,6 +257,7 @@ mutation {{
         /// <summary>
         /// Create Mutation performed on the fields with different auth permissions
         /// It throws permission denied error if role doesn't have permission to perform the operation
+        /// 'item-level-permission-role' is not applicable for create operation
         /// </summary>
         [TestMethod]
         [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "When there is limited permission at field level but have full read permission")]
@@ -305,6 +306,7 @@ mutation {{
             "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "When ONLY update permission is there")]
         [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "When update permission is there at entity level but all the fields are excluded using wildcard")]
         [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "When update permission is NOT there")]
+        [DataRow("item-level-permission-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "When item level permission is NOT there")]
         public async Task UpdateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Create an item with "Authenticated" role
@@ -348,6 +350,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
                 authToken: authtoken,
                 clientRoleHeader: roleName);
 
+            Console.WriteLine(response.ToString()); 
             if (string.IsNullOrEmpty(expectedErrorMessage))
             {
                 Assert.AreEqual(id, response.GetProperty("id").GetString());

@@ -190,22 +190,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 // sequentially and generate fields for them - to be added to the entity's ObjectTypeDefinition at the end.
                 if (configEntity.Relationships is not null)
                 {
-                    // Stores all the columns from the current entity which hold a foreign key reference to any of the related
-                    // target entity. The columns will be added to this collection only when the current entity is the referencing entity.
-                    HashSet<string> foreignKeyFieldsInEntity = new();
                     foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
                     {
                         FieldDefinitionNode relationshipField = GenerateFieldForRelationship(
                             entityName,
                             databaseObject,
                             entities,
-                            foreignKeyFieldsInEntity,
                             relationshipName,
                             relationship);
                         fieldDefinitionNodes.Add(relationshipField.Name.Value, relationshipField);
                     }
-
-                    AddForeignKeyDirectiveToFields(fieldDefinitionNodes, foreignKeyFieldsInEntity);
                 }
             }
 
@@ -266,44 +260,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
         /// <param name="databaseObject">SQL database object information.</param>
         /// <param name="entities">Key/Value Collection mapping entity name to the entity object, currently used to lookup relationship metadata.</param>
-        /// <param name="foreignKeyFieldsInEntity">Set of fields from source entity holding foreign key references to a target entities.</param>
         /// <param name="relationshipName">Name of the relationship.</param>
         /// <param name="relationship">Relationship data.</param>
         private static FieldDefinitionNode GenerateFieldForRelationship(
             string entityName,
             DatabaseObject databaseObject,
             RuntimeEntities entities,
-            HashSet<string> foreignKeyFieldsInEntity,
             string relationshipName,
             EntityRelationship relationship)
         {
             // Generate the field that represents the relationship to ObjectType, so you can navigate through it
             // and walk the graph.
-            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             string targetEntityName = relationship.TargetEntity.Split('.').Last();
             Entity referencedEntity = entities[targetEntityName];
             bool isNullableRelationship = FindNullabilityOfRelationship(entityName, databaseObject, targetEntityName);
-
-            if (// Retrieve all the relationship information for the source entity which is backed by this table definition
-                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
-                &&
-                // From the relationship information, obtain the foreign key definition for the given target entity
-                relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
-                    out List<ForeignKeyDefinition>? listOfForeignKeys))
-            {
-                // Find the foreignkeys in which the source entity is the referenced object.
-                IEnumerable<ForeignKeyDefinition> referencedForeignKeyInfo =
-                    listOfForeignKeys.Where(fk =>
-                        fk.ReferencingColumns.Count > 0
-                        && fk.ReferencedColumns.Count > 0
-                        && fk.Pair.ReferencingDbTable.Equals(databaseObject));
-
-                ForeignKeyDefinition? foreignKeyInfo = referencedForeignKeyInfo.FirstOrDefault();
-                if (foreignKeyInfo is not null)
-                {
-                    foreignKeyFieldsInEntity.UnionWith(foreignKeyInfo.ReferencingColumns);
-                }
-            }
 
             INullableTypeNode targetField = relationship.Cardinality switch
             {
@@ -356,29 +326,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             }
 
             return objectTypeDirectives;
-        }
-
-        /// <summary>
-        /// Helper method to add foreign key directive type to all the fields in the entity which
-        /// hold a foreign key reference to another entity exposed in the config.
-        /// The values of such fields holding foreign key references can come via insertions in the related entity.
-        /// By adding ForiegnKeyDirective here, we can later ensure that while creating input type for create mutations,
-        /// these fields can be marked as nullable/optional.
-        /// </summary>
-        /// <param name="fields">All fields present in the entity.</param>
-        /// <param name="foreignKeys">List of keys holding foreign key reference to another entity.</param>
-        private static void AddForeignKeyDirectiveToFields(Dictionary<string, FieldDefinitionNode> fields, IEnumerable<string> foreignKeys)
-        {
-            foreach (string foreignKey in foreignKeys)
-            {
-                FieldDefinitionNode foreignKeyField = fields[foreignKey];
-                List<DirectiveNode> directives = (List<DirectiveNode>)foreignKeyField.Directives;
-
-                // Add foreign key directive.
-                directives.Add(new DirectiveNode(ForeignKeyDirectiveType.DirectiveName));
-                foreignKeyField = foreignKeyField.WithDirectives(directives);
-                fields[foreignKey] = foreignKeyField;
-            }
         }
 
         /// <summary>

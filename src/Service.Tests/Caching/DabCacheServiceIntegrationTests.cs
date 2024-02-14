@@ -256,7 +256,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         /// Validates that the first invocation of the cache service results in a cache miss because
         /// the cache is expected to be empty.
         /// After a cache miss, Func invocation is expected.
-        /// Func is references the method which will execute DB query
+        /// Func is referencing the method which will execute DB query
         /// </summary>
         [TestMethod]
         public async Task FirstCacheServiceInvocationCallsFuncAndReturnResult()

@@ -176,11 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 "JOIN d IN b.moreAttributes " +
                 "WHERE d.name = \"moonattr0\"";
 
-            await ExecuteAndValidateResult(
-                _graphQLQueryName,
-                gqlQuery,
-                dbQueryWithJoin,
-                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()));
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
 
         /// <summary>
@@ -266,8 +262,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
 
-        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, string authToken = null)
+        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
         {
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             ValidateResults(actual.GetProperty("items"), expected.RootElement);
@@ -916,7 +913,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     }
                 }
             }";
-            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            string clientRoleHeader = "limited-read-role";
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "earths",
                 query: gqlQuery,
@@ -974,7 +971,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
+            JsonElement actual = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery, authToken: authToken);
             Assert.AreEqual(actual.GetProperty("items")[0].GetProperty("earth").GetProperty("id").ToString(), _idList[0]);
         }
 
@@ -1000,7 +998,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            string clientRoleHeader = "limited-read-role";
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,

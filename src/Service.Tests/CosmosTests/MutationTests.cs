@@ -257,11 +257,12 @@ mutation {{
         /// It throws permission denied error if role doesn't have permission to perform the operation
         /// </summary>
         [TestMethod]
-        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE)] // exclude and include fields
-        [DataRow("authenticated", null)] // full permission
-        [DataRow("only-create-role", "The mutation operation createEarth was successful but the current user is unauthorized to view the response due to lack of read permissions")] // if only create permission is there
-        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE)] // exclude wildcard
-        [DataRow("only-update-role", "The current user is not authorized to access this resource" )] // if create permission is not there
+        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = " exclude and include fields")]
+        [DataRow("authenticated", null, DisplayName = "full permission")] 
+        [DataRow("only-create-role", "The mutation operation createEarth was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "if only create permission is there")]
+        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "exclude wildcard")]
+        [DataRow("only-update-role", "The current user is not authorized to access this resource", DisplayName = "if create permission is not there")]
         public async Task CreateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Run mutation Add Earth;
@@ -296,11 +297,12 @@ mutation {{
         /// It throws permission denied error if role doesn't have permission to perform the operation
         /// </summary>
         [TestMethod]
-        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE)] // exclude and include fields
-        [DataRow("authenticated", null)] // full permission
-        [DataRow("only-update-role", "The mutation operation updateEarth was successful but the current user is unauthorized to view the response due to lack of read permissions")] // if only update permission is there
-        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE)] // exclude wildcard
-        [DataRow("only-create-role", "The current user is not authorized to access this resource")] // if update permission is not there
+        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "exclude and include fields")] 
+        [DataRow("authenticated", null, DisplayName = "full permission")]
+        [DataRow("only-update-role", "The mutation operation updateEarth was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "if only update permission is there")]
+        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "exclude wildcard")]
+        [DataRow("only-create-role", "The current user is not authorized to access this resource", DisplayName = "if update permission is not there")]
         public async Task UpdateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Create an item with "Authenticated" role
@@ -361,11 +363,13 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         /// It throws permission denied error if role doesn't have permission to perform the operation
         /// </summary>
         [TestMethod]
-        [DataRow("field-mutation-with-read-permission", null)] // exclude and include fields. Response is BLANK.
-        [DataRow("authenticated", null)] // full permission. Response is BLANK
-        [DataRow("only-delete-role", "The mutation operation deleteEarth was successful but the current user is unauthorized to view the response due to lack of read permissions")] // if only update permission is there
-        [DataRow("wildcard-exclude-fields-role", "The mutation operation deleteEarth was successful but the current user is unauthorized to view the response due to lack of read permissions")] // exclude wildcard
-        [DataRow("only-create-role", "The current user is not authorized to access this resource")] // if update permission is not there
+        [DataRow("field-mutation-with-read-permission", null, DisplayName = " exclude and include fields. Response is BLANK")]
+        [DataRow("authenticated", null, DisplayName = "full permission. Response is BLANK")]
+        [DataRow("only-delete-role", "The mutation operation deleteEarth was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "if only update permission is there")]
+        [DataRow("wildcard-exclude-fields-role", "The mutation operation deleteEarth was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "exclude wildcard")]
+        [DataRow("only-create-role", "The current user is not authorized to access this resource", DisplayName = "if update permission is not there")] 
         public async Task DeleteItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Create an item with "Authenticated" role

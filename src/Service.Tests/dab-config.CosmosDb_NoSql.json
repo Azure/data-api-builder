@@ -294,6 +294,23 @@
           ]
         },
         {
+          "role": "limited-read-role",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id",
+                  "type"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "role": "field-mutation-with-read-permission",
           "actions": [
             {

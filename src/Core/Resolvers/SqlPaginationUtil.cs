@@ -518,22 +518,40 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Create the URL that will provide for the next page of results
         /// using the same query options.
+        /// Return value formatted as a JSON array: [{"nextLink":"[base]/api/[entity]?[queryParams_URIescaped]$after=[base64encodedPaginationToken]"}]
         /// </summary>
-        /// <param name="path">The request path.</param>
-        /// <param name="queryStringParameters">Collection of query string parameters.</param>
-        /// <param name="after">The values needed for next page.</param>
-        /// <returns>The string representing nextLink.</returns>
-        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string after)
+        /// <param name="path">The request path excluding query parameters (e.g. https://localhost/api/myEntity)</param>
+        /// <param name="queryStringParameters">Collection of query string parameters that are URI escaped.</param>
+        /// <param name="newAfterPayload">The contents to add to the $after query parameter. Should be base64 encoded pagination token.</param>
+        /// <returns>JSON element - array with nextLink.</returns>
+        public static JsonElement CreateNextLink(string path, NameValueCollection? queryStringParameters, string newAfterPayload)
         {
+            if (queryStringParameters is null)
+            {
+                queryStringParameters = new();
+            }
+            else
+            {
+                // Purge old $after value so this function can replace it.
+                queryStringParameters.Remove("$after");
+            }
+
+            // To prevent regression of current behavior, retain the call to FormatQueryString
+            // which URI escapes other query parameters. Since $after has been removed,
+            // this will not affect the base64 encoded paging token.
             string queryString = FormatQueryString(queryStringParameters: queryStringParameters);
-            if (!string.IsNullOrWhiteSpace(after))
+
+            // When a new $after payload is provided, append it to the query string with the
+            // appropriate prefix: ? if $after is the only query parameter. & if $after is one of many query parameters.
+            if (!string.IsNullOrWhiteSpace(newAfterPayload))
             {
                 string afterPrefix = string.IsNullOrWhiteSpace(queryString) ? "?" : "&";
-                queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={after}";
+                queryString += $"{afterPrefix}{RequestParser.AFTER_URL}={newAfterPayload}";
             }
 
             // ValueKind will be array so we can differentiate from other objects in the response
             // to be returned.
+            // [{"nextLink":"[base]/api/[entity]?[queryParams_URIescaped]$after=[base64encodedPaginationToken]"}]
             string jsonString = JsonSerializer.Serialize(new[]
             {
                 new
@@ -578,6 +596,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (string key in queryStringParameters)
             {
+                // Whitespace or empty string query paramters are not supported.
                 if (string.IsNullOrWhiteSpace(key))
                 {
                     continue;

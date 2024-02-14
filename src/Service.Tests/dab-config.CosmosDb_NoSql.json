@@ -413,32 +413,6 @@
               "action": "delete"
             }
           ]
-        },
-        {
-          "role": "item-level-permission-role",
-          "actions": [
-            {
-              "action": "create"
-            },
-            {
-              "action": "read",
-              "policy": {
-                "database": "@item.name contains 'test_name'"
-              }
-            },
-            {
-              "action": "update",
-              "policy": {
-                "database": "@item.name eq 'sourabh'"
-              }
-            },
-            {
-              "action": "delete",
-              "policy": {
-                "database": "@claims.UserId eq @item.createdby"
-              }
-            }
-          ]
         }
       ]
     },

@@ -17,6 +17,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
     {
         private const string INSERT_MULTIPLE_MUTATION_SUFFIX = "Multiple";
         public const string INPUT_ARGUMENT_NAME = "item";
+        public const string CREATE_MUTATION_PREFIX = "create";
 
         /// <summary>
         /// Generate the GraphQL input type from an object type
@@ -332,7 +333,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
                 inputs: inputs,
                 objectTypeDefinitionNode: objectTypeDefinitionNode,
-                name:name,
+                name: name,
                 baseEntityName: name,
                 definitions: root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
                 databaseType: databaseType);
@@ -347,12 +348,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
-            string singularName = GetDefinedSingularName(name.Value, entity);
+            string singularName = GetPointCreateMutationNodeName(name.Value, entity);
 
             // Point insertion node.
             FieldDefinitionNode createOneNode = new(
                 location: null,
-                name: new NameNode($"create{singularName}"),
+                name: new NameNode(GetPointCreateMutationNodeName(name.Value, entity)),
                 description: new StringValueNode($"Creates a new {singularName}"),
                 arguments: new List<InputValueDefinitionNode> {
                 new(
@@ -371,7 +372,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // Multiple insertion node.
             FieldDefinitionNode createMultipleNode = new(
                 location: null,
-                name: new NameNode($"create{GetInsertMultipleMutationName(singularName, GetDefinedPluralName(name.Value, entity))}"),
+                name: new NameNode(GetMultipleCreateMutationNodeName(name.Value, entity)),
                 description: new StringValueNode($"Creates multiple new {singularName}"),
                 arguments: new List<InputValueDefinitionNode> {
                 new(
@@ -390,17 +391,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Helper method to determine the name of the insert multiple mutation.
+        /// Helper method to determine the name of the create one (or point create) mutation.
+        /// </summary>
+        private static string GetPointCreateMutationNodeName(string entityName, Entity entity)
+        {
+            string singularName = GetDefinedSingularName(entityName, entity);
+            return $"{CREATE_MUTATION_PREFIX}{singularName}";
+        }
+
+        /// <summary>
+        /// Helper method to determine the name of the create multiple mutation.
         /// If the singular and plural graphql names for the entity match, we suffix the name with 'Multiple' suffix to indicate
         /// that the mutation field is created to support insertion of multiple records in the top level entity.
         /// However if the plural and singular names are different, we use the plural name to construct the mutation.
         /// </summary>
-        /// <param name="singularName">Singular name of the entity to be used for GraphQL.</param>
-        /// <param name="pluralName">Plural name of the entity to be used for GraphQL.</param>
-        /// <returns>Name of the insert multiple mutation.</returns>
-        private static string GetInsertMultipleMutationName(string singularName, string pluralName)
+        private static string GetMultipleCreateMutationNodeName(string entityName, Entity entity)
         {
-            return singularName.Equals(pluralName) ? $"{singularName}{INSERT_MULTIPLE_MUTATION_SUFFIX}" : pluralName;
+            string singularName = GetDefinedSingularName(entityName, entity);
+            string pluralName = GetDefinedPluralName(entityName, entity);
+            string mutationName = singularName.Equals(pluralName) ? $"{singularName}{INSERT_MULTIPLE_MUTATION_SUFFIX}" : pluralName;
+            return $"{CREATE_MUTATION_PREFIX}{mutationName}";
         }
     }
 }

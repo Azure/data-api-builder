@@ -267,16 +267,17 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Helper method to traverse through all the relationships for all the entities exposed in the config.
-        /// For every entity, relationship pair it adds the FK directive to all the fields of the referencing entity in the relationship.
-        /// The values of such fields holding foreign key references can come via insertions in the related entity.
-        /// By adding ForiegnKeyDirective here, we can later ensure that while creating input type for create mutations,
-        /// these fields can be marked as nullable/optional.
+        /// For all the relationships defined in each entity's configuration, it adds an FK directive to all the
+        /// referencing fields of the referencing entity in the relationship. The values of such fields holding
+        /// foreign key references can come via insertions in the related entity. By adding ForiegnKeyDirective here,
+        /// we can later ensure that while creating input type for create mutations, these fields can be marked as
+        /// nullable/optional.
         /// </summary>
         /// <param name="objectTypes">Collection of object types.</param>
         /// <param name="entities">Entities from runtime config.</param>
         private void AddFKirective(RuntimeEntities entities, Dictionary<string, ObjectTypeDefinitionNode> objectTypes)
         {
-            foreach ((string sourceEntityName, ObjectTypeDefinitionNode objectTypeDefinitionNode) in objectTypes)
+            foreach ((string sourceEntityName, ObjectTypeDefinitionNode sourceObjectTypeDefinitionNode) in objectTypes)
             {
                 Entity entity = entities[sourceEntityName];
                 if (!entity.GraphQL.Enabled || entity.Relationships is null)
@@ -287,7 +288,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(sourceEntityName);
                 ISqlMetadataProvider sqlMetadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
                 SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(sourceEntityName);
-                Dictionary<string, FieldDefinitionNode> sourceFieldDefinitions = objectTypeDefinitionNode.Fields.ToDictionary(field => field.Name.Value, field => field);
+                Dictionary<string, FieldDefinitionNode> sourceFieldDefinitions = sourceObjectTypeDefinitionNode.Fields.ToDictionary(field => field.Name.Value, field => field);
 
                 foreach((_, EntityRelationship relationship) in entity.Relationships)
                 {
@@ -304,9 +305,8 @@ namespace Azure.DataApiBuilder.Core.Services
                         relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName, out List<ForeignKeyDefinition>? listOfForeignKeys))
                     {
                         sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbo);
-
                         // Find the foreignkeys in which the source entity is the referencing object.
-                        IEnumerable <ForeignKeyDefinition> referencingForeignKeyInfo =
+                        IEnumerable <ForeignKeyDefinition> sourceReferencingForeignKeysInfo =
                             listOfForeignKeys.Where(fk =>
                                 fk.ReferencingColumns.Count > 0
                                 && fk.ReferencedColumns.Count > 0
@@ -314,30 +314,37 @@ namespace Azure.DataApiBuilder.Core.Services
 
                         sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject? targetDbo);
                         // Find the foreignkeys in which the target entity is the referencing object, i.e. source entity is the referenced object.
-                        IEnumerable<ForeignKeyDefinition> referencedForeignKeyInfo =
+                        IEnumerable<ForeignKeyDefinition> targetReferencingForeignKeysInfo =
                             listOfForeignKeys.Where(fk =>
                                 fk.ReferencingColumns.Count > 0
                                 && fk.ReferencedColumns.Count > 0
                                 && fk.Pair.ReferencingDbTable.Equals(targetDbo));
 
-                        ForeignKeyDefinition? sourceReferencingFKInfo = referencingForeignKeyInfo.FirstOrDefault();
+                        ForeignKeyDefinition? sourceReferencingFKInfo = sourceReferencingForeignKeysInfo.FirstOrDefault();
                         if (sourceReferencingFKInfo is not null)
                         {
+                            // When source entity is the referencing entity, FK directive is to be added to relationship fields
+                            // in the source entity.
                             AppendFKDirectiveToReferencingFields(sourceFieldDefinitions, sourceReferencingFKInfo.ReferencingColumns);
                         }
 
                         ObjectTypeDefinitionNode targetObjectTypeDefinitionNode = objectTypes[targetEntityName];
                         Dictionary<string, FieldDefinitionNode> targetFieldDefinitions = targetObjectTypeDefinitionNode.Fields.ToDictionary(field => field.Name.Value, field => field);
-                        ForeignKeyDefinition? targetReferencingFKInfo = referencedForeignKeyInfo.FirstOrDefault();
+                        ForeignKeyDefinition? targetReferencingFKInfo = targetReferencingForeignKeysInfo.FirstOrDefault();
                         if (targetReferencingFKInfo is not null)
                         {
+                            // When target entity is the referencing entity, FK directive is to be added to relationship fields
+                            // in the target entity.
                             AppendFKDirectiveToReferencingFields(targetFieldDefinitions, targetReferencingFKInfo.ReferencingColumns);
+
+                            // Update the target object definition with the new set of fields having FK directive.
                             objectTypes[targetEntityName] = targetObjectTypeDefinitionNode.WithFields(new List<FieldDefinitionNode>(targetFieldDefinitions.Values));
                         }
                     }
                 }
 
-                objectTypes[sourceEntityName] = objectTypeDefinitionNode.WithFields(new List<FieldDefinitionNode>(sourceFieldDefinitions.Values));
+                // Update the source object definition with the new set of fields having FK directive.
+                objectTypes[sourceEntityName] = sourceObjectTypeDefinitionNode.WithFields(new List<FieldDefinitionNode>(sourceFieldDefinitions.Values));
             }
         }
 

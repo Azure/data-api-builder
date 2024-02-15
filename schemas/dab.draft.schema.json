@@ -237,6 +237,22 @@
             }
           }
         },
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable caching of responses globally.",
+              "default": false
+            },
+            "ttl-seconds": {
+              "type": "integer",
+              "description": "Time to live in seconds",
+              "default": 5
+            }
+          }
+        },
         "telemetry": {
           "type": "object",
           "description": "Telemetry configuration",
@@ -491,6 +507,22 @@
                     "cardinality",
                     "target.entity"
                   ]
+                }
+              }
+            },
+            "cache": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable caching of responses for this entity.",
+                  "default": false
+                },
+                "ttl-seconds": {
+                  "type": "integer",
+                  "description": "Time to live in seconds",
+                  "default": 5
                 }
               }
             }

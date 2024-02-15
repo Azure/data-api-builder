@@ -71,7 +71,7 @@ public class JsonConfigSchemaValidator
         {
             try
             {
-                using(HttpClient client = new())
+                using (HttpClient client = new())
                 {
                     // Send a GET request to the URL specified in runtimeConfig.Schema to get the JSON schema.
                     HttpResponseMessage response = await client.GetAsync(runtimeConfig.Schema);

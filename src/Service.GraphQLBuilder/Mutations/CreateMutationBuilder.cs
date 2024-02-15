@@ -17,6 +17,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
     {
         private const string INSERT_MULTIPLE_MUTATION_SUFFIX = "Multiple";
         public const string INPUT_ARGUMENT_NAME = "item";
+        public const string CREATE_MUTATION_PREFIX = "create";
 
         /// <summary>
         /// Generate the GraphQL input type from an object type
@@ -100,6 +101,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                     if (DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(f, (ObjectTypeDefinitionNode)def, baseEntityName))
                     {
+                        // The field can represent a related entity with M:N relationship with the parent.
                         NameNode baseEntityNameForField = new(typeName);
                         typeName = GenerateLinkingNodeName(baseEntityName.Value, typeName);
                         def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == typeName)!;
@@ -186,8 +188,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="inputs">Dictionary of all input types, allowing reuse where possible.</param>
         /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
         /// <param name="field">Field that the input type is being generated for.</param>
-        /// <param name="typeName">Name of the input type in the dictionary.</param>
-        /// <param name="baseObjectTypeName">Name of the underlying object type of the field for which the input type is to be created.</param>
+        /// <param name="typeName">In case of relationships with M:N cardinality, typeName = type name of linking object, else typeName = type name of target entity.</param>
+        /// <param name="baseObjectTypeName">Object type name of the target entity.</param>
         /// <param name="childObjectTypeDefinitionNode">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
         /// <param name="entities">Runtime configuration information for entities.</param>
@@ -213,10 +215,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-            if (databaseType is DatabaseType.MSSQL && RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
+            if (databaseType is DatabaseType.MSSQL)
             {
-                // For *:N relationships, we need to create a list type.
-                type = new ListTypeNode(new NonNullTypeNode((INullableTypeNode)type));
+                if (RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
+                {
+                    // For *:N relationships, we need to create a list type.
+                    type = GenerateListType(type, field.Type.InnerType());
+                }
+
+                // Since providing input for a relationship field is optional, the type should be nullable.
+                type = (INullableTypeNode)type;
             }
             // For a type like [Bar!]! we have to first unpack the outer non-null
             else if (field.Type.IsNonNullType())
@@ -241,7 +249,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 name: field.Name,
                 description: new StringValueNode($"Input for field {field.Name} on type {inputTypeName}"),
-                type: DoesRelationalDBSupportNestedMutations(databaseType) ? type.NullableType() : type,
+                type: type,
                 defaultValue: null,
                 directives: field.Directives
             );
@@ -293,7 +301,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// </summary>
         /// <param name="typeName">Name of the entity</param>
         /// <returns>InputTypeName</returns>
-        private static NameNode GenerateInputTypeName(string typeName)
+        public static NameNode GenerateInputTypeName(string typeName)
         {
             return new($"{EntityActionOperation.Create}{typeName}Input");
         }
@@ -330,7 +338,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
                 inputs: inputs,
                 objectTypeDefinitionNode: objectTypeDefinitionNode,
-                name:name,
+                name: name,
                 baseEntityName: name,
                 definitions: root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
                 databaseType: databaseType);
@@ -345,12 +353,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinitionNodeDirectives.Add(authorizeDirective!);
             }
 
-            string singularName = GetDefinedSingularName(name.Value, entity);
+            string singularName = GetPointCreateMutationNodeName(name.Value, entity);
 
             // Point insertion node.
             FieldDefinitionNode createOneNode = new(
                 location: null,
-                name: new NameNode($"create{singularName}"),
+                name: new NameNode(GetPointCreateMutationNodeName(name.Value, entity)),
                 description: new StringValueNode($"Creates a new {singularName}"),
                 arguments: new List<InputValueDefinitionNode> {
                 new(
@@ -369,7 +377,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // Multiple insertion node.
             FieldDefinitionNode createMultipleNode = new(
                 location: null,
-                name: new NameNode($"create{GetInsertMultipleMutationName(singularName, GetDefinedPluralName(name.Value, entity))}"),
+                name: new NameNode(GetMultipleCreateMutationNodeName(name.Value, entity)),
                 description: new StringValueNode($"Creates multiple new {singularName}"),
                 arguments: new List<InputValueDefinitionNode> {
                 new(
@@ -388,17 +396,26 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Helper method to determine the name of the insert multiple mutation.
+        /// Helper method to determine the name of the create one (or point create) mutation.
+        /// </summary>
+        public static string GetPointCreateMutationNodeName(string entityName, Entity entity)
+        {
+            string singularName = GetDefinedSingularName(entityName, entity);
+            return $"{CREATE_MUTATION_PREFIX}{singularName}";
+        }
+
+        /// <summary>
+        /// Helper method to determine the name of the create multiple mutation.
         /// If the singular and plural graphql names for the entity match, we suffix the name with 'Multiple' suffix to indicate
         /// that the mutation field is created to support insertion of multiple records in the top level entity.
         /// However if the plural and singular names are different, we use the plural name to construct the mutation.
         /// </summary>
-        /// <param name="singularName">Singular name of the entity to be used for GraphQL.</param>
-        /// <param name="pluralName">Plural name of the entity to be used for GraphQL.</param>
-        /// <returns>Name of the insert multiple mutation.</returns>
-        private static string GetInsertMultipleMutationName(string singularName, string pluralName)
+        public static string GetMultipleCreateMutationNodeName(string entityName, Entity entity)
         {
-            return singularName.Equals(pluralName) ? $"{singularName}{INSERT_MULTIPLE_MUTATION_SUFFIX}" : pluralName;
+            string singularName = GetDefinedSingularName(entityName, entity);
+            string pluralName = GetDefinedPluralName(entityName, entity);
+            string mutationName = singularName.Equals(pluralName) ? $"{singularName}{INSERT_MULTIPLE_MUTATION_SUFFIX}" : pluralName;
+            return $"{CREATE_MUTATION_PREFIX}{mutationName}";
         }
     }
 }

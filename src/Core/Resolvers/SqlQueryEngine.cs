@@ -211,11 +211,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Open connection and execute query using _queryExecutor
             string queryString = queryBuilder.Build(structure);
 
+            // Global Cache enablement check
             if (runtimeConfig.CanUseCache())
             {
+                // Entity level cache behavior checks
                 bool dbPolicyConfigured = !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]);
+                bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
 
-                if (dbPolicyConfigured)
+                // If a db policy is configured for the read operation in the context of the executing role, skip the cache.
+                // We want to avoid caching token metadata because token metadata can change frequently and we want to avoid caching it.
+                if (!dbPolicyConfigured && entityCacheEnabled)
                 {
                     DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceName, queryParameters: structure.Parameters);
                     JsonElement result = await _cache.GetOrSetAsync<JsonElement>(queryExecutor, queryMetadata, cacheEntryTtl: runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
@@ -225,6 +230,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
+            // Execute a request normally (skipping cache) when any of the cache usage checks fail:
+            // 1. Global cache is disabled
+            // 2. MSSQL datasource set-session-context property is true
+            // 3. Entity level cache is disabled
+            // 4. A db policy is resolved for the read operation
             JsonDocument? response = await queryExecutor.ExecuteQueryAsync(
                 sqltext: queryString,
                 parameters: structure.Parameters,

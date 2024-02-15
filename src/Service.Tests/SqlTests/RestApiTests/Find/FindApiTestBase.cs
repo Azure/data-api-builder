@@ -130,9 +130,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// <summary>
         /// Tests the Rest Api to validate that queries work
         /// when there is the same table name in two different
-        /// schemas.
+        /// schemas. In this test we have two table both
+        /// named magazines but with one in the schema "foo" and
+        /// the other in the schema "bar".
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public virtual async Task FindOnTableWithNamingCollision()
         {

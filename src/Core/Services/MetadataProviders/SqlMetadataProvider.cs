@@ -122,7 +122,20 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
-            SqlConnectionStringBuilder connectionStringBuilder = new(ConnectionString);
+            SqlConnectionStringBuilder connectionStringBuilder;
+            try
+            {
+                connectionStringBuilder = new SqlConnectionStringBuilder(ConnectionString);
+            }
+            catch (Exception ex)
+            {
+                throw new DataApiBuilderException(
+                    message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
+                    innerException: ex);
+            }
+
             DatabaseName = connectionStringBuilder.InitialCatalog;
             EntitiesDataSet = new();
             QueryManagerFactory = engineFactory;
@@ -1375,6 +1388,19 @@ namespace Azure.DataApiBuilder.Core.Services
             return dataTable[0];
         }
 
+        /// <summary>
+        /// Gets the correctly formatted table name with prefix, given the provided schema name
+        /// and table name. A prefix is everything that comes before the table name itself.
+        /// For example, the correct format with database, schema, and table name is of the form
+        /// [DatabaseName].[schemaName].[tableName]
+        /// In the case that the DatabaseName is empty, the correct form is
+        /// [schemaName].[tableName]
+        /// In the case that both the DatabaseName and schemaName are empty the correct form is
+        /// [tableName]
+        /// </summary>
+        /// <param name="schemaName">Name of schema the table belongs within.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <returns>Properly formatted table name with prefix.</returns>
         internal string GetTableNameWithPrefix(string schemaName, string tableName)
         {   
             IQueryBuilder queryBuilder = GetQueryBuilder();

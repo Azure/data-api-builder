@@ -97,8 +97,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Tests with different combinations of connection string to ensure
-        /// tableprefix generated is correct and forms the correct table name with said prefix.
+        /// <code>Do: </code> Tests with different combinations of data base, schema, and table names
+        /// to validate that the correct full table name with prefix is generated. For example if
+        /// databaseName = TestDB, schemaName = model, and tableName = TrainedModel, then correct would
+        /// mean [TestDB].[model].[TrainedModel], and any other form would be incorrect.
         /// <code>Check: </code> Making sure table name with prefix matches expected name with prefix.
         /// </summary>
         [DataTestMethod]
@@ -111,6 +113,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+            string dataSourceName = runtimeConfig.GetDefaultDataSourceName();
+            DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
+            dataSource.ConnectionString.Replace(dataSource.ConnectionString, $"server=localhost;database={databaseName}");
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             Mock<IQueryExecutor> queryExecutor = new();
@@ -124,7 +130,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 runtimeConfigProvider,
                 queryManagerFactory.Object,
                 sqlMetadataLogger,
-                runtimeConfigProvider.GetConfig().GetDefaultDataSourceName())
+                dataSourceName)
             {
                 DatabaseName = databaseName
             };

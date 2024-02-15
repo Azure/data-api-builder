@@ -926,6 +926,31 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
         }
 
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuth_UnauthorizedItem()
+        {
+            // Run query
+            string gqlQuery = @"{
+                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+            string clientRoleHeader = "item-level-permission-role";
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: "earths",
+                query: gqlQuery,
+                variables: new() { { "name", "test name" } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+        }
+
         /// <summary>
         /// Tests that the field level query filter succeeds requests when filter fields are authorized
         /// </summary>

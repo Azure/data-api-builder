@@ -4,6 +4,7 @@
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Parsers

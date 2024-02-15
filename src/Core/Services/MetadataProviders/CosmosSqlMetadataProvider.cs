@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using HotChocolate.Language;
@@ -16,6 +17,11 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
     public class CosmosSqlMetadataProvider : ISqlMetadataProvider
     {
+        protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
+        private ODataParser _oDataParser = new();
+
+        private IQueryBuilder CosmosQueryBuilder { get; init; }
+
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
@@ -36,13 +42,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem, IAbstractQueryManagerFactory engineFactory)
         {
             _fileSystem = fileSystem;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
 
             _databaseType = _runtimeConfig.DataSource.DatabaseType;
-
             CosmosDbNoSQLDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
 
             if (cosmosDb is null)
@@ -56,6 +61,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             _cosmosDb = cosmosDb;
             ParseSchemaGraphQLDocument();
 
+            QueryManagerFactory = engineFactory;
+            CosmosQueryBuilder = QueryManagerFactory.GetQueryBuilder(_databaseType);
             if (GraphQLSchemaRoot is null)
             {
                 throw new DataApiBuilderException(
@@ -65,6 +72,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
+
+            InitODataParser();
         }
 
         /// <inheritdoc />
@@ -84,6 +93,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization)
             };
+        }
+
+        /// <summary>
+        /// Initialize OData parser by building OData model.
+        /// The parser will be used for parsing filter clause and order by clause.
+        /// </summary>
+        private void InitODataParser()
+        {
+            _oDataParser.BuildModel(this);
         }
 
         /// <inheritdoc />
@@ -201,6 +219,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 if (modelName != typeName)
                 {
                     _graphQLTypeToFieldsMap.TryAdd(modelName, _graphQLTypeToFieldsMap[typeName]);
+
+                    EntityToDatabaseObject.Add(modelName, new DatabaseTable(modelName, modelName));
                 }
             }
         }
@@ -246,12 +266,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public ODataParser GetODataParser()
         {
-            throw new NotImplementedException();
+            return _oDataParser;
         }
 
         public IQueryBuilder GetQueryBuilder()
         {
-            throw new NotImplementedException();
+            return CosmosQueryBuilder;
         }
 
         public bool VerifyForeignKeyExistsInDB(
@@ -288,7 +308,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
-            throw new NotImplementedException();
+            return EntityToDatabaseObject;
         }
 
         /// <inheritdoc />

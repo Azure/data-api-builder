@@ -426,7 +426,7 @@
             {
               "action": "read",
               "policy": {
-                "database": "@item.name contains 'test_name'"
+                "database": "@item.name contains 'test name'"
               }
             },
             {

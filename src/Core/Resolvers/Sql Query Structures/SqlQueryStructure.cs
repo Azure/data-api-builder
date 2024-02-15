@@ -322,7 +322,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(ctx);
             // Process Authorization Policy of the entity being processed.
-            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(EntityActionOperation.Read, queryStructure: this, httpContext, authorizationResolver, sqlMetadataProvider);
+            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                EntityActionOperation.Read,
+                queryStructure: this,
+                httpContext,
+                authorizationResolver,
+                sqlMetadataProvider);
 
             if (outputType.IsNonNullType())
             {

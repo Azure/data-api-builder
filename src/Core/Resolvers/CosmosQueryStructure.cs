@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -14,7 +13,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using Microsoft.OpenApi.Models;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -59,16 +57,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DatabaseObject.Name = _containerAlias;
 
             Joins = new();
-
-            if (httpContext is not null)
-            {
-                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                EntityActionOperation.Read,
-                this,
-                httpContext,
-                authorizationResolver,
-                metadataProvider);
-            }
 
             Init(httpContext, parameters);
         }
@@ -154,6 +142,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
+            }
+
+            if (httpContext is not  null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    EntityActionOperation.Read,
+                    this,
+                    httpContext,
+                    AuthorizationResolver,
+                    MetadataProvider);
             }
 
             // first and after will not be part of query parameters. They will be going into headers instead.

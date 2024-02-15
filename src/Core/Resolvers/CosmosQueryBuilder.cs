@@ -8,7 +8,7 @@ using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
-    public class CosmosQueryBuilder : BaseSqlQueryBuilder
+    public class CosmosQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         private readonly string _containerAlias = "c";
 
@@ -17,29 +17,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="structure"></param>
         /// <returns></returns>
-        public string Build(CosmosQueryStructure structure)
+        public string Build(BaseQueryStructure baseStructure)
         {
-            StringBuilder queryStringBuilder = new();
-            queryStringBuilder.Append($"SELECT {WrappedColumns(structure)}"
-                + $" FROM {_containerAlias}");
-            string predicateString = Build(structure.Predicates);
-
-            if (structure.Joins != null && structure.Joins.Count > 0)
+            if(baseStructure is CosmosQueryStructure structure)
             {
-                queryStringBuilder.Append($" {Build(structure.Joins)}");
-            }
+                StringBuilder queryStringBuilder = new();
+                queryStringBuilder.Append($"SELECT {WrappedColumns(structure)}"
+                    + $" FROM {_containerAlias}");
+                string predicateString = Build(structure.Predicates);
 
-            if (!string.IsNullOrEmpty(predicateString))
+                if (structure.Joins != null && structure.Joins.Count > 0)
+                {
+                    queryStringBuilder.Append($" {Build(structure.Joins)}");
+                }
+
+                if (!string.IsNullOrEmpty(predicateString))
+                {
+                    queryStringBuilder.Append($" WHERE {predicateString}");
+                }
+
+                if (structure.OrderByColumns.Count > 0)
+                {
+                    queryStringBuilder.Append($" ORDER BY {Build(structure.OrderByColumns)}");
+                }
+
+                return queryStringBuilder.ToString();
+            }
+            else
             {
-                queryStringBuilder.Append($" WHERE {predicateString}");
+                throw new System.ArgumentException("Invalid query structure type");
             }
-
-            if (structure.OrderByColumns.Count > 0)
-            {
-                queryStringBuilder.Append($" ORDER BY {Build(structure.OrderByColumns)}");
-            }
-
-            return queryStringBuilder.ToString();
+            
         }
 
         protected override string Build(Column column)
@@ -169,5 +177,44 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return joinBuilder.ToString();
         }
 
+        public string Build(SqlQueryStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlInsertStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlUpdateStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlDeleteStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlUpsertQueryStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlExecuteStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string BuildQueryToGetReadOnlyColumns(string schemaOrDatabaseParamName, string tableParamName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

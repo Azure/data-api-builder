@@ -51,10 +51,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (EntityActionOperation elementalOperation in elementalOperations)
             {
                 string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
-                queryStructure.EntityName,
-                clientRoleHeader,
-                elementalOperation,
-                context);
+                        queryStructure.EntityName,
+                        clientRoleHeader,
+                        elementalOperation,
+                        context);
 
                 FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
                     dbQueryPolicy,

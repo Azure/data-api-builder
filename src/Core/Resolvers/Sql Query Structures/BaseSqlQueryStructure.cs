@@ -8,13 +8,11 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
-using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -61,12 +59,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (httpContext is not null)
             {
                 AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                operationType,
-                this,
-                httpContext,
-                authorizationResolver,
-                metadataProvider
-                );
+                    operationType,
+                    this,
+                    httpContext,
+                    authorizationResolver,
+                    metadataProvider);
             }
         }
 

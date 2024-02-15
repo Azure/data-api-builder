@@ -479,6 +479,12 @@ fragment p on Planet { id }
             Assert.AreEqual(id, response.GetProperty("id").GetString());
         }
 
+        /// <summary>
+        /// Validates that cached data is returned for the query.
+        /// First step - Query data for an ID.
+        /// Second step - Modify the name field for the document queried in the first step.
+        /// Third step - Query the document again to verify that cached data is returned and not modified one.
+        /// </summary>
         [TestMethod]
         public async Task QueryWithCacheEnabledShouldReturnCachedResponse()
         {

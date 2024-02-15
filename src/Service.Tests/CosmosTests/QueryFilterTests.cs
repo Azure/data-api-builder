@@ -899,7 +899,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests that the field level query filter fails authorization when filter fields are
         /// unauthorized because the field 'name' on object type 'earth' is an excluded field of the read
-        /// operation permissions defined for the anonymous role.
+        /// operation permissions defined for a role.
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_UnauthorizedField()

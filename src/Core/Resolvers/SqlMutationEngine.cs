@@ -1114,26 +1114,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (mutationOperation is EntityActionOperation.Create)
             {
                 AuthorizeEntityAndFieldsForMutation(context, clientRole, entityName, mutationOperation, inputArgumentName, parameters);
-                return;
-            }
-
-            List<string> inputArgumentKeys;
-            if (mutationOperation != EntityActionOperation.Delete)
-            {
-                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(inputArgumentName, parameters);
             }
             else
             {
-                inputArgumentKeys = parameters.Keys.ToList();
-            }
+                List<string> inputArgumentKeys;
+                if (mutationOperation != EntityActionOperation.Delete)
+                {
+                    inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(inputArgumentName, parameters);
+                }
+                else
+                {
+                    inputArgumentKeys = parameters.Keys.ToList();
+                }
 
-            if (!AreFieldsAuthorizedForEntity(clientRole, entityName, mutationOperation, inputArgumentKeys))
-            {
-                throw new DataApiBuilderException(
-                        message: "Unauthorized due to one or more fields in this mutation.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                    );
+                if (!AreFieldsAuthorizedForEntity(clientRole, entityName, mutationOperation, inputArgumentKeys))
+                {
+                    throw new DataApiBuilderException(
+                            message: "Unauthorized due to one or more fields in this mutation.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        );
+                }
             }
         }
 

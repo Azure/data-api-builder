@@ -178,6 +178,11 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
                 string entityName = entityDbMetadataMap.Key;
+                if (!_runtimeConfig.Entities.ContainsKey(entityName))
+                {
+                    continue;
+                }
+
                 string entityRestPath = GetEntityRestPath(entityName);
                 string entityBasePathComponent = $"/{entityRestPath}";
 
@@ -962,12 +967,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
 
-                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null && !entity.Rest.Enabled
+                    || entity is null)
                 {
-                    if (!entity.Rest.Enabled)
-                    {
-                        continue;
-                    }
+                    continue;
                 }
                 else
                 {

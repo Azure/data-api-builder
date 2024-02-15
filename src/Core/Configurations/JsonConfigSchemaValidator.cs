@@ -71,8 +71,13 @@ public class JsonConfigSchemaValidator
         {
             try
             {
-                JsonSchema jsonSchema = await JsonSchema.FromUrlAsync(runtimeConfig.Schema);
-                return jsonSchema.ToJson();
+                using(HttpClient client = new())
+                {
+                    // Send a GET request to the URL specified in runtimeConfig.Schema to get the JSON schema.
+                    HttpResponseMessage response = await client.GetAsync(runtimeConfig.Schema);
+                    string jsonSchema = await response.Content.ReadAsStringAsync();
+                    return jsonSchema;
+                }
             }
             catch (Exception e)
             {

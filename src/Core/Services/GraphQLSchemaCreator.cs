@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             // For all the fields in the object which hold a foreign key reference to any referenced entity, add a foriegn key directive.
-            AddFKirective(entities, objectTypes);
+            AddFKDirective(entities, objectTypes);
 
             // Pass two - Add the arguments to the many-to-* relationship fields
             foreach ((string entityName, ObjectTypeDefinitionNode node) in objectTypes)
@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="objectTypes">Collection of object types.</param>
         /// <param name="entities">Entities from runtime config.</param>
-        private void AddFKirective(RuntimeEntities entities, Dictionary<string, ObjectTypeDefinitionNode> objectTypes)
+        private void AddFKDirective(RuntimeEntities entities, Dictionary<string, ObjectTypeDefinitionNode> objectTypes)
         {
             foreach ((string sourceEntityName, ObjectTypeDefinitionNode sourceObjectTypeDefinitionNode) in objectTypes)
             {

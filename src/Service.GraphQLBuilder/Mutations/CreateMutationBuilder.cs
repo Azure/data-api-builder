@@ -215,11 +215,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-            if (databaseType is DatabaseType.MSSQL && RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
+            if (databaseType is DatabaseType.MSSQL)
             {
-                // For *:N relationships, we need to create a list type. Since providing input for a relationship field is optional,
-                // the type should be nullable.
-                type = (INullableTypeNode)GenerateListType(type, field.Type.InnerType());
+                if (RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
+                {
+                    // For *:N relationships, we need to create a list type.
+                    type = GenerateListType(type, field.Type.InnerType());
+                }
+
+                // Since providing input for a relationship field is optional, the type should be nullable.
+                type = (INullableTypeNode)type;
             }
             // For a type like [Bar!]! we have to first unpack the outer non-null
             else if (field.Type.IsNonNullType())
@@ -296,7 +301,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// </summary>
         /// <param name="typeName">Name of the entity</param>
         /// <returns>InputTypeName</returns>
-        private static NameNode GenerateInputTypeName(string typeName)
+        public static NameNode GenerateInputTypeName(string typeName)
         {
             return new($"{EntityActionOperation.Create}{typeName}Input");
         }
@@ -393,7 +398,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <summary>
         /// Helper method to determine the name of the create one (or point create) mutation.
         /// </summary>
-        private static string GetPointCreateMutationNodeName(string entityName, Entity entity)
+        public static string GetPointCreateMutationNodeName(string entityName, Entity entity)
         {
             string singularName = GetDefinedSingularName(entityName, entity);
             return $"{CREATE_MUTATION_PREFIX}{singularName}";
@@ -405,7 +410,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// that the mutation field is created to support insertion of multiple records in the top level entity.
         /// However if the plural and singular names are different, we use the plural name to construct the mutation.
         /// </summary>
-        private static string GetMultipleCreateMutationNodeName(string entityName, Entity entity)
+        public static string GetMultipleCreateMutationNodeName(string entityName, Entity entity)
         {
             string singularName = GetDefinedSingularName(entityName, entity);
             string pluralName = GetDefinedPluralName(entityName, entity);

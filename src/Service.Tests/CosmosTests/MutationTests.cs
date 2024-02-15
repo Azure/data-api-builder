@@ -257,15 +257,14 @@ mutation {{
         /// <summary>
         /// Create Mutation performed on the fields with different auth permissions
         /// It throws permission denied error if role doesn't have permission to perform the operation
-        /// 'item-level-permission-role' is not applicable for create operation
         /// </summary>
         [TestMethod]
-        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "When there is limited permission at field level but have full read permission")]
-        [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "When CRUD permission is there without any restriction")]
+        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed fields.")]
+        [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no create/read operation restrictions.")]
         [DataRow("only-create-role", "The mutation operation createEarth was successful " +
-            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "When ONLY create permission is there")]
-        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "When create permission is there at entity level but all the fields are excluded using wildcard")]
-        [DataRow("only-update-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "When create permission is NOT there")]
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure  but sucessful operation  where role has ONLY create permission and NO read permission.")]
+        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed field using wildcard.")]
+        [DataRow("only-update-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when create permission is NOT there.")]
         public async Task CreateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Run mutation Add Earth;
@@ -300,12 +299,12 @@ mutation {{
         /// It throws permission denied error if role doesn't have permission to perform the operation
         /// </summary>
         [TestMethod]
-        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "When there is limited permission at field level but have full read permission")]
-        [DataRow("authenticated", NO_ERROR_MESSAGE, DisplayName = "When CRUD permission is there without any restriction")]
+        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for update mutation because of reference to excluded/disallowed fields.")]
+        [DataRow("authenticated", NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no update/read operation restrictions.")]
         [DataRow("only-update-role", "The mutation operation updateEarth was successful " +
-            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "When ONLY update permission is there")]
-        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "When update permission is there at entity level but all the fields are excluded using wildcard")]
-        [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "When update permission is NOT there")]
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure  but sucessful operation where role has ONLY update permission and NO read permission.")]
+        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for update mutation because of reference to excluded/disallowed field using wildcard.")]
+        [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when update permission is NOT there.")]
         public async Task UpdateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Create an item with "Authenticated" role
@@ -367,12 +366,12 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         /// It throws permission denied error if role doesn't have permission to perform the operation
         /// </summary>
         [TestMethod]
-        [DataRow("field-mutation-with-read-permission", MutationTests.NO_ERROR_MESSAGE, DisplayName = "When there is limited permission at field level but have full read permission, Response is EMPTY string.")]
-        [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "When CRUD permission is there without any restriction, Response is EMPTY string.")]
+        [DataRow("field-mutation-with-read-permission", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response for delete mutation because of reference to excluded/disallowed fields.")]
+        [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response when role has no delete operation restrictions.")]
         [DataRow("only-delete-role", "The mutation operation deleteEarth was successful " +
-            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "When ONLY delete permission is there")]
-        [DataRow("wildcard-exclude-fields-role", MutationTests.NO_ERROR_MESSAGE, DisplayName = "When delete permission is there at entity level but all the fields are excluded using wildcard")]
-        [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "When delete permission is NOT there")]
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure but sucessful operation where role has ONLY delete permission and NO read permission.")]
+        [DataRow("wildcard-exclude-fields-role", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response for delete mutation because of reference to excluded/disallowed fields using wildcard")]
+        [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when delete permission is NOT there.")]
         public async Task DeleteItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Create an item with "Authenticated" role

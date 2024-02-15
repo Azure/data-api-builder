@@ -23,7 +23,6 @@ using Azure.DataApiBuilder.Core.Services.Cache;
 using ZiggyCreatures.Caching.Fusion;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using System;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using System.Linq;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
@@ -40,57 +39,16 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
     {
         // Stores the type of database - MsSql, MySql, PgSql, DwSql. Currently nested mutations are only supported for MsSql.
         protected static string databaseEngine;
-        private static RuntimeConfig _runtimeConfig;
-        private static DocumentNode _objectsNode;
-        private static DocumentNode _mutationsNode;
+
+        // Stores mutation definitions for entities.
+        private static IEnumerable<IHasName> _mutationDefinitions;
+
+        // Stores object definitions for entities.
         private static IEnumerable<IHasName> _objectDefinitions;
 
-        #region Test setup
-        public static async Task InitializeAsync()
-        {
-            (GraphQLSchemaCreator schemaCreator, _runtimeConfig) = await SetUpGQLSchemaCreatorAndConfig(databaseEngine);
-            (_objectsNode, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = schemaCreator.GenerateGraphQLObjects();
-            _objectDefinitions = _objectsNode.Definitions.Where(d => d is IHasName).Cast<IHasName>();
-            (_, _mutationsNode) = schemaCreator.GenerateQueryAndMutationNodes(_objectsNode, inputTypes);
-        }
-        private static async Task<Tuple<GraphQLSchemaCreator, RuntimeConfig>> SetUpGQLSchemaCreatorAndConfig(string databaseType)
-        {
-            string fileContents = await File.ReadAllTextAsync($"dab-config.{databaseType}.json");
+        // Runtime config instance.
+        private static RuntimeConfig _runtimeConfig;
 
-            IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
-            {
-                { "dab-config.json", new MockFileData(fileContents) }
-            });
-
-            FileSystemRuntimeConfigLoader loader = new(fs);
-            RuntimeConfigProvider provider = new(loader);
-            RuntimeConfig runtimeConfig = provider.GetConfig();
-            Mock<IHttpContextAccessor> httpContextAccessor = new();
-            Mock<ILogger<IQueryExecutor>> qMlogger = new();
-            Mock<IFusionCache> cache = new();
-            DabCacheService cacheService = new(cache.Object, logger: null, httpContextAccessor.Object);
-            IAbstractQueryManagerFactory queryManagerfactory = new QueryManagerFactory(provider, qMlogger.Object, httpContextAccessor.Object);
-            Mock<ILogger<ISqlMetadataProvider>> metadatProviderLogger = new();
-            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, queryManagerfactory, metadatProviderLogger.Object, fs);
-            await metadataProviderFactory.InitializeAsync();
-            GQLFilterParser graphQLFilterParser = new(provider, metadataProviderFactory);
-            IAuthorizationResolver authzResolver = new AuthorizationResolver(provider, metadataProviderFactory);
-            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
-            IQueryEngineFactory queryEngineFactory = new QueryEngineFactory(
-                runtimeConfigProvider: provider,
-                queryManagerFactory: queryManagerfactory,
-                metadataProviderFactory: metadataProviderFactory,
-                cosmosClientProvider: null,
-                contextAccessor: httpContextAccessor.Object,
-                authorizationResolver: authzResolver,
-                gQLFilterParser: graphQLFilterParser,
-                logger: queryEngineLogger.Object,
-                cache: cacheService);
-            Mock<IMutationEngineFactory> mutationEngineFactory = new();
-
-            return new(new GraphQLSchemaCreator(provider, queryEngineFactory, mutationEngineFactory.Object, metadataProviderFactory, authzResolver), runtimeConfig);
-        }
-        #endregion
         #region Nested Create tests
 
         /// <summary>
@@ -184,9 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             string createOneMutationName = CreateMutationBuilder.GetPointCreateMutationNodeName(entityName, _runtimeConfig.Entities[entityName]);
             string createMultipleMutationName = CreateMutationBuilder.GetMultipleCreateMutationNodeName(entityName, _runtimeConfig.Entities[entityName]);
 
-            ObjectTypeDefinitionNode mutationObjectDefinition = (ObjectTypeDefinitionNode)_mutationsNode.Definitions
-                .Where(d => d is IHasName).Cast<IHasName>()
-                .FirstOrDefault(d => d.Name.Value == "Mutation");
+            ObjectTypeDefinitionNode mutationObjectDefinition = (ObjectTypeDefinitionNode)_mutationDefinitions.FirstOrDefault(d => d.Name.Value == "Mutation");
 
             // The index of create one mutation not being equal to -1 indicates that we successfully created the mutation.
             int indexOfCreateOneMutationField = mutationObjectDefinition.Fields.ToList().FindIndex(f => f.Name.Value.Equals(createOneMutationName));
@@ -214,9 +170,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             Entity entity = _runtimeConfig.Entities[entityName];
             NameNode inputTypeName = CreateMutationBuilder.GenerateInputTypeName(GetDefinedSingularName(entityName, entity));
-            InputObjectTypeDefinitionNode inputObjectTypeDefinition = (InputObjectTypeDefinitionNode)_mutationsNode.Definitions
-                .Where(d => d is IHasName).Cast<IHasName>().
-                FirstOrDefault(d => d.Name.Value.Equals(inputTypeName.Value));
+            InputObjectTypeDefinitionNode inputObjectTypeDefinition = (InputObjectTypeDefinitionNode)_mutationDefinitions.FirstOrDefault(d => d.Name.Value.Equals(inputTypeName.Value));
             List<InputValueDefinitionNode> inputFields = inputObjectTypeDefinition.Fields.ToList();
             HashSet<string> inputFieldNames = new(inputObjectTypeDefinition.Fields.Select(field => field.Name.Value));
             foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships)
@@ -260,9 +214,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 sourceEntityName,
                 _runtimeConfig.Entities[sourceEntityName]));
             Entity entity = _runtimeConfig.Entities[sourceEntityName];
-            InputObjectTypeDefinitionNode inputObjectTypeDefinition = (InputObjectTypeDefinitionNode)_mutationsNode.Definitions
-                .Where(d => d is IHasName).Cast<IHasName>().
-                FirstOrDefault(d => d.Name.Value.Equals(inputTypeNameForBook.Value));
+            InputObjectTypeDefinitionNode inputObjectTypeDefinition = (InputObjectTypeDefinitionNode)_mutationDefinitions.FirstOrDefault(d => d.Name.Value.Equals(inputTypeNameForBook.Value));
             NameNode inputTypeName = CreateMutationBuilder.GenerateInputTypeName(GenerateLinkingNodeName(
                 GetDefinedSingularName(sourceEntityName, _runtimeConfig.Entities[sourceEntityName]),
                 GetDefinedSingularName(targetEntityName, _runtimeConfig.Entities[targetEntityName])));
@@ -286,9 +238,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             Entity entity = _runtimeConfig.Entities[referencingEntityName];
             NameNode inputTypeName = CreateMutationBuilder.GenerateInputTypeName(GetDefinedSingularName(referencingEntityName, entity));
-            InputObjectTypeDefinitionNode inputObjectTypeDefinition = (InputObjectTypeDefinitionNode)_mutationsNode.Definitions
-                .Where(d => d is IHasName).Cast<IHasName>().
-                FirstOrDefault(d => d.Name.Value.Equals(inputTypeName.Value));
+            InputObjectTypeDefinitionNode inputObjectTypeDefinition = (InputObjectTypeDefinitionNode)_mutationDefinitions.FirstOrDefault(d => d.Name.Value.Equals(inputTypeName.Value));
             List<InputValueDefinitionNode> inputFields = inputObjectTypeDefinition.Fields.ToList();
             foreach (string referencingColumn in referencingColumns)
             {
@@ -306,6 +256,106 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         {
             IHasName definition = _objectDefinitions.FirstOrDefault(d => d.Name.Value == sourceTargetLinkingNodeName.Value);
             return definition is ObjectTypeDefinitionNode objectTypeDefinitionNode ? objectTypeDefinitionNode : null;
+        }
+        #endregion
+
+        #region Test setup
+
+        /// <summary>
+        /// Initializes the class variables to be used throughout the tests.
+        /// </summary>
+        public static async Task InitializeAsync()
+        {
+            // Setup runtime config.
+            RuntimeConfigProvider runtimeConfigProvider = await GetRuntimeConfigProvider();
+            _runtimeConfig = runtimeConfigProvider.GetConfig();
+
+            // Collect object definitions for entities.
+            GraphQLSchemaCreator schemaCreator = await GetGQLSchemaCreator(runtimeConfigProvider);
+            (DocumentNode objectsNode, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = schemaCreator.GenerateGraphQLObjects();
+            _objectDefinitions = objectsNode.Definitions.Where(d => d is IHasName).Cast<IHasName>();
+
+            // Collect mutation definitions for entities.
+            (_, DocumentNode mutationsNode) = schemaCreator.GenerateQueryAndMutationNodes(objectsNode, inputTypes);
+            _mutationDefinitions = mutationsNode.Definitions.Where(d => d is IHasName).Cast<IHasName>();
+        }
+
+        /// <summary>
+        /// Sets up and returns a runtime config provider instance.
+        /// </summary>
+        private static async Task<RuntimeConfigProvider> GetRuntimeConfigProvider()
+        {
+            string fileContents = await File.ReadAllTextAsync($"dab-config.{databaseEngine}.json");
+            IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
+            {
+                { "dab-config.json", new MockFileData(fileContents) }
+            });
+
+            FileSystemRuntimeConfigLoader loader = new(fs);
+            return new(loader);
+        }
+
+        /// <summary>
+        /// Sets up a GraphQL schema creator instance.
+        /// </summary>
+        private static async Task<GraphQLSchemaCreator> GetGQLSchemaCreator(RuntimeConfigProvider runtimeConfigProvider)
+        {
+            // Setup mock loggers.
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            Mock<ILogger<IQueryExecutor>> executorLogger = new();
+            Mock<ILogger<ISqlMetadataProvider>> metadatProviderLogger = new();
+            Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
+
+            // Setup mock cache and cache service.
+            Mock<IFusionCache> cache = new();
+            DabCacheService cacheService = new(cache: cache.Object, logger: null, httpContextAccessor: httpContextAccessor.Object);
+
+            // Setup query manager factory.
+            IAbstractQueryManagerFactory queryManagerfactory = new QueryManagerFactory(
+                runtimeConfigProvider: runtimeConfigProvider,
+                logger: executorLogger.Object,
+                contextAccessor: httpContextAccessor.Object);
+
+            // Setup metadata provider factory.
+            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(
+                runtimeConfigProvider: runtimeConfigProvider,
+                queryManagerFactory: queryManagerfactory,
+                logger: metadatProviderLogger.Object,
+                fileSystem: null);
+
+            // Collecte all the metadata from the database.
+            await metadataProviderFactory.InitializeAsync();
+
+            // Setup GQL filter parser.
+            GQLFilterParser graphQLFilterParser = new(runtimeConfigProvider: runtimeConfigProvider, metadataProviderFactory: metadataProviderFactory);
+
+            // Setup Authorization resolver.
+            IAuthorizationResolver authorizationResolver = new AuthorizationResolver(
+                runtimeConfigProvider: runtimeConfigProvider,
+                metadataProviderFactory: metadataProviderFactory);
+
+            // Setup query engine factory.
+            IQueryEngineFactory queryEngineFactory = new QueryEngineFactory(
+                runtimeConfigProvider: runtimeConfigProvider,
+                queryManagerFactory: queryManagerfactory,
+                metadataProviderFactory: metadataProviderFactory,
+                cosmosClientProvider: null,
+                contextAccessor: httpContextAccessor.Object,
+                authorizationResolver: authorizationResolver,
+                gQLFilterParser: graphQLFilterParser,
+                logger: queryEngineLogger.Object,
+                cache: cacheService);
+
+            // Setup mock mutation engine factory.
+            Mock<IMutationEngineFactory> mutationEngineFactory = new();
+
+            // Return the setup GraphQL schema creator instance.
+            return new GraphQLSchemaCreator(
+                runtimeConfigProvider: runtimeConfigProvider,
+                queryEngineFactory: queryEngineFactory,
+                mutationEngineFactory: mutationEngineFactory.Object,
+                metadataProviderFactory: metadataProviderFactory,
+                authorizationResolver: authorizationResolver);
         }
         #endregion
     }

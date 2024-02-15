@@ -262,7 +262,7 @@ mutation {{
         [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed fields.")]
         [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no create/read operation restrictions.")]
         [DataRow("only-create-role", "The mutation operation createEarth was successful " +
-            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure  but sucessful operation  where role has ONLY create permission and NO read permission.")]
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "Successful create operation but AuthZ failure for read when role has ONLY create permission and NO read permission.")]
         [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed field using wildcard.")]
         [DataRow("only-update-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when create permission is NOT there.")]
         public async Task CreateItemWithAuthPermissions(string roleName, string expectedErrorMessage)

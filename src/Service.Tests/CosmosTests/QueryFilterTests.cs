@@ -55,6 +55,213 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         }
 
+        /// <summary>
+        /// Tests eq of StringFilterInput
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringMultiLevelFiltersWithObjectType()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {character: {star: {name: {eq: ""Earth_star""}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = "select c.name from c where c.character.star.name = \"Earth_star\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where additionalAttributes is an array
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringMultiFiltersWithAndCondition()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {
+                        and: [
+                            { additionalAttributes: {name: {eq: ""volcano1""}}}
+                            { moons: {name: {eq: ""1 moon""}}}
+                            { moons: {details: {contains: ""v1""}}}
+                        ]   
+                     })
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.additionalAttributes " +
+                "JOIN b IN c.moons " +
+                "WHERE a.name = \"volcano1\" and b.name = \"1 moon\" and b.details LIKE \"%v1%\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where additionalAttributes is an array
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersOnArrayType()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {additionalAttributes: {name: {eq: ""volcano1""}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.additionalAttributes " +
+                "WHERE a.name = \"volcano1\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where moons is an array and moonAdditionalAttributes is a subarray
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersOnNestedArrayType()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {moons: {moonAdditionalAttributes: {name: {eq: ""moonattr0""}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.moons " +
+                "JOIN b IN a.moonAdditionalAttributes " +
+                "WHERE b.name = \"moonattr0\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where moons is an array and moonAdditionalAttributes is a subarray and moreAttributes is subarray with Alias
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersOnTwoLevelNestedArrayType()
+        {
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+               @" : {moons: {moonAdditionalAttributes: {moreAttributes: {name: {eq: ""moonattr0""}}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.moons " +
+                "JOIN b IN a.moonAdditionalAttributes " +
+                "JOIN d IN b.moreAttributes " +
+                "WHERE d.name = \"moonattr0\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where moons is an array and moonAdditionalAttributes is a subarray With AND condition
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringFiltersOnNestedArrayTypeHavingAndCondition()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {moons: {
+                                and:[
+                                      {moonAdditionalAttributes: {name: {eq: ""moonattr0""}}}
+                                      {name: {eq: ""0 moon""}}
+                                ]
+                     }})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.moons " +
+                "JOIN b IN a.moonAdditionalAttributes " +
+                "WHERE b.name = \"moonattr0\" and a.name = \"0 moon\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where additionalAttributes is an array
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringMultiFiltersOnArrayTypeWithAndCondition()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : {additionalAttributes: {name: {eq: ""volcano1""}}
+                and: { moons: {name: {eq: ""1 moon""}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.additionalAttributes " +
+                "JOIN b IN c.moons " +
+                "WHERE a.name = \"volcano1\" and b.name = \"1 moon\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
+        /// <summary>
+        /// Tests eq of StringFilterInput where additionalAttributes is an array
+        /// </summary>
+        [TestMethod]
+        public async Task TestStringMultiFiltersOnArrayTypeWithOrCondition()
+        {
+            // Get only the planets where the additionalAttributes array contains an object with name "volcano1"
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+                @" : { or: [
+                {additionalAttributes: {name: {eq: ""volcano1""}}}
+                { moons: {name: {eq: ""1 moon""}}}]})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string dbQueryWithJoin = "SELECT c.name FROM c " +
+                "JOIN a IN c.additionalAttributes " +
+                "JOIN b IN c.moons " +
+                "WHERE a.name = \"volcano1\" OR b.name = \"1 moon\"";
+
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
+        }
+
         private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
         {
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);

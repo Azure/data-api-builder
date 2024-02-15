@@ -150,10 +150,10 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <returns>true if no validation failures, else false.</returns>
     public async Task<bool> TryValidateConfig(
         string configFilePath,
-        RuntimeConfig runtimeConfig,
         ILoggerFactory loggerFactory,
         bool isValidateOnly = false)
     {
+        RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);

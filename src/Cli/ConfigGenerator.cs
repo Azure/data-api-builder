@@ -1093,7 +1093,7 @@ namespace Cli
 
             // Validates that config file has data and it is properly deserialized
             // Replaces all the environment variables while deserializing when starting DAB.
-            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
+            if (!loader.TryLoadKnownConfig(out _, replaceEnvVar: true))
             {
                 _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -1108,7 +1108,7 @@ namespace Cli
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
-            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, LoggerFactoryForCli).Result;
+            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
         }
 
         /// <summary>

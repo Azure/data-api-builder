@@ -15,11 +15,11 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// </summary>
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
-        private readonly BaseSqlQueryStructure _struct;
+        private readonly BaseQueryStructure _struct;
         private readonly ISqlMetadataProvider _metadataProvider;
         private readonly EntityActionOperation _operation;
 
-        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
+        public ODataASTVisitor(BaseQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
         {
             _struct = structure;
             _metadataProvider = metadataProvider;

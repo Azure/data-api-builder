@@ -21,6 +21,10 @@ update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "wildcard-e
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "only-create-role:create"
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "only-update-role:update"
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "only-delete-role:delete"
+update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:create"
+update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:read"  --policy-database "@item.name contains 'test_name'"
+update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:update"  --policy-database "@item.name contains 'test_name'"
+update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:delete"  --policy-database "@claims.UserId eq @item.createdby"
 add Sun --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.sun" --permissions "anonymous:create,update,delete" --graphql true
 update Sun --config "dab-config.CosmosDb_NoSql.json" --permissions "anonymous:read" --fields.include "*" --fields.exclude "name"
 add AdditionalAttribute --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.additionalAttribute" --permissions "anonymous:*" --graphql "AdditionalAttribute:AdditionalAttributes"

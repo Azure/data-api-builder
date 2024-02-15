@@ -365,7 +365,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                         _ctx,
                                         filterArgumentSchema: queryArgumentSchemas[QueryBuilder.FILTER_FIELD_NAME],
                                         fields: filterFields,
-                                        queryStructure: this));
+                                        queryStructure: this,
+                                        httpContext));
                 }
             }
 

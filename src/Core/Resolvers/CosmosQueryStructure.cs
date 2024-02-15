@@ -4,6 +4,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -11,6 +13,8 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
+using Microsoft.OpenApi.Models;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -46,13 +50,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
+            HttpContext? httpContext,
             IncrementingInteger? counter = null)
             : base(metadataProvider, authorizationResolver, gQLFilterParser, entityName: string.Empty, counter: counter)
         {
             _context = context;
             SourceAlias = _containerAlias;
             DatabaseObject.Name = _containerAlias;
-            Init(parameters);
+
+            Joins = new();
+
+            if (httpContext is not null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                EntityActionOperation.Read,
+                this,
+                httpContext,
+                authorizationResolver,
+                metadataProvider);
+            }
+
+            Init(httpContext, parameters);
         }
 
         /// <inheritdoc/>
@@ -103,7 +121,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         [MemberNotNull(nameof(Container))]
         [MemberNotNull(nameof(Database))]
         [MemberNotNull(nameof(OrderByColumns))]
-        private void Init(IDictionary<string, object?> queryParams)
+        private void Init(HttpContext? httpContext, IDictionary<string, object?> queryParams)
         {
             IFieldSelection selection = _context.Selection;
             ObjectType underlyingType = GraphQLUtils.UnderlyingGraphQLEntityType(selection.Field.Type);
@@ -182,7 +200,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             _context,
                             filterArgumentSchema: selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
                             fields: filterFields,
-                            queryStructure: this));
+                            queryStructure: this,
+                            httpContext: httpContext));
 
                     // after parsing all the GraphQL filters,
                     // reset the source alias and object name to the generic container alias

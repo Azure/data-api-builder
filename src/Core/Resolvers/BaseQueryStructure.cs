@@ -1,13 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
+using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -177,6 +182,57 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
         {
             return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+        }
+
+        /// <summary>
+        /// DbPolicyPredicates is a string that represents the filter portion of our query
+        /// in the WHERE Clause added by virtue of the database policy.
+        /// </summary>
+        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
+
+
+        /// <summary>
+        /// After SqlQueryStructure is instantiated, process a database authorization policy
+        /// for GraphQL requests with the ODataASTVisitor to populate DbPolicyPredicates.
+        /// Processing will also occur for GraphQL sub-queries.
+        /// </summary>
+        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
+        /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
+        public void ProcessOdataClause(FilterClause? dbPolicyClause, EntityActionOperation operation)
+        {
+            if (dbPolicyClause is null)
+            {
+                DbPolicyPredicatesForOperations[operation] = null;
+                return;
+            }
+
+            ODataASTVisitor visitor = new(this, MetadataProvider, operation);
+            try
+            {
+                DbPolicyPredicatesForOperations[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
+            }
+            catch (Exception ex)
+            {
+                throw new DataApiBuilderException(
+                    message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                    innerException: ex);
+            }
+        }
+
+        /// <summary>
+        /// Collection of all the fields referenced in the database policy for create action.
+        /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
+        /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
+        /// This will only be populated for POST/PUT/PATCH operations.
+        /// </summary>
+        public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
+
+        protected static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)
+        {
+            return filterClause.Expression.Accept<string>(visitor);
         }
     }
 }

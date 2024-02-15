@@ -54,7 +54,8 @@ public class GQLFilterParser
         IMiddlewareContext ctx,
         IInputField filterArgumentSchema,
         List<ObjectFieldNode> fields,
-        BaseQueryStructure queryStructure)
+        BaseQueryStructure queryStructure,
+        HttpContext? httpContext)
     {
         string schemaName = queryStructure.DatabaseObject.SchemaName;
         string sourceName = queryStructure.DatabaseObject.Name;
@@ -114,7 +115,8 @@ public class GQLFilterParser
                     filterArgumentSchema: filterArgumentSchema,
                     otherPredicates,
                     queryStructure,
-                    op)));
+                    op,
+                    httpContext)));
             }
             else
             {
@@ -186,7 +188,8 @@ public class GQLFilterParser
                             subfields,
                             predicates,
                             queryStructure,
-                            metadataProvider);
+                            metadataProvider,
+                            httpContext);
                     }
                     else if (queryStructure is CosmosQueryStructure cosmosQueryStructure)
                     {
@@ -213,7 +216,8 @@ public class GQLFilterParser
                                 nestedFieldTypeName,
                                 predicates,
                                 cosmosQueryStructure,
-                                metadataProvider);
+                                metadataProvider,
+                                httpContext);
                         }
                         else
                         {
@@ -224,7 +228,8 @@ public class GQLFilterParser
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
-                                cosmosQueryStructure)));
+                                cosmosQueryStructure,
+                                httpContext)));
 
                             cosmosQueryStructure.DatabaseObject.Name = sourceName;
                             cosmosQueryStructure.SourceAlias = sourceAlias;
@@ -274,7 +279,8 @@ public class GQLFilterParser
         string entityType,
         List<PredicateOperand> predicates,
         CosmosQueryStructure queryStructure,
-        ISqlMetadataProvider metadataProvider)
+        ISqlMetadataProvider metadataProvider,
+        HttpContext? httpContext)
     {
         string entityName = metadataProvider.GetEntityName(entityType);
 
@@ -300,6 +306,7 @@ public class GQLFilterParser
                 metadataProvider: metadataProvider,
                 authorizationResolver: queryStructure.AuthorizationResolver,
                 gQLFilterParser: this,
+                httpContext: httpContext,
                 counter: queryStructure.Counter);
 
         comosQueryStructure.DatabaseObject.SchemaName = queryStructure.SourceAlias;
@@ -311,7 +318,8 @@ public class GQLFilterParser
                 ctx: ctx,
                 filterArgumentSchema: filterField,
                 fields: subfields,
-                queryStructure: comosQueryStructure));
+                queryStructure: comosQueryStructure,
+                httpContext));
         predicates.Push(joinpredicate);
 
         queryStructure.Joins ??= new Stack<CosmosJoinStructure>();
@@ -355,7 +363,8 @@ public class GQLFilterParser
         List<ObjectFieldNode> subfields,
         List<PredicateOperand> predicates,
         BaseQueryStructure queryStructure,
-        ISqlMetadataProvider metadataProvider)
+        ISqlMetadataProvider metadataProvider,
+        HttpContext? httpContext)
     {
         string? targetGraphQLTypeNameForFilter = RelationshipDirectiveType.GetTarget(filterField);
 
@@ -402,7 +411,8 @@ public class GQLFilterParser
         Predicate existsQueryFilterPredicate = Parse(ctx,
                 filterField,
                 subfields,
-                existsQuery);
+                existsQuery,
+                httpContext);
         predicatesForExistsQuery.Push(existsQueryFilterPredicate);
 
         // Add JoinPredicates to the subquery query structure so a predicate connecting
@@ -499,7 +509,8 @@ public class GQLFilterParser
         IInputField filterArgumentSchema,
         List<IValueNode> fields,
         BaseQueryStructure baseQuery,
-        PredicateOperation op)
+        PredicateOperation op,
+        HttpContext? httpContext)
     {
         if (fields.Count == 0 && (baseQuery is CosmosQueryStructure cosmosQueryStructure && cosmosQueryStructure.Joins?.Count == 0))
         {
@@ -541,7 +552,8 @@ public class GQLFilterParser
                 Parse(ctx,
                     filterArgumentSchema,
                     subfields,
-                    baseQuery)));
+                    baseQuery,
+                    httpContext)));
         }
 
         return MakeChainPredicate(operands, op);

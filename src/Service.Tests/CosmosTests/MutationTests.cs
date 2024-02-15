@@ -306,6 +306,7 @@ mutation {{
             "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "When ONLY update permission is there")]
         [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "When update permission is there at entity level but all the fields are excluded using wildcard")]
         [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "When update permission is NOT there")]
+        [DataRow("item-level-permission-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "When database policy is defined i.e. item level conditions")]
         public async Task UpdateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Create an item with "Authenticated" role

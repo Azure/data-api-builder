@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
 
             if (config.CosmosDataSourceUsed)
             {
-                IQueryEngine queryEngine = new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser);
+                IQueryEngine queryEngine = new CosmosQueryEngine(cosmosClientProvider, metadataProviderFactory, authorizationResolver, gQLFilterParser, contextAccessor);
                 _queryEngines.Add(DatabaseType.CosmosDB_NoSQL, queryEngine);
             }
 

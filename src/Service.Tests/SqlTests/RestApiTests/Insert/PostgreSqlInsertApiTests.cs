@@ -227,6 +227,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND 0 = 1
                     ) AS subq
                 "
+            },
+            {
+                "InsertOneRowWithBuiltInMethodAsDefaultvaluesTest",
+                @"
+                    SELECT to_jsonb(subq) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _defaultValueAsBuiltInMethodsTable + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                    ) AS subq
+                "
             }
         };
 

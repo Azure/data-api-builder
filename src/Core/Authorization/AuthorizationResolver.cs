@@ -4,6 +4,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Security.Claims;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -190,7 +191,7 @@ public class AuthorizationResolver : IAuthorizationResolver
             return string.Empty;
         }
 
-        return GetPolicyWithClaimValues(dBpolicyWithClaimTypes, GetAllUserClaims(httpContext));
+        return GetPolicyWithClaimValues(dBpolicyWithClaimTypes, GetAllAuthenticatedUserClaims(httpContext));
     }
 
     /// <inheritdoc />
@@ -438,17 +439,113 @@ public class AuthorizationResolver : IAuthorizationResolver
     }
 
     /// <summary>
-    /// Helper method to extract all claims available in the HttpContext's user object and add the claims
-    /// to the claimsInRequestContext dictionary to be used for claimType -> claim lookups.
+    /// Returns a dictionary (string, string) where a key is a claim's name and a value is a claim's value.
+    /// Resolves multiple claim objects of the same claim type into a JSON array mirroring the format
+    /// of the claim in the original JWT token. The JSON array's type depends on the value type
+    /// present in the original JWT token.
     /// </summary>
-    /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
-    /// <returns>Dictionary with claimType -> claim mappings.</returns>
-    public static Dictionary<string, Claim> GetAllUserClaims(HttpContext? context)
+    /// <remarks>
+    /// DotNet will resolve a claim with value type JSON array to multiple Claim objects
+    /// with the same type and different values.
+    /// e.g. roles and groups claim, which are arrays of strings and are flattened to:
+    /// roles: role1, roles: role2, groups: group1, groups: group2
+    /// "Claims are name valued pairs and nothing more."
+    /// Ref: https://github.com/dotnet/aspnetcore/issues/13647#issuecomment-527523224
+    /// The library that parses the JWT token into claims is the one that decides
+    /// *how* to resolve the claims from the token's JSON payload.
+    /// dotnet flattens the claims into a list:
+    /// https://github.com/dotnet/aspnetcore/blob/282bfc1b486ae235a3395150a8d53073a57b7f43/src/Security/Authentication/OAuth/src/JsonKeyClaimAction.cs#L39-L53
+    /// </remarks>
+    /// <param name="context">HttpContext which contains a ClaimsPrincipal</param>
+    /// <returns>Processed claims and claim values.</returns>
+    public static Dictionary<string, string> GetProcessedUserClaims(HttpContext? context)
     {
-        Dictionary<string, Claim> claimsInRequestContext = new();
+        Dictionary<string, string> processedClaims = new();
+
         if (context is null)
         {
-            return claimsInRequestContext;
+            return processedClaims;
+        }
+
+        Dictionary<string, List<Claim>> userClaims = GetAllAuthenticatedUserClaims(context);
+
+        foreach ((string claimName, List<Claim> claimValues) in userClaims)
+        {
+            // Some identity providers (other than Entra ID) may emit a 'scope' claim as a JSON string array. dotnet will
+            // create claim objects for each value in the array. DAB will honor that format
+            // and processes the 'scope' claim objects as a JSON array serialized to a string.
+            if (claimValues.Count > 1)
+            {
+                switch (claimValues.First().ValueType)
+                {
+                    case ClaimValueTypes.Boolean:
+                        processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => bool.Parse(claim.Value))));
+                        break;
+                    case ClaimValueTypes.Integer:
+                    case ClaimValueTypes.Integer32:
+                        processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => int.Parse(claim.Value))));
+                        break;
+                    // Per Microsoft Docs: UInt32's CLS compliant alternative is Integer64
+                    // https://learn.microsoft.com/dotnet/api/system.uint32?view=net-6.0#remarks
+                    case ClaimValueTypes.UInteger32:
+                    case ClaimValueTypes.Integer64:
+                        processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => long.Parse(claim.Value))));
+                        break;
+                    // Per Microsoft Docs: UInt64's CLS compliant alternative is decimal
+                    // https://learn.microsoft.com/dotnet/api/system.uint64?view=net-6.0#remarks
+                    case ClaimValueTypes.UInteger64:
+                        processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => decimal.Parse(claim.Value))));
+                        break;
+                    case ClaimValueTypes.Double:
+                        processedClaims.Add(claimName, value: JsonSerializer.Serialize(claimValues.Select(claim => double.Parse(claim.Value))));
+                        break;
+                    case ClaimValueTypes.String:
+                    case JsonClaimValueTypes.JsonNull:
+                    case JsonClaimValueTypes.Json:
+                    default:
+                        string json = JsonSerializer.Serialize(claimValues.Select(claim => claim.Value));
+                        processedClaims.Add(claimName, value: json);
+                        break;
+                }
+            }
+            else
+            {
+                // Remaining claims will be collected as string scalar values.
+                // While Claim.ValueType may indicate the token value was not a string (int, bool),
+                // resolving the actual type here would be a breaking change because 
+                // DAB has historically sent single instance claims as value type string.
+                // This block also accommodates Entra ID access tokens to avoid a breaking change because
+                // the 'scp' claim is a space delimited string which is not broken up into separate claim objects
+                // by dotnet. The Entra ID 'scp' claim should be passed to MSSQL's session context as-is.
+                // https://learn.microsoft.com/entra/identity-platform/access-token-claims-reference#payload-claims
+                processedClaims.Add(claimName, value: claimValues[0].Value);
+            }
+        }
+
+        return processedClaims;
+    }
+
+    /// <summary>
+    /// Helper method to extract all claims available in the HttpContext's user object (from authenticated ClaimsIdentity objects)
+    /// and add the claims to the claimsInRequestContext dictionary to be used for claimType -> claim lookups.
+    /// This method only resolves one `roles` claim from the authenticated user's claims: the `roles` claim whose
+    /// value matches the x-ms-api-role` header value.
+    /// </summary>
+    /// <remarks>
+    /// DotNet will resolve a claim with value type JSON array to multiple Claim objects with the same type and different values.
+    /// e.g. roles and groups claim, which are arrays of strings and are flattened to: roles: role1, roles: role2, groups: group1, groups: group2
+    /// Claims are name valued pairs and nothing more. https://github.com/dotnet/aspnetcore/issues/13647#issuecomment-527523224
+    /// The library that parses the jwt token into claims is the one that decides *how* to resolve the claims from the token's JSON payload.
+    /// DotNet flattens the claims into a list: https://github.com/dotnet/aspnetcore/blob/282bfc1b486ae235a3395150a8d53073a57b7f43/src/Security/Authentication/OAuth/src/JsonKeyClaimAction.cs#L39-L53
+    /// </remarks>
+    /// <param name="context">HttpContext object used to extract the authenticated user's claims.</param>
+    /// <returns>Dictionary with claimType -> list of claim mappings.</returns>
+    public static Dictionary<string, List<Claim>> GetAllAuthenticatedUserClaims(HttpContext? context)
+    {
+        Dictionary<string, List<Claim>> resolvedClaims = new();
+        if (context is null)
+        {
+            return resolvedClaims;
         }
 
         string clientRoleHeader = context.Request.Headers[CLIENT_ROLE_HEADER].ToString();
@@ -456,43 +553,45 @@ public class AuthorizationResolver : IAuthorizationResolver
         // Iterate through all the identities to populate claims in request context.
         foreach (ClaimsIdentity identity in context.User.Identities)
         {
-
-            // Only add a role claim which represents the role context evaluated for the request,
-            // as this can be via the virtue of an identity added by DAB.
-            if (!claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
-                identity.HasClaim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader))
-            {
-                claimsInRequestContext.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, new Claim(AuthenticationOptions.ROLE_CLAIM_TYPE, clientRoleHeader, ClaimValueTypes.String));
-            }
-
             // If identity is not authenticated, we don't honor any other claims present in this identity.
             if (!identity.IsAuthenticated)
             {
                 continue;
             }
 
+            // DAB will only resolve one 'roles' claim whose value matches the x-ms-api-role header value
+            // because DAB executes requests in the context of a single role. The `roles` claim
+            // resolved here can be forwarded to MSSQL's set-session-context. Modifying this behavior
+            // is a breaking change.
+            if (!resolvedClaims.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE) &&
+                identity.HasClaim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader))
+            {
+                List<Claim> roleClaim = new()
+                {
+                    new Claim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: clientRoleHeader, valueType: ClaimValueTypes.String)
+                };
+
+                resolvedClaims.Add(AuthenticationOptions.ROLE_CLAIM_TYPE, roleClaim);
+            }
+
+            // Process all remaining claims adding all `Claim` objects with the same claimType (claim name)
+            // into a list and storing that in resolvedClaims using the claimType as the key.
             foreach (Claim claim in identity.Claims)
             {
-                /*
-                 * An example claim would be of format:
-                 * claim.Type: "user_email"
-                 * claim.Value: "authz@microsoft.com"
-                 * claim.ValueType: "string"
-                 */
-                // At this point, only add non-role claims to the collection and only throw an exception for duplicate non-role claims.
-                if (!claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE) && !claimsInRequestContext.TryAdd(claim.Type, claim))
+                // 'roles' claim has already been processed.
+                if (claim.Type.Equals(AuthenticationOptions.ROLE_CLAIM_TYPE))
                 {
-                    // If there are duplicate claims present in the request, return an exception.
-                    throw new DataApiBuilderException(
-                        message: "Duplicate claims are not allowed within a request.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                        );
+                    continue;
+                }
+
+                if (!resolvedClaims.TryAdd(key: claim.Type, value: new List<Claim>() { claim }))
+                {
+                    resolvedClaims[claim.Type].Add(claim);
                 }
             }
         }
 
-        return claimsInRequestContext;
+        return resolvedClaims;
     }
 
     /// <summary>
@@ -503,7 +602,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <param name="claimsInRequestContext">Dictionary holding all the claims available in the request.</param>
     /// <returns>Processed policy with claim values substituted for claim types.</returns>
     /// <exception cref="DataApiBuilderException"></exception>
-    private static string GetPolicyWithClaimValues(string policy, Dictionary<string, Claim> claimsInRequestContext)
+    private static string GetPolicyWithClaimValues(string policy, Dictionary<string, List<Claim>> claimsInRequestContext)
     {
         // Regex used to extract all claimTypes in policy. It finds all the substrings which are
         // of the form @claims.*** where *** contains characters from a-zA-Z0-9._ .
@@ -523,15 +622,22 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// </summary>
     /// <param name="claimTypeMatch">The claimType present in policy with a prefix of @claims..</param>
     /// <param name="claimsInRequestContext">Dictionary populated with all the user claims.</param>
-    /// <returns>The claim value for the given claimTypeMatch.</returns>
+    /// <returns>The claim value of the first claim whose claimType matches 'claimTypeMatch'.</returns>
     /// <exception cref="DataApiBuilderException"> Throws exception when the user does not possess the given claim.</exception>
-    private static string GetClaimValueFromClaim(Match claimTypeMatch, Dictionary<string, Claim> claimsInRequestContext)
+    private static string GetClaimValueFromClaim(Match claimTypeMatch, Dictionary<string, List<Claim>> claimsInRequestContext)
     {
         // Gets <claimType> from @claims.<claimType>
         string claimType = claimTypeMatch.Value.ToString().Substring(CLAIM_PREFIX.Length);
-        if (claimsInRequestContext.TryGetValue(claimType, out Claim? claim))
+        if (claimsInRequestContext.TryGetValue(claimType, out List<Claim>? claims)
+            && claims is not null && claims.Count > 0)
         {
-            return GetClaimValue(claim);
+            // Database policies do not support operators like "in" or "contains".
+            // Return the first value in the list of claims.
+            // This is not a breaking change since historically,
+            // if the user had >1 role AND wrote a db policy to include the token '@claims.role',
+            // DAB would fail the request. Now, the request won't fail, but the value
+            // resolved is the first claim encountered (when there are multiple claim instances).
+            return GetClaimValue(claims.First());
         }
         else
         {

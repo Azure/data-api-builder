@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         public void ValidateAbsenceOfLinkingObjectDefinitionsInObjectsNodeForMNRelationships(string sourceEntityName, string targetEntityName)
         {
             string linkingEntityName = Entity.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
-            ObjectTypeDefinitionNode linkingObjectTypeDefinitionNode = GetObjectTypeDefinitionNode(new NameNode(linkingEntityName));
+            ObjectTypeDefinitionNode linkingObjectTypeDefinitionNode = GetObjectTypeDefinitionNode(linkingEntityName);
 
             // Assert that object definition for linking entity/table is null here.
             // The object definition being null here implies that the object definition is not exposed in the objects node.
@@ -88,9 +88,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         [DataRow("AuthorNF", "BookNF", DisplayName = "Validate presence of source->target linking object for AuthorNF->BookNF M:N relationship")]
         public void ValidatePresenceOfSourceTargetLinkingObjectDefinitionsInObjectsNodeForMNRelationships(string sourceEntityName, string targetEntityName)
         {
-            NameNode sourceTargetLinkingNodeName = new(GenerateLinkingNodeName(
+            string sourceTargetLinkingNodeName = GenerateLinkingNodeName(
                         GetDefinedSingularName(sourceEntityName, _runtimeConfig.Entities[sourceEntityName]),
-                        GetDefinedSingularName(targetEntityName, _runtimeConfig.Entities[targetEntityName])));
+                        GetDefinedSingularName(targetEntityName, _runtimeConfig.Entities[targetEntityName]));
             ObjectTypeDefinitionNode sourceTargetLinkingObjectTypeDefinitionNode = GetObjectTypeDefinitionNode(sourceTargetLinkingNodeName);
 
             // Validate that we have indeed inferred the object type definition for the source->target linking object.
@@ -113,9 +113,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         public void ValidatePresenceOfOneForeignKeyDirectiveOnReferencingColumns(string referencingEntityName, string[] referencingColumns)
         {
             ObjectTypeDefinitionNode objectTypeDefinitionNode = GetObjectTypeDefinitionNode(
-                new NameNode(GetDefinedSingularName(
-                   entityName: referencingEntityName,
-                   configEntity: _runtimeConfig.Entities[referencingEntityName])));
+                GetDefinedSingularName(
+                    entityName: referencingEntityName,
+                    configEntity: _runtimeConfig.Entities[referencingEntityName]));
             List<FieldDefinitionNode> fieldsInObjectDefinitionNode = objectTypeDefinitionNode.Fields.ToList();
             foreach (string referencingColumn in referencingColumns)
             {
@@ -220,7 +220,52 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 GetDefinedSingularName(targetEntityName, _runtimeConfig.Entities[targetEntityName])));
             List<InputValueDefinitionNode> inputFields = inputObjectTypeDefinition.Fields.ToList();
             int indexOfRelationshipField = inputFields.FindIndex(field => field.Type.InnerType().NamedType().Name.Value.Equals(inputTypeName.Value));
-            InputValueDefinitionNode inputValueDefinitionNode = inputFields[indexOfRelationshipField];
+            Assert.AreNotEqual(-1, indexOfRelationshipField);
+        }
+
+        /// <summary>
+        /// Test to validate that the linking input types generated for a source->target relationship contains input fields for:
+        /// 1. All the fields belonging to the target entity, and
+        /// 2. All the non-relationship fields in the linking entity.
+        /// </summary>
+        /// <param name="sourceEntityName">Name of the source entity for which the configuration is provided in the config.</param>
+        /// <param name="targetEntityName">Name of the target entity which is related to the source entity via a relationship defined in the 'relationships'
+        /// section in the configuration of the source entity.</param>
+        [DataTestMethod]
+        [DataRow("Book", "Author",
+            DisplayName = "Validate presence of target fields and linking object fields in source->target linking input object for Book->Author M:N relationship")]
+        [DataRow("Author", "Book",
+            DisplayName = "Validate presence of target fields and linking object fields in source->target linking input object for Author->Book M:N relationship")]
+        [DataRow("BookNF", "AuthorNF",
+            DisplayName = "Validate presence of target fields and linking object fields in source->target linking input object for BookNF->AuthorNF M:N relationship")]
+        [DataRow("AuthorNF", "BookNF",
+            DisplayName = "Validate presence of target fields and linking object fields in source->target linking input object for AuthorNF->BookNF M:N relationship")]
+        public void ValidateInputForMNRelationship(string sourceEntityName, string targetEntityName)
+        {
+            string linkingObjectFieldName = "royalty_percentage";
+            string sourceNodeName = GetDefinedSingularName(sourceEntityName, _runtimeConfig.Entities[sourceEntityName]);
+            string targetNodeName = GetDefinedSingularName(targetEntityName, _runtimeConfig.Entities[targetEntityName]);
+
+            // Get input object definition for target entity.
+            NameNode targetInputTypeName = CreateMutationBuilder.GenerateInputTypeName(targetNodeName);
+            InputObjectTypeDefinitionNode targetInputObjectTypeDefinitionNode = (InputObjectTypeDefinitionNode)_mutationDefinitions.FirstOrDefault(d => d.Name.Value.Equals(targetInputTypeName.Value));
+
+            // Get input object definition for source->target linking node.
+            NameNode sourceTargetLinkingInputTypeName = CreateMutationBuilder.GenerateInputTypeName(GenerateLinkingNodeName(sourceNodeName, targetNodeName));
+            InputObjectTypeDefinitionNode sourceTargetLinkingInputObjectTypeDefinition = (InputObjectTypeDefinitionNode)_mutationDefinitions.FirstOrDefault(d => d.Name.Value.Equals(sourceTargetLinkingInputTypeName.Value));
+
+            // Collect all input field names in the source->target linking node input object definition.
+            HashSet<string> inputFieldNamesInSourceTargetLinkingInput = new(sourceTargetLinkingInputObjectTypeDefinition.Fields.Select(field => field.Name.Value));
+
+            // Assert that all the fields from the target input definition are present in the source->target linking input definition.
+            foreach (InputValueDefinitionNode inputValueDefinitionNode in targetInputObjectTypeDefinitionNode.Fields)
+            {
+                Assert.AreEqual(true, inputFieldNamesInSourceTargetLinkingInput.Contains(inputValueDefinitionNode.Name.Value));
+            }
+
+            // Assert that the fields ('royalty_percentage') from linking object (i.e. book_author_link) is also
+            // present in the input fields for the source>target linking input definition.
+            Assert.AreEqual(true, inputFieldNamesInSourceTargetLinkingInput.Contains(linkingObjectFieldName));
         }
 
         /// <summary>
@@ -252,9 +297,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         #endregion
 
         #region Helpers
-        private static ObjectTypeDefinitionNode GetObjectTypeDefinitionNode(NameNode sourceTargetLinkingNodeName)
+        private static ObjectTypeDefinitionNode GetObjectTypeDefinitionNode(string nodeName)
         {
-            IHasName definition = _objectDefinitions.FirstOrDefault(d => d.Name.Value == sourceTargetLinkingNodeName.Value);
+            IHasName definition = _objectDefinitions.FirstOrDefault(d => d.Name.Value == nodeName);
             return definition is ObjectTypeDefinitionNode objectTypeDefinitionNode ? objectTypeDefinitionNode : null;
         }
         #endregion

@@ -153,7 +153,17 @@ public class RuntimeConfigValidator : IConfigValidator
         ILoggerFactory loggerFactory,
         bool isValidateOnly = false)
     {
-        RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+        RuntimeConfig runtimeConfig;
+        try
+        {
+            runtimeConfig = _runtimeConfigProvider.GetConfig();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation("Failed to parse the config file due to : {message}", ex.Message);
+            return false;
+        }
+
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);

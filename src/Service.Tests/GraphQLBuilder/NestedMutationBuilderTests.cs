@@ -296,7 +296,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         }
 
         /// <summary>
-        /// Sets up a GraphQL schema creator instance.
+        /// Sets up and returns a GraphQL schema creator instance.
         /// </summary>
         private static async Task<GraphQLSchemaCreator> GetGQLSchemaCreator(RuntimeConfigProvider runtimeConfigProvider)
         {

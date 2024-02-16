@@ -1679,7 +1679,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         // Loop over all the foreign key definitions defined from source to target entity.
                         // Add to the set validatedFKDefinitionsToTarget, all the relationships which actually map
                         // to a foreign key constraint defined in the database.
-                        AddInferredDatabaseFKs(sourceEntityName, targetEntityName, fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
+                        AddInferredDatabaseFKs(fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
 
                         // At this point, we will have the FK definition between source and target present in the database added to the set of valid FK definitions.
                         // However, for custom relationships defined in config, we still need to add them to the set of valid FK definitions.
@@ -1694,61 +1694,25 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Adds definitions for the FK constraint which exist in the database for a pair of (source, target) entities
         /// for which a relationship has been defined in the config.
-        /// In such a case, if nested insertions are supported and:
-        /// 1. If in the config, the source/target fields are also provided, they should match the FK referencing/referenced columns, OR
-        /// 2. If an FK constraint exist from source->target and target->source, in which case there is no valid order of insertion,
-        /// an exception is thrown.
+        /// In such a case, if in the config, the source/target fields are also provided, they are given precedence over the FK constraint.
         /// </summary>
-        /// <param name="sourceEntityName">Name of the source entity.</param>
-        /// <param name="targetEntityName">Name of the target entity which has a relationship with the source entity, configured via
-        /// the 'relationship' section of the entity's configuration.</param>
         /// <param name="fKDefinitionsToTarget">List of FK definitions defined from source to target.</param>
         /// <param name="validatedFKDefinitionsToTarget">List of validated FK definitions from source to target.</param>
-        /// <exception cref="DataApiBuilderException"></exception>
         private void AddInferredDatabaseFKs(
-            string sourceEntityName,
-            string targetEntityName,
             List<ForeignKeyDefinition> fKDefinitionsToTarget,
             List<ForeignKeyDefinition> validatedFKDefinitionsToTarget)
         {
-            // Value to be derived from config.
-            bool isNestedInsertSupported = false;
             foreach (ForeignKeyDefinition fKDefinitionToTarget in fKDefinitionsToTarget)
             {
                 // Add the referencing and referenced columns for this foreign key definition for the target.
                 if (PairToFkDefinition is not null &&
                     PairToFkDefinition.TryGetValue(fKDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredFKDefinition))
                 {
-                    RelationShipPair inverseFKPair = new(fKDefinitionToTarget.Pair.ReferencedDbTable, fKDefinitionToTarget.Pair.ReferencingDbTable);
-                    if (isNestedInsertSupported && PairToFkDefinition.ContainsKey(inverseFKPair))
-                    {
-                        // This means that there are 2 relationships defined in the database:
-                        // 1. From source to target
-                        // 2. From target to source
-                        // It is not possible to determine the direction of relationship in such a case. Thus, we cannot support nested inserts, so we throw an exception.
-                        throw new DataApiBuilderException(
-                            message: $"Circular relationship detected between source entity: {sourceEntityName} and target entity: {targetEntityName}. " +
-                            $"Cannot support nested insertion.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
-
                     // If the referencing and referenced columns count > 0,
                     // we have already gathered this information from the runtime config.
                     if (fKDefinitionToTarget.ReferencingColumns.Count > 0 && fKDefinitionToTarget.ReferencedColumns.Count > 0)
                     {
-                        if (isNestedInsertSupported && !AreFKDefinitionsEqual(fKDefinitionToTarget, inferredFKDefinition))
-                        {
-                            throw new DataApiBuilderException(
-                                message: $"The relationship defined between source entity: {sourceEntityName} and target entity: {targetEntityName} in the config conflicts" +
-                                $" with the relationship defined in the database.",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                        }
-                        else
-                        {
-                            validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
-                        }
+                        validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
                     }
                     // Only add the referencing/referenced columns if they have not been
                     // specified in the configuration file.

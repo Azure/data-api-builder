@@ -144,7 +144,6 @@ public class RuntimeConfigValidator : IConfigValidator
     /// This method is called by the CLI when the user runs `validate` command with `isValidateOnly=true`.
     /// </summary>
     /// <param name="configFilePath">full/relative config file path with extension</param>
-    /// <param name="runtimeConfig">RuntimeConfig object</param>
     /// <param name="loggerFactory">Logger Factory</param>
     /// <param name="isValidateOnly">true if run for validate only mode</param>
     /// <returns>true if no validation failures, else false.</returns>

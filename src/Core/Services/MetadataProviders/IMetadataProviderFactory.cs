@@ -9,6 +9,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     /// </summary>
     public interface IMetadataProviderFactory
     {
+        public Dictionary<string, bool> GetMetadataProviderLoadStatus();
         /// <summary>
         /// Gets the appropriate metadata provider based on the data source name.
         /// </summary>

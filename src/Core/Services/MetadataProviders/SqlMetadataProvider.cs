@@ -34,7 +34,6 @@ namespace Azure.DataApiBuilder.Core.Services
         where CommandT : DbCommand, new()
     {
         private ODataParser _oDataParser = new();
-
         private readonly DatabaseType _databaseType;
 
         private readonly IReadOnlyDictionary<string, Entity> _entities;
@@ -249,12 +248,26 @@ namespace Azure.DataApiBuilder.Core.Services
                 HttpStatusCode.BadRequest,
                 DataApiBuilderException.SubStatusCodes.BadRequest);
         }
+        public bool HasInitFailureOccur { get; private set; }
+        public bool DidInitFailureOccur()
+        {
+            return !HasInitFailureOccur;
+        }
 
         /// <inheritdoc />
         public async Task InitializeAsync()
         {
             System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
-            GenerateDatabaseObjectForEntities();
+            try
+            {
+                GenerateDatabaseObjectForEntities();
+            }
+            catch (Exception e)
+            {
+                HasInitFailureOccur = true;
+                _logger.LogError("Metadata Provider initialization failure: {message}", e.Message);
+            }
+
             if (_isValidateOnly)
             {
                 // Currently Validate mode only support single datasource,

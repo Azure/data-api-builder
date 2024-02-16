@@ -371,5 +371,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             throw new NotImplementedException();
         }
+
+        public bool DidInitFailureOccur()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

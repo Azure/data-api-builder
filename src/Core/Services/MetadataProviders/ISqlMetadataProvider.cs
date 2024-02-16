@@ -17,6 +17,8 @@ namespace Azure.DataApiBuilder.Core.Services
     /// </summary>
     public interface ISqlMetadataProvider
     {
+        public bool DidInitFailureOccur();
+
         /// <summary>
         /// Initializes this metadata provider for the runtime.
         /// </summary>

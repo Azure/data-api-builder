@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Tests with different combinations of data base, schema, and table names
+        /// <code>Do: </code> Tests with different combinations of database, schema, and table names
         /// to validate that the correct full table name with prefix is generated. For example if
         /// databaseName = TestDB, schemaName = model, and tableName = TrainedModel, then correct would
         /// mean [TestDB].[model].[TrainedModel], and any other form would be incorrect.

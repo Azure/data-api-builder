@@ -1243,7 +1243,10 @@ namespace Azure.DataApiBuilder.Core.Services
             // Because we have an instance of SqlMetadataProvider for each individual database
             // (note: this means each actual database not each database type), we do not
             // need to worry about collisions beyond that schema, hence no database name is needed.
-            string tableNameWithPrefix = GetTableNameWithPrefix(string.Empty, schemaName, tableName);
+            string tableNameWithPrefix = GetTableNameWithPrefix(
+                databaseName: string.Empty,
+                schemaName: schemaName,
+                tableName: tableName);
             DataTable? dataTable = EntitiesDataSet.Tables[tableNameWithPrefix];
             if (dataTable is null)
             {

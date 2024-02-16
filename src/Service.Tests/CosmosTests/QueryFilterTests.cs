@@ -1011,6 +1011,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
         }
 
+        /// <summary>
+        /// Tests that the nested field level query filter fails authorization when nested object is
+        /// unauthorized. Here, Nested array type 'moreAttributes' is avaliable for 'Authenticated' role only and
+        /// we are trying to access it with 'anonymous' role.
+        /// </summary>
         [TestMethod]
         public async Task TestQueryFilterNestedArrayFieldAuth_UnauthorizedNestedField()
         {

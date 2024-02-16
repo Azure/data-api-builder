@@ -63,11 +63,15 @@ namespace Azure.DataApiBuilder.Core.Services
                 { $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1", new(tableName, DbType.String) }
             };
 
+            System.Diagnostics.Stopwatch PopulateTriggerMetadataForTableSqlQueryTimer = System.Diagnostics.Stopwatch.StartNew();
+
+            PopulateTriggerMetadataForTableSqlQueryTimer.Start();
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: enumerateEnabledTriggers,
                 parameters: parameters,
                 dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
+            PopulateTriggerMetadataForTableSqlQueryTimer.Stop();
 
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {

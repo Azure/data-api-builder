@@ -3,11 +3,13 @@
 
 using System.IO.Abstractions;
 using System.Net;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
@@ -62,10 +64,26 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 if (provider is not null)
                 {
                     await provider.InitializeAsync();
+
+                    string json = JsonConvert.SerializeObject(provider.EntityToDatabaseObject, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All,
+                        Converters = { new DatabaseObjectConverter() }
+                    });
+
+                    Console.WriteLine(json);
+
+                    Dictionary<string, DatabaseObject> deserializedDictionary = JsonConvert.DeserializeObject<Dictionary<string, DatabaseObject>>(json, new JsonSerializerSettings
+                    {
+                        TypeNameHandling = TypeNameHandling.All,
+                        Converters = { new DatabaseObjectConverter() },
+                    })!;
+
+                    provider.InitializeAsync(deserializedDictionary);
                 }
             }
         }
-
+       
         /// <summary>
         /// Captures all the metadata exceptions from all the metadata providers at a single place.
         /// </summary>

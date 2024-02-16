@@ -47,6 +47,8 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
+            System.Diagnostics.Stopwatch GetColumnsSqlQueryTimer = System.Diagnostics.Stopwatch.StartNew();
+            GetColumnsSqlQueryTimer.Start();
             using MySqlConnection conn = new(ConnectionString);
             await QueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, _dataSourceName);
             await conn.OpenAsync();
@@ -55,6 +57,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Since column restrictions are ignored, this retrieves all the columns
             // in the engine irrespective of database and table name.
             DataTable allColumns = await conn.GetSchemaAsync("Columns");
+            GetColumnsSqlQueryTimer.Stop();
 
             // Manually filter here to find out which columns need to be removed
             // by checking the database name and table name.

@@ -89,6 +89,8 @@ public class DatabaseView : DatabaseObject
     public DatabaseView(string schemaName, string tableName)
         : base(schemaName, tableName) { }
     public ViewDefinition ViewDefinition { get; set; } = null!;
+
+    public DatabaseView() { }
 }
 
 /// <summary>
@@ -99,6 +101,8 @@ public class DatabaseStoredProcedure : DatabaseObject
     public DatabaseStoredProcedure(string schemaName, string tableName)
         : base(schemaName, tableName) { }
     public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
+
+    public DatabaseStoredProcedure() {}
 }
 
 public class StoredProcedureDefinition : SourceDefinition

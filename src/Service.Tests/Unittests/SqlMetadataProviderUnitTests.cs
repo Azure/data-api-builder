@@ -115,8 +115,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
             string dataSourceName = runtimeConfig.GetDefaultDataSourceName();
-            DataSource dataSource = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName);
-            dataSource.ConnectionString.Replace(dataSource.ConnectionString, $"server=localhost;database={databaseName}");
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             Mock<IQueryExecutor> queryExecutor = new();
@@ -130,11 +128,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 runtimeConfigProvider,
                 queryManagerFactory.Object,
                 sqlMetadataLogger,
-                dataSourceName)
-            {
-                DatabaseName = databaseName
-            };
-            string tableNameWithPrefix = provider.GetTableNameWithPrefix(schemaName, tableName);
+                dataSourceName);
+            string tableNameWithPrefix = provider.GetTableNameWithPrefix(databaseName, schemaName, tableName);
             Assert.AreEqual(expectedTableNameWithPrefix, tableNameWithPrefix);
         }
 

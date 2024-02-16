@@ -17,7 +17,6 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -54,8 +53,6 @@ namespace Azure.DataApiBuilder.Core.Services
         protected const int NUMBER_OF_RESTRICTIONS = 4;
 
         protected string ConnectionString { get; init; }
-
-        public string DatabaseName { get; set; }
 
         protected IQueryBuilder SqlQueryBuilder { get; init; }
 
@@ -122,21 +119,6 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             ConnectionString = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).ConnectionString;
-            SqlConnectionStringBuilder connectionStringBuilder;
-            try
-            {
-                connectionStringBuilder = new SqlConnectionStringBuilder(ConnectionString);
-            }
-            catch (Exception ex)
-            {
-                throw new DataApiBuilderException(
-                    message: DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE,
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization,
-                    innerException: ex);
-            }
-
-            DatabaseName = connectionStringBuilder.InitialCatalog;
             EntitiesDataSet = new();
             QueryManagerFactory = engineFactory;
             SqlQueryBuilder = QueryManagerFactory.GetQueryBuilder(_databaseType);
@@ -1258,7 +1240,10 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            string tableNameWithPrefix = GetTableNameWithPrefix(schemaName, tableName);
+            // Because we have an instance of SqlMetadataProvider for each individual database
+            // (note: this means each actual database not each database type), we do not
+            // need to worry about collisions beyond that schema, hence no database name is needed.
+            string tableNameWithPrefix = GetTableNameWithPrefix(string.Empty, schemaName, tableName);
             DataTable? dataTable = EntitiesDataSet.Tables[tableNameWithPrefix];
             if (dataTable is null)
             {
@@ -1379,7 +1364,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 Connection = conn
             };
 
-            string tableNameWithPrefix = GetTableNameWithPrefix(schemaName, tableName);
+            string tableNameWithPrefix = GetTableNameWithPrefix(conn.Database, schemaName, tableName);
             selectCommand.CommandText
                 = $"SELECT * FROM {tableNameWithPrefix}";
             adapterForTable.SelectCommand = selectCommand;
@@ -1401,15 +1386,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="schemaName">Name of schema the table belongs within.</param>
         /// <param name="tableName">Name of the table.</param>
         /// <returns>Properly formatted table name with prefix.</returns>
-        internal string GetTableNameWithPrefix(string schemaName, string tableName)
+        internal string GetTableNameWithPrefix(string databaseName, string schemaName, string tableName)
         {   
             IQueryBuilder queryBuilder = GetQueryBuilder();
             StringBuilder tablePrefix = new();
 
-            if (!string.IsNullOrEmpty(DatabaseName))
+            if (!string.IsNullOrEmpty(databaseName))
             {
                 // Determine databaseName for prefix.
-                string quotedDatabaseName = queryBuilder.QuoteIdentifier(DatabaseName);
+                string quotedDatabaseName = queryBuilder.QuoteIdentifier(databaseName);
                 tablePrefix.Append(quotedDatabaseName);
 
                 if (!string.IsNullOrEmpty(schemaName))

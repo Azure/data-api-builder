@@ -1750,43 +1750,6 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Helper method to compare two foreign key definitions for equality on the basis of the referencing -> referenced column mappings present in them.
-        /// The equality ensures that both the foreign key definitions have:
-        /// 1. Same set of referencing and referenced tables,
-        /// 2. Same number of referencing/referenced columns,
-        /// 3. Same mappings from referencing -> referenced column.
-        /// </summary>
-        /// <param name="fkDefinition1">First foreign key definition.</param>
-        /// <param name="fkDefinition2">Second foreign key definition.</param>
-        /// <returns>true if all the above mentioned conditions are met, else false.</returns>
-        private static bool AreFKDefinitionsEqual(ForeignKeyDefinition fkDefinition1, ForeignKeyDefinition fkDefinition2)
-        {
-            if (!fkDefinition1.Pair.Equals(fkDefinition2.Pair) || fkDefinition1.ReferencingColumns.Count != fkDefinition2.ReferencingColumns.Count)
-            {
-                return false;
-            }
-
-            Dictionary<string, string> referencingToReferencedColumns = fkDefinition1.ReferencingColumns.Zip(
-                fkDefinition1.ReferencedColumns, (key, value) => new { Key = key, Value = value }).ToDictionary(item => item.Key, item => item.Value);
-
-            // Traverse through each (referencing, referenced) columns pair in the second foreign key definition.
-            for (int idx = 0; idx < fkDefinition2.ReferencingColumns.Count; idx++)
-            {
-                string referencingColumnName = fkDefinition2.ReferencingColumns[idx];
-                if (!referencingToReferencedColumns.TryGetValue(referencingColumnName, out string? referencedColumnName)
-                    || !referencedColumnName.Equals(fkDefinition2.ReferencedColumns[idx]))
-                {
-                    // This indicates that either there is no mapping defined for referencingColumnName in the second foreign key definition
-                    // or the referencing -> referenced column mapping in the second foreign key definition do not match the mapping in the first foreign key definition.
-                    // In both the cases, it is implied that the two foreign key definitions do not match.
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
         /// For the given two database objects, returns true if a foreignKey exists between them.
         /// Else returns false.
         /// </summary>

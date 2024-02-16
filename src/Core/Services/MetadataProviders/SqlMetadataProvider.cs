@@ -1677,7 +1677,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = new();
 
                         // Loop over all the foreign key definitions defined from source to target entity.
-                        // Add to the set validatedFKDefinitionsToTarget, all the FK definitions which actually map
+                        // Add to the set validatedFKDefinitionsToTarget, all the relationships which actually map
                         // to a foreign key constraint defined in the database.
                         AddInferredDatabaseFKs(sourceEntityName, targetEntityName, fKDefinitionsToTarget, validatedFKDefinitionsToTarget);
 
@@ -1691,6 +1691,20 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
+        /// <summary>
+        /// Adds definitions for the FK constraint which exist in the database for a pair of (source, target) entities
+        /// for which a relationship has been defined in the config.
+        /// In such a case, if nested insertions are supported and:
+        /// 1. If in the config, the source/target fields are also provided, they should match the FK referencing/referenced columns, OR
+        /// 2. If an FK constraint exist from source->target and target->source, in which case there is no valid order of insertion,
+        /// an exception is thrown.
+        /// </summary>
+        /// <param name="sourceEntityName">Name of the source entity.</param>
+        /// <param name="targetEntityName">Name of the target entity which has a relationship with the source entity, configured via
+        /// the 'relationship' section of the entity's configuration.</param>
+        /// <param name="fKDefinitionsToTarget">List of FK definitions defined from source to target.</param>
+        /// <param name="validatedFKDefinitionsToTarget">List of validated FK definitions from source to target.</param>
+        /// <exception cref="DataApiBuilderException"></exception>
         private void AddInferredDatabaseFKs(
             string sourceEntityName,
             string targetEntityName,
@@ -1746,6 +1760,12 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
+        /// <summary>
+        /// Adds definitions for all the relationships which are defined in the config for a pair of (source, target) entities
+        /// where no FK constraint exists between the pair of entities in the database.
+        /// </summary>
+        /// <param name="fKDefinitionsToTarget">List of FK definitions defined from source to target.</param>
+        /// <param name="validatedFKDefinitionsToTarget">List of validated FK definitions from source to target.</param>
         private void AddConfigRelationships(
             List<ForeignKeyDefinition> fKDefinitionsToTarget,
             List<ForeignKeyDefinition> validatedFKDefinitionsToTarget)
@@ -1755,8 +1775,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 RelationShipPair inverseFKPair = new(fKDefinitionToTarget.Pair.ReferencedDbTable, fKDefinitionToTarget.Pair.ReferencingDbTable);
 
                 // Add FK definition to the set of validated FKs only if no relationship is defined for the source and target entities
-                // either from source -> target or target -> source.
-                if (PairToFkDefinition is not null && !PairToFkDefinition.ContainsKey(fKDefinitionToTarget.Pair) && !PairToFkDefinition.ContainsKey(inverseFKPair))
+                // in the database, either from source -> target or target -> source.
+                if (PairToFkDefinition is not null &&
+                    !PairToFkDefinition.ContainsKey(fKDefinitionToTarget.Pair) &&
+                    !PairToFkDefinition.ContainsKey(inverseFKPair))
                 {
                     validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
                 }

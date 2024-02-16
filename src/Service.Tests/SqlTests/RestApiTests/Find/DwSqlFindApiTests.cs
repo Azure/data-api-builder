@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -546,7 +545,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FROM {_integrationTableName} " +
                 $"ORDER BY [publisher_id] ASC, [id] ASC " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
-            }
+            },
+            {
+                "FindManyStoredProcedureTest",
+                $"EXECUTE {_integrationProcedureFindMany_ProcName}"
+            },
+            {
+                "FindOneStoredProcedureTestUsingParameter",
+                $"EXECUTE {_integrationProcedureFindOne_ProcName} @id = 1"
+            },
         };
         #region Test Fixture Setup
 
@@ -598,48 +605,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
-        // Pending Stored Procedure Support
-        [TestMethod]
-        [Ignore]
-        public override Task FindManyStoredProcedureTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindOneStoredProcedureTestUsingParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithMissingParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithNonexistentParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindApiTestForSPWithRequiredParamsInRequestBody()
-        {
-            throw new NotImplementedException();
-        }
         #endregion
     }
 }

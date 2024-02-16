@@ -29,7 +29,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Delete
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
         /// </summary>
-        /// <param name="context"></param>
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {

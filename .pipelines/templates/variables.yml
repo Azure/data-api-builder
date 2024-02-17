@@ -1,5 +1,3 @@
-pool:
-  vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
 variables:
   solution: '**/*.sln'

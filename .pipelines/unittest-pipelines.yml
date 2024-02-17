@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 pool:
   vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 

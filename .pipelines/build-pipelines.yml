@@ -25,7 +25,6 @@ jobs:
   steps:
   - template:  templates/build-pipelines.yml
 
-  steps:
   - task: FileTransform@1.206.0
     displayName: 'Version stamp dab.draft.schema.json'
     inputs:

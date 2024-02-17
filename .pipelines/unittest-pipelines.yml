@@ -1,0 +1,5 @@
+variables:
+- template: templates/variables.yml
+
+steps:
+- template: templates/build-pieplines.yml

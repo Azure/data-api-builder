@@ -18,22 +18,13 @@ pool:
   vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
-  major: 0
-  minor: 11
-  # Maintain a separate patch value between CI and PR runs.
-  # The counter is reset when the minor version is updated.
-  patch: $[counter(format('{0}_{1}', variables['build.reason'], variables['minor']), 0)]
-  isReleaseBuild: $(isNugetRelease)
-  $id: 'https://github.com/Azure/data-api-builder/releases/download/v$(major).$(minor).$(patch)/dab.draft.schema.json'
-  SNAPSHOOTER_STRICT_MODE: true
+- template: templates/variables.yml
 
 jobs:
-- template:  templates/build-pipelines.yml
-
 - job:
+  steps:
+  - template:  templates/build-pipelines.yml
+
   steps:
   - task: FileTransform@1.206.0
     displayName: 'Version stamp dab.draft.schema.json'

@@ -1,8 +1,0 @@
-pool:
-  vmImage: 'ubuntu-latest' # examples of other options: 'macOS-10.15', 'windows-2019'
-
-variables:
-- template: templates/variables.yml
-
-steps:
-- template: templates/build-pieplines.yml

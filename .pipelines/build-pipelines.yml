@@ -5,4 +5,4 @@ variables:
 - template: templates/variables.yml
 
 steps:
-- template: templates/build-pieplines.yml
+- template: templates/build-pipelines.yml

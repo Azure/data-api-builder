@@ -152,7 +152,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
-            QueryDefinition querySpec = new(_queryBuilder.Build(structure));
+            string queryString = _queryBuilder.Build(structure);
+            QueryDefinition querySpec = new(queryString);
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {

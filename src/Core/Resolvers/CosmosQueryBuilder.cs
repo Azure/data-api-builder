@@ -4,6 +4,7 @@
 using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Models;
+using Microsoft.IdentityModel.Tokens;
 using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -32,6 +33,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (!string.IsNullOrEmpty(predicateString))
             {
                 queryStringBuilder.Append($" WHERE {predicateString}");
+            }
+
+            if (!string.IsNullOrEmpty(structure.DbPolicies))
+            {
+                queryStringBuilder.Append($" AND {structure.DbPolicies}");
             }
 
             if (structure.OrderByColumns.Count > 0)

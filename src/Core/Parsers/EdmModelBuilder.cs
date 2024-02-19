@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     // entitySourceName = dbo.publishers
                     // newEntityKey = Publisher.dbo.publishers
                     string entitySourceName = $"{entityAndDbObject.Value.FullName}";
-                    string newEntityKey = $"{entityAndDbObject.Key}.{entitySourceName}";
+                    string newEntityKey = $"{entityAndDbObject.Key}";
                     EdmEntityType newEntity = new(DEFAULT_NAMESPACE, newEntityKey);
                     _entities.Add(newEntityKey, newEntity);
 
@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 if (entityAndDbObject.Value.SourceType != EntitySourceType.StoredProcedure)
                 {
                     string entityName = $"{entityAndDbObject.Value.FullName}";
-                    container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
+                    container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}"]);
                 }
             }
 

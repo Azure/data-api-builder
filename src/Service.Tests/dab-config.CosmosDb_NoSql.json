@@ -362,22 +362,18 @@
           ]
         },
         {
-          "role": "wildcard-exclude-fields-role",
+          "role": "item-level-permission-role",
           "actions": [
             {
-              "action": "read",
-              "fields": {
-                "exclude": [
-                  "*"
-                ]
+              "action": "delete",
+              "policy": {
+                "database": "@claims.UserId eq @item.createdby"
               }
             },
             {
-              "action": "delete",
-              "fields": {
-                "exclude": [
-                  "*"
-                ]
+              "action": "read",
+              "policy": {
+                "database": "@item.name eq 'test name'"
               }
             },
             {

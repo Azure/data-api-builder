@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -11,6 +12,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -32,6 +34,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // Order of the join matters
         public Stack<CosmosJoinStructure>? Joins { get; internal set; }
 
+        public string DbPolicies { get; internal set; }
+
         /// <summary>
         /// A simple class that is used to hold the information about joins that
         /// are part of a Cosmos query.
@@ -52,6 +56,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _context = context;
             SourceAlias = _containerAlias;
             DatabaseObject.Name = _containerAlias;
+
+            DbPolicies = string.Empty;
+
             Init(parameters);
         }
 
@@ -136,6 +143,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
+            }
+
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(_context);
+            if (httpContext is not null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    EntityActionOperation.Read,
+                    this,
+                    httpContext,
+                    AuthorizationResolver,
+                    MetadataProvider);
             }
 
             // first and after will not be part of query parameters. They will be going into headers instead.

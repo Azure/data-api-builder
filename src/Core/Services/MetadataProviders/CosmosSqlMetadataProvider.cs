@@ -3,6 +3,7 @@
 
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
+using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -16,11 +17,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
     public class CosmosSqlMetadataProvider : ISqlMetadataProvider
     {
+        private ODataParser _oDataParser = new();
+
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
+
+        private readonly IReadOnlyDictionary<string, Entity> _entities;
+        protected readonly string _dataSourceName;
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -36,12 +42,17 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem, string dataSourceName)
         {
             _fileSystem = fileSystem;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
-
+            _dataSourceName = dataSourceName;
             _databaseType = _runtimeConfig.DataSource.DatabaseType;
+
+            _entities = _runtimeConfig.Entities
+                .Where(x =>
+                    string.Equals(_runtimeConfig.GetDataSourceNameFromEntityName(x.Key), _dataSourceName, StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(x => x.Key, x => x.Value);
 
             CosmosDbNoSQLDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
 
@@ -65,6 +76,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
+            GenerateDatabaseObjectForEntities();
+            _oDataParser.BuildModel(this);
         }
 
         /// <inheritdoc />
@@ -126,6 +139,34 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         }
 
         /// <summary>
+        /// Create a DatabaseObject for all the exposed entities.
+        /// </summary>
+        private void GenerateDatabaseObjectForEntities()
+        {
+            Dictionary<string, DatabaseObject> sourceObjects = new();
+            foreach ((string entityName, Entity entity) in _entities)
+            {
+                if (!EntityToDatabaseObject.ContainsKey(entityName))
+                {
+                    // Reuse the same Database object for multiple entities if they share the same source.
+                    if (!sourceObjects.TryGetValue(entity.Source.Object, out DatabaseObject? sourceObject))
+                    {
+                        sourceObject = new DatabaseTable()
+                        {
+                            SchemaName = "",
+                            Name = entityName,
+                            TableDefinition = new()
+                        };
+                        sourceObjects.Add(entity.Source.Object, sourceObject);
+                    }
+
+                    EntityToDatabaseObject.Add(entityName, sourceObject);
+
+                }
+            }
+        }
+
+        /// <summary>
         /// Even though there is no source definition for underlying entity names for
         /// cosmosdb_nosql, we return back an empty source definition required for
         /// graphql filter parser.
@@ -133,7 +174,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <param name="entityName"></param>
         public SourceDefinition GetSourceDefinition(string entityName)
         {
-            return new SourceDefinition();
+            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
+            {
+                throw new DataApiBuilderException(message: $"Table Definition for {entityName} has not been inferred.",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+            }
+
+            return databaseObject.SourceDefinition;
         }
 
         public StoredProcedureDefinition GetStoredProcedureDefinition(string entityName)
@@ -246,7 +294,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public ODataParser GetODataParser()
         {
-            throw new NotImplementedException();
+            return _oDataParser;
         }
 
         public IQueryBuilder GetQueryBuilder()
@@ -263,7 +311,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public (string, string) ParseSchemaAndDbTableName(string source)
         {
-            throw new NotImplementedException();
+            return EntitySourceNamesParser.ParseSchemaAndTable(source)!;
+
         }
 
         public bool TryGetExposedColumnName(string entityName, string field, [NotNullWhen(true)] out string? name)
@@ -288,7 +337,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects()
         {
-            throw new NotImplementedException();
+            return EntityToDatabaseObject;
         }
 
         /// <inheritdoc />

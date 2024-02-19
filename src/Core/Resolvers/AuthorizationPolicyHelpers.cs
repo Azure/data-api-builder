@@ -51,10 +51,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (EntityActionOperation elementalOperation in elementalOperations)
             {
                 string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
-                queryStructure.EntityName,
-                clientRoleHeader,
-                elementalOperation,
-                context);
+                    queryStructure.EntityName,
+                    clientRoleHeader,
+                    elementalOperation,
+                    context);
 
                 FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
                     dbQueryPolicy,
@@ -62,6 +62,46 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     resourcePath: queryStructure.DatabaseObject.FullName,
                     sqlMetadataProvider);
                 queryStructure.ProcessOdataClause(filterClause, elementalOperation);
+            }
+        }
+
+        public static void ProcessAuthorizationPolicies(
+            EntityActionOperation operationType,
+            CosmosQueryStructure queryStructure,
+            HttpContext context,
+            IAuthorizationResolver authorizationResolver,
+            ISqlMetadataProvider sqlMetadataProvider)
+        {
+            if (!context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeaderValue))
+            {
+                throw new DataApiBuilderException(
+                    message: "No ClientRoleHeader found in request context.",
+                    statusCode: System.Net.HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            string clientRoleHeader = roleHeaderValue.ToString();
+            List<EntityActionOperation> elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
+
+            foreach (EntityActionOperation elementalOperation in elementalOperations)
+            {
+                string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
+                queryStructure.EntityName,
+                clientRoleHeader,
+                elementalOperation,
+                context);
+
+                queryStructure.DbPolicies = dbQueryPolicy;
+
+                Console.Write("dbQueryPolicy : " + dbQueryPolicy);
+
+                FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
+                    dbQueryPolicy,
+                    entityName: queryStructure.EntityName,
+                    resourcePath: queryStructure.DatabaseObject.FullName,
+                    sqlMetadataProvider);
+                Console.Write("filterClause : " + filterClause);
+                /*queryStructure.ProcessOdataClause(filterClause, elementalOperation);*/
             }
         }
 

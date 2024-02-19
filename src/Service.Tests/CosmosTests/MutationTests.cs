@@ -31,6 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                                                         name
                                                     }
                                                 }";
+
         private static readonly string _deletePlanetMutation = @"
                                                 mutation ($id: ID!, $partitionKeyValue: String!) {
                                                     deletePlanet (id: $id, _partitionKeyValue: $partitionKeyValue) {
@@ -38,6 +39,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                                                         name
                                                     }
                                                 }";
+        private const string USER_NOT_AUTHORIZED = "The current user is not authorized to access this resource";
+        private const string NO_ERROR_MESSAGE = null;
 
         /// <summary>
         /// Executes once for the test.
@@ -252,34 +255,17 @@ mutation {{
         }
 
         /// <summary>
-        /// Mutation can be performed on the authorized fields because the
-        /// field `id` is an included field for the create operation on the anonymous role defined
-        /// for entity 'earth'
+        /// Create Mutation performed on the fields with different auth permissions
+        /// It throws permission denied error if role doesn't have permission to perform the operation
         /// </summary>
         [TestMethod]
-        public async Task CanCreateItemWithAuthorizedFields()
-        {
-            // Run mutation Add Earth;
-            string id = Guid.NewGuid().ToString();
-            string mutation = $@"
-mutation {{
-    createEarth (item: {{ id: ""{id}"" }}) {{
-        id
-    }}
-}}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new());
-
-            // Validate results
-            Assert.AreEqual(id, response.GetProperty("id").GetString());
-        }
-
-        /// <summary>
-        /// Mutation performed on the unauthorized fields throws permission denied error because the
-        /// field `name` is an excluded field for the create operation on the anonymous role defined
-        /// for entity 'earth'
-        /// </summary>
-        [TestMethod]
-        public async Task CreateItemWithUnauthorizedFieldsReturnsError()
+        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed fields.")]
+        [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no create/read operation restrictions.")]
+        [DataRow("only-create-role", "The mutation operation createEarth was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "Successful create operation but AuthZ failure for read when role has ONLY create permission and NO read permission.")]
+        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed field using wildcard.")]
+        [DataRow("only-update-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when create permission is NOT there.")]
+        public async Task CreateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
             // Run mutation Add Earth;
             string id = Guid.NewGuid().ToString();
@@ -291,23 +277,56 @@ mutation {{
         name
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new());
+            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new(), authToken: authtoken, clientRoleHeader: roleName);
 
             // Validate the result contains the GraphQL authorization error code.
-            string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE));
+            Console.WriteLine(response.ToString());
+            if (string.IsNullOrEmpty(expectedErrorMessage))
+            {
+                Assert.AreEqual(id, response.GetProperty("id").GetString());
+            }
+            else
+            {
+                // Validate the result contains the GraphQL authorization error code.
+                string errorMessage = response.ToString();
+                Assert.IsTrue(errorMessage.Contains(expectedErrorMessage));
+            }
         }
 
         /// <summary>
-        /// Mutation performed on the unauthorized fields throws permission denied error because the
-        /// wildcard is used in the excluded field for the update operation on the anonymous role defined
-        /// for entity 'earth'
+        /// Update Mutation performed on the fields with different auth permissions
+        /// It throws permission denied error if role doesn't have permission to perform the operation
         /// </summary>
         [TestMethod]
-        public async Task UpdateItemWithUnauthorizedWildCardReturnsError()
+        [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for update mutation because of reference to excluded/disallowed fields.")]
+        [DataRow("authenticated", NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no update/read operation restrictions.")]
+        [DataRow("only-update-role", "The mutation operation updateEarth was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure  but sucessful operation where role has ONLY update permission and NO read permission.")]
+        [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for update mutation because of reference to excluded/disallowed field using wildcard.")]
+        [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when update permission is NOT there.")]
+        public async Task UpdateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
-            // Run mutation Update Earth;
+            // Create an item with "Authenticated" role
             string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string createMutation = $@"
+mutation {{
+    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+
+            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createEarth", createMutation,
+                variables: new(),
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
+                clientRoleHeader: AuthorizationType.Authenticated.ToString());
+
+            // Making sure item is created successfully
+            Assert.AreEqual(id, createResponse.GetProperty("id").GetString());
+
+            // Run mutation Update Earth;
             string mutation = @"
 mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
     updateEarth (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
@@ -321,11 +340,87 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
                 name = "new_name"
             };
 
-            JsonElement response = await ExecuteGraphQLRequestAsync("updateEarth", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: "updateEarth",
+                query: mutation,
+                variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } },
+                authToken: authtoken,
+                clientRoleHeader: roleName);
 
-            // Validate the result contains the GraphQL authorization error code.
-            string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE));
+            Console.WriteLine(response.ToString());
+            if (string.IsNullOrEmpty(expectedErrorMessage))
+            {
+                Assert.AreEqual(id, response.GetProperty("id").GetString());
+            }
+            else
+            {
+                // Validate the result contains the GraphQL authorization error code.
+                string errorMessage = response.ToString();
+                Assert.IsTrue(errorMessage.Contains(expectedErrorMessage));
+            }
+        }
+
+        /// <summary>
+        /// Delete Mutation performed on the fields with different auth permissions
+        /// It throws permission denied error if role doesn't have permission to perform the operation
+        /// </summary>
+        [TestMethod]
+        [DataRow("field-mutation-with-read-permission", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response for delete mutation because of reference to excluded/disallowed fields.")]
+        [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response when role has no delete operation restrictions.")]
+        [DataRow("only-delete-role", "The mutation operation deleteEarth was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure but sucessful operation where role has ONLY delete permission and NO read permission.")]
+        [DataRow("wildcard-exclude-fields-role", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response for delete mutation because of reference to excluded/disallowed fields using wildcard")]
+        [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when delete permission is NOT there.")]
+        public async Task DeleteItemWithAuthPermissions(string roleName, string expectedErrorMessage)
+        {
+            // Create an item with "Authenticated" role
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string createMutation = $@"
+mutation {{
+    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+
+            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createEarth", createMutation,
+                variables: new(),
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
+                clientRoleHeader: AuthorizationType.Authenticated.ToString());
+
+            // Making sure item is created successfully
+            Assert.AreEqual(id, createResponse.GetProperty("id").GetString());
+
+            // Run mutation Update Earth;
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!) {
+    deleteEarth (id: $id, _partitionKeyValue: $partitionKeyValue) {
+        id
+        name
+     }
+}";
+            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: "deleteEarth",
+                query: mutation,
+                variables: new() { { "id", id }, { "partitionKeyValue", id } },
+                authToken: authtoken,
+                clientRoleHeader: roleName);
+
+            Console.WriteLine(response.ToString());
+
+            if (string.IsNullOrEmpty(expectedErrorMessage))
+            {
+                Assert.IsTrue(string.IsNullOrEmpty(response.ToString()));
+            }
+            else
+            {
+                // Validate the result contains the GraphQL authorization error code.
+                string errorMessage = response.ToString();
+                Assert.IsTrue(errorMessage.Contains(expectedErrorMessage));
+            }
         }
 
         /// <summary>
@@ -421,12 +516,12 @@ type Planet @model(name:""Planet"") {
 }";
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object> dbOptions = new();
             HyphenatedNamingPolicy namingPolicy = new();
 
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement("graphqldb"));
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(_containerName));
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement("custom-schema.gql"));
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), _containerName);
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
             DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
                 ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
 
@@ -550,12 +645,12 @@ type Planet @model(name:""Planet"") {
 }";
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object> dbOptions = new();
             HyphenatedNamingPolicy namingPolicy = new();
 
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement("graphqldb"));
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(_containerName));
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement("custom-schema.gql"));
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), _containerName);
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
             DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
                 ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
 

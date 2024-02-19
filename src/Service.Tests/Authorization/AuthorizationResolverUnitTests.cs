@@ -2,17 +2,22 @@
 // Licensed under the MIT License.
 
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Tests.Authentication.Helpers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.JsonWebTokens;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -1058,64 +1063,53 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate that duplicate claims throws an exception for everything except roles
-        /// duplicate role claims are ignored, so just checks policy is parsed as expected in this case 
+        /// HappyPath: Duplicate claim types resolved into:
+        /// key -> claimType (name)
+        /// value -> scalar as string
+        /// Database policies do not support operators like "in" or "contains" so when a
+        /// list of claims (count > 1) exists, return the first value in the list of claims.
+        /// While not ideal behavior, this is *not* a breaking change and an "improvement" since historically,
+        /// DAB would fail the request if a user had >1 role AND dab config defined a db policy
+        /// to include the token '@claims.role'. While this test validates the expected behavior of
+        /// not failing the request, the value resolved for `@claims.groups` is the first claim encountered
+        /// (when there are multiple claim instances like when 'groups' is a JSON array in the JWT token.
         /// </summary>
-        /// <param name="exceptionExpected"> Whether we expect an exception (403 forbidden) to be thrown while parsing policy </param>
-        /// <param name="claimTypes"> Parameter list of claim types/keys to add to the claims dictionary that can be accessed with @claims </param>
-        [DataTestMethod]
-        [DataRow(true, AuthenticationOptions.ROLE_CLAIM_TYPE, "username", "guid", "username",
-            DisplayName = "duplicate claim expect exception")]
-        [DataRow(false, AuthenticationOptions.ROLE_CLAIM_TYPE, "username", "guid", AuthenticationOptions.ROLE_CLAIM_TYPE,
-            DisplayName = "duplicate role claim does not expect exception")]
-        [DataRow(true, AuthenticationOptions.ROLE_CLAIM_TYPE, AuthenticationOptions.ROLE_CLAIM_TYPE, "username", "username",
-            DisplayName = "duplicate claim expect exception ignoring role")]
-        public void ParsePolicyWithDuplicateUserClaims(bool exceptionExpected, params string[] claimTypes)
+        [TestMethod]
+        public void ParsePolicyWithDuplicateUserClaims()
         {
-            string policy = $"@claims.guid eq 1";
-            string defaultClaimValue = "unimportant";
+            // Arrange
             RuntimeConfig runtimeConfig = InitRuntimeConfig(
                 entityName: TEST_ENTITY,
                 roleName: TEST_ROLE,
                 operation: TEST_OPERATION,
                 includedCols: new HashSet<string> { "col1", "col2", "col3" },
-                databasePolicy: policy
+                databasePolicy: "@claims.scope eq @item.col2 and @claims.groups eq @item.col3"
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
             Mock<HttpContext> context = new();
 
             // Add identity to the readAction, updateAction.
             ClaimsIdentity identity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
-            foreach (string claimType in claimTypes)
-            {
-                identity.AddClaim(new Claim(type: claimType, value: defaultClaimValue, ClaimValueTypes.String));
-            }
+            identity.AddClaim(new Claim(type: "scope", value: "profile", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "scope", value: "openid", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "scope", value: "openid", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "groups", value: "1111", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "groups", value: "2222", ClaimValueTypes.String));
+            identity.AddClaim(new Claim(type: "groups", value: "3333", ClaimValueTypes.String));
+
+            // Add roles claim that matches client role header value. (x-ms-api-role)
+            identity.AddClaim(new Claim(type: AuthenticationOptions.ROLE_CLAIM_TYPE, value: TEST_ROLE, ClaimValueTypes.String));
 
             ClaimsPrincipal principal = new(identity);
             context.Setup(x => x.User).Returns(principal);
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
-            // We expect an exception if duplicate claims are present EXCEPT for role claim
-            if (exceptionExpected)
-            {
-                try
-                {
-                    authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
-                    Assert.Fail();
-                }
-                catch (DataApiBuilderException ex)
-                {
-                    Assert.AreEqual(HttpStatusCode.Forbidden, ex.StatusCode);
-                    Assert.AreEqual("Duplicate claims are not allowed within a request.", ex.Message);
-                }
-            }
-            else
-            {
-                // If the role claim was the only duplicate, simply verify policy parsed as expected
-                string expectedPolicy = $"'{defaultClaimValue}' eq 1";
-                string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
-                Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
-            }
+            // Act
+            string parsedPolicy = authZResolver.ProcessDBPolicy(TEST_ENTITY, TEST_ROLE, TEST_OPERATION, context.Object);
+
+            // Assert
+            string expectedPolicy = $"'profile' eq col2 and '1111' eq col3";
+            Assert.AreEqual(expected: expectedPolicy, actual: parsedPolicy);
         }
 
         // Indirectly tests the AuthorizationResolver private method:
@@ -1176,13 +1170,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         }
 
         /// <summary>
-        /// Test to validate the AuthorizationResolver.GetAllUserClaims() successfully adds role claim to the claimsInRequestContext dictionary.
-        /// Only the role claim corresponding to the X-MS-API-ROLE header is added to the claimsInRequestContext.
+        /// Test to validate the AuthorizationResolver.GetAllAuthenticatedUserClaims() successfully adds role claim to the resolvedClaims dictionary.
+        /// Only one "roles" claim is added to the dictionary resolvedClaims and only one Claim is added to the list maintained
+        /// for the key "roles" where the value corresponds to the X-MS-API-ROLE header.
+        /// e.g [key: "roles"] -> [value: List (Claim) { Claim(type: "roles", value: "{x-ms-api-role value") }]
         /// The role claim will be sourced by DAB when the user is not already a member of a system role(authenticated/anonymous),
         /// or the role claim will be sourced from a user's access token issued by an identity provider.
         /// </summary>
         [TestMethod]
-        public void ValidateClientRoleHeaderClaimIsAddedToClaimsInRequestContext()
+        public void ValidateClientRoleHeaderClaimIsAddedToResolvedClaims()
         {
             Mock<HttpContext> context = new();
 
@@ -1204,12 +1200,173 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
             context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
 
             // Execute the method to be tested - GetAllUserClaims().
-            Dictionary<string, Claim> claimsInRequestContext = AuthorizationResolver.GetAllUserClaims(context.Object);
+            Dictionary<string, List<Claim>> resolvedClaims = AuthorizationResolver.GetAllAuthenticatedUserClaims(context.Object);
 
             // Assert that only the role claim corresponding to clientRoleHeader is added to the claims dictionary.
-            Assert.IsTrue(claimsInRequestContext.Count == 1);
-            Assert.IsTrue(claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE));
-            Assert.IsTrue(TEST_ROLE.Equals(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE].Value));
+            // Assert
+            Assert.AreEqual(resolvedClaims.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), true, message: "Only the claim, roles, should be present.");
+            Assert.AreEqual(resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE].Count, 1, message: "Only one claim should be present to represent the client role header context.");
+            Assert.AreEqual(resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE].First().Value, TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+        }
+
+        /// <summary>
+        /// Validates that AuthorizationResolver.GetProcessedUserClaims(...)
+        /// -> returns a dictionary (string, string) where each key is a claim's name and each value is a claim's value.
+        /// -> Resolves scope/scp claims to a single string value with scopes delimited by spaces.
+        /// -> Resolves multiple instances of a claim into a JSON array mirroring the format
+        /// of the claim in the original JWT token. The JSON array's type depends on the value type
+        /// present in the original JWT token.
+        /// </summary>
+        [TestMethod]
+        public async Task TestClaimsParsingToJson()
+        {
+            // Arrange
+            Dictionary<string, object> distributedClaimSources = new()
+            {
+                ["src1"] = new { endpoint = "https://graph.microsoft.com/v1.0/users/{userID}/getMemberObjects" }
+            };
+
+            Dictionary<string, object?> claimsCollection = new()
+            {
+                { "scp", "scope1 scope2 scope3" },
+                { "groups", "src1" },
+                { "_claim_sources", distributedClaimSources},
+                { "wids", new List<string>() { "d74b8d81-39eb-4201-bd9f-9f1c4011e3c9", "18d14519-c4da-4ad4-936d-9a2de69d33cf", "9e513fc0-e8af-43b1-a6c7-949edb1967a3" } },
+                { "int_array", new List<int>() { 1, 2, 3 } },
+                { "bool_array", new List<bool>() { true, false, true } },
+                { "roles", new List<string> { "anonymous", "authenticated", TEST_ROLE } },
+                { "nullValuedClaim",  null},
+                { "iat", 1706816426 }
+            };
+
+            ClaimsPrincipal principal = await CreateClaimsPrincipal(userClaims: claimsCollection);
+
+            Mock<HttpContext> context = new();
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            // Act
+            Dictionary<string, string> claimsInRequestContext = AuthorizationResolver.GetProcessedUserClaims(context.Object);
+
+            // Assert
+            // The only role that should be present is the role set in the client role header. The claims collection
+            // configured in the 'arrange' section of this test must include that role in the list of role claims.
+            // DAB historically only sent a single role into MS SQL's session context, so changing this behavior
+            // is a breaking change.
+            Assert.AreEqual(expected: true, claimsInRequestContext.ContainsKey(AuthenticationOptions.ROLE_CLAIM_TYPE), message: "The 'roles' claim must be present.");
+            Assert.AreEqual(expected: TEST_ROLE, claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE], message: "The roles claim should have the value:" + TEST_ROLE);
+
+            // Ensure JSON arrays are reconstructed correctly aligning to the JWT token claim's value type
+            Assert.AreEqual(expected: @"[""d74b8d81-39eb-4201-bd9f-9f1c4011e3c9"",""18d14519-c4da-4ad4-936d-9a2de69d33cf"",""9e513fc0-e8af-43b1-a6c7-949edb1967a3""]", claimsInRequestContext["wids"]);
+            Assert.AreEqual(expected: "[1,2,3]", actual: claimsInRequestContext["int_array"]);
+            Assert.AreEqual(expected: "[true,false,true]", actual: claimsInRequestContext["bool_array"]);
+            Assert.AreEqual(expected: @"src1", actual: claimsInRequestContext["groups"]);
+            Assert.AreEqual(expected: @"{""src1"":{""endpoint"":""https://graph.microsoft.com/v1.0/users/{userID}/getMemberObjects""}}", actual: claimsInRequestContext["_claim_sources"]);
+            Assert.AreEqual(expected: "1706816426", actual: claimsInRequestContext["iat"]);
+            Assert.AreEqual(expected: "", actual: claimsInRequestContext["nullValuedClaim"]);
+        }
+
+        /// <summary>
+        /// JWT token JSON payloads may not be flat and may contain nested JSON objects or arrays.
+        /// This test validates that when dotnet's JWT processing code flattens the JWT token payload
+        /// into Claim objects, the AuthorizationResolver.GetProcessedUserClaims(...) method correctly
+        /// returns a dictionary where key=claimType and value= scalar value or serialized JSON array.
+        /// This test enforces that DAB only processes one 'roles' claim whose value matches the x-ms-api-role
+        /// header, which protects against regression.
+        /// </summary>
+        [TestMethod]
+        public void UniqueClaimsResolvedForDbPolicy_SessionCtx_Usage()
+        {
+            // Arrange
+            Mock<HttpContext> context = new();
+
+            // Creat list of claims for testing
+            List<Claim> claims = new()
+            {
+                new("scp", "openid"),
+                new("sub", "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY"),
+                new("oid", "55296aad-ea7f-4c44-9a4c-bb1e8d43a005"),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "ROLE2")
+            };
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity identityWithClientRoleHeaderClaim = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            identityWithClientRoleHeaderClaim.AddClaims(claims);
+
+            ClaimsPrincipal principal = new();
+            principal.AddIdentity(identityWithClientRoleHeaderClaim);
+
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            // Act
+            Dictionary<string, string> claimsInRequestContext = AuthorizationResolver.GetProcessedUserClaims(context.Object);
+
+            // Assert
+            Assert.AreEqual(expected: claims.Count - 1, actual: claimsInRequestContext.Count, message: "Unexpected number of claims. Expected a count of unique claim types.");
+            Assert.AreEqual(expected: "openid", actual: claimsInRequestContext["scp"], message: "Expected the scp claim to be present.");
+            Assert.AreEqual(expected: "Aa_0RISCzzZ-abC1De2fGHIjKLMNo123pQ4rStUVWXY", actual: claimsInRequestContext["sub"], message: "Expected the sub claim to be present.");
+            Assert.AreEqual(expected: "55296aad-ea7f-4c44-9a4c-bb1e8d43a005", actual: claimsInRequestContext["oid"], message: "Expected the oid claim to be present.");
+            Assert.AreEqual(claimsInRequestContext[AuthenticationOptions.ROLE_CLAIM_TYPE], actual: TEST_ROLE, message: "The roles claim should have the value:" + TEST_ROLE);
+        }
+
+        /// <summary>
+        /// Validates that AuthorizationResolver.GetProcessedUserClaims(httpContext) does not resolve claims sourced from
+        /// an unauthenticated ClaimsIdentity object within a ClaimsPrincipal.
+        /// While no scenarios currently inject an unauthenticated ClaimsIdentity object into a ClaimsPrincipal,
+        /// any scenarios that do so will have their unauthenticated ClaimsIdentity claims ignored.
+        /// </summary>
+        [TestMethod]
+        public void ValidateUnauthenticatedUserClaimsAreNotResolvedWhenProcessingUserClaims()
+        {
+            // Arrange
+            Mock<HttpContext> context = new();
+
+            // Create authenticated ClaimsIdentity object with list of claims.
+            List<Claim> authenticatedUserclaims = new()
+            {
+                new("scp", "openid", ClaimValueTypes.String),
+                new("oid", "55296aad-ea7f-4c44-9a4c-bb1e8d43a005", ClaimValueTypes.String),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, TEST_ROLE, ClaimValueTypes.String),
+            };
+
+            //Add identity object to the Mock context object.
+            ClaimsIdentity authenticatedIdentity = new(TEST_AUTHENTICATION_TYPE, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            authenticatedIdentity.AddClaims(authenticatedUserclaims);
+
+            // Create unauthenticated ClaimsIdentity object with list of claims.
+            List<Claim> unauthenticatedClaims = new()
+            {
+                new("scp", "invalidScope", ClaimValueTypes.String),
+                new("oid", "1337", ClaimValueTypes.String),
+                new(AuthenticationOptions.ROLE_CLAIM_TYPE, "Don't_Parse_This_Role",ClaimValueTypes.String)
+            };
+
+            // ClaimsIdentity is unauthenticated because the authenticationType is null.
+            ClaimsIdentity unauthenticatedIdentity = new(authenticationType: null, TEST_CLAIMTYPE_NAME, AuthenticationOptions.ROLE_CLAIM_TYPE);
+            unauthenticatedIdentity.AddClaims(unauthenticatedClaims);
+
+            //Add identities object to the Mock context object.
+            ClaimsPrincipal principal = new();
+            principal.AddIdentity(authenticatedIdentity);
+            principal.AddIdentity(unauthenticatedIdentity);
+
+            context.Setup(x => x.User).Returns(principal);
+            context.Setup(x => x.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER]).Returns(TEST_ROLE);
+
+            // Act
+            Dictionary<string, string> resolvedClaims = AuthorizationResolver.GetProcessedUserClaims(context.Object);
+
+            // Assert
+            Assert.AreEqual(expected: authenticatedUserclaims.Count, actual: resolvedClaims.Count, message: "Only two claims should be present.");
+            Assert.AreEqual(expected: "openid", actual: resolvedClaims["scp"], message: "Unexpected scp claim returned.");
+
+            bool didResolveUnauthenticatedRoleClaim = resolvedClaims[AuthenticationOptions.ROLE_CLAIM_TYPE] == "Don't_Parse_This_Role";
+            Assert.AreEqual(expected: false, actual: didResolveUnauthenticatedRoleClaim, message: "Unauthenticated roles claim erroneously resolved.");
+
+            bool didResolveUnauthenticatedOidClaim = resolvedClaims["oid"] == "1337";
+            Assert.AreEqual(expected: false, actual: didResolveUnauthenticatedRoleClaim, message: "Unauthenticated oid claim erroneously resolved.");
         }
         #endregion
 
@@ -1225,7 +1382,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
         /// <param name="requestPolicy">Request authorization policy. (Support TBD)</param>
         /// <param name="databasePolicy">Database authorization policy.</param>
         /// <returns>Mocked RuntimeConfig containing metadata provided in method arguments.</returns>
-        public static RuntimeConfig InitRuntimeConfig(
+        private static RuntimeConfig InitRuntimeConfig(
             string entityName = "SampleEntity",
             string roleName = "Reader",
             EntityActionOperation operation = EntityActionOperation.Create,
@@ -1281,6 +1438,56 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 Entities: new(entityMap)
             );
             return runtimeConfig;
+        }
+
+        /// <summary>
+        /// Returns a ClaimsPrincipal object created from a jwt token which uses either the provided
+        /// claimsCollection or a default claimsCollection capturing various value types of possible claims.
+        /// Value types include:
+        /// - space delimited string for scp claim
+        /// - JSON String array (roles)
+        /// - JSON object (distributed groups claim)
+        /// - JSON int/bool array (theoretical, though not in EntraID access token)
+        /// </summary>
+        /// <param name="userClaims">Test configured collection of claims to include in ClientPrincipal</param>
+        /// <returns>Authenticated ClaimsPrincipal with user specified or default claims</returns>
+        private async static Task<ClaimsPrincipal> CreateClaimsPrincipal(Dictionary<string, object?>? userClaims = null)
+        {
+            if (userClaims is null)
+            {
+                Dictionary<string, object> distributedClaimSources = new()
+                {
+                    ["src1"] = new { endpoint = "https://graph.microsoft.com/v1.0/users/{userID}/getMemberObjects" }
+                };
+
+                userClaims = new()
+                {
+                    { "scope", "scope1 scope2 scope3" },
+                    { "groups", "src1" },
+                    { "_claim_sources", distributedClaimSources},
+                    { "wids", new List<string>() { "d74b8d81-39eb-4201-bd9f-9f1c4011e3c9", "18d14519-c4da-4ad4-936d-9a2de69d33cf", "9e513fc0-e8af-43b1-a6c7-949edb1967a3" } },
+                    { "int_array", new List<int>() { 1, 2, 3 } },
+                    { "bool_array", new List<bool>() { true, false, true } },
+                    { "roles", new List<string> { "anonymous", "authenticated", TEST_ROLE } },
+                    { "nullValuedClaim",  null}
+                };
+            }
+
+            RsaSecurityKey signingKey = new(RSA.Create(2048));
+            SecurityTokenDescriptor tokenDescriptor = new()
+            {
+                Audience = "d727a7e8-1af4-4ce0-8c56-f3107f10bbfd",
+                Issuer = "https://fabrikam.com",
+                Claims = userClaims,
+                NotBefore = DateTime.Now.AddHours(-1),
+                Expires = DateTime.Now.AddHours(1),
+                SigningCredentials = new(key: signingKey, algorithm: SecurityAlgorithms.RsaSsaPssSha256)
+            };
+
+            JsonWebTokenHandler tokenHandler = new();
+            string jwtToken = tokenHandler.CreateToken(tokenDescriptor);
+            HttpContext context = await WebHostBuilderHelper.SendRequestAndGetHttpContextState(key: signingKey, token: jwtToken);
+            return context.User;
         }
         #endregion
     }

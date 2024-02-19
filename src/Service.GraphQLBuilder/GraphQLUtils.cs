@@ -376,8 +376,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// has an IntValue, FloatValue, StringValue, BooleanValue, NullValue or an EnumValue.
         /// </summary>
         /// <param name="fieldSyntaxKind">SyntaxKind of the field.</param>
-        /// <returns>true if the field is a column field, else false.</returns>
-        public static bool IsColumnField(SyntaxKind fieldSyntaxKind)
+        /// <returns>true if the field is a scalar field, else false.</returns>
+        public static bool IsScalarField(SyntaxKind fieldSyntaxKind)
         {
             return fieldSyntaxKind is not SyntaxKind.ObjectValue && fieldSyntaxKind is not SyntaxKind.ListValue;
         }

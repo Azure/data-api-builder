@@ -1244,7 +1244,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IMiddlewareContext context,
             object? parameters)
         {
-            InputObjectType schemaObject = ResolverMiddleware.InputObjectTypeFromIInputField(schema);
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
             {
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
@@ -1317,7 +1316,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 SyntaxKind underlyingFieldKind = fieldDetails.Item2;
 
                 // For a column field, we do not have to recurse to process fields in the value - which is required for relationship fields.
-                if (GraphQLUtils.IsColumnField(underlyingFieldKind))
+                if (GraphQLUtils.IsScalarField(underlyingFieldKind))
                 {
                     // It might be the case that we are currently processing the fields for a linking input object.
                     // Linking input objects enable users to provide input for fields belonging to the target entity and the linking entity.

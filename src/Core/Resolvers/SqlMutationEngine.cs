@@ -1251,7 +1251,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ProcessObjectFieldNodesForAuthZ(
                     context: context,
                     entityName: entityName,
-                    schemaObject: schemaObject,
+                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
                     fieldNodes: listOfObjectFieldNode,
                     entityTofields: entityToFields);
             }
@@ -1273,7 +1273,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ProcessObjectFieldNodesForAuthZ(
                     context: context,
                     entityName: entityName,
-                    schemaObject: schemaObject,
+                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
                     fieldNodes: objectValueNode.Fields,
                     entityTofields: entityToFields);
             }

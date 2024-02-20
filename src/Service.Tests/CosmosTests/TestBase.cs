@@ -97,7 +97,8 @@ type MoonAdditionalAttribute @model(name:""MoonAdditionalAttribute"") {
 
 type MoreAttribute @model(name:""MoreAttrAlias"") {
     id : ID,
-    name : String
+    name : String,
+    type: String @authorize(roles: [""authenticated""])
 }";
 
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };

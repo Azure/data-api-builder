@@ -271,18 +271,22 @@
         },
         Permissions: [
           {
-            Role: anonymous,
+            Role: field-mutation-with-read-permission,
             Actions: [
               {
                 Action: Update,
                 Fields: {
                   Exclude: [
-                    *
+                    name
+                  ],
+                  Include: [
+                    id,
+                    type
                   ]
                 }
               },
               {
-                Action: Read,
+                Action: Delete,
                 Fields: {
                   Exclude: [
                     name
@@ -305,7 +309,7 @@
                 }
               },
               {
-                Action: Delete
+                Action: Read
               }
             ]
           },
@@ -321,6 +325,84 @@
               {
                 Action: Update
               },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: limited-read-role,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id,
+                    type
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            Role: wildcard-exclude-fields-role,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Delete,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            Role: only-create-role,
+            Actions: [
+              {
+                Action: Create
+              }
+            ]
+          },
+          {
+            Role: only-update-role,
+            Actions: [
+              {
+                Action: Update
+              }
+            ]
+          },
+          {
+            Role: only-delete-role,
+            Actions: [
               {
                 Action: Delete
               }
@@ -359,6 +441,128 @@
               },
               {
                 Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      AdditionalAttribute: {
+        Source: {
+          Object: graphqldb.additionalAttribute
+        },
+        GraphQL: {
+          Singular: AdditionalAttribute,
+          Plural: AdditionalAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      MoonAdditionalAttribute: {
+        Source: {
+          Object: graphqldb.moonAdditionalAttributes
+        },
+        GraphQL: {
+          Singular: MoonAdditionalAttribute,
+          Plural: MoonAdditionalAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      MoreAttrAlias: {
+        Source: {
+          Object: graphqldb.moreAttribute
+        },
+        GraphQL: {
+          Singular: MoreAttribute,
+          Plural: MoreAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id
+                  ]
+                }
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id
+                  ]
+                }
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
               },
               {
                 Action: Update

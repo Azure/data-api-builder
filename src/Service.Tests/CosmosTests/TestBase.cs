@@ -49,9 +49,10 @@ type Planet @model {
     age : Int,
     dimension : String,
     earth: Earth,
+    tags: [String!],
     stars: [Star],
-    moons: [Moon],
-    tags: [String!]
+    additionalAttributes: [AdditionalAttribute],
+    moons: [Moon]
 }
 
 type Star @model(name:""StarAlias"") {
@@ -68,7 +69,8 @@ type Tag @model(name:""TagAlias"") {
 type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
     id : ID,
     name : String,
-    details : String
+    details : String,
+    moonAdditionalAttributes: [MoonAdditionalAttribute]
 }
 
 type Earth @model(name:""Earth"") {
@@ -80,6 +82,23 @@ type Earth @model(name:""Earth"") {
 type Sun @model(name:""Sun"") {
     id : ID,
     name : String
+}
+
+type AdditionalAttribute @model(name:""AdditionalAttribute"") {
+    id : ID,
+    name : String
+}
+
+type MoonAdditionalAttribute @model(name:""MoonAdditionalAttribute"") {
+    id : ID,
+    name : String,
+    moreAttributes: [MoreAttribute!]
+}
+
+type MoreAttribute @model(name:""MoreAttrAlias"") {
+    id : ID,
+    name : String,
+    type: String @authorize(roles: [""authenticated""])
 }";
 
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };

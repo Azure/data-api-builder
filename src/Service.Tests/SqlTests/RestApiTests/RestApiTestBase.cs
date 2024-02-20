@@ -65,6 +65,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _nonAutogenPKEntityWithTrigger = "InternData";
         protected static readonly string _nonAutogenPKTableWithTrigger = "intern_data";
         protected static readonly string _tableWithDateTimePK = "stocks_price";
+        protected static readonly string _defaultValueAsBuiltInMethodsEntity = "DefaultBuiltInFunction";
+        protected static readonly string _defaultValueAsBuiltInMethodsTable = "default_with_function_table";
         protected static readonly string _tableWithVarcharMax = "journals";
         protected static readonly string _entityWithVarcharMax = "Journal";
 

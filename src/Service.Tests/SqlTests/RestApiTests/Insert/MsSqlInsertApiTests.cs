@@ -212,6 +212,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE [id] = {STARTING_ID_FOR_TEST_INSERTS} AND 0 = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
+            },
+            {
+                "InsertOneRowWithBuiltInMethodAsDefaultvaluesTest",
+                $"SELECT * FROM { _defaultValueAsBuiltInMethodsTable } " +
+                $"WHERE [id] = {STARTING_ID_FOR_TEST_INSERTS} " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             }
         };
 

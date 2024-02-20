@@ -21,6 +21,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         public const string SCHEMA_NAME_PARAM = "schemaName";
         public const string TABLE_NAME_PARAM = "tableName";
+        public const string STOREDPROC_COLUMN_NAME = "name";
+        public const string STOREDPROC_COLUMN_SYSTEMTYPENAME = "system_type_name";
+        public const string STOREDPROC_COLUMN_ISNULLABLE = "is_nullable";
 
         /// <summary>
         /// Predicate added to the query when no other predicates exist.

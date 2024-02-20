@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     /// Unit tests for ODataASTVisitor.cs.
     /// testing.
     /// </summary>
-    [TestClass, TestCategory(TestCategory.MSSQL)]
+    [TestClass, TestCategory(TestCategory.MYSQL)]
     public class ODataASTVisitorUnitTests : SqlTestBase
     {
         private const string DEFAULT_ENTITY = "SupportedType";
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
-            DatabaseEngine = TestCategory.MSSQL;
+            DatabaseEngine = TestCategory.MYSQL;
             await InitializeTestFixture();
         }
 
@@ -176,7 +176,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     .GetODataParser()
                     .GetFilterClause(
                         filterQueryString,
-                        resourcePath: $"{entityName}.{DEFAULT_SCHEMA_NAME}.{tableName}",
+                        resourcePath: $"{entityName}.{tableName}",
                         customResolver: new ClaimsTypeDataUriResolver());
                 Assert.IsFalse(errorExpected, message: "Filter clause creation was expected to fail.");
             }

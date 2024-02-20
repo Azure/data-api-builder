@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -91,17 +92,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 elementalOperation,
                 context);
 
-                queryStructure.DbPolicies = dbQueryPolicy;
-
-                Console.Write("dbQueryPolicy : " + dbQueryPolicy);
-
                 FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
                     dbQueryPolicy,
                     entityName: queryStructure.EntityName,
-                    resourcePath: queryStructure.DatabaseObject.FullName,
+                    resourcePath: null,
                     sqlMetadataProvider);
                 Console.Write("filterClause : " + filterClause);
-                /*queryStructure.ProcessOdataClause(filterClause, elementalOperation);*/
+                queryStructure.ProcessOdataClause(filterClause, elementalOperation);
             }
         }
 
@@ -115,7 +112,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public static FilterClause? GetDBPolicyClauseForQueryStructure(
             string dbPolicyClause,
             string entityName,
-            string resourcePath,
+            string? resourcePath,
             ISqlMetadataProvider sqlMetadataProvider)
         {
             if (!string.IsNullOrEmpty(dbPolicyClause))
@@ -125,11 +122,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // This enables the ODataVisitor helpers to parse the policy text properly.
                 dbPolicyClause = $"?{RequestParser.FILTER_URL}={dbPolicyClause}";
 
+                string fullResourcePath = entityName;
+                if(!string.IsNullOrEmpty(resourcePath))
+                {
+                    fullResourcePath = $"{entityName}.{resourcePath}";
+                }
+
                 // Parse and save the values that are needed to later generate SQL query predicates
                 // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
                 return sqlMetadataProvider.GetODataParser().GetFilterClause(
                     filterQueryString: dbPolicyClause,
-                    resourcePath: $"{entityName}.{resourcePath}",
+                    resourcePath: fullResourcePath,
                     customResolver: new ClaimsTypeDataUriResolver());
             }
 

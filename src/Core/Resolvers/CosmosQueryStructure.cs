@@ -34,8 +34,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // Order of the join matters
         public Stack<CosmosJoinStructure>? Joins { get; internal set; }
 
-        public string DbPolicies { get; internal set; }
-
         /// <summary>
         /// A simple class that is used to hold the information about joins that
         /// are part of a Cosmos query.
@@ -56,8 +54,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _context = context;
             SourceAlias = _containerAlias;
             DatabaseObject.Name = _containerAlias;
-
-            DbPolicies = string.Empty;
 
             Init(parameters);
         }

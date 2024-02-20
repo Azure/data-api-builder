@@ -4,6 +4,7 @@
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Parsers
@@ -56,9 +57,15 @@ namespace Azure.DataApiBuilder.Core.Parsers
                     // given an entity Publisher with schema.table of dbo.publishers
                     // entitySourceName = dbo.publishers
                     // newEntityKey = Publisher.dbo.publishers
-                    string entitySourceName = $"{entityAndDbObject.Value.FullName}";
-                    string newEntityKey = $"{entityAndDbObject.Key}.{entitySourceName}";
+                    string newEntityKey = $"{entityAndDbObject.Key}";
+                    if (sqlMetadataProvider is not CosmosSqlMetadataProvider)
+                    {
+                        string entitySourceName = $"{entityAndDbObject.Value.FullName}";
+                        newEntityKey = $"{entityAndDbObject.Key}.{entitySourceName}";
+                    }
+
                     EdmEntityType newEntity = new(DEFAULT_NAMESPACE, newEntityKey);
+
                     _entities.Add(newEntityKey, newEntity);
 
                     SourceDefinition sourceDefinition
@@ -114,7 +121,14 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 if (entityAndDbObject.Value.SourceType != EntitySourceType.StoredProcedure)
                 {
                     string entityName = $"{entityAndDbObject.Value.FullName}";
-                    container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
+                    if (sqlMetadataProvider is CosmosSqlMetadataProvider)
+                    {
+                        container.AddEntitySet(name: $"{entityAndDbObject.Key}", _entities[$"{entityAndDbObject.Key}"]);
+                    }
+                    else
+                    {
+                        container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
+                    }
                 }
             }
 

@@ -3,13 +3,13 @@
 
 using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
-using Microsoft.IdentityModel.Tokens;
 using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
-    public class CosmosQueryBuilder : BaseSqlQueryBuilder
+    public class CosmosQueryBuilder : BaseSqlQueryBuilder, IQueryBuilder
     {
         private readonly string _containerAlias = "c";
 
@@ -35,9 +35,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryStringBuilder.Append($" WHERE {predicateString}");
             }
 
-            if (!string.IsNullOrEmpty(structure.DbPolicies))
+            if (!string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]))
             {
-                queryStringBuilder.Append($" AND {structure.DbPolicies}");
+                queryStringBuilder.Append($" AND {structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]}");
             }
 
             if (structure.OrderByColumns.Count > 0)
@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public override string QuoteIdentifier(string ident)
         {
-            throw new System.NotImplementedException();
+            return ident;
         }
 
         /// <summary>
@@ -175,5 +175,44 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return joinBuilder.ToString();
         }
 
+        public string Build(SqlQueryStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlInsertStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlUpdateStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlDeleteStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlUpsertQueryStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Build(SqlExecuteStructure structure)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string BuildQueryToGetReadOnlyColumns(string schemaOrDatabaseParamName, string tableParamName)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

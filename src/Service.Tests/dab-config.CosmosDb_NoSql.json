@@ -373,7 +373,7 @@
             {
               "action": "read",
               "policy": {
-                "database": "@item.name eq 'test name'"
+                "database": "@item.type eq 'earth1'"
               }
             },
             {

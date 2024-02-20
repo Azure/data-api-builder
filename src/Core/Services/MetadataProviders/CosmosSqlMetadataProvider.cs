@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Net;
@@ -9,6 +10,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using HotChocolate.Language;
@@ -28,6 +30,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private readonly IReadOnlyDictionary<string, Entity> _entities;
         protected readonly string _dataSourceName;
 
+        protected IQueryBuilder CosmosQueryBuilder { get; set; }
+
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
 
@@ -42,7 +46,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem, string dataSourceName)
+        protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
+
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem, string dataSourceName, IAbstractQueryManagerFactory engineFactory)
         {
             _fileSystem = fileSystem;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
@@ -77,6 +83,11 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             ParseSchemaGraphQLFieldsForGraphQLType();
             GenerateDatabaseObjectForEntities();
+            PopulateObjectDefinitionForEntities();
+
+            QueryManagerFactory = engineFactory;
+            CosmosQueryBuilder = QueryManagerFactory.GetQueryBuilder(_databaseType);
+
             _oDataParser.BuildModel(this);
         }
 
@@ -153,7 +164,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     {
                         sourceObject = new DatabaseTable()
                         {
-                            SchemaName = "",
                             Name = entityName,
                             TableDefinition = new()
                         };
@@ -193,6 +203,47 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public Task InitializeAsync()
         {
             return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Enrich the entities in the runtime config with the
+        /// object definition information needed by the runtime to serve requests.
+        /// Populates table definition for entities specified as tables or views
+        /// Populates procedure definition for entities specified as stored procedures
+        /// </summary>
+        private void PopulateObjectDefinitionForEntities()
+        {
+            foreach ((string entityName, Entity _) in _entities)
+            {
+                PopulateSourceDefinitionAsync(
+                    entityName,
+                    GetSourceDefinition(entityName));
+            }
+        }
+
+        /// <summary>
+        /// Fills the table definition with information of all columns and
+        /// primary keys.
+        /// </summary>
+        /// <param name="schemaName">Name of the schema.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <param name="sourceDefinition">Table definition to fill.</param>
+        /// <param name="entityName">EntityName included to pass on for error messaging.</param>
+        private void PopulateSourceDefinitionAsync(
+            string entityName,
+            SourceDefinition sourceDefinition)
+        {
+            List<FieldDefinitionNode> columnName = _graphQLTypeToFieldsMap[entityName];
+
+            foreach (FieldDefinitionNode columnInfoFromAdapter in columnName)
+            {
+                ColumnDefinition column = new()
+                {
+
+                };
+
+                sourceDefinition.Columns.TryAdd(columnInfoFromAdapter.Name.Value, column);
+            }
         }
 
         private string GraphQLSchema()
@@ -299,7 +350,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public IQueryBuilder GetQueryBuilder()
         {
-            throw new NotImplementedException();
+            return CosmosQueryBuilder;
         }
 
         public bool VerifyForeignKeyExistsInDB(

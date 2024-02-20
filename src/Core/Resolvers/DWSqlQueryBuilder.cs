@@ -23,6 +23,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return _builder.QuoteIdentifier(ident);
         }
 
+        /// <inheritdoc />
+        public override string UnquoteIdentifier(string quotedIdentifier)
+        {
+            return _builder.UnquoteIdentifier(quotedIdentifier);
+        }
+
         /// <summary>
         /// Builds the sql query that will return the json result for DW.
         /// Sample: Get title of all books.

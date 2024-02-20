@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -48,10 +49,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // primary keys used as predicates
                 MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+                SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, backingColumn!);
                 if (primaryKeys.Contains(backingColumn!))
                 {
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn!)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn!, columnSqlDbType)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, backingColumn!, GetColumnSystemType(backingColumn!)), backingColumn)}")
                     ));

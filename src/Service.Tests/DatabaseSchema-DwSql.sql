@@ -175,7 +175,8 @@ CREATE TABLE trees (
 
 CREATE TABLE fungi (
     speciesid int,
-    region varchar(2048)
+    region varchar(2048),
+    habitat varchar(6)
 );
 
 CREATE TABLE type_table(
@@ -241,10 +242,18 @@ INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 
 INSERT INTO stocks(categoryid, pieceid, categoryName, piecesAvailable, piecesRequired) VALUES (1,1,'SciFi',0,0),(2,1,'Tales',0,0),(0,1,'',0,0),(100,99,'Historical',0,0);
 INSERT INTO stocks_price (categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100, 1);
 INSERT INTO notebooks(id, notebookname, color, ownername) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
-INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');
+INSERT INTO journals(id, journalname, color, ownername)
+VALUES
+    (1, 'Journal1', 'red', 'Sean'),
+    (2, 'Journal2', 'green', 'Ani'),
+    (3, 'Journal3', 'blue', 'Jarupat'),
+    (4, 'Journal4', 'yellow', 'Aaron'),
+    (5, 'Journal5', null, 'Abhishek'),
+    (6, 'Journal6', 'green', null),
+    (7, 'Journal7', null, null);
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
-INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
+INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');
 INSERT INTO type_table(id, short_types, int_types, long_types,
 string_types,
 single_types, float_types, decimal_types,

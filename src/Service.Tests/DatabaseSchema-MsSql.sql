@@ -179,7 +179,8 @@ CREATE TABLE trees (
 
 CREATE TABLE fungi (
     speciesid int PRIMARY KEY,
-    region varchar(max)
+    region varchar(max),
+    habitat varchar(6)
 );
 
 CREATE TABLE empty_table (
@@ -453,7 +454,15 @@ INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.5
 SET IDENTITY_INSERT sales OFF
 
 INSERT INTO notebooks(id, notebookname, color, ownername) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
-INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');
+INSERT INTO journals(id, journalname, color, ownername)
+VALUES
+    (1, 'Journal1', 'red', 'Sean'),
+    (2, 'Journal2', 'green', 'Ani'),
+    (3, 'Journal3', 'blue', 'Jarupat'),
+    (4, 'Journal4', 'yellow', 'Aaron'),
+    (5, 'Journal5', null, 'Abhishek'),
+    (6, 'Journal6', 'green', null),
+    (7, 'Journal7', null, null);
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
@@ -471,7 +480,7 @@ INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES 
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100.57, 1);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
-INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
+INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');
 
 SET IDENTITY_INSERT authors_history ON
 INSERT INTO authors_history(id, first_name, middle_name, last_name, year_of_publish, books_published)

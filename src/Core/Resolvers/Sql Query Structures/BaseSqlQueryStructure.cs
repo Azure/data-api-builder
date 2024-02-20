@@ -109,8 +109,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 else
                 {
+                    SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, leftoverColumn);
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn, columnSqlDbType)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"{MakeDbConnectionParam(value: null, leftoverColumn)}")
                     );
@@ -264,7 +265,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// the columns of the right table. The columns are compared in order,
         /// thus the lists should be the same length.
         /// </summary>
-        protected static IEnumerable<Predicate> CreateJoinPredicates(
+        protected IEnumerable<Predicate> CreateJoinPredicates(
             string leftTableAlias,
             List<string> leftColumnNames,
             string rightTableAlias,
@@ -273,9 +274,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return leftColumnNames.Zip(rightColumnNames,
                     (leftColumnName, rightColumnName) =>
                     {
+                        SqlDbType? leftColumnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, leftColumnName);
+                        SqlDbType? rightColumnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, rightColumnName);
                         // no table name or schema here is needed because this is a subquery that joins on table alias
-                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftTableAlias);
-                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightTableAlias);
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftColumnSqlDbType, leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightColumnSqlDbType, rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,
@@ -328,10 +331,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
+                SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, columnName);
+
                 outputColumns.Add(new(
                     tableSchema: DatabaseObject.SchemaName,
                     tableName: DatabaseObject.Name,
                     columnName: columnName,
+                    columnSqlDbType: columnSqlDbType,
                     label: exposedName!,
                     tableAlias: SourceAlias));
             }

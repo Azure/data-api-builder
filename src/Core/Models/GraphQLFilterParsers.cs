@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -134,6 +135,8 @@ public class GQLFilterParser
 
                 metadataProvider.TryGetBackingColumn(queryStructure.EntityName, field: name, out string? resolvedBackingColumnName);
 
+                SqlDbType? columnSqlDbType = null;
+
                 // When runtime configuration defines relationship metadata,
                 // an additional field on the entity representing GraphQL type
                 // will exist. That relationship field does not represent a column in
@@ -145,6 +148,7 @@ public class GQLFilterParser
                 {
                     backingColumnName = resolvedBackingColumnName;
                     relationshipField = false;
+                    columnSqlDbType = metadataProvider.GetSqlDbTypeForColumnNameInAnEntity(entityName, backingColumnName);
                 }
 
                 // Only perform field (column) authorization when the field is not a relationship field.
@@ -219,12 +223,13 @@ public class GQLFilterParser
                             ParseScalarType(
                                 ctx,
                                 argumentSchema: filterArgumentObject.Fields[name],
-                                backingColumnName,
-                                subfields,
-                                schemaName,
-                                sourceName,
-                                sourceAlias,
-                                queryStructure.MakeDbConnectionParam)));
+                                fieldName: backingColumnName,
+                                fields: subfields,
+                                schemaName: schemaName,
+                                tableName: sourceName,
+                                tableAlias: sourceAlias,
+                                fieldSqlDbType: columnSqlDbType,
+                                processLiterals: queryStructure.MakeDbConnectionParam)));
                 }
             }
         }
@@ -353,23 +358,25 @@ public class GQLFilterParser
     /// </summary>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
     /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
-    /// <param name="name">The name of the field</param>
+    /// <param name="fieldName">The name of the field</param>
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="schemaName">The db schema name to which the table belongs</param>
     /// <param name="tableName">The name of the table underlying the *FilterInput being processed</param>
     /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
+    /// <param name="fieldSqlDbType">The sql DbType of the field</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
     private static Predicate ParseScalarType(
         IMiddlewareContext ctx,
         IInputField argumentSchema,
-        string name,
+        string fieldName,
         List<ObjectFieldNode> fields,
         string schemaName,
         string tableName,
         string tableAlias,
+        SqlDbType? fieldSqlDbType,
         Func<object, string?, string> processLiterals)
     {
-        Column column = new(schemaName, tableName, columnName: name, tableAlias);
+        Column column = new(schemaName, tableName, columnName: fieldName, columnSqlDbType: fieldSqlDbType, tableAlias: tableAlias);
 
         return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals);
     }

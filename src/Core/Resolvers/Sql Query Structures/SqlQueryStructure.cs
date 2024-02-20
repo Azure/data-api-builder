@@ -229,9 +229,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 foreach (string column in PrimaryKey())
                 {
+                    SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, column);
                     _primaryKeyAsOrderByColumns.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                                       tableName: DatabaseObject.Name,
                                                                       columnName: column,
+                                                                      columnSqlDbType: columnSqlDbType,
                                                                       tableAlias: SourceAlias));
                 }
             }
@@ -449,10 +451,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     columnName = backingColumnName;
                 }
 
+                SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, columnName!);
+
                 Predicates.Add(new Predicate(
                     new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName,
                                                     tableName: DatabaseObject.Name,
                                                     columnName: columnName,
+                                                    columnSqlDbType: columnSqlDbType,
                                                     tableAlias: SourceAlias)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"{MakeDbConnectionParam(parameter.Value, columnName)}")
@@ -499,8 +504,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     parameterName = MakeDbConnectionParam(
                         GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn);
+                    SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, backingColumn);
+
                     Predicates.Add(new Predicate(
-                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
+                        new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, columnSqlDbType, SourceAlias)),
                         op,
                         new PredicateOperand($"{parameterName}")));
                 }
@@ -616,11 +623,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (MetadataProvider.TryGetBackingColumn(EntityName, fieldName, out string? name)
                         && !string.IsNullOrWhiteSpace(name))
                     {
-                        AddColumn(columnName: name, labelName: fieldName);
+                        SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, name);
+                        AddColumn(columnName: name, labelName: fieldName, columnSqlDbType: columnSqlDbType);
                     }
                     else
                     {
-                        AddColumn(fieldName);
+                        SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, fieldName);
+                        AddColumn(fieldName, columnSqlDbType);
                     }
                 }
                 else
@@ -677,6 +686,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     Columns.Add(new LabelledColumn(tableSchema: subquery.DatabaseObject.SchemaName,
                               tableName: subquery.DatabaseObject.Name,
                               columnName: DATA_IDENT,
+                              columnSqlDbType: null,
                               label: fieldName,
                               tableAlias: subqueryAlias));
                 }
@@ -742,6 +752,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 }
 
+                SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, backingColumnName);
+
                 // remove pk column from list if it was specified as a
                 // field in orderBy
                 remainingPkCols.Remove(backingColumnName);
@@ -751,6 +763,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                              tableName: DatabaseObject.Name,
                                                              columnName: backingColumnName,
+                                                             columnSqlDbType: columnSqlDbType,
                                                              tableAlias: SourceAlias,
                                                              direction: OrderBy.DESC));
                 }
@@ -759,15 +772,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                              tableName: DatabaseObject.Name,
                                                              columnName: backingColumnName,
+                                                             columnSqlDbType: columnSqlDbType,
                                                              tableAlias: SourceAlias));
                 }
             }
 
             foreach (string colName in remainingPkCols)
             {
+                SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, colName);
                 orderByColumnsList.Add(new OrderByColumn(tableSchema: DatabaseObject.SchemaName,
                                                          tableName: DatabaseObject.Name,
                                                          columnName: colName,
+                                                         columnSqlDbType: columnSqlDbType,
                                                          tableAlias: SourceAlias));
             }
 
@@ -779,19 +795,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// the column name is all that is provided, and we add
         /// a labeled column with a label equal to column name.
         /// </summary>
-        protected void AddColumn(string columnName)
+        protected void AddColumn(string columnName, SqlDbType? columnSqlDbType=null)
         {
-            AddColumn(columnName, columnName);
+            AddColumn(columnName, columnName, columnSqlDbType);
         }
 
         /// <summary>
         /// Adds a labelled column to this query's columns.
         /// <param name="columnName">The backing column name.</param>
         /// <param name="labelName">The exposed name.</param>
+        /// <param name="columnSqlDbType">The SqlDbType of the column.</param>
         /// </summary>
-        protected void AddColumn(string columnName, string labelName)
+        protected void AddColumn(string columnName, string labelName, SqlDbType? columnSqlDbType=null)
         {
-            LabelledColumn column = new(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, SourceAlias);
+            LabelledColumn column = new(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, columnSqlDbType, SourceAlias);
             if (!Columns.Contains(column))
             {
                 Columns.Add(column);

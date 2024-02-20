@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Data.Common;
 using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -28,6 +29,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public override string QuoteIdentifier(string ident)
         {
             return _builder.QuoteIdentifier(ident);
+        }
+
+        /// <inheritdoc />
+        public override string UnquoteIdentifier(string quotedIdentifier)
+        {
+            return _builder.UnquoteIdentifier(quotedIdentifier);
         }
 
         /// <inheritdoc />
@@ -60,6 +67,50 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return query;
+        }
+
+        /// <summary>
+        /// Build left and right predicate operand and resolve the predicate operator into
+        /// {OperandLeft} {Operator} {OperandRight}
+        /// </summary>
+        protected override string Build(Predicate? predicate)
+        {
+            if (predicate is null)
+            {
+                throw new ArgumentNullException(nameof(predicate));
+            }
+
+            StringBuilder predicateString = new();
+
+            if (predicate.Left is not null)
+            {
+                string leftOperand = ResolveOperand(predicate.Left);
+                string operation = Build(predicate.Op);
+                string rightOperand = ResolveOperand(predicate.Right);
+
+                // This is done to make sure there are performance issues due to implicit conversion of data types from nvarchar to varchar.
+                if (predicate.Left.AsColumn() is not null && predicate.Left.AsColumn()!.ColumnSqlDbType == SqlDbType.VarChar && !rightOperand.Equals("NULL", StringComparison.OrdinalIgnoreCase)) {
+                    // This operation is valid even when the column being filtered is not VARCHAR(MAX), but a smaller VARCHAR type such as VARCHAR(20).
+                    rightOperand = $"CAST({rightOperand} AS VARCHAR(MAX))";
+                }
+
+                // For Binary predicates:
+                predicateString.Append($"{leftOperand} {operation} {rightOperand}");
+            }
+            else
+            {
+                // For Unary predicates, there is always a paranthesis around the operand.
+                predicateString.Append($"{Build(predicate.Op)} ({ResolveOperand(predicate.Right)})");
+            }
+
+            if (predicate.AddParenthesis)
+            {
+                return "(" + predicateString + ")";
+            }
+            else
+            {
+                return predicateString.ToString();
+            }
         }
 
         /// <inheritdoc />

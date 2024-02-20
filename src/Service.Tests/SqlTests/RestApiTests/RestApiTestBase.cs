@@ -35,6 +35,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _integrationMappingTable = "trees";
         protected static readonly string _integrationMappingDifferentEntity = "plants";
         protected static readonly string _integrationBrokenMappingEntity = "Fungus";
+        protected static readonly string _integrationBrokenMappingTable = "fungi";
         protected static readonly string _integrationUniqueCharactersEntity = "ArtOfWar";
         protected static readonly string _integrationUniqueCharactersTable = "aow";
         protected static readonly string _nonExistentEntityName = "!@$%^&*()_+definitely_nonexistent_entity!@$%^&*()_+";
@@ -64,6 +65,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected static readonly string _nonAutogenPKEntityWithTrigger = "InternData";
         protected static readonly string _nonAutogenPKTableWithTrigger = "intern_data";
         protected static readonly string _tableWithDateTimePK = "stocks_price";
+        protected static readonly string _tableWithVarcharMax = "journals";
+        protected static readonly string _entityWithVarcharMax = "Journal";
 
         public abstract string GetQuery(string key);
     }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Specialized;
+using System.Data;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -300,6 +301,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // was formed from a previous response with a nextLink. If the nextLink
                     // has been modified and backingColumn is null we throw exception.
                     string backingColumnName = GetBackingColumnName(entityName, field.FieldName, sqlMetadataProvider);
+                    SqlDbType? columnSqlDbType = sqlMetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(entityName, backingColumnName);
                     if (backingColumnName is null)
                     {
                         throw new DataApiBuilderException(
@@ -312,6 +314,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         tableName: "",
                         tableSchema: "",
                         columnName: backingColumnName,
+                        columnSqlDbType: columnSqlDbType,
                         value: field.FieldValue,
                         paramName: field.ParamName,
                         direction: field.Direction);

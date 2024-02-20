@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -159,6 +160,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Predicate predicate;
             // since we have already validated param we know backing column exists
             MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+            SqlDbType? columnSqlDbType = sourceDefinition.Columns[backingColumn!].SqlDbType;
+
             if (param.Value is null && !sourceDefinition.Columns[backingColumn!].IsNullable)
             {
                 throw new DataApiBuilderException(
@@ -170,7 +173,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!, columnSqlDbType)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"{MakeDbConnectionParam(null, backingColumn)}")
                 );
@@ -179,7 +182,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key, columnSqlDbType)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, param.Key, GetColumnSystemType(param.Key)), param.Key)}"));
             }

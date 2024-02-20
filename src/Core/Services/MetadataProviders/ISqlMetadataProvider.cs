@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -114,6 +115,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <returns></returns>
         DatabaseType GetDatabaseType();
+
+        /// <summary>
+        /// Obtains the Sql Data Type for the given column name in the given entity.
+        /// </summary>
+        /// <param name="entityName">Name of the associated entity.</param>
+        /// <param name="columnName">Name of the underlying column.</param>
+        SqlDbType? GetSqlDbTypeForColumnNameInAnEntity(string entityName, string columnName);
 
         IQueryBuilder GetQueryBuilder();
 

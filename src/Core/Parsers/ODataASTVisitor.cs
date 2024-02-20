@@ -39,13 +39,15 @@ namespace Azure.DataApiBuilder.Core.Parsers
             string left = nodeIn.Left.Accept(this);
             string right = nodeIn.Right.Accept(this);
 
-            if (nodeIn.Left.Kind.Equals(QueryNodeKind.SingleValuePropertyAccess)) {
+            if (nodeIn.Left.Kind.Equals(QueryNodeKind.SingleValuePropertyAccess))
+            {
                 string backingColumnName = _metadataProvider.GetQueryBuilder().UnquoteIdentifier(left);
                 SqlDbType? columnSqlDbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName].SqlDbType;
 
                 // We are currently only setting SqlDbType for MSSQL, so for other databases SqlDbType will be null
                 // below casting won't be applied.
-                if(columnSqlDbType == SqlDbType.VarChar && !right.Equals("NULL", StringComparison.OrdinalIgnoreCase)) {
+                if (columnSqlDbType == SqlDbType.VarChar && !right.Equals("NULL", StringComparison.OrdinalIgnoreCase))
+                {
                     right = $"CAST({right} AS VARCHAR(MAX))";
                 }
             }

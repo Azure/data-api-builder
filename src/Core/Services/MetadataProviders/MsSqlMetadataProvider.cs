@@ -108,7 +108,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     columnDefinition.DbType = TypeHelper.GetDbTypeFromSystemType(columnDefinition.SystemType);
 
                     string sqlDbTypeName = (string)columnInfo["DATA_TYPE"];
-                    if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType)) {
+                    if (Enum.TryParse(sqlDbTypeName, ignoreCase: true, out SqlDbType sqlDbType))
+                    {
                         // The DbType enum in .NET does not distinguish between VarChar and NVarChar. Both are mapped to DbType.String.
                         // So to keep track of the underlying sqlDbType, we store it in the columnDefinition.
                         columnDefinition.SqlDbType = sqlDbType;

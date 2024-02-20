@@ -217,7 +217,8 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc />
-        public SqlDbType? GetSqlDbTypeForColumnNameInAnEntity(string entityName, string columnName) {
+        public SqlDbType? GetSqlDbTypeForColumnNameInAnEntity(string entityName, string columnName)
+        {
             if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
             {
                 throw new DataApiBuilderException(message: $"Source Definition for {entityName} has not been inferred.",
@@ -225,7 +226,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            if (!databaseObject.SourceDefinition.Columns.TryGetValue(columnName, out ColumnDefinition? columnDefinition)) {
+            if (!databaseObject.SourceDefinition.Columns.TryGetValue(columnName, out ColumnDefinition? columnDefinition))
+            {
                 throw new DataApiBuilderException(message: $"column Definition for column Name: {columnName} has not been inferred.",
                     statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);

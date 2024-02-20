@@ -35,7 +35,7 @@ public class Column
     /// </summary>
     public SqlDbType? ColumnSqlDbType { get; set; }
 
-    public Column(string tableSchema, string tableName, string columnName, SqlDbType? columnSqlDbType=null, string? tableAlias = null)
+    public Column(string tableSchema, string tableName, string columnName, SqlDbType? columnSqlDbType = null, string? tableAlias = null)
     {
         TableSchema = tableSchema;
         TableName = tableName;
@@ -51,7 +51,7 @@ public class Column
 public class OrderByColumn : Column
 {
     public OrderBy Direction { get; }
-    public OrderByColumn(string tableSchema, string tableName, string columnName, SqlDbType? columnSqlDbType=null, string? tableAlias = null, OrderBy direction = OrderBy.ASC)
+    public OrderByColumn(string tableSchema, string tableName, string columnName, SqlDbType? columnSqlDbType = null, string? tableAlias = null, OrderBy direction = OrderBy.ASC)
         : base(tableSchema, tableName, columnName, columnSqlDbType, tableAlias)
     {
         Direction = direction;
@@ -70,7 +70,7 @@ public class PaginationColumn : OrderByColumn
                             string tableName,
                             string columnName,
                             object? value,
-                            SqlDbType? columnSqlDbType=null,
+                            SqlDbType? columnSqlDbType = null,
                             string? tableAlias = null,
                             OrderBy direction = OrderBy.ASC,
                             string? paramName = null)

@@ -795,7 +795,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// the column name is all that is provided, and we add
         /// a labeled column with a label equal to column name.
         /// </summary>
-        protected void AddColumn(string columnName, SqlDbType? columnSqlDbType=null)
+        protected void AddColumn(string columnName, SqlDbType? columnSqlDbType = null)
         {
             AddColumn(columnName, columnName, columnSqlDbType);
         }
@@ -806,7 +806,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="labelName">The exposed name.</param>
         /// <param name="columnSqlDbType">The SqlDbType of the column.</param>
         /// </summary>
-        protected void AddColumn(string columnName, string labelName, SqlDbType? columnSqlDbType=null)
+        protected void AddColumn(string columnName, string labelName, SqlDbType? columnSqlDbType = null)
         {
             LabelledColumn column = new(DatabaseObject.SchemaName, DatabaseObject.Name, columnName, label: labelName, columnSqlDbType, SourceAlias);
             if (!Columns.Contains(column))

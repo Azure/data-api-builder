@@ -89,7 +89,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string rightOperand = ResolveOperand(predicate.Right);
 
                 // This is done to make sure there are performance issues due to implicit conversion of data types from nvarchar to varchar.
-                if (predicate.Left.AsColumn() is not null && predicate.Left.AsColumn()!.ColumnSqlDbType == SqlDbType.VarChar && !rightOperand.Equals("NULL", StringComparison.OrdinalIgnoreCase)) {
+                if (predicate.Left.AsColumn() is not null && predicate.Left.AsColumn()!.ColumnSqlDbType == SqlDbType.VarChar && !rightOperand.Equals("NULL", StringComparison.OrdinalIgnoreCase))
+                {
                     // This operation is valid even when the column being filtered is not VARCHAR(MAX), but a smaller VARCHAR type such as VARCHAR(20).
                     rightOperand = $"CAST({rightOperand} AS VARCHAR(MAX))";
                 }

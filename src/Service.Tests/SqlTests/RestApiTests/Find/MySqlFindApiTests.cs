@@ -978,7 +978,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
                 @"
-                    SELECT COALESCE(SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'journalname', journalname, 'color', color, 'ownername', ownername)), JSON_ARRAY()) AS data
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', id, 'journalname', journalname, 'color', color, 'ownername', ownername)), JSON_ARRAY()) AS data
                     FROM (
                         SELECT *" + @"
                         FROM " + _tableWithVarcharMax + @"

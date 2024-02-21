@@ -160,9 +160,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Predicate predicate;
             // since we have already validated param we know backing column exists
             MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-            SqlDbType? columnSqlDbType = sourceDefinition.Columns[backingColumn!].SqlDbType;
+            if(backingColumn is null) {
+                // param.Key is already the backing column
+                backingColumn = param.Key;
+            }
 
-            if (param.Value is null && !sourceDefinition.Columns[backingColumn!].IsNullable)
+            SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, backingColumn);
+            
+
+            if (param.Value is null && !sourceDefinition.Columns[backingColumn].IsNullable)
             {
                 throw new DataApiBuilderException(
                     message: $"Cannot set argument {param.Key} to null.",
@@ -173,7 +179,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!, columnSqlDbType)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn, columnSqlDbType)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"{MakeDbConnectionParam(null, backingColumn)}")
                 );
@@ -182,9 +188,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, param.Key, columnSqlDbType)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn, columnSqlDbType)),
                     PredicateOperation.Equal,
-                    new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, param.Key, GetColumnSystemType(param.Key)), param.Key)}"));
+                    new PredicateOperand($"{MakeDbConnectionParam(GetParamAsSystemType(param.Value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn)}"));
             }
 
             return predicate;

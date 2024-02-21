@@ -124,6 +124,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Get column type from table underlying the query structure
         /// </summary>
+        /// <param name="columnName">underlying column name</param>
         public Type GetColumnSystemType(string columnName)
         {
             if (GetUnderlyingSourceDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
@@ -265,7 +266,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// the columns of the right table. The columns are compared in order,
         /// thus the lists should be the same length.
         /// </summary>
-        protected IEnumerable<Predicate> CreateJoinPredicates(
+        protected static IEnumerable<Predicate> CreateJoinPredicates(
             string leftTableAlias,
             List<string> leftColumnNames,
             string rightTableAlias,
@@ -274,11 +275,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return leftColumnNames.Zip(rightColumnNames,
                     (leftColumnName, rightColumnName) =>
                     {
-                        SqlDbType? leftColumnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, leftColumnName);
-                        SqlDbType? rightColumnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, rightColumnName);
                         // no table name or schema here is needed because this is a subquery that joins on table alias
-                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftColumnSqlDbType, leftTableAlias);
-                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightColumnSqlDbType, rightTableAlias);
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: leftColumnName, tableAlias: leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: rightColumnName, tableAlias: rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,

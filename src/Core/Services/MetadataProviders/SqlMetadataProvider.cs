@@ -1391,7 +1391,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="tableName">Name of the table.</param>
         /// <returns>Properly formatted table name with prefix.</returns>
         internal string GetTableNameWithPrefix(string databaseName, string schemaName, string tableName)
-        {   
+        {
             IQueryBuilder queryBuilder = GetQueryBuilder();
             StringBuilder tablePrefix = new();
 

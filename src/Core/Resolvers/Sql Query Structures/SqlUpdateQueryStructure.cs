@@ -160,13 +160,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Predicate predicate;
             // since we have already validated param we know backing column exists
             MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-            if(backingColumn is null) {
-                // param.Key is already the backing column
+            if (backingColumn is null)
+            {
+                // If param.Key was not present in the ExposedToBackingColumnMap then provided param.Key is already the backing column
                 backingColumn = param.Key;
             }
 
             SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, backingColumn);
-            
 
             if (param.Value is null && !sourceDefinition.Columns[backingColumn].IsNullable)
             {

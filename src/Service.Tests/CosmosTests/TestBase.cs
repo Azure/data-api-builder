@@ -78,7 +78,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
 type Earth @model(name:""Earth"") {
     id : ID,
     name : String,
-    type: String
+    type: String @authorize(roles: [""authenticated"", ""item-level-permission-role""])
 }
 
 type Sun @model(name:""Sun"") {

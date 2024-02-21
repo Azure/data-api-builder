@@ -107,7 +107,7 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
 
     private HttpClient _client;
     internal WebApplicationFactory<Startup> _application;
-    internal string _containerName = Guid.NewGuid().ToString();
+    internal string _containerName = "planet";
     protected static Mock<IAbstractQueryManagerFactory> _queryManagerFactory;
     protected static IQueryBuilder _queryBuilder;
     [TestInitialize]

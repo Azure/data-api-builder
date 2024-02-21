@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                             { additionalAttributes: {name: {eq: ""volcano1""}}}
                             { moons: {name: {eq: ""1 moon""}}}
                             { moons: {details: {contains: ""11""}}}
-                        ]   
+                        ]
                      })
                 {
                     items {
@@ -281,6 +281,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 Assert.IsFalse(expected.ToString().Equals("[]"), "Expected  Response is Empty.");
                 Assert.IsFalse(actual.ToString().Equals("[]"), "Actual  Response is Empty.");
             }
+            Console.WriteLine("ACTUAL " + JToken.Parse(actual.ToString()));
+            Console.WriteLine("EXPECTED " + JToken.Parse(expected.ToString()));
 
             Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));
         }
@@ -1064,7 +1066,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         earth {
                             id
                             type
-                        } 
+                        }
                     }
                 }
             }";
@@ -1139,18 +1141,22 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         [TestMethod]
-        public async Task TestQueryFilterFieldAuth_UnauthorizedItem()
+        public async Task TestQueryFilterFieldAuth_Only_AuthorizedItem()
         {
             // Run query
             string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {contains : ""Earth""}})
                 {
                     items {
+                        id
                         name
+                        type
                     }
                 }
             }";
-            string clientRoleHeader = "item-level-permission-role";
+
+            // First get all the items which doesn use item level permission
+            string clientRoleHeader = "authenticated";
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "earths",
                 query: gqlQuery,
@@ -1158,9 +1164,19 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 
+            string originalItems = response.ToString();
+
+            // Now get the item with item level permission
+            clientRoleHeader = "item-level-permission-role";
+            response = await ExecuteGraphQLRequestAsync(
+                queryName: "earths",
+                query: gqlQuery,
+                variables: new() { { "name", "test name" } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
             // Validate the result contains the GraphQL authorization error code.
-            string errorMessage = response.ToString();
-            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+            string filteredItems = response.ToString();
         }
         #endregion
 

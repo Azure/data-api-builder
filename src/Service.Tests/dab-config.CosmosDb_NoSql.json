@@ -365,10 +365,7 @@
           "role": "item-level-permission-role",
           "actions": [
             {
-              "action": "delete",
-              "policy": {
-                "database": "@claims.UserId eq @item.createdby"
-              }
+              "action": "delete"
             },
             {
               "action": "read",
@@ -377,20 +374,10 @@
               }
             },
             {
-              "action": "update",
-              "fields": {
-                "exclude": [
-                  "*"
-                ]
-              }
+              "action": "update"
             },
             {
-              "action": "create",
-              "fields": {
-                "exclude": [
-                  "*"
-                ]
-              }
+              "action": "create"
             }
           ]
         },

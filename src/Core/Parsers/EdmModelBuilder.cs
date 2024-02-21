@@ -91,7 +91,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                         else
                         {
                             sqlMetadataProvider.TryGetExposedColumnName(entityAndDbObject.Key, column, out exposedColumnName!);
-                            newEntity.AddStructuralProperty(name: exposedColumnName, type, isNullable: true);
+                            newEntity.AddStructuralProperty(name: exposedColumnName, type, isNullable: (sourceDefinition.Columns[column]?.IsNullable ?? false));
                         }
                     }
 

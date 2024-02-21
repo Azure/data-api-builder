@@ -87,7 +87,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             QueryManagerFactory = engineFactory;
             CosmosQueryBuilder = QueryManagerFactory.GetQueryBuilder(_databaseType);
+            InitODataParser();
+        }
 
+        /// <summary>
+        /// Initialize OData parser by building OData model.
+        /// The parser will be used for parsing filter clause and order by clause.
+        /// </summary>
+        private void InitODataParser()
+        {
             _oDataParser.BuildModel(this);
         }
 
@@ -171,7 +179,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     }
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
-
                 }
             }
         }
@@ -215,34 +222,17 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             foreach ((string entityName, Entity _) in _entities)
             {
-                PopulateSourceDefinitionAsync(
-                    entityName,
-                    GetSourceDefinition(entityName));
-            }
-        }
-
-        /// <summary>
-        /// Fills the table definition with information of all columns and
-        /// primary keys.
-        /// </summary>
-        /// <param name="schemaName">Name of the schema.</param>
-        /// <param name="tableName">Name of the table.</param>
-        /// <param name="sourceDefinition">Table definition to fill.</param>
-        /// <param name="entityName">EntityName included to pass on for error messaging.</param>
-        private void PopulateSourceDefinitionAsync(
-            string entityName,
-            SourceDefinition sourceDefinition)
-        {
-            List<FieldDefinitionNode> columnName = _graphQLTypeToFieldsMap[entityName];
-
-            foreach (FieldDefinitionNode columnInfoFromAdapter in columnName)
-            {
-                ColumnDefinition column = new()
+                List<FieldDefinitionNode> columnName = _graphQLTypeToFieldsMap[entityName];
+                foreach (FieldDefinitionNode columnInfoFromAdapter in columnName)
                 {
+                    ColumnDefinition column = new()
+                    {
+                        IsNullable = !columnInfoFromAdapter.Type.IsNonNullType(),
+                    };
+                    SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
 
-                };
-
-                sourceDefinition.Columns.TryAdd(columnInfoFromAdapter.Name.Value, column);
+                    sourceDefinition.Columns.TryAdd(columnInfoFromAdapter.Name.Value, column);
+                }
             }
         }
 

@@ -35,9 +35,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryStringBuilder.Append($" WHERE {predicateString}");
             }
 
+            if (string.IsNullOrEmpty(predicateString) && !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]))
+            {
+                queryStringBuilder.Append(" WHERE ");
+            }
+
+            if (!string.IsNullOrEmpty(predicateString) && !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]))
+            {
+                queryStringBuilder.Append(" AND ");
+            }
+
             if (!string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]))
             {
-                queryStringBuilder.Append($" AND {structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]}");
+                queryStringBuilder.Append($"{structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]}");
             }
 
             if (structure.OrderByColumns.Count > 0)

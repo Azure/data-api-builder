@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Runtime.InteropServices;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -33,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
         public static void ProcessAuthorizationPolicies(
             EntityActionOperation operationType,
-            BaseSqlQueryStructure queryStructure,
+            BaseQueryStructure queryStructure,
             HttpContext context,
             IAuthorizationResolver authorizationResolver,
             ISqlMetadataProvider sqlMetadataProvider)
@@ -57,47 +58,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     elementalOperation,
                     context);
 
-                FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
-                    dbQueryPolicy,
-                    entityName: queryStructure.EntityName,
-                    resourcePath: queryStructure.DatabaseObject.FullName,
-                    sqlMetadataProvider);
-                queryStructure.ProcessOdataClause(filterClause, elementalOperation);
-            }
-        }
-
-        public static void ProcessAuthorizationPolicies(
-            EntityActionOperation operationType,
-            CosmosQueryStructure queryStructure,
-            HttpContext context,
-            IAuthorizationResolver authorizationResolver,
-            ISqlMetadataProvider sqlMetadataProvider)
-        {
-            if (!context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeaderValue))
-            {
-                throw new DataApiBuilderException(
-                    message: "No ClientRoleHeader found in request context.",
-                    statusCode: System.Net.HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
-
-            string clientRoleHeader = roleHeaderValue.ToString();
-            List<EntityActionOperation> elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
-
-            foreach (EntityActionOperation elementalOperation in elementalOperations)
-            {
-                string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
-                queryStructure.EntityName,
-                clientRoleHeader,
-                elementalOperation,
-                context);
+                string? resourcePath = null;
+                if(queryStructure is not CosmosQueryStructure)
+                {
+                    resourcePath = queryStructure.DatabaseObject.FullName;
+                }
 
                 FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
                     dbQueryPolicy,
                     entityName: queryStructure.EntityName,
-                    resourcePath: null,
+                    alias: queryStructure.SourceAlias,
+                    resourcePath: resourcePath,
                     sqlMetadataProvider);
-                Console.Write("filterClause : " + filterClause);
                 queryStructure.ProcessOdataClause(filterClause, elementalOperation);
             }
         }
@@ -112,6 +84,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public static FilterClause? GetDBPolicyClauseForQueryStructure(
             string dbPolicyClause,
             string entityName,
+            string alias,
             string? resourcePath,
             ISqlMetadataProvider sqlMetadataProvider)
         {

@@ -77,6 +77,11 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
             }
 
+            if (_struct is CosmosQueryStructure)
+            {
+                return $"{_struct.SourceAlias}.{_metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!)}";
+            }
+
             return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
         }
 

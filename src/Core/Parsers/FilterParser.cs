@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
+using Microsoft.OData.Edm.Csdl;
 using Microsoft.OData.UriParser;
 
 namespace Azure.DataApiBuilder.Core.Parsers
@@ -49,6 +50,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 Uri relativeUri = new(resourcePath + '/' + filterQueryString, UriKind.Relative);
                 ODataUriParser parser = new(_model, relativeUri);
 
+                parser.Model.SetNamespaceAlias("default_namespace", "c");
                 if (customResolver is not null)
                 {
                     parser.Resolver = customResolver;

@@ -168,6 +168,49 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to verify telemetry details are added to the config.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("true", "InstrumentationKey=00000000", DisplayName = "Add Telemetry with connection string and enabled")]
+    [DataRow("false", "InstrumentationKey=00000000", DisplayName = "Add Telemetry with connection string and disabled")]
+    [DataRow(null, "InstrumentationKey=00000000", DisplayName = "Add Telemetry with connection string without enabled flag should default to enabled")]
+    public void TestAddTelemetry(string? appInsightsEnabled, string appInsightsConnString)
+    {
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+
+        // Perform assertions on various properties.
+        Assert.IsNotNull(runtimeConfig);
+        Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.IsNull(runtimeConfig.Runtime.Telemetry);
+
+        string[] addTelemetryArgs;
+        if (appInsightsEnabled is null)
+        {
+            addTelemetryArgs = new string[] { "add-telemetry", "-c", TEST_RUNTIME_CONFIG_FILE, "--app-insights-conn-string", appInsightsConnString };
+        }
+        else
+        {
+            addTelemetryArgs = new string[] { "add-telemetry", "-c", TEST_RUNTIME_CONFIG_FILE, "--app-insights-conn-string", appInsightsConnString, "--app-insights-enabled", appInsightsEnabled, };
+        }
+
+        Program.Execute(addTelemetryArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? updatedConfig));
+        Assert.IsNotNull(updatedConfig);
+        Assert.IsNotNull(updatedConfig.Runtime);
+        Assert.IsNotNull(updatedConfig.Runtime.Telemetry);
+        Assert.IsNotNull(updatedConfig.Runtime.Telemetry.ApplicationInsights);
+
+        // if --app-insights-enabled is not provided, it will default to true
+        Assert.AreEqual(appInsightsEnabled is null ? true : Boolean.Parse(appInsightsEnabled), updatedConfig.Runtime.Telemetry.ApplicationInsights.Enabled);
+        Assert.AreEqual("InstrumentationKey=00000000", updatedConfig.Runtime.Telemetry.ApplicationInsights.ConnectionString);
+    }
+
+    /// <summary>
     /// Test to verify authentication options with init command containing
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.

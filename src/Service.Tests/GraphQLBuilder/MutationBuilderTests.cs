@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
@@ -94,7 +95,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode createField =
                 query.Fields.Where(f => f.Name.Value == $"createFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: createField.Directives.Count);
+                actual: createField.Directives.Where(x => x.Name.Value is GraphQLUtils.AUTHORIZE_DIRECTIVE).Count());
         }
 
         [TestMethod]
@@ -719,7 +720,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode deleteField =
                 query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: deleteField.Directives.Count);
+                actual: deleteField.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -838,7 +839,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode collectionField =
                 query.Fields.Where(f => f.Name.Value == $"updateFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: collectionField.Directives.Count);
+                actual: field.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]

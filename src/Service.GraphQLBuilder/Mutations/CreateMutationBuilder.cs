@@ -219,13 +219,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
         /// <summary>
         /// Generate the `create` mutation field for the GraphQL mutations for a given Object Definition
+        /// ReturnEntityName can be different from dbEntityName in cases where user wants summary results returned (through the DBOperationResult entity)
+        /// as opposed to full entity.
         /// </summary>
         /// <param name="name">Name of the GraphQL object to generate the create field for.</param>
         /// <param name="inputs">All known GraphQL input types.</param>
         /// <param name="objectTypeDefinitionNode">The GraphQL object type to generate for.</param>
         /// <param name="root">The GraphQL document root to find GraphQL schema items in.</param>
         /// <param name="databaseType">Type of database we're generating the field for.</param>
-        /// <param name="entity">Runtime config information for the type.</param>
+        /// <param name="entities">Runtime entities specification from config.</param>
+        /// <param name="dbEntityName">Entity name specified in the runtime config.</param>
+        /// <param name="returnEntityName">Name of type to be returned by the mutation.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
         public static FieldDefinitionNode Build(
@@ -236,6 +240,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType,
             RuntimeEntities entities,
             string dbEntityName,
+            string returnEntityName,
             IEnumerable<string>? rolesAllowedForMutation = null)
         {
             Entity entity = entities[dbEntityName];
@@ -248,9 +253,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 databaseType,
                 entities);
 
-            // Create authorize directive denoting allowed roles
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new();
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode(ModelDirectiveType.ModelNameArgument, dbEntityName)) };
 
+            // Create authorize directive denoting allowed roles
             if (CreateAuthorizationDirectiveIfNecessary(
                     rolesAllowedForMutation,
                     out DirectiveNode? authorizeDirective))
@@ -272,7 +277,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     defaultValue: null,
                     new List<DirectiveNode>())
                 },
-                new NamedTypeNode(name),
+                new NamedTypeNode(returnEntityName),
                 fieldDefinitionNodeDirectives
             );
         }

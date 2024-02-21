@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -46,6 +47,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Obtains the underlying GraphQL object type for an entity field.
         /// </summary>
         string? GetSchemaGraphQLFieldTypeFromFieldName(string entityName, string fieldName);
+
+        /// <summary>
+        /// Obtains the underlying GraphQL object for an entity field.
+        /// </summary>
+        FieldDefinitionNode? GetSchemaGraphQLFieldFromFieldName(string entityName, string fieldName);
 
         /// <summary>
         /// Obtains the underlying SourceDefinition for the given entity name.
@@ -122,6 +128,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <returns></returns>
         public IReadOnlyDictionary<string, DatabaseObject> GetEntityNamesAndDbObjects();
+
+        /// <summary>
+        /// Given entity name, gets the map of exposed field to backing field mappings.
+        /// </summary>
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
+
+        /// <summary>
+        /// Given entity name, gets the map of backing field to exposed field mappings.
+        /// </summary>
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings);
 
         /// <summary>
         /// Gets Partition Key Path of a database container.

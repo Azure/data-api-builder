@@ -258,10 +258,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             await _sqlMetadataProvider.InitializeAsync();
 
             MsSqlMetadataProvider metadataProvider = (MsSqlMetadataProvider)_sqlMetadataProvider;
-            Assert.IsFalse(metadataProvider.TryGetColumnToEntityMappings("InvalidEntity", out _), "Column to entity mappings should not exist for invalid entity.");
-            Assert.IsFalse(metadataProvider.TryGetEntityToColumnMappings("invalidEntity", out _), "Entity to column mappings should not exist for invalid entity.");
-            Assert.IsTrue(metadataProvider.TryGetEntityToColumnMappings("Publisher", out IReadOnlyDictionary<string, string> _), "Entity to column mappings should exist for valid entity.");
-            Assert.IsTrue(metadataProvider.TryGetColumnToEntityMappings("Publisher", out IReadOnlyDictionary<string, string> _), "Column to entity mappings should exist for valid entity.");
+            Assert.IsFalse(metadataProvider.TryGetBackingFieldToExposedFieldMap("InvalidEntity", out _), "Column to entity mappings should not exist for invalid entity.");
+            Assert.IsFalse(metadataProvider.TryGetExposedFieldToBackingFieldMap("invalidEntity", out _), "Entity to column mappings should not exist for invalid entity.");
+            Assert.IsTrue(metadataProvider.TryGetExposedFieldToBackingFieldMap("Publisher", out IReadOnlyDictionary<string, string> _), "Entity to column mappings should exist for valid entity.");
+            Assert.IsTrue(metadataProvider.TryGetBackingFieldToExposedFieldMap("Publisher", out IReadOnlyDictionary<string, string> _), "Column to entity mappings should exist for valid entity.");
 
             TestHelper.UnsetAllDABEnvironmentVariables();
         }

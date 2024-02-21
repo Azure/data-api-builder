@@ -234,6 +234,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return null;
         }
 
+        public FieldDefinitionNode? GetSchemaGraphQLFieldFromFieldName(string entityName, string fieldName)
+        {
+            if (_graphQLTypeToFieldsMap.TryGetValue(entityName, out List<FieldDefinitionNode>? fields))
+            {
+                return fields?.Where(x => x.Name.Value == fieldName).FirstOrDefault();
+            }
+
+            return null;
+        }
+
         public ODataParser GetODataParser()
         {
             throw new NotImplementedException();
@@ -336,7 +346,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             throw new DataApiBuilderException(
-                "GraphQL type doesn't match any entity name or singular type in the runtime config.",
+               "GraphQL type doesn't match any entity name or singular type in the runtime config.",
                 System.Net.HttpStatusCode.BadRequest,
                 DataApiBuilderException.SubStatusCodes.BadRequest);
         }
@@ -350,6 +360,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public bool IsDevelopmentMode()
         {
             return _runtimeConfig.IsDevelopmentMode();
+        }
+
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        {
+            throw new NotImplementedException();
         }
     }
 }

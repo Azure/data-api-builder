@@ -62,6 +62,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         }
 
         /// <summary>
+        /// Perform insert on a table that has default values as built-in methods for some of its columns.
+        /// It is expected that the default values are correctly inserted for the columns.
+        /// </summary>
+        [TestMethod]
+        public virtual async Task InsertOneRowWithBuiltInMethodAsDefaultvaluesTest()
+        {
+            string requestBody = @"
+            {
+                ""user_value"": 1234
+            }";
+
+            string expectedLocationHeader = $"id/{STARTING_ID_FOR_TEST_INSERTS}";
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: null,
+                queryString: null,
+                entityNameOrPath: _defaultValueAsBuiltInMethodsEntity,
+                sqlQuery: GetQuery(nameof(InsertOneRowWithBuiltInMethodAsDefaultvaluesTest)),
+                operationType: EntityActionOperation.Insert,
+                requestBody: requestBody,
+                expectedStatusCode: HttpStatusCode.Created,
+                expectedLocationHeader: expectedLocationHeader
+            );
+        }
+
+        /// <summary>
         /// Perform insert test with bytearray column as NULL. This ensures that even though implicit conversion
         /// between varchar to varbinary is not possible for MsSql (but it is possible for MySql & PgSql),
         /// but since we are passing the DbType for the parameter, the database can explicitly convert it into varbinary.

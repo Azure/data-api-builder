@@ -53,7 +53,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
             {
                 if (linkingEntities.ContainsKey(entityAndDbObject.Key))
                 {
-                    // No need to create entity types for linking entity.
+                    // No need to create entity types for linking entity because the linking entity is not exposed for REST and GraphQL.
+                    // Hence, there is no possibility of having a `filter` operation against it.
                     continue;
                 }
 

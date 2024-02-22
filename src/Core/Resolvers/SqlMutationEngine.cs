@@ -1260,7 +1260,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IMiddlewareContext context,
             object? parameters)
         {
-            InputObjectType schemaObject = ResolverMiddleware.InputObjectTypeFromIInputField(schema);
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
             {
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
@@ -1268,7 +1267,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ProcessObjectFieldNodesForAuthZ(
                     context: context,
                     entityName: entityName,
-                    schemaObject: schemaObject,
+                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
                     fieldNodes: listOfObjectFieldNode,
                     entityTofields: entityToFields);
             }
@@ -1290,7 +1289,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 ProcessObjectFieldNodesForAuthZ(
                     context: context,
                     entityName: entityName,
-                    schemaObject: schemaObject,
+                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
                     fieldNodes: objectValueNode.Fields,
                     entityTofields: entityToFields);
             }

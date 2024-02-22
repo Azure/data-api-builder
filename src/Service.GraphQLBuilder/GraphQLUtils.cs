@@ -31,6 +31,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string OBJECT_TYPE_QUERY = "query";
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
         public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
+
+        // String used as a prefix for the name of a linking entity.
+        private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
+        // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
+        private const string ENTITY_NAME_DELIMITER = "$";
+
         public static HashSet<DatabaseType> RELATIONAL_DB_SUPPORTING_NESTED_MUTATIONS = new() { DatabaseType.MSSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
@@ -405,6 +411,39 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             return new(value, value.Kind);
+        }
+
+        /// <summary>
+        /// Helper method to generate the linking entity name using the source and target entity names.
+        /// </summary>
+        /// <param name="source">Source entity name.</param>
+        /// <param name="target">Target entity name.</param>
+        /// <returns>Name of the linking entity 'LinkingEntity$SourceEntityName$TargetEntityName'.</returns>
+        public static string GenerateLinkingEntityName(string source, string target)
+        {
+            return LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER + source + ENTITY_NAME_DELIMITER + target;
+        }
+
+        /// <summary>
+        ///  Helper method to decode the names of source and target entities from the name of a linking entity.
+        /// </summary>
+        /// <param name="linkingEntityName">linking entity name of the format 'LinkingEntity$SourceEntityName$TargetEntityName'.</param>
+        /// <returns>tuple of source, target entities name of the format (SourceEntityName, TargetEntityName).</returns>
+        public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
+        {
+            if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER))
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            string[] sourceTargetEntityNames = linkingEntityName.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
+
+            if (sourceTargetEntityNames.Length != 3)
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            return new(sourceTargetEntityNames[1], sourceTargetEntityNames[2]);
         }
     }
 }

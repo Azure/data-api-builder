@@ -180,6 +180,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 if (!_runtimeConfig.Entities.ContainsKey(entityName))
                 {
+                    // This can happen for linking entities which are not present in runtime config.
                     continue;
                 }
 
@@ -966,10 +967,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 // the OpenAPI description document.
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
+                _runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity);
 
-                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null && !entity.Rest.Enabled
-                    || entity is null)
+                if (entity is null || !entity.Rest.Enabled)
                 {
+                    // Don't create component schemas for:
+                    // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.
+                    // 2. Entity for which REST endpoint is disabled.
                     continue;
                 }
 

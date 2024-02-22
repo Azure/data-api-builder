@@ -94,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         /// <summary>
         /// Attempts to deserialize and get the SingularPlural GraphQL naming config
-        /// of an Entity from the Runtime Configuration.
+        /// of an Entity from the Runtime Configuration and return the singular name of the entity.
         /// </summary>
         public static string GetDefinedSingularName(string entityName, Entity configEntity)
         {
@@ -106,6 +106,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return configEntity.GraphQL.Singular;
         }
 
+        /// <summary>
+        /// Attempts to deserialize and get the SingularPlural GraphQL naming config
+        /// of an Entity from the Runtime Configuration and return the plural name of the entity.
+        /// </summary>
         public static string GetDefinedPluralName(string entityName, Entity configEntity)
         {
             if (string.IsNullOrEmpty(configEntity.GraphQL.Plural))

@@ -163,10 +163,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <exception cref="DataApiBuilderException"></exception>
         private DocumentNode GenerateSqlGraphQLObjects(RuntimeEntities entities, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
-            // Dictionary to store object types for:
-            // 1. Every entity exposed for MySql/PgSql/MsSql/DwSql in the config file.
-            // 2. Directional linking entities to support nested insertions for M:N relationships for MsSql. We generate the directional linking object types
-            // from source -> target and target -> source.
+            // Dictionary to store:
+            // 1. Object types for very entity exposed for MySql/PgSql/MsSql/DwSql in the config file.
+            // 2. Object type for source->target linking object for M:N relationships to support nested insertion in the target table,
+            // followed by an insertion in the linking table. The directional linking object contains all the fields from the target entity
+            // (relationship/column) and non-relationship fields from the linking table.
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
 
             // 1. Build up the object and input types for all the exposed entities in the config.
@@ -268,10 +269,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Helper method to traverse through all the relationships for all the entities exposed in the config.
         /// For all the relationships defined in each entity's configuration, it adds an referencing field directive to all the
-        /// referencing fields of the referencing entity in the relationship. The values of such fields holding
-        /// foreign key references can come via insertions in the related entity. By adding ForiegnKeyDirective here,
-        /// we can later ensure that while creating input type for create mutations, these fields can be marked as
-        /// nullable/optional.
+        /// referencing fields of the referencing entity in the relationship. For relationships defined in config:
+        /// 1. If an FK constraint exists between the entities - the referencing field directive
+        /// is added to the referencing fields from the referencing entity.
+        /// 2. If no FK constraint exists between the entities - the referencing field directive
+        /// is added to the source.fields/target.fields from both the source and target entities.
+        ///
+        /// The values of such fields holding foreign key references can come via insertions in the related entity.
+        /// By adding ForiegnKeyDirective here, we can later ensure that while creating input type for create mutations,
+        /// these fields can be marked as nullable/optional.
         /// </summary>
         /// <param name="objectTypes">Collection of object types.</param>
         /// <param name="entities">Entities from runtime config.</param>

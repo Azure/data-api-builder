@@ -186,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             // Hence we don't need to process relationships for the linking entity itself.
             if (!configEntity.IsLinkingEntity)
             {
-                // For a non-linking entity. i.e. for an entity exposed in the config, process the relationships (if there are any)
+                // For an entity exposed in the config, process the relationships (if there are any)
                 // sequentially and generate fields for them - to be added to the entity's ObjectTypeDefinition at the end.
                 if (configEntity.Relationships is not null)
                 {

@@ -287,21 +287,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Cardinality rightCardinality = RelationshipDirectiveType.Cardinality(childFieldDefinitionNode);
             if (rightCardinality is not Cardinality.Many)
             {
+                // Indicates that there is a *:1 relationship from parent -> child.
                 return false;
             }
 
+            // We have concluded that there is an *:N relationship from parent -> child.
+            // But for a many-to-many relationship, we should have an M:N relationship between parent and child.
             List<FieldDefinitionNode> fieldsInChildNode = childObjectTypeDefinitionNode.Fields.ToList();
+
+            // If the cardinality of relationship from child->parent is N:M, we must find a paginated field for parent in the child
+            // object definition's fields.
             int indexOfParentFieldInChildDefinition = fieldsInChildNode.FindIndex(field => field.Type.NamedType().Name.Value.Equals(QueryBuilder.GeneratePaginationTypeName(parentNode.Value)));
             if (indexOfParentFieldInChildDefinition == -1)
             {
-                // Indicates that there is a 1:N relationship between parent and child nodes.
+                // Indicates that there is a 1:N relationship from parent -> child.
                 return false;
             }
 
-            FieldDefinitionNode parentFieldInChildNode = fieldsInChildNode[indexOfParentFieldInChildDefinition];
-
-            // Return true if left cardinality is also N.
-            return RelationshipDirectiveType.Cardinality(parentFieldInChildNode) is Cardinality.Many;
+            // Indicates an M:N relationship from parent->child.
+            return true;
         }
 
         private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)

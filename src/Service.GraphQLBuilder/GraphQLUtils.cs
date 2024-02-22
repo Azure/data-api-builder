@@ -380,15 +380,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         /// <param name="source">Source entity name.</param>
         /// <param name="target">Target entity name.</param>
-        /// <returns>Name of the linking entity.</returns>
+        /// <returns>Name of the linking entity 'LinkingEntity$SourceEntityName$TargetEntityName'.</returns>
         public static string GenerateLinkingEntityName(string source, string target)
         {
             return LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER + source + ENTITY_NAME_DELIMITER + target;
         }
 
         /// <summary>
-        /// Helper method to decode the names of source and target entities from the name of a linking entity.
+        ///  Helper method to decode the names of source and target entities from the name of a linking entity.
         /// </summary>
+        /// <param name="linkingEntityName">linking entity name of the format 'LinkingEntity$SourceEntityName$TargetEntityName'.</param>
+        /// <returns>tuple of source, target entities name of the format (SourceEntityName, TargetEntityName).</returns>
         public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
         {
             if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER))
@@ -396,15 +398,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 throw new ArgumentException("The provided entity name is an invalid linking entity name.");
             }
 
-            string entityNameWithLinkingEntityPrefix = linkingEntityName.Substring(LINKING_ENTITY_PREFIX.Length + ENTITY_NAME_DELIMITER.Length);
-            string[] sourceTargetEntityNames = entityNameWithLinkingEntityPrefix.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
+            string[] sourceTargetEntityNames = linkingEntityName.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
 
-            if (sourceTargetEntityNames.Length != 2)
+            if (sourceTargetEntityNames.Length != 3)
             {
                 throw new ArgumentException("The provided entity name is an invalid linking entity name.");
             }
 
-            return new(sourceTargetEntityNames[0], sourceTargetEntityNames[1]);
+            return new(sourceTargetEntityNames[1], sourceTargetEntityNames[2]);
         }
     }
 }

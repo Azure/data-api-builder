@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         public SqlDbType? GetSqlDbTypeForColumnNameInAnEntity(string entityName, string columnName)
         {
             // CosmosDb doesn't require SqlDbType
-            throw new NotSupportedException();
+            return null;
         }
 
         public Task InitializeAsync()

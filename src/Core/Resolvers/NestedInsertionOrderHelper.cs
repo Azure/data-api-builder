@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// Helper class to determine the order of insertion for a nested insertion. For a nested insertion, the insertion needs to be performed first
     /// in the referenced entity followed by insertion in the referencing entity.
     /// </summary>
-    public  class NestedInsertionOrderHelper
+    public class NestedInsertionOrderHelper
     {
         /// <summary>
         /// Given a source and target entity with their metadata and request input data,
@@ -247,7 +247,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="sourceDbObject">Database object for source entity.</param>
         /// <param name="targetDbObject">Database object for target entity.</param>
         /// <returns>Tuple of relationship fields in source, target entities.</returns>
-        private static Tuple<List<string>, List<string> > GetRelationshipFieldsInSourceAndTarget(
+        private static Tuple<List<string>, List<string>> GetRelationshipFieldsInSourceAndTarget(
             string sourceEntityName,
             string targetEntityName,
             DatabaseObject sourceDbObject,

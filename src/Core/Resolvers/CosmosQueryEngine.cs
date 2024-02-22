@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+    // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
 # nullable disable
@@ -173,7 +173,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseContinuation != null),
                             new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
-                        // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
                         return res;
                     }
 

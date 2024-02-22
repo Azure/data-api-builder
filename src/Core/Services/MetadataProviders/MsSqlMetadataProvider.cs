@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -224,7 +225,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 return;
             }
 
-            string linkingEntityName = Entity.GenerateLinkingEntityName(entityName, targetEntityName);
+            string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(entityName, targetEntityName);
             Entity linkingEntity = new(
                 Source: new EntitySource(Type: EntitySourceType.Table, Object: linkingObject, Parameters: null, KeyFields: null),
                 Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),

@@ -25,8 +25,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="inputs">Reference table of all known input types.</param>
         /// <param name="objectTypeDefinitionNode">GraphQL object to generate the input type for.</param>
         /// <param name="name">Name of the GraphQL object type.</param>
-        /// <param name="baseEntityName">In case when we are creating input type for linking object, baseEntityName = targetEntityName,
-        /// else baseEntityName = name.</param>
+        /// <param name="baseEntityName">In case when we are creating input type for linking object, baseEntityName is equal to the targetEntityName,
+        /// else baseEntityName is equal to the name parameter.</param>
         /// <param name="definitions">All named GraphQL items in the schema (objects, enums, scalars, etc.)</param>
         /// <param name="databaseType">Database type to generate input type for.</param>
         /// <param name="entities">Runtime config information.</param>
@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             // The input fields for a create object will be a combination of:
             // 1. Scalar input fields corresponding to columns which belong to the table.
-            // 2. Complex input fields corresponding to tables having a foreign key relationship with this table.
+            // 2. Complex input fields corresponding to tables having a relationship defined with this table in the config.
             List<InputValueDefinitionNode> inputFields = new();
 
             // 1. Scalar input fields.
@@ -146,6 +146,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return true;
         }
 
+        /// <summary>
+        /// Helper method to determine whether a built in type (all GQL types supported by DAB) field is allowed to be present
+        /// in the input object for a create mutation.
+        /// </summary>
+        /// <param name="field">Field definition.</param>
+        /// <param name="databaseType">Database type.</param>
         private static bool IsBuiltInTypeFieldAllowedForCreateInput(FieldDefinitionNode field, DatabaseType databaseType)
         {
             // cosmosdb_nosql doesn't have the concept of "auto increment" for the ID field, nor does it have "auto generate"
@@ -158,25 +164,36 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             };
         }
 
-        private static bool HasForeignKeyReference(FieldDefinitionNode field)
+        /// <summary>
+        /// Helper method to check if a field in an entity(table) is a  referencing field to a referenced field
+        /// in another entity.
+        /// </summary>
+        /// <param name="field">Field definition.</param>
+        private static bool IsAReferencingField(FieldDefinitionNode field)
         {
-            return field.Directives.Any(d => d.Name.Value.Equals(ForeignKeyDirectiveType.DirectiveName));
+            return field.Directives.Any(d => d.Name.Value.Equals(ReferencingFieldDirectiveType.DirectiveName));
         }
 
-        private static InputValueDefinitionNode GenerateScalarInputType(NameNode name, FieldDefinitionNode f, DatabaseType databaseType)
+        /// <summary>
+        /// Helper method to create input type for a scalar/column field in an entity.
+        /// </summary>
+        /// <param name="name">Name of the field.</param>
+        /// <param name="fieldDefinition">Field definition.</param>
+        /// <param name="databaseType">Database type</param>
+        private static InputValueDefinitionNode GenerateScalarInputType(NameNode name, FieldDefinitionNode fieldDefinition, DatabaseType databaseType)
         {
             IValueNode? defaultValue = null;
 
-            if (DefaultValueDirectiveType.TryGetDefaultValue(f, out ObjectValueNode? value))
+            if (DefaultValueDirectiveType.TryGetDefaultValue(fieldDefinition, out ObjectValueNode? value))
             {
                 defaultValue = value.Fields[0].Value;
             }
 
             return new(
                 location: null,
-                f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(name.Value)}"),
-                defaultValue is not null || databaseType is DatabaseType.MSSQL && HasForeignKeyReference(f) ? f.Type.NullableType() : f.Type,
+                fieldDefinition.Name,
+                new StringValueNode($"Input for field {fieldDefinition.Name} on type {GenerateInputTypeName(name.Value)}"),
+                defaultValue is not null || databaseType is DatabaseType.MSSQL && IsAReferencingField(fieldDefinition) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
                 defaultValue,
                 new List<DirectiveNode>()
             );
@@ -270,21 +287,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Cardinality rightCardinality = RelationshipDirectiveType.Cardinality(childFieldDefinitionNode);
             if (rightCardinality is not Cardinality.Many)
             {
+                // Indicates that there is a *:1 relationship from parent -> child.
                 return false;
             }
 
+            // We have concluded that there is an *:N relationship from parent -> child.
+            // But for a many-to-many relationship, we should have an M:N relationship between parent and child.
             List<FieldDefinitionNode> fieldsInChildNode = childObjectTypeDefinitionNode.Fields.ToList();
+
+            // If the cardinality of relationship from child->parent is N:M, we must find a paginated field for parent in the child
+            // object definition's fields.
             int indexOfParentFieldInChildDefinition = fieldsInChildNode.FindIndex(field => field.Type.NamedType().Name.Value.Equals(QueryBuilder.GeneratePaginationTypeName(parentNode.Value)));
             if (indexOfParentFieldInChildDefinition == -1)
             {
-                // Indicates that there is a 1:N relationship between parent and child nodes.
+                // Indicates that there is a 1:N relationship from parent -> child.
                 return false;
             }
 
-            FieldDefinitionNode parentFieldInChildNode = fieldsInChildNode[indexOfParentFieldInChildDefinition];
-
-            // Return true if left cardinality is also N.
-            return RelationshipDirectiveType.Cardinality(parentFieldInChildNode) is Cardinality.Many;
+            // Indicates an M:N relationship from parent->child.
+            return true;
         }
 
         private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)

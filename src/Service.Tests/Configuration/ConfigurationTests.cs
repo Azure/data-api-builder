@@ -1063,9 +1063,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// This method tests the config properties like data-source, runtime settings and entities.
+        /// This method tests that config file is validated correctly and no exceptions are thrown.
         /// </summary>
-        [TestMethod("Validates the config for everything."), TestCategory(TestCategory.MSSQL)]
+        [TestMethod("Validates the complete config."), TestCategory(TestCategory.MSSQL)]
         public async Task TestConfigIsValid()
         {
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
@@ -1091,8 +1091,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     configValidatorLogger.Object,
                     true);
 
-            bool isValid = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
-            Assert.IsTrue(isValid);
+            try
+            {
+                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+            }
+            catch (Exception e)
+            {
+                Assert.Fail(e.Message);
+            }
         }
 
         /// <summary> 

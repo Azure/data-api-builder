@@ -1813,7 +1813,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
                 RelationShipPair referencingReferencedPair = new(referencingDbTable, referencedDbTable);
                 List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
-                return fKDefinitions.FirstOrDefault(fk => fk.Pair.Equals(referencingReferencedPair))!;
+                return fKDefinitions.FirstOrDefault(
+                    fk => fk.Pair.Equals(referencingReferencedPair) &&
+                    fk.ReferencingColumns.Count > 0
+                    && fk.ReferencedColumns.Count > 0)!;
             }
 
             return new();

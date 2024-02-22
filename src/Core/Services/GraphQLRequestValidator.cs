@@ -27,7 +27,6 @@ namespace Azure.DataApiBuilder.Core.Services
             string parentEntityName,
             IMetadataProviderFactory sqlMetadataProviderFactory)
         {
-            InputObjectType schemaObject = ResolverMiddleware.InputObjectTypeFromIInputField(schema);
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
             {
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
@@ -35,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 ValidateObjectFieldNodes(
                     context: context,
                     entityName: entityName,
-                    schemaObject: schemaObject,
+                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
                     objectFieldNodes: listOfObjectFieldNode,
                     runtimeConfig: runtimeConfig,
                     columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
@@ -67,7 +66,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 ValidateObjectFieldNodes(
                     context: context,
                     entityName: entityName,
-                    schemaObject: schemaObject,
+                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
                     objectFieldNodes: objectValueNode.Fields,
                     runtimeConfig: runtimeConfig,
                     columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
@@ -191,10 +190,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (!string.IsNullOrWhiteSpace(linkingObject))
                 {
                     // When a linking object is present, it indicates an M:N relationship between current entity and the target entity.
-                    // For such a case, there is no referencing/referenced entity between the source/target entities.
-                    // Rather the linking table act as a referencing table for both the source/target entities, which act as referenced entities.
-                    // In such a case, no column values for the child entity could be derived from insertion in the current entity,
-                    // and no column values for the current entity could be derived from the insertion in the child entity.
+                    // For such a case, the linking table act as a referencing table for both the source/target entities, both of which act as
+                    // referenced entities. In such a case, no column values for the child entity can be derived from insertion in the current entity,
+                    // and no column values for the current entity can be derived from the insertion in the child entity.
                     continue;
                 }
 

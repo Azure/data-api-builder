@@ -1,7 +1,7 @@
-    // Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-# nullable disable
+#nullable disable
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;

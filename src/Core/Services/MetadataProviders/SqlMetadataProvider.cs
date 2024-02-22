@@ -1717,8 +1717,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
                     }
-                    // Only add the referencing/referenced columns if they have not been
-                    // specified in the configuration file.
+                    // The count of referenced and referencing columns being = 0 indicates that source.fields and target.fields 
+                    // are not configured through the config file. In this case, the FK fields inferred from the database are populated.
                     else
                     {
                         validatedFKDefinitionsToTarget.Add(inferredFKDefinition);

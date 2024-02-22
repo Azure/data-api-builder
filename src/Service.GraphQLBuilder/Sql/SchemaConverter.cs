@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles) || configEntity.IsLinkingEntity)
                 {
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
-                    // This check is bypassed for lnking entities for the same reason explained above.
+                    // This check is bypassed for linking entities for the same reason explained above.
                     if (configEntity.IsLinkingEntity || roles is not null && roles.Count() > 0)
                     {
                         FieldDefinitionNode field = GenerateFieldForColumn(configEntity, columnName, column, directives, roles);

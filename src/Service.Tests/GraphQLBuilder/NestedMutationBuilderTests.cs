@@ -27,6 +27,7 @@ using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 using System.Linq;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 {
@@ -66,7 +67,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         [DataRow("AuthorNF", "BookNF", DisplayName = "Validate absence of linking object for AuthorNF->BookNF M:N relationship")]
         public void ValidateAbsenceOfLinkingObjectDefinitionsInObjectsNodeForMNRelationships(string sourceEntityName, string targetEntityName)
         {
-            string linkingEntityName = Entity.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
+            string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(sourceEntityName, targetEntityName);
             ObjectTypeDefinitionNode linkingObjectTypeDefinitionNode = GetObjectTypeDefinitionNode(linkingEntityName);
 
             // Assert that object definition for linking entity/table is null here.
@@ -105,12 +106,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         /// <param name="referencingColumns">List of referencing columns.</param>
         [DataTestMethod]
         [DataRow("Book", new string[] { "publisher_id" },
-            DisplayName = "Validate FK directive for referencing columns in Book entity for Book->Publisher relationship.")]
+            DisplayName = "Validate referencing field directive for referencing columns in Book entity for Book->Publisher relationship.")]
         [DataRow("Review", new string[] { "book_id" },
-            DisplayName = "Validate FK directive for referencing columns in Review entity for Review->Book relationship.")]
+            DisplayName = "Validate referencing field directive for referencing columns in Review entity for Review->Book relationship.")]
         [DataRow("stocks_price", new string[] { "categoryid", "pieceid" },
-            DisplayName = "Validate FK directive for referencing columns in stocks_price entity for stocks_price->Stock relationship.")]
-        public void ValidatePresenceOfOneForeignKeyDirectiveOnReferencingColumns(string referencingEntityName, string[] referencingColumns)
+            DisplayName = "Validate referencing field directive for referencing columns in stocks_price entity for stocks_price->Stock relationship.")]
+        public void ValidatePresenceOfOneReferencingFieldDirectiveOnReferencingColumns(string referencingEntityName, string[] referencingColumns)
         {
             ObjectTypeDefinitionNode objectTypeDefinitionNode = GetObjectTypeDefinitionNode(
                 GetDefinedSingularName(
@@ -121,12 +122,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             {
                 int indexOfReferencingField = fieldsInObjectDefinitionNode.FindIndex((field => field.Name.Value.Equals(referencingColumn)));
                 FieldDefinitionNode referencingFieldDefinition = fieldsInObjectDefinitionNode[indexOfReferencingField];
-                int countOfFkDirectives = referencingFieldDefinition.Directives.Where(directive => directive.Name.Value == ForeignKeyDirectiveType.DirectiveName).Count();
-                // The presence of 1 FK directive indicates:
+                int countOfReferencingFieldDirectives = referencingFieldDefinition.Directives.Where(directive => directive.Name.Value == ReferencingFieldDirectiveType.DirectiveName).Count();
+                // The presence of 1 referencing field directive indicates:
                 // 1. The foreign key dependency was successfully inferred from the metadata.
-                // 2. The FK directive was added only once. When a relationship between two entities is defined in the configuration of both the entities,
-                // we want to ensure that we don't unnecessarily add the FK directive twice for the referencing fields.
-                Assert.AreEqual(1, countOfFkDirectives);
+                // 2. The referencing field directive was added only once. When a relationship between two entities is defined in the configuration of both the entities,
+                // we want to ensure that we don't unnecessarily add the referencing field directive twice for the referencing fields.
+                Assert.AreEqual(1, countOfReferencingFieldDirectives);
             }
         }
 

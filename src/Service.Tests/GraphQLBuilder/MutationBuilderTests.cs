@@ -1073,8 +1073,8 @@ type Foo @model(name:""Foo"") {{
             // So create, update and delete mutations should get generated.
             // A Check to validate that the count of mutations generated is 4 -
             // 1. 2 Create mutations - point/many.
-            // 2. Update mutation
-            // 3. Delete mutation
+            // 2. 1 Update mutation
+            // 3. 1 Delete mutation
             Assert.AreEqual(4 * entityNames.Length, mutation.Fields.Count);
 
             for (int i = 0; i < entityNames.Length; i++)

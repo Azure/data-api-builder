@@ -145,21 +145,16 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     /// <param name="configFilePath">full/relative config file path with extension</param>
     /// <param name="loggerFactory">Logger Factory</param>
-    /// <param name="isValidateOnly">true if run for validate only mode</param>
     /// <returns>true if no validation failures, else false.</returns>
     public async Task<bool> TryValidateConfig(
         string configFilePath,
-        ILoggerFactory loggerFactory,
-        bool isValidateOnly = false)
+        ILoggerFactory loggerFactory)
     {
-        RuntimeConfig runtimeConfig;
-        try
+        RuntimeConfig? runtimeConfig;
+
+        if (!_runtimeConfigProvider.TryGetConfig(out runtimeConfig))
         {
-            runtimeConfig = _runtimeConfigProvider.GetConfig();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogInformation("Failed to parse the config file due to : {message}", ex.Message);
+            _logger.LogInformation("Failed to parse the config file");
             return false;
         }
 

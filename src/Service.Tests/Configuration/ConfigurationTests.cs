@@ -1062,6 +1062,39 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             configValidator.ValidateConfigProperties();
         }
 
+        /// <summary>
+        /// This method tests the config properties like data-source, runtime settings and entities.
+        /// </summary>
+        [TestMethod("Validates the config for everything."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestConfigIsValid()
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(configuration.ToJson()));
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    fileSystem,
+                    configValidatorLogger.Object,
+                    true);
+
+            bool isValid = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
+            Assert.IsTrue(isValid);
+        }
+
         /// <summary> 
         /// This test method checks a valid config's entities against 
         /// the database and ensures they are valid. 

@@ -1673,10 +1673,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     // that this source is related to.
                     foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        // List of validated FK definitions from source to target which contains:
-                        // 1. One entry for relationships defined between source to target in the database  (via FK constraint)
-                        // in the right order of referencing/referenced entity.
-                        // 2. Two entries for relationships defined in the config between source to target (which don't exist in the database).
+                        // 
+                        // Scenario 1: When a FK constraint is defined between source and target entities
+                        // In this case, there will be exactly one ForeignKeyDefinition with the right pair of Referencing and Referenced tables. 
+                        // Scenario 2: When no FK constraint is defined between source and target entities, but the relationship fields are configured through config file
+                        // In this case, two entries will be created. 
+                        // First entry: Referencing table: Source entity, Referenced table: Target entity
+                        // Second entry: Referencing table: Target entity, Referenced table: Source entity 
                         List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = GetValidatedFKs(fKDefinitionsToTarget);
                         relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }

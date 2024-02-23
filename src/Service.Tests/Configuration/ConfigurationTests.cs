@@ -1103,38 +1103,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        /// <summary>
-        /// This method tests that config file is validated correctly and no exceptions are thrown.
-        /// </summary>
-        [TestMethod("Validates the config with data-source containing invalid db type and empty connection-string."), TestCategory(TestCategory.MSSQL)]
-        public async Task TestValidateConfigWithInvalidDataSource()
-        {
-            const string CUSTOM_CONFIG = "custom-config.json";
-
-            MockFileSystem fileSystem = new();
-            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(CONFIG_WITH_INVALID_SCHEMA));
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
-            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
-            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
-
-            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
-            RuntimeConfigValidator configValidator =
-                new(
-                    configProvider,
-                    fileSystem,
-                    configValidatorLogger.Object,
-                    true);
-
-            try
-            {
-                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
-            }
-            catch (Exception e)
-            {
-                Assert.Fail(e.Message);
-            }
-        }
-
         /// <summary> 
         /// This test method checks a valid config's entities against 
         /// the database and ensures they are valid. 

@@ -2343,6 +2343,40 @@
         }
       }
     },
+    "DefaultBuiltInFunction": {
+      "source": {
+        "object": "default_with_function_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                  "include": [
+                      "*"
+                  ],
+                  "exclude": [
+                      "current_date",
+                      "next_date"
+                  ]
+              }
+            },
+            "read",
+            "update",
+            "delete"
+          ]
+        }
+      ]
+    },
     "AuthorNF": {
       "source": {
         "object": "authors",

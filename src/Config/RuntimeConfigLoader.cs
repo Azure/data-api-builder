@@ -173,6 +173,7 @@ public abstract class RuntimeConfigLoader
         options.Converters.Add(new EntityCacheOptionsConverterFactory());
         options.Converters.Add(new NestedCreateOptionsConverter());
         options.Converters.Add(new NestedMutationOptionsConverter(options));
+        options.Converters.Add(new DataSourceConverterFactory(replaceEnvVar));
 
         if (replaceEnvVar)
         {

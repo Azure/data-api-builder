@@ -2193,6 +2193,325 @@
           ]
         }
       ]
+    },
+    "GetBooks": {
+      "source": {
+        "object": "get_books",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "GetBooks",
+          "plural": "GetBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "GetPublisher": {
+      "source": {
+        "object": "get_publisher_by_id",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "query",
+        "type": {
+          "singular": "GetPublisher",
+          "plural": "GetPublishers"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "GetAuthorsHistoryByFirstName": {
+      "source": {
+        "object": "get_authors_history_by_first_name",
+        "type": "stored-procedure",
+        "parameters": {
+          "firstName": "Aaron"
+        }
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "SearchAuthorByFirstName",
+          "plural": "SearchAuthorByFirstNames"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "CountBooks": {
+      "source": {
+        "object": "count_books",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "CountBooks",
+          "plural": "CountBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "InsertBook": {
+      "source": {
+        "object": "insert_book",
+        "type": "stored-procedure",
+        "parameters": {
+          "title": "randomX",
+          "publisher_id": 1234
+        }
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "InsertBook",
+          "plural": "InsertBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "InsertAndDisplayAllBooksUnderGivenPublisher": {
+      "source": {
+        "object": "insert_and_display_all_books_for_given_publisher",
+        "type": "stored-procedure",
+        "parameters": {
+          "title": "MyTitle",
+          "publisher_name": "MyPublisher"
+        }
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "InsertAndDisplayAllBooksUnderGivenPublisher",
+          "plural": "InsertAndDisplayAllBooksUnderGivenPublishers"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "UpdateBookTitle": {
+      "source": {
+        "object": "update_book_title",
+        "type": "stored-procedure",
+        "parameters": {
+          "id": 1,
+          "title": "Testing Tonight"
+        }
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "UpdateBookTitle",
+          "plural": "UpdateBookTitles"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
+    "DeleteLastInsertedBook": {
+      "source": {
+        "object": "delete_last_inserted_book",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": true,
+        "operation": "mutation",
+        "type": {
+          "singular": "DeleteLastInsertedBook",
+          "plural": "DeleteLastInsertedBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "post"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
     }
   }
 }

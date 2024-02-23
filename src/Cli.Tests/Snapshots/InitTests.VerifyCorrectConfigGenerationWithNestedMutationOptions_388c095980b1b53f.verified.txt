@@ -1,15 +1,9 @@
 ﻿{
   DataSource: {
     Options: {
-      container: {
-        ValueKind: String
-      },
-      database: {
-        ValueKind: String
-      },
-      schema: {
-        ValueKind: String
-      }
+      container: testcontainer,
+      database: testdb,
+      schema: test-schema.gql
     }
   },
   Runtime: {

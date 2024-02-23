@@ -2,9 +2,7 @@
   DataSource: {
     DatabaseType: DWSQL,
     Options: {
-      set-session-context: {
-        ValueKind: True
-      }
+      set-session-context: true
     }
   },
   Runtime: {

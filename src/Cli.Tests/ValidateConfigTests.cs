@@ -73,9 +73,12 @@ public class ValidateConfigTests
 
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
 
-        try {
+        try
+        {
             Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
         }
     }

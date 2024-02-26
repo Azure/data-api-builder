@@ -304,6 +304,7 @@ public class GQLFilterParser
                 counter: queryStructure.Counter);
 
         comosQueryStructure.DatabaseObject.SchemaName = queryStructure.SourceAlias;
+        comosQueryStructure.DatabaseObject.Name = entityName;
         comosQueryStructure.SourceAlias = entityName;
         comosQueryStructure.EntityName = entityName;
 

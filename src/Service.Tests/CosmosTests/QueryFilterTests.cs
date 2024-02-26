@@ -90,7 +90,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         and: [
                             { additionalAttributes: {name: {eq: ""volcano1""}}}
                             { moons: {name: {eq: ""1 moon""}}}
-                            { moons: {details: {contains: ""v1""}}}
+                            { moons: {details: {contains: ""11""}}}
                         ]   
                      })
                 {
@@ -103,7 +103,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string dbQueryWithJoin = "SELECT c.name FROM c " +
                 "JOIN a IN c.additionalAttributes " +
                 "JOIN b IN c.moons " +
-                "WHERE a.name = \"volcano1\" and b.name = \"1 moon\" and b.details LIKE \"%v1%\"";
+                "WHERE a.name = \"volcano1\" and b.name = \"1 moon\" and b.details LIKE \"%11%\"";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -263,25 +263,25 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
 
-        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
+        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, bool ignoreBlankResults = false)
         {
             string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
-            ValidateResults(actual.GetProperty("items"), expected.RootElement);
+            ValidateResults(actual.GetProperty("items"), expected.RootElement, ignoreBlankResults);
         }
 
-        private static void ValidateResults(JsonElement actual, JsonElement expected)
+        private static void ValidateResults(JsonElement actual, JsonElement expected, bool ignoreBlankResults)
         {
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
 
-            // Making sure we are not asserting emply results
-            Assert.IsFalse(expected.ToString().Equals("[]"));
-            Assert.IsFalse(actual.ToString().Equals("[]"));
-
-            Console.WriteLine("Expected: " + expected.ToString());
-            Console.WriteLine("Actual: " + actual.ToString());
+            if(!ignoreBlankResults)
+            {
+                // Making sure we are not asserting emply results
+                Assert.IsFalse(expected.ToString().Equals("[]"), "Expected  Response is Empty.");
+                Assert.IsFalse(actual.ToString().Equals("[]"), "Actual  Response is Empty.");
+            }
 
             Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));
         }
@@ -682,7 +682,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "select c.name, c.age from c where IS_NULL(c.age)";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, true);
         }
 
         /// <summary>
@@ -702,7 +702,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "select c.name, c.age from c where IS_NULL(c.name)";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, true);
         }
 
         /// <summary>
@@ -766,7 +766,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "SELECT c.name, c.age FROM c WHERE 1 != 1";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, true);
         }
 
         /// <summary>
@@ -870,18 +870,15 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestFilterWithEntityNameAlias()
         {
             string gqlQuery = @"{
-                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {tag : {name : {eq : ""test name""}}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {stars : {tag: {name : {eq : ""tag1""}}}})
                 {
                     items {
-                        tag {
-                            id
-                            name
-                        }
+                        id
                     }
                  }
             }";
 
-            string dbQuery = "SELECT top 1 c.tag FROM c where c.tag.name = \"test name\"";
+            string dbQuery = "SELECT top 1 c.id FROM c JOIN starAlias  IN c.stars where starAlias.tag.name = \"tag1\"";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
@@ -1062,16 +1059,23 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             // Run query
             string gqlQuery = @"{
-                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth: {id : {eq : """ + _idList[0] + @"""}}})
                 {
                     items {
-                        id
-                        type
+                        earth {
+                            id
+                            type
+                        } 
                     }
                 }
             }";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery);
+            string clientRoleHeader = "limited-read-role";
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader);
+            JsonElement response = await ExecuteGraphQLRequestAsync(_graphQLQueryName,
+                query: gqlQuery,
+                authToken: authToken,
+                clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
@@ -1080,7 +1084,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         /// <summary>
         /// Tests that the field level query filter succeeds requests
-        /// when GraphQL is set to true without setting singular type in runtime config and
+        /// when GraphQL i  s set to true without setting singular type in runtime config and
         /// when include fields are WILDCARD,
         /// all the columns are able to be retrieved for authorization validation.
         /// </summary>
@@ -1110,11 +1114,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuth_ExcludeTakesPredecence()
         {
             string gqlQuery = @"{
-                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {suns: { name : {eq : ""test name""}}})
                 {
                     items {
-                        id
-                        name
+                        suns {
+                            id
+                            name
+                        }
                     }
                 }
             }";

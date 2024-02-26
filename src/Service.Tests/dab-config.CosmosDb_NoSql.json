@@ -88,6 +88,14 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "limited-read-role",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
         }
       ]
     },

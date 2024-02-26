@@ -889,7 +889,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuth_AuthorizedField()
         {
             string gqlQuery = @"{
-                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth: {id : {eq : """ + _idList[0] + @"""}}})
                 {
                     items {
                         id
@@ -897,7 +897,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQuery = $"SELECT top 1 c.id FROM c where c.id = \"{_idList[0]}\"";
+            string dbQuery = $"SELECT top 1 c.id FROM c where c.earth.id = \"{_idList[0]}\"";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
@@ -1091,7 +1091,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuthWithoutSingularType()
         {
             string gqlQuery = @"{
-                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {suns: {id : {eq : """ + _idList[0] + @"""}}})
                 {
                     items {
                         id
@@ -1100,7 +1100,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQuery = $"SELECT top 1 c.id, c.name FROM c where c.id = \"{_idList[0]}\"";
+            string dbQuery = $"SELECT top 1 c.id, c.name FROM c JOIN sun IN c.suns where sun.id = \"{_idList[0]}\"";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 

@@ -105,7 +105,7 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
 
     private HttpClient _client;
     internal WebApplicationFactory<Startup> _application;
-    internal string _containerName = Guid.NewGuid().ToString();
+    internal string _containerName = "planet";
 
     [TestInitialize]
     public void Init()
@@ -115,7 +115,7 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
         _client = _application.CreateClient();
     }
 
-    protected WebApplicationFactory<Startup> SetupTestApplicationFactory()
+    protected static WebApplicationFactory<Startup> SetupTestApplicationFactory()
     {
         // Read the base config from the file system
         TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
@@ -125,21 +125,11 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
             throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
         }
 
-        Dictionary<string, object> updatedOptions = baseConfig.DataSource.Options;
-        updatedOptions["container"] = JsonDocument.Parse($"\"{_containerName}\"").RootElement;
-
-        RuntimeConfig updatedConfig = baseConfig
-            with
-        {
-            DataSource = baseConfig.DataSource with { Options = updatedOptions },
-            Entities = new(baseConfig.Entities.ToDictionary(e => e.Key, e => e.Value with { Source = e.Value.Source with { Object = _containerName } }))
-        };
-
         // Setup a mock file system, and use that one with the loader/provider for the config
         MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
         {
             { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
-            { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(updatedConfig.ToJson()) }
+            { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(baseConfig.ToJson()) }
         });
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
         RuntimeConfigProvider provider = new(loader);

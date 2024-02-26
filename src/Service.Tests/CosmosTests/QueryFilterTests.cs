@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -274,6 +275,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
+
+            // Making sure we are not asserting emply results
+            Assert.IsFalse(expected.ToString().Equals("[]"));
+            Assert.IsFalse(actual.ToString().Equals("[]"));
+
+            Console.WriteLine("Expected: " + expected.ToString());
+            Console.WriteLine("Actual: " + actual.ToString());
+
             Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));
         }
 
@@ -861,7 +870,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestFilterWithEntityNameAlias()
         {
             string gqlQuery = @"{
-                stars(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {tag : {name : {eq : ""test name""}}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {tag : {name : {eq : ""test name""}}})
                 {
                     items {
                         tag {
@@ -873,7 +882,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "SELECT top 1 c.tag FROM c where c.tag.name = \"test name\"";
-            await ExecuteAndValidateResult("stars", gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
         #region Field Level Auth
@@ -884,7 +893,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuth_AuthorizedField()
         {
             string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
                 {
                     items {
                         id
@@ -893,7 +902,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = $"SELECT top 1 c.id FROM c where c.id = \"{_idList[0]}\"";
-            await ExecuteAndValidateResult("earths", gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
         /// <summary>
@@ -906,7 +915,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             // Run query
             string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
                 {
                     items {
                         name
@@ -915,7 +924,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
             string clientRoleHeader = "limited-read-role";
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "earths",
+                queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
@@ -1053,7 +1062,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             // Run query
             string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
                 {
                     items {
                         id
@@ -1079,7 +1088,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuthWithoutSingularType()
         {
             string gqlQuery = @"{
-                suns(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
                 {
                     items {
                         id
@@ -1089,7 +1098,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = $"SELECT top 1 c.id, c.name FROM c where c.id = \"{_idList[0]}\"";
-            await ExecuteAndValidateResult("suns", gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
         /// <summary>
@@ -1101,7 +1110,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuth_ExcludeTakesPredecence()
         {
             string gqlQuery = @"{
-                suns(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
                 {
                     items {
                         id
@@ -1112,7 +1121,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             string clientRoleHeader = AuthorizationType.Anonymous.ToString();
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "suns",
+                queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),

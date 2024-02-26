@@ -125,6 +125,7 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
         {
             throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
         }
+
         Dictionary<string, object> updatedOptions = baseConfig.DataSource.Options;
         updatedOptions["container"] = JsonDocument.Parse($"\"{_containerName}\"").RootElement;
 
@@ -141,7 +142,6 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
             { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
             { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(updatedConfig.ToJson()) }
         });
-
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
         RuntimeConfigProvider provider = new(loader);
 

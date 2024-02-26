@@ -911,7 +911,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             // Run query
             string gqlQuery = @"{
-                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth: {name : {eq : ""test name""}}})
                 {
                     items {
                         name

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -276,7 +275,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
 
-            if(!ignoreBlankResults)
+            if (!ignoreBlankResults)
             {
                 // Making sure we are not asserting emply results
                 Assert.IsFalse(expected.ToString().Equals("[]"), "Expected  Response is Empty.");

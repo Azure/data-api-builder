@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -1145,39 +1146,90 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuth_Only_AuthorizedItem()
         {
             // Run query
-            string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {contains : ""Earth""}})
+            string gqlQueryWithMoreFilters = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" :
+                    {earth:
+                        {and: [{name: {contains : ""blue earth""}}
+                               {type: {eq: ""earth0""}} ]
+                        }
+                    })
                 {
                     items {
                         id
-                        name
-                        type
                     }
                 }
             }";
 
             // First get all the items which doesn use item level permission
             string clientRoleHeader = "authenticated";
-            JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "earths",
-                query: gqlQuery,
-                variables: new() { { "name", "test name" } },
+            JsonElement responseWithFilterInQuery = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQueryWithMoreFilters,
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 
-            string originalItems = response.ToString();
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {earth: {name : {contains : ""blue earth""}}})
+                {
+                    items {
+                        id
+                    }
+                }
+            }";
 
             // Now get the item with item level permission
             clientRoleHeader = "item-level-permission-role";
-            response = await ExecuteGraphQLRequestAsync(
-                queryName: "earths",
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
                 query: gqlQuery,
-                variables: new() { { "name", "test name" } },
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
-            string filteredItems = response.ToString();
+            ValidateResults(responseWithFilterInQuery, response);
+        }
+
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuth_Only_AuthorizedArrayItem()
+        {
+            // Run query
+            string gqlQueryWithMoreFilters = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" :
+                    { additionalAttributes: {name: {eq: ""volcano1""}}})
+                {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            // First get all the items which doesn use item level permission
+            string clientRoleHeader = "authenticated";
+            JsonElement responseWithFilterInQuery = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQueryWithMoreFilters,
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : { additionalAttributes: {name: {eq: ""volcano1""}}})
+                {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            // Now get the item with item level permission
+            clientRoleHeader = "item-level-permission-role";
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQuery,
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            // Validate the result contains the GraphQL authorization error code.
+            ValidateResults(responseWithFilterInQuery, response);
         }
 
         [TestCleanup]

@@ -141,17 +141,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
 
-            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(_context);
-            if (httpContext is not null)
-            {
-                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                    EntityActionOperation.Read,
-                    this,
-                    httpContext,
-                    AuthorizationResolver,
-                    MetadataProvider);
-            }
-
             // first and after will not be part of query parameters. They will be going into headers instead.
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
@@ -207,6 +196,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
+                HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(_context);
+                if (httpContext is not null)
+                {
+                    AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                        EntityActionOperation.Read,
+                        this,
+                        httpContext,
+                        AuthorizationResolver,
+                        MetadataProvider);
+                }
+
                 foreach (KeyValuePair<string, object?> parameter in queryParams)
                 {
                     Predicates.Add(new Predicate(

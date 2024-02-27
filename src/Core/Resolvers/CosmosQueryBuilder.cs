@@ -30,24 +30,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryStringBuilder.Append($" {Build(structure.Joins)}");
             }
 
-            if (!string.IsNullOrEmpty(predicateString))
-            {
-                queryStringBuilder.Append($" WHERE {predicateString}");
-            }
+            structure.DbPolicyPredicatesForOperations.TryGetValue(EntityActionOperation.Read, out string? policy);
 
-            if (string.IsNullOrEmpty(predicateString) && !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]))
+            if (!string.IsNullOrEmpty(predicateString) || !string.IsNullOrEmpty(policy))
             {
                 queryStringBuilder.Append(" WHERE ");
             }
 
-            if (!string.IsNullOrEmpty(predicateString) && !string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]))
+            if (!string.IsNullOrEmpty(predicateString))
+            {
+                queryStringBuilder.Append($" {predicateString}");
+            }
+
+            if (!string.IsNullOrEmpty(predicateString) && !string.IsNullOrEmpty(policy))
             {
                 queryStringBuilder.Append(" AND ");
             }
 
-            if (!string.IsNullOrEmpty(structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]))
+            if (!string.IsNullOrEmpty(policy))
             {
-                queryStringBuilder.Append($"{structure.DbPolicyPredicatesForOperations[EntityActionOperation.Read]}");
+                queryStringBuilder.Append($"{policy}");
             }
 
             if (structure.OrderByColumns.Count > 0)

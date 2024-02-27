@@ -96,6 +96,14 @@
               "action": "read"
             }
           ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
         }
       ]
     },
@@ -426,25 +434,10 @@
           "role": "item-level-permission-role",
           "actions": [
             {
-              "action": "delete",
-              "policy": {
-                "database": "@claims.UserId eq @item.createdby"
-              }
-            },
-            {
-              "action": "update",
-              "policy": {
-                "database": "@item.name contains 'test_name'"
-              }
-            },
-            {
               "action": "read",
               "policy": {
-                "database": "@item.name contains 'test_name'"
+                "database": "@item.type eq 'earth0'"
               }
-            },
-            {
-              "action": "create"
             }
           ]
         }
@@ -512,6 +505,34 @@
           "actions": [
             {
               "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.name eq 'volcano0'"
+              }
             }
           ]
         }
@@ -616,3 +637,4 @@
     }
   }
 }
+

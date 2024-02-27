@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -107,6 +108,8 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
     private HttpClient _client;
     internal WebApplicationFactory<Startup> _application;
     internal string _containerName = Guid.NewGuid().ToString();
+    protected static Mock<IAbstractQueryManagerFactory> _queryManagerFactory;
+    protected static IQueryBuilder _queryBuilder;
 
     [TestInitialize]
     public void Init()
@@ -145,7 +148,11 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
         RuntimeConfigProvider provider = new(loader);
 
-        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);
+        _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
+        _queryBuilder = new CosmosQueryBuilder();
+        _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
+        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem, provider.GetConfig().GetDefaultDataSourceName(), _queryManagerFactory.Object);
+
         Mock<IMetadataProviderFactory> metadataProviderFactory = new();
         metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(cosmosSqlMetadataProvider);
 

@@ -58,6 +58,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     elementalOperation,
                     context);
 
+                if(string.IsNullOrEmpty(dbQueryPolicy))
+                {
+                    continue;
+                }
+
                 string? resourcePath = null;
                 if(queryStructure is not CosmosQueryStructure)
                 {

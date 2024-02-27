@@ -1709,7 +1709,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
         /// whose definition has to be populated with foreign key information.</param>
-        protected virtual void FillInferredFkInfo(
+        private void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
             // For each table definition that has to be populated with the inferred
@@ -1718,52 +1718,101 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // For each source entities, which maps to this table definition
                 // and has a relationship metadata to be filled.
-                foreach ((_, RelationshipMetadata relationshipData)
+                foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
                     // Enumerate all the foreign keys required for all the target entities
                     // that this source is related to.
-                    IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities =
-                        relationshipData.TargetEntityToFkDefinitionMap.Values;
-                    // For each target, loop through each foreign key
-                    foreach (List<ForeignKeyDefinition> foreignKeysForTarget in foreignKeysForAllTargetEntities)
+                    foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        // For each foreign key between this pair of source and target entities
-                        // which needs the referencing columns,
-                        // find the fk inferred for this pair the backend and
-                        // equate the referencing columns and referenced columns.
-                        foreach (ForeignKeyDefinition fk in foreignKeysForTarget)
-                        {
-                            // if the referencing and referenced columns count > 0,
-                            // we have already gathered this information from the runtime config.
-                            if (fk.ReferencingColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
-                            {
-                                continue;
-                            }
-
-                            // Add the referencing and referenced columns for this foreign key definition
-                            // for the target.
-                            if (PairToFkDefinition is not null && PairToFkDefinition.TryGetValue(
-                                    fk.Pair, out ForeignKeyDefinition? inferredDefinition))
-                            {
-                                // Only add the referencing columns if they have not been
-                                // specified in the configuration file.
-                                if (fk.ReferencingColumns.Count == 0)
-                                {
-                                    fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
-                                }
-
-                                // Only add the referenced columns if they have not been
-                                // specified in the configuration file.
-                                if (fk.ReferencedColumns.Count == 0)
-                                {
-                                    fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
-                                }
-                            }
-                        }
+                        // 
+                        // Scenario 1: When a FK constraint is defined between source and target entities
+                        // In this case, there will be exactly one ForeignKeyDefinition with the right pair of Referencing and Referenced tables. 
+                        // Scenario 2: When no FK constraint is defined between source and target entities, but the relationship fields are configured through config file
+                        // In this case, two entries will be created. 
+                        // First entry: Referencing table: Source entity, Referenced table: Target entity
+                        // Second entry: Referencing table: Target entity, Referenced table: Source entity 
+                        List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = GetValidatedFKs(fKDefinitionsToTarget);
+                        relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Loops over all the foreign key definitions defined for the target entity in the source entity's definition
+        /// and adds to the set of validated FK definitions:
+        /// 1. All the FK definitions which actually map to a foreign key constraint defined in the database.
+        /// In such a case, if the source/target fields are also provided in the config, they are given precedence over the FK constraint.
+        /// 2. FK definitions for custom relationships defined by the user in the configuration file where no FK constraint exists between
+        /// the pair of (source, target) entities.
+        /// </summary>
+        /// <param name="fKDefinitionsToTarget">List of FK definitions defined from source to target.</param>
+        /// <returns>List of validated FK definitions from source to target.</returns>
+        private List<ForeignKeyDefinition> GetValidatedFKs(
+            List<ForeignKeyDefinition> fKDefinitionsToTarget)
+        {
+            List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = new();
+            foreach (ForeignKeyDefinition fKDefinitionToTarget in fKDefinitionsToTarget)
+            {
+                // This code block adds FK definitions between source and target entities when there is an FK constraint defined
+                // in the database, either from source->target or target->source entities or both.
+
+                // Add the referencing and referenced columns for this foreign key definition for the target.
+                if (PairToFkDefinition is not null &&
+                    PairToFkDefinition.TryGetValue(fKDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredFKDefinition))
+                {
+                    // Being here indicates that we inferred an FK constraint for the current FK.
+                    // If the referencing and referenced columns count > 0,
+                    // we have already gathered this information from the runtime config.
+                    if (fKDefinitionToTarget.ReferencingColumns.Count > 0 && fKDefinitionToTarget.ReferencedColumns.Count > 0)
+                    {
+                        validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
+                    }
+                    // Only add the referencing/referenced columns if they have not been
+                    // specified in the configuration file.
+                    else
+                    {
+                        validatedFKDefinitionsToTarget.Add(inferredFKDefinition);
+                    }
+                }
+                else
+                {
+                    // This code block adds FK definitions between source and target entities when there is no FK constraint defined
+                    // in the database, either from source->target or target->source entities.
+
+                    // Being here indicates that we did not find an FK constraint in the database for the current FK definition.
+                    // But this does not indicate absence of an FK constraint between the source, target entities yet.
+                    // This may happen when an FK constraint exists between two tables, but in an order opposite to the order
+                    // of referencing and referenced tables present in the current FK definition. This happens because for a relationship
+                    // with right cardinality as 1, we add FK definitons from both source->target and target->source to the source entity's definition.
+                    // because at that point we don't know if the relationship is an N:1 relationship or a 1:1 relationship.
+                    // So here, we need to remove the wrong FK definition for:
+                    // 1. N:1 relationships,
+                    // 2. 1:1 relationships where an FK constraint exists only from source->target or target->source but not both.
+
+                    // E.g. for a relationship between Book-Publisher entities with cardinality 1, we would have added a Foreign key definition
+                    // from Book->Publisher and Publisher->Book to Book's source definition earlier.
+                    // Since it is an N:1 relationship, it might have been the case that the current FK definition had
+                    // 'publishers' table as the referencing table and 'books' table as the referenced table, and hence,
+                    // we did not find any FK constraint. But an FK constraint does exist where 'books' is the referencing table
+                    // while the 'publishers' is the referenced table.
+                    // (The definition for that constraint would be taken care of while adding database FKs above.)
+
+                    // So, before concluding that there is no FK constraint between the source, target entities, we need
+                    // to confirm absence of FK constraint from source->target and target->source tables.
+                    RelationShipPair inverseFKPair = new(fKDefinitionToTarget.Pair.ReferencedDbTable, fKDefinitionToTarget.Pair.ReferencingDbTable);
+
+                    // Add FK definition to the set of validated FKs only if no FK constraint is defined for the source and target entities
+                    // in the database, either from source -> target or target -> source.
+                    if (PairToFkDefinition is not null && !PairToFkDefinition.ContainsKey(inverseFKPair))
+                    {
+                        validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
+                    }
+                }
+            }
+
+            return validatedFKDefinitionsToTarget;
         }
 
         /// <summary>

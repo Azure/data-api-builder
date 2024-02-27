@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
-        /// <inheritdoc/>
+        /*/// <inheritdoc/>
         protected override void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
@@ -381,6 +381,6 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return true;
-        }
+        }*/
     }
 }

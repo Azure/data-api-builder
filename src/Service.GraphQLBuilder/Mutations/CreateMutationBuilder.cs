@@ -96,7 +96,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
                     if (def is null)
                     {
-                        throw new DataApiBuilderException($"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                        throw new DataApiBuilderException(
+                            message: $"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
 
                     if (DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(f, (ObjectTypeDefinitionNode)def, baseEntityName))
@@ -132,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
                 // Support for inserting nested entities with relationship cardinalities of 1-N or N-N is only supported for MsSql.
-                return databaseType is DatabaseType.MSSQL;
+                return DoesRelationalDBSupportNestedMutations(databaseType);
             }
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
@@ -140,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // For cosmos, allow updating nested objects
             if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)
             {
-                return databaseType is DatabaseType.MSSQL;
+                return DoesRelationalDBSupportNestedMutations(databaseType);
             }
 
             return true;
@@ -165,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Helper method to check if a field in an entity(table) is a  referencing field to a referenced field
+        /// Helper method to check if a field in an entity(table) is a referencing field to a referenced field
         /// in another entity.
         /// </summary>
         /// <param name="field">Field definition.</param>
@@ -193,7 +196,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 location: null,
                 fieldDefinition.Name,
                 new StringValueNode($"Input for field {fieldDefinition.Name} on type {GenerateInputTypeName(name.Value)}"),
-                defaultValue is not null || databaseType is DatabaseType.MSSQL && IsAReferencingField(fieldDefinition) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
+                defaultValue is not null ||
+                (DoesRelationalDBSupportNestedMutations(databaseType) && IsAReferencingField(fieldDefinition)) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
                 defaultValue,
                 new List<DirectiveNode>()
             );
@@ -232,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-            if (databaseType is DatabaseType.MSSQL)
+            if (DoesRelationalDBSupportNestedMutations(databaseType))
             {
                 if (RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
                 {
@@ -379,7 +383,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // Point insertion node.
             FieldDefinitionNode createOneNode = new(
                 location: null,
-                name: new NameNode(GetPointCreateMutationNodeName(name.Value, entity)),
+                name: new NameNode(singularName),
                 description: new StringValueNode($"Creates a new {singularName}"),
                 arguments: new List<InputValueDefinitionNode> {
                 new(
@@ -399,7 +403,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             FieldDefinitionNode createMultipleNode = new(
                 location: null,
                 name: new NameNode(GetMultipleCreateMutationNodeName(name.Value, entity)),
-                description: new StringValueNode($"Creates multiple new {singularName}"),
+                description: new StringValueNode($"Creates multiple new {GetDefinedPluralName(name.Value, entity)}"),
                 arguments: new List<InputValueDefinitionNode> {
                 new(
                     location : null,

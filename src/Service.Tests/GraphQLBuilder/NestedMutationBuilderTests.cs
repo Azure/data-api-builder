@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
@@ -24,7 +25,6 @@ using ZiggyCreatures.Caching.Fusion;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
-using System.Linq;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -214,7 +214,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             NameNode inputTypeNameForBook = CreateMutationBuilder.GenerateInputTypeName(GetDefinedSingularName(
                 sourceEntityName,
                 _runtimeConfig.Entities[sourceEntityName]));
-            Entity entity = _runtimeConfig.Entities[sourceEntityName];
             InputObjectTypeDefinitionNode inputObjectTypeDefinition = (InputObjectTypeDefinitionNode)_mutationDefinitions.FirstOrDefault(d => d.Name.Value.Equals(inputTypeNameForBook.Value));
             NameNode inputTypeName = CreateMutationBuilder.GenerateInputTypeName(GenerateLinkingNodeName(
                 GetDefinedSingularName(sourceEntityName, _runtimeConfig.Entities[sourceEntityName]),

@@ -268,7 +268,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Helper method to traverse through all the relationships for all the entities exposed in the config.
-        /// For all the relationships defined in each entity's configuration, it adds an referencing field directive to all the
+        /// For all the relationships defined in each entity's configuration, it adds a referencing field directive to all the
         /// referencing fields of the referencing entity in the relationship. For relationships defined in config:
         /// 1. If an FK constraint exists between the entities - the referencing field directive
         /// is added to the referencing fields from the referencing entity.
@@ -285,9 +285,14 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             foreach ((string sourceEntityName, ObjectTypeDefinitionNode sourceObjectTypeDefinitionNode) in objectTypes)
             {
-                Entity entity = entities[sourceEntityName];
-                if (!entity.GraphQL.Enabled || entity.Relationships is null)
+                if(!entities.TryGetValue(sourceEntityName, out Entity? entity))
                 {
+                    continue;
+                }
+
+                if (!entity.GraphQL.Enabled || entity.Source.Type is not EntitySourceType.Table || entity.Relationships is null)
+                {
+                    // Nested insertions are only supported on database tables for which GraphQL endpoint is enabled.
                     continue;
                 }
 
@@ -338,17 +343,18 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             // When source entity is the referencing entity, referencing field directive is to be added to relationship fields
                             // in the source entity.
-                            AddReferencingFieldDirectiveToReferencingFields(sourceFieldDefinitions, sourceReferencingFKInfo.ReferencingColumns);
+                            AddReferencingFieldDirectiveToReferencingFields(sourceFieldDefinitions, sourceReferencingFKInfo.ReferencingColumns, sqlMetadataProvider, sourceEntityName);
                         }
 
-                        ObjectTypeDefinitionNode targetObjectTypeDefinitionNode = objectTypes[targetEntityName];
-                        Dictionary<string, FieldDefinitionNode> targetFieldDefinitions = targetObjectTypeDefinitionNode.Fields.ToDictionary(field => field.Name.Value, field => field);
                         ForeignKeyDefinition? targetReferencingFKInfo = targetReferencingForeignKeysInfo.FirstOrDefault();
-                        if (targetReferencingFKInfo is not null)
+                        if (targetReferencingFKInfo is not null &&
+                            objectTypes.TryGetValue(targetEntityName, out ObjectTypeDefinitionNode? targetObjectTypeDefinitionNode))
                         {
+                            IReadOnlyList<FieldDefinitionNode> gg = targetObjectTypeDefinitionNode.Fields;
+                            Dictionary<string, FieldDefinitionNode> targetFieldDefinitions = targetObjectTypeDefinitionNode.Fields.ToDictionary(field => field.Name.Value, field => field);
                             // When target entity is the referencing entity, referencing field directive is to be added to relationship fields
                             // in the target entity.
-                            AddReferencingFieldDirectiveToReferencingFields(targetFieldDefinitions, targetReferencingFKInfo.ReferencingColumns);
+                            AddReferencingFieldDirectiveToReferencingFields(targetFieldDefinitions, targetReferencingFKInfo.ReferencingColumns, sqlMetadataProvider, targetEntityName);
 
                             // Update the target object definition with the new set of fields having referencing field directive.
                             objectTypes[targetEntityName] = targetObjectTypeDefinitionNode.WithFields(new List<FieldDefinitionNode>(targetFieldDefinitions.Values));
@@ -367,16 +373,23 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="referencingEntityFieldDefinitions">Field definitions of the referencing entity.</param>
         /// <param name="referencingColumns">Referencing columns in the relationship.</param>
-        private static void AddReferencingFieldDirectiveToReferencingFields(Dictionary<string, FieldDefinitionNode> referencingEntityFieldDefinitions, List<string> referencingColumns)
+        private static void AddReferencingFieldDirectiveToReferencingFields(
+            Dictionary<string, FieldDefinitionNode> referencingEntityFieldDefinitions,
+            List<string> referencingColumns,
+            ISqlMetadataProvider metadataProvider,
+            string entityName)
         {
-            foreach (string referencingColumnInSource in referencingColumns)
+            foreach (string referencingColumn in referencingColumns)
             {
-                FieldDefinitionNode referencingFieldDefinition = referencingEntityFieldDefinitions[referencingColumnInSource];
-                if (!referencingFieldDefinition.Directives.Any(directive => directive.Name.Value == ReferencingFieldDirectiveType.DirectiveName))
+                if (metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedReferencingColumnName) &&
+                    referencingEntityFieldDefinitions.TryGetValue(exposedReferencingColumnName, out FieldDefinitionNode? referencingFieldDefinition))
                 {
-                    List<DirectiveNode> directiveNodes = referencingFieldDefinition.Directives.ToList();
-                    directiveNodes.Add(new DirectiveNode(ReferencingFieldDirectiveType.DirectiveName));
-                    referencingEntityFieldDefinitions[referencingColumnInSource] = referencingFieldDefinition.WithDirectives(directiveNodes);
+                    if (!referencingFieldDefinition.Directives.Any(directive => directive.Name.Value == ReferencingFieldDirectiveType.DirectiveName))
+                    {
+                        List<DirectiveNode> directiveNodes = referencingFieldDefinition.Directives.ToList();
+                        directiveNodes.Add(new DirectiveNode(ReferencingFieldDirectiveType.DirectiveName));
+                        referencingEntityFieldDefinitions[exposedReferencingColumnName] = referencingFieldDefinition.WithDirectives(directiveNodes);
+                    }
                 }
             }
         }
@@ -436,8 +449,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     IEnumerable<ForeignKeyDefinition> foreignKeyDefinitionsFromSourceToTarget = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
 
-                    // Get list of all referencing columns in the linking entity.
-                    List<string> referencingColumnNames = foreignKeyDefinitionsFromSourceToTarget.SelectMany(foreignKeyDefinition => foreignKeyDefinition.ReferencingColumns).ToList();
+                    // Get list of all referencing columns from the foreign key definition. For an M:N relationship,
+                    // all the referencing columns belong to the linking entity.
+                    HashSet<string> referencingColumnNamesInLinkingEntity = new(foreignKeyDefinitionsFromSourceToTarget.SelectMany(foreignKeyDefinition => foreignKeyDefinition.ReferencingColumns).ToList());
 
                     // Store the names of relationship/column fields in the target entity to prevent conflicting names
                     // with the linking table's column fields.
@@ -458,7 +472,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     foreach (FieldDefinitionNode fieldInLinkingNode in fieldsInLinkingNode)
                     {
                         string fieldName = fieldInLinkingNode.Name.Value;
-                        if (!referencingColumnNames.Contains(fieldName))
+                        if (!referencingColumnNamesInLinkingEntity.Contains(fieldName))
                         {
                             if (fieldNamesInTarget.Contains(fieldName))
                             {
@@ -485,14 +499,15 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Store object type of the linking node for (sourceEntityName, targetEntityName).
                     NameNode sourceTargetLinkingNodeName = new(GenerateLinkingNodeName(
                         objectTypes[sourceEntityName].Name.Value,
-                        objectTypes[targetEntityName].Name.Value));
-                    objectTypes[sourceTargetLinkingNodeName.Value] = new(
-                        location: null,
-                        name: sourceTargetLinkingNodeName,
-                        description: null,
-                        new List<DirectiveNode>() { },
-                        new List<NamedTypeNode>(),
-                        fieldsInSourceTargetLinkingNode);
+                        targetNode.Name.Value));
+                    objectTypes.TryAdd(sourceTargetLinkingNodeName.Value,
+                        new(
+                            location: null,
+                            name: sourceTargetLinkingNodeName,
+                            description: null,
+                            new List<DirectiveNode>() { },
+                            new List<NamedTypeNode>(),
+                            fieldsInSourceTargetLinkingNode));
                 }
             }
         }

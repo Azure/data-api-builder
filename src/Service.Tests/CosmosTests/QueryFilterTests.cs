@@ -681,7 +681,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "select c.name, c.age from c where IS_NULL(c.age)";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, true);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, ignoreBlankResults: true);
         }
 
         /// <summary>
@@ -701,7 +701,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "select c.name, c.age from c where IS_NULL(c.name)";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, true);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, ignoreBlankResults: true);
         }
 
         /// <summary>
@@ -765,7 +765,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "SELECT c.name, c.age FROM c WHERE 1 != 1";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, true);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, ignoreBlankResults: true);
         }
 
         /// <summary>

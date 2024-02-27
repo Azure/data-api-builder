@@ -34,10 +34,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         private static InputObjectTypeDefinitionNode GenerateCreateInputType(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
+            string entityName,
             NameNode name,
             NameNode baseEntityName,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
-            DatabaseType databaseType)
+            DatabaseType databaseType,
+            RuntimeEntities entities)
         {
             NameNode inputName = GenerateInputTypeName(name.Value);
 
@@ -102,21 +104,40 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
 
-                    if (DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(f, (ObjectTypeDefinitionNode)def, baseEntityName))
+                    entities.TryGetValue(entityName, out Entity? entity);
+                    string targetEntityName = entity!.Relationships![f.Name.Value].TargetEntity;
+                    if (entity is not null && DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(entity, f.Name.Value))
                     {
                         // The field can represent a related entity with M:N relationship with the parent.
-                        NameNode baseEntityNameForField = new(typeName);
+                        NameNode baseObjectTypeNameForField = new(typeName);
                         typeName = GenerateLinkingNodeName(baseEntityName.Value, typeName);
-                        def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value == typeName)!;
+                        def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value.Equals(typeName))!;
 
                         // Get entity definition for this ObjectTypeDefinitionNode.
                         // Recurse for evaluating input objects for related entities.
-                        return GetComplexInputType(inputs, definitions, f, typeName, baseEntityNameForField, (ObjectTypeDefinitionNode)def, databaseType);
+                        return GetComplexInputType(
+                            entityName: targetEntityName,
+                            inputs: inputs,
+                            definitions: definitions,
+                            field: f,
+                            typeName: typeName,
+                            baseObjectTypeName: baseObjectTypeNameForField,
+                            childObjectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
+                            databaseType: databaseType,
+                            entities: entities);
                     }
 
                     // Get entity definition for this ObjectTypeDefinitionNode.
                     // Recurse for evaluating input objects for related entities.
-                    return GetComplexInputType(inputs, definitions, f, typeName, new(typeName), (ObjectTypeDefinitionNode)def, databaseType);
+                    return GetComplexInputType(
+                        entityName: targetEntityName,
+                        inputs: inputs,
+                        definitions: definitions,
+                        field: f, typeName: typeName,
+                        baseObjectTypeName: new(typeName),
+                        childObjectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
+                        databaseType: databaseType,
+                        entities: entities);
                 });
             // Append relationship fields to the input fields.
             inputFields.AddRange(complexInputFields);
@@ -216,19 +237,29 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="entities">Runtime configuration information for entities.</param>
         /// <returns>A GraphQL input type value.</returns>
         private static InputValueDefinitionNode GetComplexInputType(
+            string entityName,
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             FieldDefinitionNode field,
             string typeName,
             NameNode baseObjectTypeName,
             ObjectTypeDefinitionNode childObjectTypeDefinitionNode,
-            DatabaseType databaseType)
+            DatabaseType databaseType,
+            RuntimeEntities entities)
         {
             InputObjectTypeDefinitionNode node;
             NameNode inputTypeName = GenerateInputTypeName(typeName);
             if (!inputs.ContainsKey(inputTypeName))
             {
-                node = GenerateCreateInputType(inputs, childObjectTypeDefinitionNode, new NameNode(typeName), baseObjectTypeName, definitions, databaseType);
+                node = GenerateCreateInputType(
+                    inputs,
+                    childObjectTypeDefinitionNode,
+                    entityName,
+                    new NameNode(typeName),
+                    baseObjectTypeName,
+                    definitions,
+                    databaseType,
+                    entities);
             }
             else
             {
@@ -277,39 +308,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Helper method to determine if there is a M:N relationship between the parent and child node by checking that the relationship
-        /// directive's cardinality value is Cardinality.Many for both parent -> child and child -> parent.
+        /// Helper method to determine if the relationship defined between the source entity and a particular target entity is an M:N relationship.
         /// </summary>
-        /// <param name="childFieldDefinitionNode">FieldDefinition of the child node.</param>
-        /// <param name="childObjectTypeDefinitionNode">Object definition of the child node.</param>
-        /// <param name="parentNode">Parent node's NameNode.</param>
-        /// <returns>true if the relationship between parent and child entities has a cardinality of M:N.</returns>
-        private static bool IsMToNRelationship(FieldDefinitionNode childFieldDefinitionNode, ObjectTypeDefinitionNode childObjectTypeDefinitionNode, NameNode parentNode)
+        /// <param name="sourceEntity">Source entity.</param>
+        /// <param name="relationshipName">Relationship name.</param>
+        /// <returns>true if the relationship between source and target entities has a cardinality of M:N.</returns>
+        private static bool IsMToNRelationship(Entity sourceEntity, string relationshipName)
         {
-            // Determine the cardinality of the relationship from parent -> child, where parent is the entity present at a level
-            // higher than the child. Eg. For 1:N relationship from parent -> child, the right cardinality is N.
-            Cardinality rightCardinality = RelationshipDirectiveType.Cardinality(childFieldDefinitionNode);
-            if (rightCardinality is not Cardinality.Many)
-            {
-                // Indicates that there is a *:1 relationship from parent -> child.
-                return false;
-            }
-
-            // We have concluded that there is an *:N relationship from parent -> child.
-            // But for a many-to-many relationship, we should have an M:N relationship between parent and child.
-            List<FieldDefinitionNode> fieldsInChildNode = childObjectTypeDefinitionNode.Fields.ToList();
-
-            // If the cardinality of relationship from child->parent is N:M, we must find a paginated field for parent in the child
-            // object definition's fields.
-            int indexOfParentFieldInChildDefinition = fieldsInChildNode.FindIndex(field => field.Type.NamedType().Name.Value.Equals(QueryBuilder.GeneratePaginationTypeName(parentNode.Value)));
-            if (indexOfParentFieldInChildDefinition == -1)
-            {
-                // Indicates that there is a 1:N relationship from parent -> child.
-                return false;
-            }
-
-            // Indicates an M:N relationship from parent->child.
-            return true;
+            return sourceEntity.Relationships is not null &&
+                sourceEntity.Relationships.TryGetValue(relationshipName, out EntityRelationship? relationshipInfo) &&
+                !string.IsNullOrWhiteSpace(relationshipInfo.LinkingObject);
         }
 
         private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)
@@ -363,10 +371,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
                 inputs: inputs,
                 objectTypeDefinitionNode: objectTypeDefinitionNode,
+                entityName:dbEntityName,
                 name: name,
                 baseEntityName: name,
                 definitions: root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
-                databaseType: databaseType);
+                databaseType: databaseType,
+                entities: entities);
 
             // Create authorize directive denoting allowed roles
             List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", dbEntityName)) };

@@ -252,6 +252,41 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc />
+        public async Task InitializeAsync()
+        {
+            System.Diagnostics.Stopwatch timer = System.Diagnostics.Stopwatch.StartNew();
+            GenerateDatabaseObjectForEntities();
+            if (_isValidateOnly)
+            {
+                // Currently Validate mode only support single datasource,
+                // so using the below validation we can check connection once instead of checking for each entity.
+                // To enable to check for multiple data-sources just remove this validation and each entity will have its own connection check.
+                try
+                {
+                    await ValidateDatabaseConnection();
+                }
+                catch (DataApiBuilderException e)
+                {
+                    HandleOrRecordException(e);
+                    return;
+                }
+            }
+
+            await PopulateObjectDefinitionForEntities();
+            GenerateExposedToBackingColumnMapsForEntities();
+            // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
+            if (!_runtimeConfigProvider.IsLateConfigured)
+            {
+                LogPrimaryKeys();
+            }
+
+            GenerateRestPathToEntityMap();
+            InitODataParser();
+            timer.Stop();
+            _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
+        }
+
+        /// <inheritdoc />
         public void InitializeAsync(Dictionary<string, DatabaseObject> dictionary)
         {
             GenerateDatabaseObjectForEntities();
@@ -262,50 +297,6 @@ namespace Azure.DataApiBuilder.Core.Services
             GenerateExposedToBackingColumnMapsForEntities();
         }
 
-        /// <inheritdoc />
-        public async Task InitializeAsync()
-        {
-            try
-            {
-                GenerateDatabaseObjectForEntities();
-
-                if (_isValidateOnly)
-                {
-                    // Currently Validate mode only support single datasource,
-                    // so using the below validation we can check connection once instead of checking for each entity.
-                    // To enable to check for multiple data-sources just remove this validation and each entity will have its own connection check.
-                    try
-                    {
-                        await ValidateDatabaseConnection();
-                    }
-                    catch (DataApiBuilderException e)
-                    {
-                        HandleOrRecordException(e);
-                        return;
-                    }
-                }
-        
-                await PopulateObjectDefinitionForEntities();        
-               
-                GenerateExposedToBackingColumnMapsForEntities();
-
-                // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
-                if (!_runtimeConfigProvider.IsLateConfigured)
-                {
-                    LogPrimaryKeys();
-                }
-
-                GenerateRestPathToEntityMap();
-
-                InitODataParser();
-
-            }
-            catch (Exception e)
-            {
-                HandleOrRecordException(e);
-                return;
-            }
-        }
 
         /// <inheritdoc/>
         public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)

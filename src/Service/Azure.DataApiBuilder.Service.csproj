@@ -17,6 +17,10 @@
         <InternalsVisibleTo Include="Azure.DataApiBuilder.Service.Tests" />
     </ItemGroup>
 
+    <ItemGroup>
+        <None Remove="schema.gql" />
+    </ItemGroup>
+
     <!--
     Set the CopyToOutputDirectory action based on the configuration.
     In Debug/Release, we'll copy the config, appsettings, sql and gql files, but not in Docker configuration since we don't want them to end up in the docker image.
@@ -91,12 +95,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="dab-config.CosmosDb_NoSql.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>

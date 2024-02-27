@@ -15,7 +15,6 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
-using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -78,7 +77,7 @@ type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
 type Earth @model(name:""Earth"") {
     id : ID,
     name : String,
-    type: String @authorize(roles: [""authenticated"", ""item-level-permission-role""])
+    type: String @authorize(roles: [""authenticated""])
 }
 
 type Sun @model(name:""Sun"") {
@@ -107,9 +106,8 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
 
     private HttpClient _client;
     internal WebApplicationFactory<Startup> _application;
-    internal string _containerName = "planet";
-    protected static Mock<IAbstractQueryManagerFactory> _queryManagerFactory;
-    protected static IQueryBuilder _queryBuilder;
+    internal string _containerName = Guid.NewGuid().ToString();
+
     [TestInitialize]
     public void Init()
     {
@@ -131,19 +129,23 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
         Dictionary<string, object> updatedOptions = baseConfig.DataSource.Options;
         updatedOptions["container"] = JsonDocument.Parse($"\"{_containerName}\"").RootElement;
 
+        RuntimeConfig updatedConfig = baseConfig
+            with
+        {
+            DataSource = baseConfig.DataSource with { Options = updatedOptions },
+            Entities = new(baseConfig.Entities.ToDictionary(e => e.Key, e => e.Value with { Source = e.Value.Source with { Object = _containerName } }))
+        };
+
         // Setup a mock file system, and use that one with the loader/provider for the config
         MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
         {
             { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
-            { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(baseConfig.ToJson()) }
+            { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(updatedConfig.ToJson()) }
         });
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
         RuntimeConfigProvider provider = new(loader);
 
-        _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
-        _queryBuilder = new CosmosQueryBuilder();
-        _queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
-        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem, provider.GetConfig().GetDefaultDataSourceName(), _queryManagerFactory.Object);
+        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);
         Mock<IMetadataProviderFactory> metadataProviderFactory = new();
         metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(cosmosSqlMetadataProvider);
 

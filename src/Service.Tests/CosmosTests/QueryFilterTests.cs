@@ -1139,6 +1139,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
 
         }
+        #endregion
 
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_Only_AuthorizedItem()
@@ -1178,7 +1179,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             // Validate the result contains the GraphQL authorization error code.
             string filteredItems = response.ToString();
         }
-        #endregion
 
         [TestCleanup]
         public void TestFixtureTearDown()

@@ -101,7 +101,7 @@
     },
     "Character": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.character"
       },
       "graphql": {
         "enabled": true,
@@ -135,7 +135,7 @@
     },
     "StarAlias": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.star"
       },
       "graphql": {
         "enabled": true,
@@ -186,7 +186,7 @@
     },
     "TagAlias": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.tag"
       },
       "graphql": {
         "enabled": true,
@@ -220,7 +220,7 @@
     },
     "Moon": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.moon"
       },
       "graphql": {
         "enabled": true,
@@ -271,7 +271,7 @@
     },
     "Earth": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.earth"
       },
       "graphql": {
         "enabled": true,
@@ -362,22 +362,39 @@
           ]
         },
         {
-          "role": "item-level-permission-role",
+          "role": "wildcard-exclude-fields-role",
           "actions": [
             {
-              "action": "delete"
-            },
-            {
               "action": "read",
-              "policy": {
-                "database": "@item.type eq 'earth1'"
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
               }
             },
             {
-              "action": "update"
+              "action": "delete",
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
+              }
             },
             {
-              "action": "create"
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
+              }
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
+              }
             }
           ]
         },
@@ -409,7 +426,7 @@
     },
     "Sun": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.sun"
       },
       "graphql": {
         "enabled": true,
@@ -451,7 +468,7 @@
     },
     "AdditionalAttribute": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.additionalAttribute"
       },
       "graphql": {
         "enabled": true,
@@ -476,7 +493,7 @@
     },
     "MoonAdditionalAttribute": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.moonAdditionalAttributes"
       },
       "graphql": {
         "enabled": true,
@@ -501,7 +518,7 @@
     },
     "MoreAttrAlias": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.moreAttribute"
       },
       "graphql": {
         "enabled": true,

@@ -611,23 +611,6 @@ query {{
 
                 // Asserting cached data is returned
                 Assert.IsFalse(queryResponse.GetProperty("name").GetString() != name, "Query didn't return cached value");
-
-                update = new
-                {
-                    id = id,
-                    name = name,
-                };
-
-                // Clean up setting document name back to original value
-                _ = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                client,
-                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                query: mutation,
-                                queryName: "updatePlanet",
-                                variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } },
-                                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
-                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
-                                );
             }
         }
 

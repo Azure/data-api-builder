@@ -261,6 +261,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         [TestMethod]
         public async Task FirstCacheServiceInvocationCallsFuncAndReturnResult()
         {
+            // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
             JObject expectedDatabaseResponse = JObject.Parse(@"{""key"": ""value""}");
 
@@ -293,6 +294,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         [TestMethod]
         public async Task SecondCacheServiceInvocation_CacheHit_NoFuncInvocation()
         {
+            // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
             JObject expectedDatabaseResponse = JObject.Parse(@"{""key"": ""value""}");
 
@@ -311,17 +313,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // First call. Cache miss
             _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
 
+            // Act
             JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
 
             // Assert
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
-
-            // Validates that the expected database response is returned by the cache service.
-            Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
-
-            // Assert
             Assert.IsFalse(mockExecuteQuery.Invocations.Count is 2, message: "Expected a cache hit, but observed two cache misses.");
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
+            Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
+
+            // Validates that the expected database response is returned by the cache service.
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }
 
@@ -334,6 +335,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
         [TestMethod]
         public async Task ThirdCacheServiceInvocation_CacheHit_NoFuncInvocation()
         {
+            // Arrange
             using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
             JObject expectedDatabaseResponse = JObject.Parse(@"{""key"": ""value""}");
 
@@ -349,6 +351,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             DabCacheService dabCache = CreateDabCacheService(cache);
 
             int cacheEntryTtl = 1;
+
+            // Act
             // First call. Cache miss
             _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
             _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
@@ -356,6 +360,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             // Sleep for the amount of time the cache entry is valid to trigger eviction.
             Thread.Sleep(millisecondsTimeout: cacheEntryTtl * 1000);
 
+            // Act
             JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
 
             // Assert

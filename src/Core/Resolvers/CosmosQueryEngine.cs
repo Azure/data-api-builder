@@ -63,7 +63,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object> parameters,
             string dataSourceName)
         {
-            // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
@@ -120,7 +119,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// ExecuteQueryAsync Perform single parition and cross partition query. 
+        /// ExecuteQueryAsync Performs single parition and cross partition queries. 
         /// </summary>
         /// <param name="structure"></param>
         /// <param name="querySpec"></param>
@@ -128,7 +127,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="container"></param>
         /// <param name="idValue"></param>
         /// <param name="partitionKeyValue"></param>
-        /// <returns>JsonDocument</returns>
+        /// <returns>JObject</returns>
         private static async Task<JObject> ExecuteQueryAsync(CosmosQueryStructure structure, QueryDefinition querySpec, QueryRequestOptions queryRequestOptions, Container container, string idValue, string partitionKeyValue)
         {
             string requestContinuation = null;

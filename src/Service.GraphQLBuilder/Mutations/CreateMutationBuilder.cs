@@ -89,12 +89,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // Evaluate input objects for related entities.
             IEnumerable<InputValueDefinitionNode> complexInputFields =
                 objectTypeDefinitionNode.Fields
-                .Where(f => !IsBuiltInType(f.Type))
-                .Where(f => IsComplexFieldAllowedForCreateInput(f, databaseType, definitions))
-                .Select(f =>
+                .Where(field => !IsBuiltInType(field.Type))
+                .Where(field => IsComplexFieldAllowedForCreateInput(field, databaseType, definitions))
+                .Select(field =>
                 {
-                    string typeName = RelationshipDirectiveType.Target(f);
-                    HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value == typeName);
+                    string typeName = RelationshipDirectiveType.Target(field);
+                    HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value.Equals(typeName));
 
                     if (def is null)
                     {
@@ -104,9 +104,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                     }
 
-                    entities.TryGetValue(entityName, out Entity? entity);
-                    string targetEntityName = entity!.Relationships![f.Name.Value].TargetEntity;
-                    if (entity is not null && DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(entity, f.Name.Value))
+                    if (!entities.TryGetValue(entityName, out Entity? entity) || entity.Relationships is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Could not find entity metadata for entity: {entityName}.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    string targetEntityName = entity.Relationships[field.Name.Value].TargetEntity;
+                    if (DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(entity, field.Name.Value))
                     {
                         // The field can represent a related entity with M:N relationship with the parent.
                         NameNode baseObjectTypeNameForField = new(typeName);
@@ -119,7 +126,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             entityName: targetEntityName,
                             inputs: inputs,
                             definitions: definitions,
-                            field: f,
+                            field: field,
                             typeName: typeName,
                             baseObjectTypeName: baseObjectTypeNameForField,
                             childObjectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
@@ -133,7 +140,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         entityName: targetEntityName,
                         inputs: inputs,
                         definitions: definitions,
-                        field: f, typeName: typeName,
+                        field: field,
+                        typeName: typeName,
                         baseObjectTypeName: new(typeName),
                         childObjectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
                         databaseType: databaseType,
@@ -193,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// in another entity.
         /// </summary>
         /// <param name="field">Field definition.</param>
-        private static bool IsAReferencingField(FieldDefinitionNode field)
+        private static bool DoesFieldHaveReferencingFieldDirective(FieldDefinitionNode field)
         {
             return field.Directives.Any(d => d.Name.Value.Equals(ReferencingFieldDirectiveType.DirectiveName));
         }
@@ -218,7 +226,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinition.Name,
                 new StringValueNode($"Input for field {fieldDefinition.Name} on type {GenerateInputTypeName(name.Value)}"),
                 defaultValue is not null ||
-                (DoesRelationalDBSupportNestedMutations(databaseType) && IsAReferencingField(fieldDefinition)) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
+                (DoesRelationalDBSupportNestedMutations(databaseType) && DoesFieldHaveReferencingFieldDirective(fieldDefinition)) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
                 defaultValue,
                 new List<DirectiveNode>()
             );

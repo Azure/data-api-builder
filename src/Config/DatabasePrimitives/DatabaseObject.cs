@@ -210,7 +210,9 @@ public class SourceDefinition
 /// <summary>
 /// Class to store the database view definition.
 /// </summary>
-public class ViewDefinition : SourceDefinition { }
+public class ViewDefinition : SourceDefinition {
+
+}
 
 /// <summary>
 /// Class encapsulating foreign keys corresponding to target entities.

@@ -23,6 +23,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Initializes this metadata provider for the runtime.
+        /// This method will take in various objects which we can use directly rather than recreating the objects
+        /// using multiple tsql query
         /// </summary>
         void InitializeAsync(Dictionary<string,DatabaseObject> dictionary);
 

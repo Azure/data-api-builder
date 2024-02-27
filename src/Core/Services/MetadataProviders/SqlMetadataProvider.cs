@@ -254,10 +254,10 @@ namespace Azure.DataApiBuilder.Core.Services
         public void InitializeAsync(Dictionary<string, DatabaseObject> dictionary)
         {
             GenerateDatabaseObjectForEntities();
+            
             EntityToDatabaseObject = dictionary;
-
-            EntityToDatabaseObject.First().Value.SourceDefinition.PrimaryKey.RemoveAt(1);
-
+            // will initialise other objects sent from Graphql workload
+            
             GenerateExposedToBackingColumnMapsForEntities();
         }
 

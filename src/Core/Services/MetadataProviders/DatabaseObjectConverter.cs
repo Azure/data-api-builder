@@ -27,10 +27,17 @@ public class DatabaseObjectConverter : Newtonsoft.Json.JsonConverter
         DatabaseObject objA = (DatabaseObject)Activator.CreateInstance(concreteType)!;
         serializer.Populate(jsonObject.CreateReader(), objA);
 
+        // this is to make sure duplicate values are not getting added in PrimaryKeys list
+        // in SourceDefinition
+        if (objA is DatabaseObject dObject && dObject.SourceDefinition is SourceDefinition sObject)
+        {
+            sObject.PrimaryKey = jsonObject["SourceDefinition"]!["PrimaryKey"]!.ToObject<List<string>>()!;
+        }
+
         return objA;
     }
 
-    public override void WriteJson(JsonWriter writer, object? value, JsonSerializer serializer)
+    public override void WriteJson(JsonWriter writer, object? value, Newtonsoft.Json.JsonSerializer serializer)
     {
         DatabaseObject obj = (DatabaseObject)value!;
         JObject jsonObject = new JObject()!;
@@ -64,5 +71,6 @@ public class DatabaseObjectConverter : Newtonsoft.Json.JsonConverter
 
         return type;
     }
+
 }
 

@@ -65,6 +65,11 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     await provider.InitializeAsync();
 
+                    // Following code is just POC specific, this wont be part of final implementation in DAB
+                    // this is just for me to test directly on DAB (as I cannot test in GraphQL repo without new DAB package support)
+
+
+                    // Following code is how we will serialise the object on our end when we attach with a source
                     string json = JsonConvert.SerializeObject(provider.EntityToDatabaseObject, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.All,
@@ -73,6 +78,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                     Console.WriteLine(json);
 
+                    // Following code is how we will deserialise the object on our end before sending to DAB 
                     Dictionary<string, DatabaseObject> deserializedDictionary = JsonConvert.DeserializeObject<Dictionary<string, DatabaseObject>>(json, new JsonSerializerSettings
                     {
                         TypeNameHandling = TypeNameHandling.All,

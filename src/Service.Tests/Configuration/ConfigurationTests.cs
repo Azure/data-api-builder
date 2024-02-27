@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions;
@@ -16,6 +17,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Web;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -1058,6 +1060,47 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     configValidatorLogger.Object);
 
             configValidator.ValidateConfigProperties();
+        }
+
+        /// <summary>
+        /// This method tests that config file is validated correctly and no exceptions are thrown.
+        /// This tests gets the json from the integration test config file and then uses that
+        /// to validate the complete config file.
+        /// </summary>
+        [TestMethod("Validates the complete config."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestConfigIsValid()
+        {
+            // Fetch the MS_SQL integration test config file.
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystemRuntimeConfigLoader testConfigPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfig configuration = TestHelper.GetRuntimeConfigProvider(testConfigPath).GetConfig();
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            MockFileSystem fileSystem = new();
+
+            // write it to the custom-config file and add it to the filesystem.
+            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(configuration.ToJson()));
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    fileSystem,
+                    configValidatorLogger.Object,
+                    true);
+
+            try
+            {
+                // Run the validate on the custom config json file.
+                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+            }
+            catch (Exception e)
+            {
+                Assert.Fail(e.Message);
+            }
         }
 
         /// <summary> 
@@ -2715,6 +2758,95 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             // Validate that components were not created for the entity with REST disabled.
             Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher_NoPK", out _));
             Assert.IsFalse(componentSchemasElement.TryGetProperty("Publisher", out _));
+        }
+
+        /// <summary>
+        /// This test validates that DAB properly creates and returns a nextLink with a single $after
+        /// query parameter when sending paging requests.
+        /// The first request initiates a paging workload, meaning the response is expected to have a nextLink.
+        /// The validation occurs after the second request which uses the previously acquired nextLink
+        /// This test ensures that the second request's response body contains the expected nextLink which:
+        /// - is base64 encoded and NOT URI escaped e.g. the trailing "==" are not URI escaped to "%3D%3D"
+        /// - is not the same as the first response's nextLink -> DAB is properly injecting a new $after query param
+        /// and updating the new nextLink
+        /// - does not contain a comma (,) indicating that the URI namevaluecollection tracking the query parameters
+        /// did not come across two $after query parameters. This addresses a customer raised issue where two $after
+        /// query parameters were returned by DAB.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateNextLinkUsage()
+        {
+            // Arrange - Setup test server with entity that has >1 record so that results can be paged.
+            // A short cut to using an entity with >100 records is to just include the $first=1 filter
+            // as done in this test, so that paging behavior can be invoked.
+
+            const string ENTITY_NAME = "Bookmark";
+
+            // At least one entity is required in the runtime config for the engine to start.
+            // Even though this entity is not under test, it must be supplied to the config
+            // file creation function.
+            Entity requiredEntity = new(
+                Source: new("bookmarks", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: true),
+                GraphQL: new(Singular: "", Plural: "", Enabled: false),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { ENTITY_NAME, requiredEntity }
+            };
+
+            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            // Setup and send GET request
+            HttpRequestMessage initialPaginationRequest = new(HttpMethod.Get, $"{RestRuntimeOptions.DEFAULT_PATH}/{ENTITY_NAME}?$first=1");
+            HttpResponseMessage initialPaginationResponse = await client.SendAsync(initialPaginationRequest);
+
+            // Process response body for first request and get the nextLink to use on subsequent request
+            // which represents what this test is validating.
+            string responseBody = await initialPaginationResponse.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+            string nextLinkUri = responseProperties["nextLink"].ToString();
+
+            // Act - Submit request with nextLink uri as target and capture response
+
+            HttpRequestMessage followNextLinkRequest = new(HttpMethod.Get, nextLinkUri);
+            HttpResponseMessage followNextLinkResponse = await client.SendAsync(followNextLinkRequest);
+
+            // Assert
+
+            Assert.AreEqual(HttpStatusCode.OK, followNextLinkResponse.StatusCode, message: "Expected request to succeed.");
+
+            // Process the response body and inspect the "nextLink" property for expected contents.
+            string followNextLinkResponseBody = await followNextLinkResponse.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> followNextLinkResponseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(followNextLinkResponseBody);
+
+            string followUpResponseNextLink = followNextLinkResponseProperties["nextLink"].ToString();
+            Uri nextLink = new(uriString: followUpResponseNextLink);
+            NameValueCollection parsedQueryParameters = HttpUtility.ParseQueryString(query: nextLink.Query);
+            Assert.AreEqual(expected: false, actual: parsedQueryParameters["$after"].Contains(','), message: "nextLink erroneously contained two $after query parameters that were joined by HttpUtility.ParseQueryString(queryString).");
+            Assert.AreNotEqual(notExpected: nextLinkUri, actual: followUpResponseNextLink, message: "The follow up request erroneously returned the same nextLink value.");
+
+            // Do not use SqlPaginationUtils.Base64Encode()/Decode() here to eliminate test dependency on engine code to perform an assert.
+            try
+            {
+                Convert.FromBase64String(parsedQueryParameters["$after"]);
+            }
+            catch (FormatException)
+            {
+                Assert.Fail(message: "$after query parameter was not a valid base64 encoded value.");
+            }
         }
 
         /// <summary>

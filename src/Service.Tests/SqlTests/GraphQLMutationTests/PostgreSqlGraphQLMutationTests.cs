@@ -113,6 +113,28 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         }
 
         /// <summary>
+        /// <code>Do: </code> Inserts new row in a table containing default values as built_in methods.
+        /// <code>Check: </code> Correctly inserts the row with columns having default values as built_in methods and returns the inserted row
+        /// as GraphQL response.
+        /// </summary>
+        [TestMethod]
+        public async Task InsertMutationWithDefaultBuiltInFunctions()
+        {
+            string postgresQuery = @"
+                SELECT to_jsonb(subq) AS DATA
+                FROM
+                  (SELECT *
+                   FROM default_with_function_table AS table0
+                   WHERE id = 5001
+                     AND user_value = 1234
+                   ORDER BY id asc
+                   LIMIT 1) AS subq
+            ";
+
+            await base.InsertMutationWithDefaultBuiltInFunctions(postgresQuery);
+        }
+
+        /// <summary>
         /// <code>Do: </code> Inserts new book using variables to set its title and publisher_id
         /// <code>Check: </code> If book with the expected values of the new book is present in the database and
         /// if the mutation query has returned the correct information

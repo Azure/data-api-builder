@@ -81,6 +81,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         ValidateAuthenticationOptions(runtimeConfig);
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
+        ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -120,21 +121,43 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
+    /// A connection string to send telemetry to Application Insights is required if telemetry is enabled.
+    /// </summary>
+    public void ValidateAppInsightsTelemetryConnectionString(RuntimeConfig runtimeConfig)
+    {
+        if (runtimeConfig.Runtime!.Telemetry is not null && runtimeConfig.Runtime.Telemetry.ApplicationInsights is not null)
+        {
+            ApplicationInsightsOptions applicationInsightsOptions = runtimeConfig.Runtime.Telemetry.ApplicationInsights;
+            if (applicationInsightsOptions.Enabled && string.IsNullOrWhiteSpace(applicationInsightsOptions.ConnectionString))
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: "Application Insights connection string cannot be null or empty if enabled.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+    }
+
+    /// <summary>
     /// This method runs several validations against the config file such as schema validation,
     /// validation of entities metadata, validation of permissions, validation of entity configuration.
     /// This method is called by the CLI when the user runs `validate` command with `isValidateOnly=true`.
     /// </summary>
     /// <param name="configFilePath">full/relative config file path with extension</param>
-    /// <param name="runtimeConfig">RuntimeConfig object</param>
     /// <param name="loggerFactory">Logger Factory</param>
-    /// <param name="isValidateOnly">true if run for validate only mode</param>
     /// <returns>true if no validation failures, else false.</returns>
     public async Task<bool> TryValidateConfig(
         string configFilePath,
-        RuntimeConfig runtimeConfig,
-        ILoggerFactory loggerFactory,
-        bool isValidateOnly = false)
+        ILoggerFactory loggerFactory)
     {
+        RuntimeConfig? runtimeConfig;
+
+        if (!_runtimeConfigProvider.TryGetConfig(out runtimeConfig))
+        {
+            _logger.LogInformation("Failed to parse the config file");
+            return false;
+        }
+
         JsonSchemaValidationResult validationResult = await ValidateConfigSchema(runtimeConfig, configFilePath, loggerFactory);
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);

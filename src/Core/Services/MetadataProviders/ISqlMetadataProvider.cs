@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 
 namespace Azure.DataApiBuilder.Core.Services
 {
@@ -53,6 +54,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Obtains the underlying GraphQL object type for an entity field.
         /// </summary>
         string? GetSchemaGraphQLFieldTypeFromFieldName(string entityName, string fieldName);
+
+        /// <summary>
+        /// Obtains the underlying GraphQL object for an entity field.
+        /// </summary>
+        FieldDefinitionNode? GetSchemaGraphQLFieldFromFieldName(string entityName, string fieldName);
 
         /// <summary>
         /// Obtains the underlying SourceDefinition for the given entity name.

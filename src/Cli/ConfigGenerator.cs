@@ -4,7 +4,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -89,7 +88,7 @@ namespace Cli
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
             string? runtimeBaseRoute = options.RuntimeBaseRoute;
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object?> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
 
@@ -148,14 +147,14 @@ namespace Cli
                     }
 
                     restPath = null;
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement(cosmosDatabase));
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(cosmosContainer));
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement(graphQLSchemaPath));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), cosmosDatabase);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), cosmosContainer);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), graphQLSchemaPath);
                     break;
 
                 case DatabaseType.DWSQL:
                 case DatabaseType.MSSQL:
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), JsonSerializer.SerializeToElement(options.SetSessionContext));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.SetSessionContext);
 
                     break;
                 case DatabaseType.MySQL:
@@ -1092,24 +1091,14 @@ namespace Cli
                 return false;
             }
 
-            // Validates that config file has data and it is properly deserialized
-            // Replaces all the environment variables while deserializing when starting DAB.
-            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
-            {
-                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
-                return false;
-            }
-            else
-            {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
-            }
+            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
-            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, LoggerFactoryForCli).Result;
+            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
         }
 
         /// <summary>
@@ -1316,6 +1305,54 @@ namespace Cli
             }
 
             return graphQLType with { Operation = graphQLOperation };
+        }
+
+        /// <summary>
+        /// This method will add the telemetry options to the config file. If the config file already has telemetry options,
+        /// it will overwrite the existing options.
+        /// Data API builder consumes the config file with provided telemetry options to send telemetry to Application Insights.
+        /// </summary>
+        public static bool TryAddTelemetry(AddTelemetryOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.Runtime is null)
+            {
+                _logger.LogError("Invalid or missing 'runtime' section in config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(options.AppInsightsConnString))
+            {
+                _logger.LogError("Invalid Application Insights connection string provided.");
+                return false;
+            }
+
+            ApplicationInsightsOptions applicationInsightsOptions = new(
+                Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
+                ConnectionString: options.AppInsightsConnString
+            );
+
+            runtimeConfig = runtimeConfig with
+            {
+                Runtime = runtimeConfig.Runtime with
+                {
+                    Telemetry = runtimeConfig.Runtime.Telemetry is null
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
+                }
+            };
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }
     }
 }

@@ -349,8 +349,30 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ValidateInferredFKInfoForTables();
         }
 
+        [TestMethod, TestCategory(TestCategory.MYSQL)]
+        public async Task ValidateInferredFKInfoForMySql()
+        {
+            DatabaseEngine = TestCategory.MYSQL;
+            await InferMetadata();
+            ValidateInferredFKInfoForTables();
+        }
+
+        [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
+        public async Task ValidateInferredFKInfoForPgSql()
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await InferMetadata();
+            ValidateInferredFKInfoForTables();
+        }
+
         private static void ValidateInferredFKInfoForTables()
         {
+            // Validate that when custom source.fields/target.fields are defined in the config for a relationship of cardinality *:1
+            // between Book - Stock but no FK constraint exists between them, we ÇANNOT successfully determine at the startup,
+            // which entity is the referencing entity and hence keep ourselves open to the possibility of either entity acting
+            // as the referencing entity. The actual referencing entity is determined during request execution.
+            ValidateReferencingEntityForFK("Book", "Stock", new List<string>() { "Book", "Stock" });
+
             // Validate that when custom source.fields/target.fields defined in the config for a relationship of cardinality N:1
             // between Review - Book is the same as the FK constraint from Review -> Book,
             // we successfully determine at the startup, that Review is the referencing entity.
@@ -367,17 +389,17 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ValidateReferencingEntityForFK("Stock", "stocks_price", new List<string>() { "stocks_price" });
 
             // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality N:1
-            // between Book - Publisher but an FK constraint exists from Book->Publisher, we successfully determine at the startup,
+            // between Book - Publisher and an FK constraint exists from Book->Publisher, we successfully determine at the startup,
             // that Book is the referencing entity.
             ValidateReferencingEntityForFK("Book", "Publisher", new List<string>() { "Book" });
 
             // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality 1:N
-            // between Publisher - Book but an FK constraint exists from Book->Publisher, we successfully determine at the startup,
+            // between Publisher - Book and an FK constraint exists from Book->Publisher, we successfully determine at the startup,
             // that Book is the referencing entity.
             ValidateReferencingEntityForFK("Publisher", "Book", new List<string>() { "Book" });
 
             // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality 1:1
-            // between Book - BookWebsitePlacement but an FK constraint exists from BookWebsitePlacement->Book,
+            // between Book - BookWebsitePlacement and an FK constraint exists from BookWebsitePlacement->Book,
             // we successfully determine at the startup, that BookWebsitePlacement is the referencing entity.
             ValidateReferencingEntityForFK("Book", "BookWebsitePlacement", new List<string>() { "BookWebsitePlacement" });
         }
@@ -390,6 +412,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DatabaseTable targetTable = (DatabaseTable)targetDbo;
             List<ForeignKeyDefinition> foreignKeys = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntity].TargetEntityToFkDefinitionMap[targetEntity];
             HashSet<DatabaseTable> expectedReferencingTables = new();
+            HashSet<DatabaseTable> actualReferencingTables = new();
             foreach (string referencingEntityName in list)
             {
                 DatabaseTable referencingTable = referencingEntityName.Equals(sourceEntity) ? sourceTable : targetTable;
@@ -398,9 +421,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             foreach (ForeignKeyDefinition foreignKey in foreignKeys)
             {
+                if (foreignKey.ReferencedColumns.Count == 0)
+                {
+                    continue;
+                }
+
                 DatabaseTable actualReferencingTable = foreignKey.Pair.ReferencingDbTable;
-                Assert.IsTrue(expectedReferencingTables.Contains(actualReferencingTable));
-            } 
+                actualReferencingTables.Add(actualReferencingTable);
+            }
+
+            Assert.IsTrue(actualReferencingTables.SetEquals(expectedReferencingTables));
         }
 
         private static async Task InferMetadata()

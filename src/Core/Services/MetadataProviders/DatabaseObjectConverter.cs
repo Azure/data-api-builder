@@ -6,6 +6,7 @@ using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
+// Json converter for DatabaseObject
 public class DatabaseObjectConverter : Newtonsoft.Json.JsonConverter
 {
     public override bool CanConvert(Type objectType)

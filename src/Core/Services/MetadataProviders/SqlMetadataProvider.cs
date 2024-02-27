@@ -283,13 +283,9 @@ namespace Azure.DataApiBuilder.Core.Services
                         return;
                     }
                 }
-
-                System.Diagnostics.Stopwatch timer = new();
-
-          
-                await PopulateObjectDefinitionForEntities();           
+        
+                await PopulateObjectDefinitionForEntities();        
                
-
                 GenerateExposedToBackingColumnMapsForEntities();
 
                 // When IsLateConfigured is true we are in a hosted scenario and do not reveal primary key information.
@@ -1109,16 +1105,7 @@ namespace Azure.DataApiBuilder.Core.Services
             SourceDefinition sourceDefinition,
             string[]? runtimeConfigKeyFields)
         {
-            System.Diagnostics.Stopwatch GetTableWithSchemaFromDataSetAsyncTimer = new();
-            System.Diagnostics.Stopwatch PopulateTriggerMetadataForTableTimer = new();
-            System.Diagnostics.Stopwatch GetColumnsAsyncTimer = new();
-            System.Diagnostics.Stopwatch PopulateColumnDefinitionWithHasDefaultAndDbTypeTimer = new();
-            System.Diagnostics.Stopwatch PopulateColumnDefinitionsWithReadOnlyFlagTimer = new();
-
-            GetTableWithSchemaFromDataSetAsyncTimer.Start();
             DataTable dataTable = await GetTableWithSchemaFromDataSetAsync(entityName, schemaName, tableName);
-            GetTableWithSchemaFromDataSetAsyncTimer.Stop();
-            System.Console.WriteLine(" **** GetTableWithSchemaFromDataSetAsyncTimer " + GetTableWithSchemaFromDataSetAsyncTimer.ElapsedMilliseconds);
 
             List<DataColumn> primaryKeys = new(dataTable.PrimaryKey);
             if (runtimeConfigKeyFields is null || runtimeConfigKeyFields.Length == 0)
@@ -1138,15 +1125,11 @@ namespace Azure.DataApiBuilder.Core.Services
                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            PopulateTriggerMetadataForTableTimer.Start();
             _entities.TryGetValue(entityName, out Entity? entity);
             if (GetDatabaseType() is DatabaseType.MSSQL && entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
                 await PopulateTriggerMetadataForTable(entityName, schemaName, tableName, sourceDefinition);
             }
-
-            PopulateTriggerMetadataForTableTimer.Stop();
-            System.Console.WriteLine(" **** PopulateTriggerMetadataForTableTimer " + PopulateTriggerMetadataForTableTimer.ElapsedMilliseconds);
 
             using DataTableReader reader = new(dataTable);
             DataTable schemaTable = reader.GetSchemaTable();
@@ -1182,28 +1165,18 @@ namespace Azure.DataApiBuilder.Core.Services
                 sourceDefinition.Columns.TryAdd(columnName, column);
             }
 
-            GetColumnsAsyncTimer.Start();
             DataTable columnsInTable = await GetColumnsAsync(schemaName, tableName);
-            GetColumnsAsyncTimer.Stop();
-            System.Console.WriteLine(" **** GetColumnsAsyncTimer " + GetColumnsAsyncTimer.ElapsedMilliseconds);
 
-            PopulateColumnDefinitionWithHasDefaultAndDbTypeTimer.Start();
             PopulateColumnDefinitionWithHasDefaultAndDbType(
                 sourceDefinition,
                 columnsInTable);
-            PopulateColumnDefinitionWithHasDefaultAndDbTypeTimer.Stop();
-            System.Console.WriteLine(" **** PopulateColumnDefinitionWithHasDefaultAndDbTypeTimer " + PopulateColumnDefinitionWithHasDefaultAndDbTypeTimer.ElapsedMilliseconds);
 
-            PopulateColumnDefinitionsWithReadOnlyFlagTimer.Start();
             if (entity is not null && entity.Source.Type is EntitySourceType.Table)
             {
                 // For MySql, database name is equivalent to schema name.
                 string schemaOrDatabaseName = GetDatabaseType() is DatabaseType.MySQL ? GetDatabaseName() : schemaName;
                 await PopulateColumnDefinitionsWithReadOnlyFlag(tableName, schemaOrDatabaseName, sourceDefinition);
             }
-
-            PopulateColumnDefinitionsWithReadOnlyFlagTimer.Stop();       
-            System.Console.WriteLine(" **** PopulateColumnDefinitionsWithReadOnlyFlagTimer " + PopulateColumnDefinitionsWithReadOnlyFlagTimer.ElapsedMilliseconds);
         }
 
         /// <summary>
@@ -1215,15 +1188,10 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="sourceDefinition">Table definition.</param>
         private async Task PopulateColumnDefinitionsWithReadOnlyFlag(string tableName, string schemaOrDatabaseName, SourceDefinition sourceDefinition)
         {
-            Stopwatch timer1 = new();
-            timer1.Start();
             string schemaOrDatabaseParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param0";
             string tableParamName = $"{BaseQueryStructure.PARAM_NAME_PREFIX}param1";
             string queryToGetReadOnlyColumns = SqlQueryBuilder.BuildQueryToGetReadOnlyColumns(schemaOrDatabaseParamName, tableParamName);
-            timer1.Stop();
 
-            Stopwatch timer2 = new();
-            timer2.Start();
             Dictionary<string, DbConnectionParam> parameters = new()
             {
                 { schemaOrDatabaseParamName, new(schemaOrDatabaseName, DbType.String) },
@@ -1234,10 +1202,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 sqltext: queryToGetReadOnlyColumns,
                 parameters: parameters,
                 dataReaderHandler: SummarizeReadOnlyFieldsMetadata);
-            timer2.Stop();
 
-            Stopwatch timer3 = new();
-            timer3.Start();
             if (readOnlyFields is not null && readOnlyFields.Count > 0)
             {
                 foreach (string readOnlyField in readOnlyFields)
@@ -1249,13 +1214,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
                 }
             }
-
-            timer3.Stop();
-
-            System.Console.WriteLine(" **** timer1 " + timer1.ElapsedMilliseconds);
-            System.Console.WriteLine(" **** timer2 " + timer2.ElapsedMilliseconds);
-            System.Console.WriteLine(" **** timer3 " + timer3.ElapsedMilliseconds);
-
         }
 
         /// <summary>
@@ -1378,12 +1336,6 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            System.Console.WriteLine(" **** FillSchemaForTableAsync ");
-
-            System.Diagnostics.Stopwatch timer1 = new();
-            System.Diagnostics.Stopwatch timer2 = new ();
-
-            timer1.Start();
             using ConnectionT conn = new();
             // If connection string is set to empty string
             // we throw here to avoid having to sort out
@@ -1421,9 +1373,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
             await conn.OpenAsync();
 
-            timer1.Stop();
-            timer2.Start();
-
             DataAdapterT adapterForTable = new();
             CommandT selectCommand = new()
             {
@@ -1437,11 +1386,6 @@ namespace Azure.DataApiBuilder.Core.Services
             adapterForTable.SelectCommand = selectCommand;
 
             DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
-            timer2.Stop();
-
-            System.Console.WriteLine(" **** FillSchemaForTableAsync connection " + timer1.ElapsedMilliseconds);
-            System.Console.WriteLine( "**** FillSchemaForTableAsync query " + timer2.ElapsedMilliseconds);
-
             return dataTable[0];
         }
 

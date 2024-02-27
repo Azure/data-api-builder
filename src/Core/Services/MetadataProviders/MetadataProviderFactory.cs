@@ -65,6 +65,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     await provider.InitializeAsync();
 
+                    // How will the changes on GraphQL workload look like ? 
+
                     // Following code is just POC specific, this wont be part of final implementation in DAB
                     // this is just for me to test directly on DAB (as I cannot test in GraphQL repo without new DAB package support)
 
@@ -85,6 +87,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                         Converters = { new DatabaseObjectConverter() },
                     })!;
 
+                    // GraphQL Workload will call this new initialise method
                     provider.InitializeAsync(deserializedDictionary);
                 }
             }

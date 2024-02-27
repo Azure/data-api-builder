@@ -1050,7 +1050,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// This is for testing the scenario when the filter field is authorized, but the query field is unauthorized.
         /// For "type" field in "Earth" GraphQL type, it has @authorize(policy: "authenticated") directive in the test schema,
-        /// but in the runtime config, this field is marked as included field for read operation with anonymous role,
+        /// but in the runtime config, this field is marked as included field for read operation with "limited-read-role" role,
         /// this should return unauthorized.
         /// </summary>
         [TestMethod]
@@ -1083,7 +1083,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         /// <summary>
         /// Tests that the field level query filter succeeds requests
-        /// when GraphQL i  s set to true without setting singular type in runtime config and
+        /// when GraphQL is set to true without setting singular type in runtime config and
         /// when include fields are WILDCARD,
         /// all the columns are able to be retrieved for authorization validation.
         /// </summary>

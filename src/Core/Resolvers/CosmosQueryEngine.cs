@@ -128,7 +128,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="idValue">Id param</param>
         /// <param name="partitionKeyValue">PartitionKey Value</param>
         /// <returns>JObject</returns>
-        private static async Task<JObject> ExecuteQueryAsync(CosmosQueryStructure structure, QueryDefinition querySpec, QueryRequestOptions queryRequestOptions, Container container, string idValue, string partitionKeyValue)
+        private static async Task<JObject> ExecuteQueryAsync(
+            CosmosQueryStructure structure,
+            QueryDefinition querySpec,
+            QueryRequestOptions queryRequestOptions,
+            Container container,
+            string idValue,
+            string partitionKeyValue)
         {
             string requestContinuation = null;
             if (structure.IsPaginated)

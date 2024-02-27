@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -338,6 +339,79 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 expected: false,
                 actual: isViolationWithGraphQLGloballyDisabled,
                 message: "Unexpected failure. fieldName: " + dbColumnName + " | fieldMapping:" + mappedName);
+        }
+
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateInferredFKInfoForMsSql()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await InferMetadata();
+            ValidateInferredFKInfoForTables();
+        }
+
+        private static void ValidateInferredFKInfoForTables()
+        {
+            // Validate that when custom source.fields/target.fields defined in the config for a relationship of cardinality N:1
+            // between Review - Book is the same as the FK constraint from Review -> Book,
+            // we successfully determine at the startup, that Review is the referencing entity.
+            ValidateReferencingEntityForFK("Review", "Book", new List<string>() { "Review" });
+
+            // Validate that when custom source.fields/target.fields defined in the config for a relationship of cardinality 1:N
+            // between Book - Review is the same as the FK constraint from Review -> Book,
+            // we successfully determine at the startup, that Review is the referencing entity.
+            ValidateReferencingEntityForFK("Book", "Review", new List<string>() { "Review" });
+
+            // Validate that when custom source.fields/target.fields defined in the config for a relationship of cardinality 1:1
+            // between Stock - stocks_price is the same as the FK constraint from stocks_price -> Stock,
+            // we successfully determine at the startup, that stocks_price is the referencing entity.
+            ValidateReferencingEntityForFK("Stock", "stocks_price", new List<string>() { "stocks_price" });
+
+            // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality N:1
+            // between Book - Publisher but an FK constraint exists from Book->Publisher, we successfully determine at the startup,
+            // that Book is the referencing entity.
+            ValidateReferencingEntityForFK("Book", "Publisher", new List<string>() { "Book" });
+
+            // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality 1:N
+            // between Publisher - Book but an FK constraint exists from Book->Publisher, we successfully determine at the startup,
+            // that Book is the referencing entity.
+            ValidateReferencingEntityForFK("Publisher", "Book", new List<string>() { "Book" });
+
+            // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality 1:1
+            // between Book - BookWebsitePlacement but an FK constraint exists from BookWebsitePlacement->Book,
+            // we successfully determine at the startup, that BookWebsitePlacement is the referencing entity.
+            ValidateReferencingEntityForFK("Book", "BookWebsitePlacement", new List<string>() { "BookWebsitePlacement" });
+        }
+
+        private static void ValidateReferencingEntityForFK(string sourceEntity, string targetEntity, List<string> list)
+        {
+            _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntity, out DatabaseObject sourceDbo);
+            _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntity, out DatabaseObject targetDbo);
+            DatabaseTable sourceTable = (DatabaseTable)sourceDbo;
+            DatabaseTable targetTable = (DatabaseTable)targetDbo;
+            List<ForeignKeyDefinition> foreignKeys = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntity].TargetEntityToFkDefinitionMap[targetEntity];
+            HashSet<DatabaseTable> expectedReferencingTables = new();
+            foreach (string referencingEntityName in list)
+            {
+                DatabaseTable referencingTable = referencingEntityName.Equals(sourceEntity) ? sourceTable : targetTable;
+                expectedReferencingTables.Add(referencingTable);
+            }
+
+            foreach (ForeignKeyDefinition foreignKey in foreignKeys)
+            {
+                DatabaseTable actualReferencingTable = foreignKey.Pair.ReferencingDbTable;
+                Assert.IsTrue(expectedReferencingTables.Contains(actualReferencingTable));
+            } 
+        }
+
+        private static async Task InferMetadata()
+        {
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            SqlTestHelper.RemoveAllRelationshipBetweenEntities(runtimeConfig);
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+            await ResetDbStateAsync();
+            await _sqlMetadataProvider.InitializeAsync();
         }
     }
 }

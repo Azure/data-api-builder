@@ -109,7 +109,7 @@
     },
     "Character": {
       "source": {
-        "object": "graphqldb.character"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,
@@ -143,7 +143,7 @@
     },
     "StarAlias": {
       "source": {
-        "object": "graphqldb.star"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,
@@ -194,7 +194,7 @@
     },
     "TagAlias": {
       "source": {
-        "object": "graphqldb.tag"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,
@@ -228,7 +228,7 @@
     },
     "Moon": {
       "source": {
-        "object": "graphqldb.moon"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,
@@ -487,7 +487,7 @@
     },
     "AdditionalAttribute": {
       "source": {
-        "object": "graphqldb.additionalAttribute"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,
@@ -540,7 +540,7 @@
     },
     "MoonAdditionalAttribute": {
       "source": {
-        "object": "graphqldb.moonAdditionalAttributes"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,
@@ -565,7 +565,7 @@
     },
     "MoreAttrAlias": {
       "source": {
-        "object": "graphqldb.moreAttribute"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,

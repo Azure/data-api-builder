@@ -22,7 +22,7 @@ public abstract class RuntimeConfigLoader
 {
     protected readonly string? _connectionString;
 
-    public RuntimeConfig? RuntimeConfig { get; set; }
+    public RuntimeConfig? RuntimeConfig;
 
     public RuntimeConfigLoader(string? connectionString = null)
     {

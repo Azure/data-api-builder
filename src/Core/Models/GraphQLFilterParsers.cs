@@ -4,7 +4,6 @@
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
-using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
@@ -16,7 +15,6 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-using Polly;
 using static Azure.DataApiBuilder.Core.Authorization.AuthorizationResolver;
 using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
@@ -227,17 +225,6 @@ public class GQLFilterParser
                             cosmosQueryStructure.SourceAlias = sourceName + "." + backingColumnName;
                             cosmosQueryStructure.EntityName = metadataProvider.GetEntityName(nestedFieldTypeName);
 
-                            HttpContext httpContext = GetHttpContextFromMiddlewareContext(ctx);
-                            if (httpContext is not null)
-                            {
-                                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                                    EntityActionOperation.Read,
-                                    cosmosQueryStructure,
-                                    httpContext,
-                                    cosmosQueryStructure.AuthorizationResolver,
-                                    metadataProvider);
-                            }
-
                             predicates.Push(new PredicateOperand(Parse(ctx,
                                 filterArgumentObject.Fields[name],
                                 subfields,
@@ -341,18 +328,6 @@ public class GQLFilterParser
         comosQueryStructure.SourceAlias = tableAlias;
         comosQueryStructure.EntityName = entityName;
 
-        HttpContext httpContext = GetHttpContextFromMiddlewareContext(ctx);
-        if (httpContext is not null)
-        {
-            AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                EntityActionOperation.Read,
-                comosQueryStructure,
-                httpContext,
-                comosQueryStructure.AuthorizationResolver,
-                metadataProvider);
-        }
-
-        queryStructure.DbPolicyPredicatesForOperations = comosQueryStructure.DbPolicyPredicatesForOperations;
         PredicateOperand joinpredicate = new(
             Parse(
                 ctx: ctx,

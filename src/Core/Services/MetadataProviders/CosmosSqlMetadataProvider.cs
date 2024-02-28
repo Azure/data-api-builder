@@ -162,21 +162,18 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// </summary>
         private void GenerateDatabaseObjectForEntities()
         {
-            Dictionary<string, DatabaseObject> sourceObjects = new();
-            foreach ((string entityName, Entity entity) in _entities)
+            foreach ((string entityName, Entity _) in _entities)
             {
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
                     // Reuse the same Database object for multiple entities if they share the same source.
-                    if (!sourceObjects.TryGetValue(entity.Source.Object, out DatabaseObject? sourceObject))
+
+                    DatabaseTable sourceObject = new ()
                     {
-                        sourceObject = new DatabaseTable()
-                        {
-                            Name = entityName,
-                            TableDefinition = new()
-                        };
-                        sourceObjects.Add(entity.Source.Object, sourceObject);
-                    }
+                        SchemaName = entityName,
+                        Name = entityName,
+                        TableDefinition = new()
+                    };
 
                     EntityToDatabaseObject.Add(entityName, sourceObject);
                 }

@@ -279,7 +279,7 @@
     },
     "Earth": {
       "source": {
-        "object": "graphqldb.earth"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,
@@ -445,7 +445,7 @@
     },
     "Sun": {
       "source": {
-        "object": "graphqldb.sun"
+        "object": "graphqldb.planet"
       },
       "graphql": {
         "enabled": true,

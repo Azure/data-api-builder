@@ -1,17 +1,19 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Runtime.InteropServices;
+using System.Net;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Microsoft.IdentityModel.Tokens;
 using Microsoft.OData.UriParser;
+using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -34,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
         public static void ProcessAuthorizationPolicies(
             EntityActionOperation operationType,
-            BaseQueryStructure queryStructure,
+            BaseSqlQueryStructure queryStructure,
             HttpContext context,
             IAuthorizationResolver authorizationResolver,
             ISqlMetadataProvider sqlMetadataProvider)
@@ -63,19 +65,55 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
-                string? resourcePath = null;
-                if(queryStructure is not CosmosQueryStructure)
-                {
-                    resourcePath = queryStructure.DatabaseObject.FullName;
-                }
-
                 FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
                     dbQueryPolicy,
                     entityName: queryStructure.EntityName,
-                    alias: queryStructure.SourceAlias,
-                    resourcePath: resourcePath,
+                    resourcePath: queryStructure.DatabaseObject.FullName,
                     sqlMetadataProvider);
                 queryStructure.ProcessOdataClause(filterClause, elementalOperation);
+            }
+        }
+
+        public static void ProcessAuthorizationPolicies(
+          EntityActionOperation operationType,
+          HttpContext context,
+          IAuthorizationResolver authorizationResolver,
+          ISqlMetadataProvider sqlMetadataProvider,
+          CosmosQueryStructure queryStructure)
+        {
+            if (!context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeaderValue))
+            {
+                throw new DataApiBuilderException(
+                    message: "No ClientRoleHeader found in request context.",
+                    statusCode: System.Net.HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            foreach ((string entityName, DatabaseObject dbObject) in sqlMetadataProvider.GetEntityNamesAndDbObjects())
+            {
+                string clientRoleHeader = roleHeaderValue.ToString();
+                List<EntityActionOperation> elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
+
+                foreach (EntityActionOperation elementalOperation in elementalOperations)
+                {
+                    string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
+                        entityName,
+                        clientRoleHeader,
+                        elementalOperation,
+                        context);
+
+                    if (string.IsNullOrEmpty(dbQueryPolicy))
+                    {
+                        continue;
+                    }
+
+                    FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
+                        dbQueryPolicy,
+                        entityName: entityName,
+                        resourcePath: null,
+                        sqlMetadataProvider);
+                    ProcessOdataClause(entityName, sqlMetadataProvider, filterClause, elementalOperation, dbObject, queryStructure);
+                }
             }
         }
 
@@ -89,7 +127,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public static FilterClause? GetDBPolicyClauseForQueryStructure(
             string dbPolicyClause,
             string entityName,
-            string alias,
             string? resourcePath,
             ISqlMetadataProvider sqlMetadataProvider)
         {
@@ -132,6 +169,56 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     new List<EntityActionOperation> { EntityActionOperation.Update, EntityActionOperation.Create },
                 _ => new List<EntityActionOperation> { operation },
             };
+        }
+
+        /// <summary>
+        /// After SqlQueryStructure is instantiated, process a database authorization policy
+        /// for GraphQL requests with the ODataASTVisitor to populate DbPolicyPredicates.
+        /// Processing will also occur for GraphQL sub-queries.
+        /// </summary>
+        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
+        /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
+        public static void ProcessOdataClause(string entityName,
+            ISqlMetadataProvider sqlMetadataProvider,
+            FilterClause? dbPolicyClause,
+            EntityActionOperation operation,
+            DatabaseObject dbObject,
+            CosmosQueryStructure cosmosQueryStructure)
+        {
+            Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations = new();
+            if (dbPolicyClause is null)
+            {
+                DbPolicyPredicatesForOperations[operation] = null;
+                return;
+            }
+
+            ODataASTVisitorForCosmos visitor = new(entityName, dbObject.SchemaName, sqlMetadataProvider, cosmosQueryStructure.Counter);
+            try
+            {
+                DbPolicyPredicatesForOperations[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
+
+                Stack<CosmosJoinStructure> joins = cosmosQueryStructure.Joins?? new();
+                joins?.Push(new CosmosJoinStructure(
+                                        DbObject: dbObject,
+                                        TableAlias: entityName));
+
+                cosmosQueryStructure.Joins = joins;
+                cosmosQueryStructure.DbPolicyPredicatesForOperations = DbPolicyPredicatesForOperations;
+            }
+            catch (Exception ex)
+            {
+                throw new DataApiBuilderException(
+                    message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                    innerException: ex);
+            }
+        }
+
+        private static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitorForCosmos visitor)
+        {
+            return filterClause.Expression.Accept<string>(visitor);
         }
     }
 }

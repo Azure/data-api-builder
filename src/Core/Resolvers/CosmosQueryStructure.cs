@@ -31,6 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
+
         // Order of the join matters
         public Stack<CosmosJoinStructure>? Joins { get; internal set; }
 
@@ -196,17 +197,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(_context);
-                if (httpContext is not null)
-                {
-                    AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
-                        EntityActionOperation.Read,
-                        this,
-                        httpContext,
-                        AuthorizationResolver,
-                        MetadataProvider);
-                }
-
                 foreach (KeyValuePair<string, object?> parameter in queryParams)
                 {
                     Predicates.Add(new Predicate(
@@ -253,5 +243,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return orderByColumnsList;
         }
+
     }
 }

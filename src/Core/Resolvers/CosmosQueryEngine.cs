@@ -2,15 +2,19 @@
 // Licensed under the MIT License.
 
 # nullable disable
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
@@ -42,6 +46,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _queryBuilder = new CosmosQueryBuilder();
             _gQLFilterParser = gQLFilterParser;
             _authorizationResolver = authorizationResolver;
+
         }
 
         /// <summary>
@@ -60,6 +65,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+
+            // Add Item level policies defined in config for all related entities in query structure, it doesn't matter if that entity was part of the query or not.
+            HttpContext httpContext = GetHttpContextFromMiddlewareContext(context);
+            if (httpContext is not null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    EntityActionOperation.Read,
+                    httpContext,
+                    _authorizationResolver,
+                    metadataStoreProvider,
+                    structure);
+            }
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
@@ -384,5 +401,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             byte[] base64EncodedBytes = Convert.FromBase64String(base64EncodedData);
             return Encoding.UTF8.GetString(base64EncodedBytes);
         }
+
+        /// <summary>
+        /// Helper method to get the HttpContext from the MiddlewareContext.
+        /// </summary>
+        /// <param name="ctx">Middleware context for the object.</param>
+        /// <returns>HttpContext</returns>
+        /// <exception cref="DataApiBuilderException">throws exception when http context could not be found.</exception>
+        private static HttpContext GetHttpContextFromMiddlewareContext(IMiddlewareContext ctx)
+        {
+            // Get HttpContext from IMiddlewareContext and fail if resolved value is null.
+            if (!ctx.ContextData.TryGetValue(nameof(HttpContext), out object? httpContextValue))
+            {
+                throw new DataApiBuilderException(
+                    message: "No HttpContext found in GraphQL Middleware Context.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            return (HttpContext)httpContextValue!;
+        }
+
     }
 }

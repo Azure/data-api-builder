@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config;
+
 namespace Azure.DataApiBuilder.Core.Configurations;
 
 public class ConfigFileWatcher
@@ -38,7 +40,7 @@ public class ConfigFileWatcher
 
             if (!_configProvider.IsLateConfigured && _configProvider.GetConfig().IsDevelopmentMode())
             {
-                _configProvider.HotReloadConfig();
+                _configProvider.HotReloadConfig(_configProvider.GetConfig().DefaultDataSourceName);
             }
         }
         catch (Exception ex)

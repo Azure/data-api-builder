@@ -859,7 +859,7 @@
         "customRelationshipWithStock": {
           "cardinality": "one",
           "target.entity": "Stock",
-          "source.fields": [ "name" ],
+          "source.fields": [ "title" ],
           "target.fields": [ "categoryName" ]
         }
       }

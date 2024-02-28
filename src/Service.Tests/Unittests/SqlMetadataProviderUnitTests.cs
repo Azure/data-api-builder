@@ -341,81 +341,108 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 message: "Unexpected failure. fieldName: " + dbColumnName + " | fieldMapping:" + mappedName);
         }
 
+        /// <summary>
+        /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
+        /// collected from the MsSql database.
+        /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public async Task ValidateInferredFKInfoForMsSql()
+        public async Task ValidateInferredRelationshipInfoForMsSql()
         {
             DatabaseEngine = TestCategory.MSSQL;
             await InferMetadata();
-            ValidateInferredFKInfoForTables();
+            ValidateInferredRelationshipInfoForTables();
         }
 
+        /// <summary>
+        /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
+        /// collected from the MySql database.
+        /// </summary>
         [TestMethod, TestCategory(TestCategory.MYSQL)]
-        public async Task ValidateInferredFKInfoForMySql()
+        public async Task ValidateInferredRelationshipInfoForMySql()
         {
             DatabaseEngine = TestCategory.MYSQL;
             await InferMetadata();
-            ValidateInferredFKInfoForTables();
+            ValidateInferredRelationshipInfoForTables();
         }
 
+        /// <summary>
+        /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
+        /// collected from the PgSql database.
+        /// </summary>
         [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
-        public async Task ValidateInferredFKInfoForPgSql()
+        public async Task ValidateInferredRelationshipInfoForPgSql()
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
             await InferMetadata();
-            ValidateInferredFKInfoForTables();
+            ValidateInferredRelationshipInfoForTables();
         }
 
-        private static void ValidateInferredFKInfoForTables()
+        /// <summary>
+        /// Helper method for tests which validate that the relationship data is correctly inferred based on the info provided
+        /// in the config and the metadata collected from the database. It runs the test against various test cases verifying that
+        /// when a relationship is defined in the config between source and target entity and:
+        ///
+        /// a) An FK constraint exists in the database between the two entities: We successfully determine which is the referencing
+        /// entity based on the FK constraint. If custom source.fields/target.fields are provided, preference is given to those fields.
+        ///
+        /// b) No FK constraint exists in the database between the two entities: We ÇANNOT determine which entity is the referencing
+        /// entity and hence we keep ourselves open to the possibility of either entity acting as the referencing entity.
+        /// The actual referencing entity is determined during request execution.
+        /// </summary>
+        private static void ValidateInferredRelationshipInfoForTables()
         {
             // Validate that when custom source.fields/target.fields are defined in the config for a relationship of cardinality *:1
             // between Book - Stock but no FK constraint exists between them, we ÇANNOT successfully determine at the startup,
             // which entity is the referencing entity and hence keep ourselves open to the possibility of either entity acting
             // as the referencing entity. The actual referencing entity is determined during request execution.
-            ValidateReferencingEntityForFK("Book", "Stock", new List<string>() { "Book", "Stock" });
+            ValidateReferencingEntitiesForRelationship("Book", "Stock", new List<string>() { "Book", "Stock" });
 
             // Validate that when custom source.fields/target.fields defined in the config for a relationship of cardinality N:1
             // between Review - Book is the same as the FK constraint from Review -> Book,
             // we successfully determine at the startup, that Review is the referencing entity.
-            ValidateReferencingEntityForFK("Review", "Book", new List<string>() { "Review" });
+            ValidateReferencingEntitiesForRelationship("Review", "Book", new List<string>() { "Review" });
 
             // Validate that when custom source.fields/target.fields defined in the config for a relationship of cardinality 1:N
             // between Book - Review is the same as the FK constraint from Review -> Book,
             // we successfully determine at the startup, that Review is the referencing entity.
-            ValidateReferencingEntityForFK("Book", "Review", new List<string>() { "Review" });
+            ValidateReferencingEntitiesForRelationship("Book", "Review", new List<string>() { "Review" });
 
             // Validate that when custom source.fields/target.fields defined in the config for a relationship of cardinality 1:1
             // between Stock - stocks_price is the same as the FK constraint from stocks_price -> Stock,
             // we successfully determine at the startup, that stocks_price is the referencing entity.
-            ValidateReferencingEntityForFK("Stock", "stocks_price", new List<string>() { "stocks_price" });
+            ValidateReferencingEntitiesForRelationship("Stock", "stocks_price", new List<string>() { "stocks_price" });
 
             // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality N:1
             // between Book - Publisher and an FK constraint exists from Book->Publisher, we successfully determine at the startup,
             // that Book is the referencing entity.
-            ValidateReferencingEntityForFK("Book", "Publisher", new List<string>() { "Book" });
+            ValidateReferencingEntitiesForRelationship("Book", "Publisher", new List<string>() { "Book" });
 
             // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality 1:N
             // between Publisher - Book and an FK constraint exists from Book->Publisher, we successfully determine at the startup,
             // that Book is the referencing entity.
-            ValidateReferencingEntityForFK("Publisher", "Book", new List<string>() { "Book" });
+            ValidateReferencingEntitiesForRelationship("Publisher", "Book", new List<string>() { "Book" });
 
             // Validate that when no custom source.fields/target.fields are defined in the config for a relationship of cardinality 1:1
             // between Book - BookWebsitePlacement and an FK constraint exists from BookWebsitePlacement->Book,
             // we successfully determine at the startup, that BookWebsitePlacement is the referencing entity.
-            ValidateReferencingEntityForFK("Book", "BookWebsitePlacement", new List<string>() { "BookWebsitePlacement" });
+            ValidateReferencingEntitiesForRelationship("Book", "BookWebsitePlacement", new List<string>() { "BookWebsitePlacement" });
         }
 
-        private static void ValidateReferencingEntityForFK(string sourceEntity, string targetEntity, List<string> list)
+        private static void ValidateReferencingEntitiesForRelationship(
+            string sourceEntityName,
+            string targetEntityName,
+            List<string> referencingEntityNames)
         {
-            _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntity, out DatabaseObject sourceDbo);
-            _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntity, out DatabaseObject targetDbo);
+            _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject sourceDbo);
+            _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject targetDbo);
             DatabaseTable sourceTable = (DatabaseTable)sourceDbo;
             DatabaseTable targetTable = (DatabaseTable)targetDbo;
-            List<ForeignKeyDefinition> foreignKeys = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntity].TargetEntityToFkDefinitionMap[targetEntity];
+            List<ForeignKeyDefinition> foreignKeys = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
             HashSet<DatabaseTable> expectedReferencingTables = new();
             HashSet<DatabaseTable> actualReferencingTables = new();
-            foreach (string referencingEntityName in list)
+            foreach (string referencingEntityName in referencingEntityNames)
             {
-                DatabaseTable referencingTable = referencingEntityName.Equals(sourceEntity) ? sourceTable : targetTable;
+                DatabaseTable referencingTable = referencingEntityName.Equals(sourceEntityName) ? sourceTable : targetTable;
                 expectedReferencingTables.Add(referencingTable);
             }
 

@@ -13,7 +13,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Directives
         {
             descriptor
                 .Name(DirectiveName)
-                .Description("Indicates that a field is a referencing field to some referenced field in another table.")
+                .Description("When present on a field in a database table, indicates that the field is a referencing field " +
+                "to some field in the same/another database table.")
                 .Location(DirectiveLocation.FieldDefinition);
         }
     }

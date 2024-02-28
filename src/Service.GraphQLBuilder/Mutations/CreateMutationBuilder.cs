@@ -50,11 +50,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             // The input fields for a create object will be a combination of:
             // 1. Scalar input fields corresponding to columns which belong to the table.
-            // 2. Complex input fields corresponding to tables having a relationship defined with this table in the config.
+            // 2. 2. Complex input fields corresponding to related (target) entities (table backed entities, for now)
+            // which are defined in the runtime config.
             List<InputValueDefinitionNode> inputFields = new();
 
             // 1. Scalar input fields.
-            IEnumerable<InputValueDefinitionNode> simpleInputFields = objectTypeDefinitionNode.Fields
+            IEnumerable<InputValueDefinitionNode> scalarInputFields = objectTypeDefinitionNode.Fields
                 .Where(f => IsBuiltInType(f.Type))
                 .Where(f => IsBuiltInTypeFieldAllowedForCreateInput(f, databaseType))
                 .Select(f =>
@@ -62,10 +63,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     return GenerateScalarInputType(name, f, databaseType);
                 });
 
-            // Add simple input fields to list of input fields for current input type.
-            foreach (InputValueDefinitionNode simpleInputField in simpleInputFields)
+            // Add scalar input fields to list of input fields for current input type.
+            foreach (InputValueDefinitionNode scalarInputField in scalarInputFields)
             {
-                inputFields.Add(simpleInputField);
+                inputFields.Add(scalarInputField);
             }
 
             // Create input object for this entity.
@@ -85,40 +86,57 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // we find that the input object has already been created for the entity.
             inputs.Add(input.Name, input);
 
-            // 2. Complex input fields.
-            // Evaluate input objects for related entities.
-            IEnumerable<InputValueDefinitionNode> complexInputFields =
-                objectTypeDefinitionNode.Fields
-                .Where(field => !IsBuiltInType(field.Type))
-                .Where(field => IsComplexFieldAllowedForCreateInput(field, databaseType, definitions))
-                .Select(field =>
-                {
-                    string typeName = RelationshipDirectiveType.Target(field);
-                    HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value.Equals(typeName));
-
-                    if (def is null)
+            // Generate fields for related entities only if nested mutations are supported for the database flavor.
+            if(DoesRelationalDBSupportNestedInsertions(databaseType))
+            {
+                // 2. Complex input fields.
+                // Evaluate input objects for related entities.
+                IEnumerable<InputValueDefinitionNode> complexInputFields =
+                    objectTypeDefinitionNode.Fields
+                    .Where(field => !IsBuiltInType(field.Type))
+                    .Where(field => IsComplexFieldAllowedForCreateInput(field, databaseType, definitions))
+                    .Select(field =>
                     {
-                        throw new DataApiBuilderException(
-                            message: $"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
+                        string typeName = RelationshipDirectiveType.Target(field);
+                        HotChocolate.Language.IHasName? def = definitions.FirstOrDefault(d => d.Name.Value.Equals(typeName));
 
-                    if (!entities.TryGetValue(entityName, out Entity? entity) || entity.Relationships is null)
-                    {
-                        throw new DataApiBuilderException(
-                            message: $"Could not find entity metadata for entity: {entityName}.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
+                        if (def is null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"The type {typeName} is not a known GraphQL type, and cannot be used in this schema.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
 
-                    string targetEntityName = entity.Relationships[field.Name.Value].TargetEntity;
-                    if (DoesRelationalDBSupportNestedMutations(databaseType) && IsMToNRelationship(entity, field.Name.Value))
-                    {
-                        // The field can represent a related entity with M:N relationship with the parent.
-                        NameNode baseObjectTypeNameForField = new(typeName);
-                        typeName = GenerateLinkingNodeName(baseEntityName.Value, typeName);
-                        def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value.Equals(typeName))!;
+                        if (!entities.TryGetValue(entityName, out Entity? entity) || entity.Relationships is null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Could not find entity metadata for entity: {entityName}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
+
+                        string targetEntityName = entity.Relationships[field.Name.Value].TargetEntity;
+                        if (DoesRelationalDBSupportNestedInsertions(databaseType) && IsMToNRelationship(entity, field.Name.Value))
+                        {
+                            // The field can represent a related entity with M:N relationship with the parent.
+                            NameNode baseObjectTypeNameForField = new(typeName);
+                            typeName = GenerateLinkingNodeName(baseEntityName.Value, typeName);
+                            def = (ObjectTypeDefinitionNode)definitions.FirstOrDefault(d => d.Name.Value.Equals(typeName))!;
+
+                            // Get entity definition for this ObjectTypeDefinitionNode.
+                            // Recurse for evaluating input objects for related entities.
+                            return GetComplexInputType(
+                                entityName: targetEntityName,
+                                inputs: inputs,
+                                definitions: definitions,
+                                field: field,
+                                typeName: typeName,
+                                baseObjectTypeName: baseObjectTypeNameForField,
+                                childObjectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
+                                databaseType: databaseType,
+                                entities: entities);
+                        }
 
                         // Get entity definition for this ObjectTypeDefinitionNode.
                         // Recurse for evaluating input objects for related entities.
@@ -128,27 +146,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             definitions: definitions,
                             field: field,
                             typeName: typeName,
-                            baseObjectTypeName: baseObjectTypeNameForField,
+                            baseObjectTypeName: new(typeName),
                             childObjectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
                             databaseType: databaseType,
                             entities: entities);
-                    }
+                    });
+                // Append relationship fields to the input fields.
+                inputFields.AddRange(complexInputFields);
+            }
 
-                    // Get entity definition for this ObjectTypeDefinitionNode.
-                    // Recurse for evaluating input objects for related entities.
-                    return GetComplexInputType(
-                        entityName: targetEntityName,
-                        inputs: inputs,
-                        definitions: definitions,
-                        field: field,
-                        typeName: typeName,
-                        baseObjectTypeName: new(typeName),
-                        childObjectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
-                        databaseType: databaseType,
-                        entities: entities);
-                });
-            // Append relationship fields to the input fields.
-            inputFields.AddRange(complexInputFields);
             return input;
         }
 
@@ -164,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
                 // Support for inserting nested entities with relationship cardinalities of 1-N or N-N is only supported for MsSql.
-                return DoesRelationalDBSupportNestedMutations(databaseType);
+                return DoesRelationalDBSupportNestedInsertions(databaseType);
             }
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
@@ -172,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // For cosmos, allow updating nested objects
             if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)
             {
-                return DoesRelationalDBSupportNestedMutations(databaseType);
+                return DoesRelationalDBSupportNestedInsertions(databaseType);
             }
 
             return true;
@@ -226,7 +232,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinition.Name,
                 new StringValueNode($"Input for field {fieldDefinition.Name} on type {GenerateInputTypeName(name.Value)}"),
                 defaultValue is not null ||
-                (DoesRelationalDBSupportNestedMutations(databaseType) && DoesFieldHaveReferencingFieldDirective(fieldDefinition)) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
+                (DoesRelationalDBSupportNestedInsertions(databaseType) && DoesFieldHaveReferencingFieldDirective(fieldDefinition)) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
                 defaultValue,
                 new List<DirectiveNode>()
             );
@@ -275,7 +281,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-            if (DoesRelationalDBSupportNestedMutations(databaseType))
+            if (DoesRelationalDBSupportNestedInsertions(databaseType))
             {
                 if (RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
                 {

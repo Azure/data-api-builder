@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
         private const string ENTITY_NAME_DELIMITER = "$";
 
-        public static HashSet<DatabaseType> RELATIONAL_DB_SUPPORTING_NESTED_MUTATIONS = new() { DatabaseType.MSSQL };
+        public static HashSet<DatabaseType> RELATIONAL_DB_SUPPORTING_NESTED_INSERTIONS = new() { DatabaseType.MSSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -76,9 +76,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Helper method to evaluate whether DAB supports nested mutations for particular database type.
         /// </summary>
-        public static bool DoesRelationalDBSupportNestedMutations(DatabaseType databaseType)
+        public static bool DoesRelationalDBSupportNestedInsertions(DatabaseType databaseType)
         {
-            return RELATIONAL_DB_SUPPORTING_NESTED_MUTATIONS.Contains(databaseType);
+            return RELATIONAL_DB_SUPPORTING_NESTED_INSERTIONS.Contains(databaseType);
         }
 
         /// <summary>
@@ -391,6 +391,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         /// <param name="linkingEntityName">linking entity name of the format 'LinkingEntity$SourceEntityName$TargetEntityName'.</param>
         /// <returns>tuple of source, target entities name of the format (SourceEntityName, TargetEntityName).</returns>
+        /// <exception cref="ArgumentException">Thrown when the linking entity name is not of the expected format.</exception>
         public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
         {
             if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER))

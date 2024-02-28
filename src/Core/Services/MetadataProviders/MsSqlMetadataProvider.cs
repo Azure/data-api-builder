@@ -218,7 +218,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string linkingObject,
             Dictionary<string, DatabaseObject> sourceObjects)
         {
-            if (!GraphQLUtils.DoesRelationalDBSupportNestedMutations(GetDatabaseType()))
+            if (!GraphQLUtils.DoesRelationalDBSupportNestedInsertions(GetDatabaseType()))
             {
                 // Currently we have this same class instantiated for both MsSql and DwSql.
                 // This is a refactor we need to take care of in future.

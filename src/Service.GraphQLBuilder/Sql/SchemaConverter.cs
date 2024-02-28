@@ -166,7 +166,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                 }
 
-                // A field is added to the schema when:
+                // A field is added to the ObjectTypeDefinition when:
                 // 1. The entity is a linking entity. A linking entity is not exposed by DAB for query/mutation but the fields are required to generate
                 // object definitions of directional linking entities from source to target.
                 // 2. The entity is not a linking entity and there is atleast one role allowed to access the field.

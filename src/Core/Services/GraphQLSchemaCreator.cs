@@ -164,7 +164,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private DocumentNode GenerateSqlGraphQLObjects(RuntimeEntities entities, Dictionary<string, InputObjectTypeDefinitionNode> inputObjects)
         {
             // Dictionary to store:
-            // 1. Object types for very entity exposed for MySql/PgSql/MsSql/DwSql in the config file.
+            // 1. Object types for every entity exposed for MySql/PgSql/MsSql/DwSql in the config file.
             // 2. Object type for source->target linking object for M:N relationships to support nested insertion in the target table,
             // followed by an insertion in the linking table. The directional linking object contains all the fields from the target entity
             // (relationship/column) and non-relationship fields from the linking table.
@@ -316,7 +316,6 @@ namespace Azure.DataApiBuilder.Core.Services
                         // Thus, it is not required to add the directive to any field in this entity.
                         continue;
                     }
-
                     
                     // From the relationship information, obtain the foreign key definition for the given target entity and add the
                     // referencing field directive to the referencing fields from the referencing table (whether it is the source entity or the target entity).
@@ -350,7 +349,6 @@ namespace Azure.DataApiBuilder.Core.Services
                         if (targetReferencingFKInfo is not null &&
                             objectTypes.TryGetValue(targetEntityName, out ObjectTypeDefinitionNode? targetObjectTypeDefinitionNode))
                         {
-                            IReadOnlyList<FieldDefinitionNode> gg = targetObjectTypeDefinitionNode.Fields;
                             Dictionary<string, FieldDefinitionNode> targetFieldDefinitions = targetObjectTypeDefinitionNode.Fields.ToDictionary(field => field.Name.Value, field => field);
                             // When target entity is the referencing entity, referencing field directive is to be added to relationship fields
                             // in the target entity.
@@ -480,7 +478,7 @@ namespace Azure.DataApiBuilder.Core.Services
                                 // The fieldName in the linking node cannot conflict with any of the
                                 // existing field names (either column name or relationship name) in the target node.
                                 bool doesFieldRepresentAColumn = sqlMetadataProvider.TryGetBackingColumn(targetEntityName, fieldName, out string? _);
-                                string infoMsg = $"Cannot use field name '{fieldName}' as it conflicts with one of the other field's name in the entity: {targetEntityName}. ";
+                                string infoMsg = $"Cannot use field name '{fieldName}' as it conflicts with another field's name in the entity: {targetEntityName}. ";
                                 string actionableMsg = doesFieldRepresentAColumn ?
                                     $"Consider using the 'mappings' section of the {targetEntityName} entity configuration to provide some other name for the field: '{fieldName}'." :
                                     $"Consider using the 'relationships' section of the {targetEntityName} entity configuration to provide some other name for the relationship: '{fieldName}'.";

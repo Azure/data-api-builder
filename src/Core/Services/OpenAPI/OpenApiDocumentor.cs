@@ -968,7 +968,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
 
-                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && (entity is null || !entity.Rest.Enabled))
+                if (!_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled)
                 {
                     // Don't create component schemas for:
                     // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.

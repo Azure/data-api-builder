@@ -19,7 +19,6 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
-using Namotion.Reflection;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]

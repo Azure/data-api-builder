@@ -15,11 +15,11 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// </summary>
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
-        private readonly BaseQueryStructure _struct;
+        private readonly BaseSqlQueryStructure _struct;
         private readonly ISqlMetadataProvider _metadataProvider;
         private readonly EntityActionOperation _operation;
 
-        public ODataASTVisitor(BaseQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
+        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
         {
             _struct = structure;
             _metadataProvider = metadataProvider;
@@ -75,11 +75,6 @@ namespace Azure.DataApiBuilder.Core.Parsers
             if (_operation is EntityActionOperation.Create)
             {
                 _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
-            }
-
-            if (_struct is CosmosQueryStructure)
-            {
-                return $"{_struct.SourceAlias}.{_metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!)}";
             }
 
             return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);

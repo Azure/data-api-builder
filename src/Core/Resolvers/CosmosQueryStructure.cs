@@ -4,7 +4,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -12,7 +11,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -31,7 +29,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
-
         // Order of the join matters
         public Stack<CosmosJoinStructure>? Joins { get; internal set; }
 
@@ -55,7 +52,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _context = context;
             SourceAlias = _containerAlias;
             DatabaseObject.Name = _containerAlias;
-
             Init(parameters);
         }
 
@@ -243,6 +239,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return orderByColumnsList;
         }
-
     }
 }

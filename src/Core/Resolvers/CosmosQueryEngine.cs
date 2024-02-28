@@ -46,7 +46,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _queryBuilder = new CosmosQueryBuilder();
             _gQLFilterParser = gQLFilterParser;
             _authorizationResolver = authorizationResolver;
-
         }
 
         /// <summary>

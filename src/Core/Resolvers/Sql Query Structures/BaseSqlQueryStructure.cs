@@ -42,6 +42,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string? FilterPredicates { get; set; }
 
+        /// <summary>
+        /// Collection of all the fields referenced in the database policy for create action.
+        /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
+        /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
+        /// This will only be populated for POST/PUT/PATCH operations.
+        /// </summary>
+        public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
+
         public BaseSqlQueryStructure(
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
@@ -454,6 +462,42 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// After SqlQueryStructure is instantiated, process a database authorization policy
+        /// for GraphQL requests with the ODataASTVisitor to populate DbPolicyPredicates.
+        /// Processing will also occur for GraphQL sub-queries.
+        /// </summary>
+        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
+        /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
+        /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
+        public void ProcessOdataClause(FilterClause? dbPolicyClause, EntityActionOperation operation)
+        {
+            if (dbPolicyClause is null)
+            {
+                DbPolicyPredicatesForOperations[operation] = null;
+                return;
+            }
+
+            ODataASTVisitor visitor = new(this, MetadataProvider, operation);
+            try
+            {
+                DbPolicyPredicatesForOperations[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
+            }
+            catch (Exception ex)
+            {
+                throw new DataApiBuilderException(
+                    message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
+                    statusCode: HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
+                    innerException: ex);
+            }
+        }
+
+        protected static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)
+        {
+            return filterClause.Expression.Accept<string>(visitor);
+        }
+
+        /// <summary>
         /// Helper method to get the database policy for the given operation.
         /// </summary>
         /// <param name="operation">Operation for which the database policy is to be determined.</param>
@@ -522,43 +566,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     innerException: e);
 
             }
-        }
-
-        /// <summary>
-        /// After SqlQueryStructure is instantiated, process a database authorization policy
-        /// for GraphQL requests with the ODataASTVisitor to populate DbPolicyPredicates.
-        /// Processing will also occur for GraphQL sub-queries.
-        /// </summary>
-        /// <param name="dbPolicyClause">FilterClause from processed runtime configuration permissions Policy:Database</param>
-        /// <param name="operation">CRUD operation for which the database policy predicates are to be evaluated.</param>
-        /// <exception cref="DataApiBuilderException">Thrown when the OData visitor traversal fails. Possibly due to malformed clause.</exception>
-        public void ProcessOdataClause(FilterClause? dbPolicyClause, EntityActionOperation operation)
-        {
-            if (dbPolicyClause is null)
-            {
-                DbPolicyPredicatesForOperations[operation] = null;
-                return;
-            }
-
-            ODataASTVisitor visitor = new(this, MetadataProvider, operation);
-            try
-            {
-                DbPolicyPredicatesForOperations[operation] = GetFilterPredicatesFromOdataClause(dbPolicyClause, visitor);
-
-            }
-            catch (Exception ex)
-            {
-                throw new DataApiBuilderException(
-                    message: "Policy query parameter is not well formed for GraphQL Policy Processing.",
-                    statusCode: HttpStatusCode.Forbidden,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed,
-                    innerException: ex);
-            }
-        }
-
-        protected static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)
-        {
-            return filterClause.Expression.Accept<string>(visitor);
         }
     }
 }

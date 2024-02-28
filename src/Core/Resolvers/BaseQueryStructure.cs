@@ -74,14 +74,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
-        /// <summary>
-        /// Collection of all the fields referenced in the database policy for create action.
-        /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
-        /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
-        /// This will only be populated for POST/PUT/PATCH operations.
-        /// </summary>
-        public HashSet<string> FieldsReferencedInDbPolicyForCreateAction { get; set; } = new();
-
         public const string PARAM_NAME_PREFIX = "@";
 
         public BaseQueryStructure(
@@ -193,6 +185,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
         }
-
     }
 }

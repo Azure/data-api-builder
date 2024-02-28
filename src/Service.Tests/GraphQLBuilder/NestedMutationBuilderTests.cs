@@ -99,11 +99,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         }
 
         /// <summary>
-        /// Test to validate that we don't erroneously add a Foriegn key directive to the list of directives for every column in an entity/table,
-        /// which does not hold a foreign key reference to any entity in the config.
+        /// Test to validate that we add a referencing field directive to the list of directives for every column in an entity/table,
+        /// which is a referencing field to another field in any entity in the config.
         /// </summary>
         [TestMethod]
-        public void ValidateAbsenceOfOneReferencingFieldDirectiveOnNonReferencingColumns()
+        public void ValidatePresenceOfOneReferencingFieldDirectiveOnReferencingColumns()
         {
             // Name of the referencing entity.
             string referencingEntityName = "Book";
@@ -125,6 +125,33 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 // 2. The referencing field directive was added only once. When a relationship between two entities is defined in the configuration of both the entities,
                 // we want to ensure that we don't unnecessarily add the referencing field directive twice for the referencing fields.
                 Assert.AreEqual(1, countOfReferencingFieldDirectives);
+            }
+        }
+
+        /// <summary>
+        /// Test to validate that we don't erroneously add a referencing field directive to the list of directives for every column in an entity/table,
+        /// which is not a referencing field to another field in any entity in the config.
+        /// </summary>
+        [TestMethod]
+        public void ValidateAbsenceOfReferencingFieldDirectiveOnNonReferencingColumns()
+        {
+            // Name of the referencing entity.
+            string referencingEntityName = "stocks_price";
+
+            // List of referencing columns.
+            HashSet<string> referencingColumns = new(){ "categoryid", "pieceid" };
+            ObjectTypeDefinitionNode objectTypeDefinitionNode = GetObjectTypeDefinitionNode(
+                GetDefinedSingularName(
+                    entityName: referencingEntityName,
+                    configEntity: _runtimeConfig.Entities[referencingEntityName]));
+            List<FieldDefinitionNode> fieldsInObjectDefinitionNode = objectTypeDefinitionNode.Fields.ToList();
+            foreach (FieldDefinitionNode fieldInObjectDefinitionNode in fieldsInObjectDefinitionNode)
+            {
+                if (!referencingColumns.Contains(fieldInObjectDefinitionNode.Name.Value))
+                {
+                    int countOfReferencingFieldDirectives = fieldInObjectDefinitionNode.Directives.Where(directive => directive.Name.Value == ReferencingFieldDirectiveType.DirectiveName).Count();
+                    Assert.AreEqual(0, countOfReferencingFieldDirectives);
+                }
             }
         }
 
@@ -195,8 +222,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         /// <summary>
         /// Test to validate that for entities having an M:N relationship between them, we create a source->target linking input type.
         /// </summary>
-        [DataTestMethod]
-        [DataRow("Book", "Author", DisplayName = "")]
+        [TestMethod]
         public void ValidateCreationOfSourceTargetLinkingInputForMNRelationship()
         {
             // Name of the source entity for which the configuration is provided in the config.

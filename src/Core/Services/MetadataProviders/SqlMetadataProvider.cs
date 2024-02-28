@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
+using Namotion.Reflection;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
 [assembly: InternalsVisibleTo("Azure.DataApiBuilder.Service.Tests")]
@@ -1244,11 +1245,11 @@ namespace Azure.DataApiBuilder.Core.Services
             // Because we have an instance of SqlMetadataProvider for each individual database
             // (note: this means each actual database not each database type), we do not
             // need to worry about collisions beyond that schema, hence no database name is needed.
-            string tableNameWithPrefix = GetTableNameWithPrefix(
-                databaseName: string.Empty,
+            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(
                 schemaName: schemaName,
                 tableName: tableName);
-            DataTable? dataTable = EntitiesDataSet.Tables[tableNameWithPrefix];
+
+            DataTable? dataTable = EntitiesDataSet.Tables[tableNameWithSchemaPrefix];
             if (dataTable is null)
             {
                 try
@@ -1368,47 +1369,31 @@ namespace Azure.DataApiBuilder.Core.Services
                 Connection = conn
             };
 
-            string tableNameWithPrefix = GetTableNameWithPrefix(conn.Database, schemaName, tableName);
+            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
             selectCommand.CommandText
-                = $"SELECT * FROM {tableNameWithPrefix}";
+                = $"SELECT * FROM {tableNameWithSchemaPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithPrefix);
+            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
             return dataTable[0];
         }
 
         /// <summary>
-        /// Gets the correctly formatted table name with prefix, given the provided schema name
-        /// and table name. A prefix is everything that comes before the table name itself.
-        /// For example, the correct format with database, schema, and table name is of the form
-        /// [DatabaseName].[schemaName].[tableName]
-        /// In the case that the DatabaseName is empty, the correct form is
-        /// [schemaName].[tableName]
-        /// In the case that both the DatabaseName and schemaName are empty the correct form is
-        /// [tableName]
+        /// Gets the correctly formatted table name with schema as prefix, if one exists.
+        /// A schema prefix is simply the correctly formatted and prefixed schema name that
+        /// is provided, separated from the table name by a ".". The formatting for both the
+        /// schema and table name is based on database type and may or may not include
+        /// [] quotes depending how the particular database type handles said format.
         /// </summary>
         /// <param name="schemaName">Name of schema the table belongs within.</param>
         /// <param name="tableName">Name of the table.</param>
-        /// <returns>Properly formatted table name with prefix.</returns>
-        internal string GetTableNameWithPrefix(string databaseName, string schemaName, string tableName)
+        /// <returns>Properly formatted table name with schema prefix if it exists.</returns>
+        internal string GetTableNameWithSchemaPrefix(string schemaName, string tableName)
         {
             IQueryBuilder queryBuilder = GetQueryBuilder();
             StringBuilder tablePrefix = new();
 
-            if (!string.IsNullOrEmpty(databaseName))
-            {
-                // Determine databaseName for prefix.
-                string quotedDatabaseName = queryBuilder.QuoteIdentifier(databaseName);
-                tablePrefix.Append(quotedDatabaseName);
-
-                if (!string.IsNullOrEmpty(schemaName))
-                {
-                    // Determine schemaName for prefix.
-                    schemaName = queryBuilder.QuoteIdentifier(schemaName);
-                    tablePrefix.Append($".{schemaName}");
-                }
-            }
-            else if (!string.IsNullOrEmpty(schemaName))
+            if (!string.IsNullOrEmpty(schemaName))
             {
                 // Determine schemaName for prefix.
                 schemaName = queryBuilder.QuoteIdentifier(schemaName);

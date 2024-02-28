@@ -97,18 +97,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Tests with different combinations of database, schema, and table names
-        /// to validate that the correct full table name with prefix is generated. For example if
-        /// databaseName = TestDB, schemaName = model, and tableName = TrainedModel, then correct would
-        /// mean [TestDB].[model].[TrainedModel], and any other form would be incorrect.
+        /// <code>Do: </code> Tests with different combinations of schema and table names
+        /// to validate that the correct full table name with schema as prefix is generated. For example if
+        /// schemaName = model, and tableName = TrainedModel, then correct would mean
+        /// [model].[TrainedModel], and any other form would be incorrect.
         /// <code>Check: </code> Making sure table name with prefix matches expected name with prefix.
         /// </summary>
         [DataTestMethod]
-        [DataRow("", "", "", "[]")]
-        [DataRow("", "model", "TrainedModel", "[model].[TrainedModel]")]
-        [DataRow("TestDB", "", "TestTable", "[TestDB].[TestTable]")]
-        [DataRow("TestDB", "model", "TrainedModel", "[TestDB].[model].[TrainedModel]")]
-        public void CheckTablePrefix(string databaseName, string schemaName, string tableName, string expectedTableNameWithPrefix)
+        [DataRow("", "", "[]")]
+        [DataRow("model", "TrainedModel", "[model].[TrainedModel]")]
+        [DataRow("", "TestTable", "[TestTable]")]
+        [DataRow("model", "TrainedModel", "[model].[TrainedModel]")]
+        public void CheckTablePrefix(string schemaName, string tableName, string expectedTableNameWithPrefix)
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 queryManagerFactory.Object,
                 sqlMetadataLogger,
                 dataSourceName);
-            string tableNameWithPrefix = provider.GetTableNameWithPrefix(databaseName, schemaName, tableName);
+            string tableNameWithPrefix = provider.GetTableNameWithSchemaPrefix(schemaName, tableName);
             Assert.AreEqual(expectedTableNameWithPrefix, tableNameWithPrefix);
         }
 
@@ -184,6 +184,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+
+            // MySQL test will not error out before calling the query builder's format function and
+            // therefore can not be null
+            if (string.Equals(databaseType, TestCategory.MYSQL))
+            {
+                _queryBuilder = new MySqlQueryBuilder();
+            }
 
             try
             {

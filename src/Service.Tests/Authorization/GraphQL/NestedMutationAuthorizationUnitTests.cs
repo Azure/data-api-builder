@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         {
             string createBookMutationName = "createbook";
             string nestedCreateOneBook = @"mutation {
-                    createbook(item: { title: ""My New Book"", publishers: { name: ""New publisher""}}) {
+                    createbook(item: { title: ""Book #1"", publishers: { name: ""Publisher #1""}}) {
                         id
                         title
                     }

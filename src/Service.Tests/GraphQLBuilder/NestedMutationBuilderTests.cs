@@ -2,9 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using System.IO;
-using System.IO.Abstractions;
-using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
@@ -332,7 +329,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         public static async Task InitializeAsync()
         {
             // Setup runtime config.
-            RuntimeConfigProvider runtimeConfigProvider = await GetRuntimeConfigProvider();
+            RuntimeConfigProvider runtimeConfigProvider = GetRuntimeConfigProvider();
             _runtimeConfig = runtimeConfigProvider.GetConfig();
 
             // Collect object definitions for entities.
@@ -348,16 +345,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         /// <summary>
         /// Sets up and returns a runtime config provider instance.
         /// </summary>
-        private static async Task<RuntimeConfigProvider> GetRuntimeConfigProvider()
+        private static RuntimeConfigProvider GetRuntimeConfigProvider()
         {
-            string fileContents = await File.ReadAllTextAsync($"dab-config.{databaseEngine}.json");
-            IFileSystem fs = new MockFileSystem(new Dictionary<string, MockFileData>()
-            {
-                { "dab-config.json", new MockFileData(fileContents) }
-            });
-
-            FileSystemRuntimeConfigLoader loader = new(fs);
-            return new(loader);
+            TestHelper.SetupDatabaseEnvironment(databaseEngine);
+            // Get the base config file from disk
+            FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
+            return new(configPath);
         }
 
         /// <summary>

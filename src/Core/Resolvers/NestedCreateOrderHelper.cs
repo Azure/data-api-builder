@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     /// Helper class to determine the order of insertion for a nested insertion. For a nested insertion, the insertion needs to be performed first
     /// in the referenced entity followed by insertion in the referencing entity.
     /// </summary>
-    public class NestedInsertionOrderHelper
+    public class NestedCreateOrderHelper
     {
         /// <summary>
         /// Given a source and target entity with their metadata and request input data,

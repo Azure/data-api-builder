@@ -1,0 +1,106 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# ASP.NET Core (.NET Framework)
+# Build and test ASP.NET Core projects targeting the full .NET Framework.
+# Add steps that publish symbols, save build artifacts, and more:
+# https://learn.microsoft.com/azure/devops/pipelines/languages/dotnet-core
+
+steps:
+- task: NuGetAuthenticate@1
+  displayName: 'NuGet Authenticate'
+
+# If this is a release, do not append the build number at the end as it will 
+# generate the prerelease nuget version.
+# We cannot set this in variables section above because $(isNugetRelease) 
+# is not available at pipeline compilation time.
+- bash: |
+    echo IsNugetRelease = $ISNUGETRELEASE
+    echo IsReleaseCandidate = $ISRELEASECANDIDATE
+    dabVersion=$(major).$(minor).$(patch)
+    if [ "$ISNUGETRELEASE" = "true" ]
+    then
+      if [ "$ISRELEASECANDIDATE" = "true" ]
+      then
+        dabVersion=$dabVersion-rc
+      fi
+    else
+      dabVersion=$dabVersion-$(Build.BuildId)
+    fi
+    echo dabVersion = $dabVersion
+    echo "##vso[task.setvariable variable=dabVersion]$dabVersion"
+    schemaId="https://github.com/Azure/data-api-builder/releases/download/v$dabVersion/dab.draft.schema.json"
+    echo schemaId = $schemaId
+    echo "##vso[task.setvariable variable=\$id]$schemaId"
+  displayName: Set dab version
+
+- task: UseDotNet@2
+  displayName: Setup .NET SDK v6.0.x
+  inputs:
+    packageType: sdk
+    version: 6.0.x
+    installationPath: $(Agent.ToolsDirectory)/dotnet
+
+- task: NuGetToolInstaller@1
+
+- task: NuGetCommand@2
+  inputs:
+    restoreSolution: '$(solution)'
+    feedsToUse: config
+    nugetConfigPath: Nuget.config
+
+- task: DotNetCoreCLI@2
+  displayName: Check formatting
+  inputs:
+    command: custom
+    custom: format
+    projects: '$(solution)'
+    arguments: '--verify-no-changes'
+
+# Use dotnet pack command to build the project because we want to generate build output
+# in the correct location that pack command will be using. This build output location
+# will be used to do code signing so we need to do this first.
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    command: custom
+    custom: pack
+    projects: '**/*.sln'
+    arguments: '--configuration $(buildConfiguration) -p:Version=$(dabVersion)' 
+
+- task: DotNetCoreCLI@2
+  displayName: "Run Unit Tests"
+  inputs:
+    command: test
+    projects: '**/*Tests*.csproj'
+    arguments: '--filter "TestCategory!=CosmosDb_NoSql&TestCategory!=MsSql&TestCategory!=PostgreSql&TestCategory!=MySql&TestCategory!=DwSql" --configuration $(buildConfiguration) --collect "XPlat Code coverage"'
+
+- task: CmdLine@2
+  displayName: 'Set flag to publish Verify *.received files when tests fail'
+  condition: failed()
+  inputs:
+    script: 'echo ##vso[task.setvariable variable=publishverify]Yes'
+
+- task: CopyFiles@2
+  condition: eq(variables['publishverify'], 'Yes')
+  displayName: 'Copy received files to Artifact Staging'
+  inputs:
+    contents: '**\*.received.*' 
+    targetFolder: '$(Build.ArtifactStagingDirectory)\Verify'
+    cleanTargetFolder: true
+    overWrite: true
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish received files as Artifacts'
+  name: 'verifypublish'
+  condition: eq(variables['publishverify'], 'Yes')
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)\Verify'
+    ArtifactName: 'Verify'
+    publishLocation: 'Container'
+
+- task: PublishCodeCoverageResults@1
+  displayName: 'Publish code coverage'
+  inputs:
+    codeCoverageTool: Cobertura
+    summaryFileLocation: '$(Agent.TempDirectory)/**/*cobertura.xml'

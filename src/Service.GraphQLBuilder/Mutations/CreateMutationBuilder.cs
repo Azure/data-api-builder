@@ -253,9 +253,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 databaseType,
                 entities);
 
-            // Create authorize directive denoting allowed roles
-            List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode("name", dbEntityName)) };
+            List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode(ModelDirectiveType.ModelNameArgument, dbEntityName)) };
 
+            // Create authorize directive denoting allowed roles
             if (CreateAuthorizationDirectiveIfNecessary(
                     rolesAllowedForMutation,
                     out DirectiveNode? authorizeDirective))

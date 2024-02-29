@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
     public static class CreateMutationBuilder
     {
-        private const string INSERT_MULTIPLE_MUTATION_SUFFIX = "Multiple";
+        private const string CREATE_MULTIPLE_MUTATION_SUFFIX = "Multiple";
         public const string INPUT_ARGUMENT_NAME = "item";
         public const string CREATE_MUTATION_PREFIX = "create";
 
@@ -467,7 +467,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         {
             string singularName = GetDefinedSingularName(entityName, entity);
             string pluralName = GetDefinedPluralName(entityName, entity);
-            string mutationName = singularName.Equals(pluralName) ? $"{singularName}{INSERT_MULTIPLE_MUTATION_SUFFIX}" : pluralName;
+            string mutationName = singularName.Equals(pluralName) ? $"{singularName}{CREATE_MULTIPLE_MUTATION_SUFFIX}" : pluralName;
             return $"{CREATE_MUTATION_PREFIX}{mutationName}";
         }
     }

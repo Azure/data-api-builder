@@ -249,10 +249,12 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Return a list of all the object types to be exposed in the schema.
             Dictionary<string, FieldDefinitionNode> fields = new();
+
+            // Add the DBOperationResult type to the schema
             NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
             FieldDefinitionNode field = GetDbOperationResultField();
 
-            fields.TryAdd("result", field);
+            fields.TryAdd(GraphQLUtils.DB_OPERATION_RESULT_FIELD_NAME, field);
 
             objectTypes.Add(GraphQLUtils.DB_OPERATION_RESULT_TYPE, new ObjectTypeDefinitionNode(
                 location: null,
@@ -549,7 +551,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             return new(
                 location: null,
-                name: new("result"),
+                name: new(GraphQLUtils.DB_OPERATION_RESULT_FIELD_NAME),
                 description: new StringValueNode("Contains result for mutation execution"),
                 arguments: new List<InputValueDefinitionNode>(),
                 type: new StringType().ToTypeNode(),

@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string OBJECT_TYPE_QUERY = "query";
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
         public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
+        public const string DB_OPERATION_RESULT_FIELD_NAME = "result";
 
         // String used as a prefix for the name of a linking entity.
         private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
@@ -334,9 +335,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         public static string GetEntityNameFromContext(IMiddlewareContext context)
         {
-            string entityName = context.Selection.Field.Type.TypeName();
+            IOutputType type = context.Selection.Field.Type;
+            string graphQLTypeName = type.TypeName();
+            string entityName = graphQLTypeName;
 
-            if (entityName is DB_OPERATION_RESULT_TYPE)
+            if (graphQLTypeName is DB_OPERATION_RESULT_TYPE)
             {
                 // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
                 if (GraphQLUtils.TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
@@ -348,7 +351,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 // for rest of scenarios get entity name from output object type.
                 ObjectType underlyingFieldType;
-                IOutputType type = context.Selection.Field.Type;
                 underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
                 // Example: CustomersConnectionObject - for get all scenarios.
                 if (QueryBuilder.IsPaginationType(underlyingFieldType))

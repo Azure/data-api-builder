@@ -264,7 +264,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
         {
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             ValidateResults(actual.GetProperty("items"), expected.RootElement);
         }
@@ -898,7 +899,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// Tests that the field level query filter fails authorization when filter fields are
         /// unauthorized because the field 'name' on object type 'earth' is an excluded field of the read
-        /// operation permissions defined for the anonymous role.
+        /// operation permissions defined for a role.
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_UnauthorizedField()
@@ -912,7 +913,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     }
                 }
             }";
-            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            string clientRoleHeader = "limited-read-role";
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: "earths",
                 query: gqlQuery,
@@ -970,7 +971,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
+            JsonElement actual = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery, authToken: authToken);
             Assert.AreEqual(actual.GetProperty("items")[0].GetProperty("earth").GetProperty("id").ToString(), _idList[0]);
         }
 
@@ -996,11 +998,42 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            string clientRoleHeader = "limited-read-role";
             JsonElement response = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            // Validate the result contains the GraphQL authorization error code.
+            string errorMessage = response.ToString();
+            Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
+        }
+
+        /// <summary>
+        /// Tests that the nested field level query filter fails authorization when nested object is
+        /// unauthorized. Here, Nested array type 'moreAttributes' is avaliable for 'Authenticated' role only and
+        /// we are trying to access it with 'anonymous' role.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterNestedArrayFieldAuth_UnauthorizedNestedField()
+        {
+            // Run query
+            string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+               @" : {moons: {moonAdditionalAttributes: {moreAttributes: {name: {eq: ""moonattr0""}}}}})
+                {
+                    items {
+                        name
+                    }
+                }
+            }";
+
+            string clientRoleHeader = AuthorizationType.Anonymous.ToString();
+            JsonElement response = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQuery,
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 

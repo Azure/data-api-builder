@@ -1711,14 +1711,14 @@ namespace Azure.DataApiBuilder.Core.Services
                     PairToFkDefinition.TryGetValue(fKDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredFKDefinition))
                 {
                     // Being here indicates that we inferred an FK constraint for the current FK.
-                    // If the referencing and referenced columns count > 0,
-                    // we have already gathered this information from the runtime config.
+                    // The count of referencing and referenced columns being > 0 indicates that source.fields and target.fields 
+                    // have been specified in the config file. In this scenario, higher precedence is given to the fields configured through the config file. So, the existing FK definition is retained as is.   
                     if (fKDefinitionToTarget.ReferencingColumns.Count > 0 && fKDefinitionToTarget.ReferencedColumns.Count > 0)
                     {
                         validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
                     }
-                    // Only add the referencing/referenced columns if they have not been
-                    // specified in the configuration file.
+                    // The count of referenced and referencing columns being = 0 indicates that source.fields and target.fields 
+                    // are not configured through the config file. In this case, the FK fields inferred from the database are populated.
                     else
                     {
                         validatedFKDefinitionsToTarget.Add(inferredFKDefinition);

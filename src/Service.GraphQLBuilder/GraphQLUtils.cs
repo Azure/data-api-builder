@@ -39,6 +39,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_NESTED_CREATE = new() { DatabaseType.MSSQL };
 
+        public static HashSet<DatabaseType> NOSQL_DBS = new() { DatabaseType.CosmosDB_NoSQL };
+
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
             string modelDirectiveName = ModelDirectiveType.DirectiveName;
@@ -80,6 +82,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public static bool DoesRelationalDBSupportNestedCreate(DatabaseType databaseType)
         {
             return RELATIONAL_DBS_SUPPORTING_NESTED_CREATE.Contains(databaseType);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether database type represents a NoSQL database.
+        /// </summary>
+        public static bool IsNoSQLDb(DatabaseType databaseType)
+        {
+            return NOSQL_DBS.Contains(databaseType);
         }
 
         /// <summary>

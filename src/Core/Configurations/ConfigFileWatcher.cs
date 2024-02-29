@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Config;
-
 namespace Azure.DataApiBuilder.Core.Configurations;
 
 public class ConfigFileWatcher

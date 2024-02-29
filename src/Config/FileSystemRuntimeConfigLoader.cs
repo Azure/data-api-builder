@@ -98,13 +98,26 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public bool TryLoadConfig(
         string path,
         [NotNullWhen(true)] out RuntimeConfig? config,
-        bool replaceEnvVar = false)
+        bool replaceEnvVar = false,
+        string dataSourceName = "")
     {
         if (_fileSystem.File.Exists(path))
         {
             Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
-            return TryParseConfig(json, out config, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
+            bool success = TryParseConfig(
+                json: json,
+                config: out config,
+                connectionString: _connectionString,
+                replaceEnvVar: replaceEnvVar,
+                dataSourceName: dataSourceName);
+            // investigating empty datasource name on startup
+            //if (success && !string.IsNullOrEmpty(dataSourceName))
+            //{
+            //    config!.DefaultDataSourceName = dataSourceName;
+            //}
+
+            return success;
         }
         else
         {
@@ -124,7 +137,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string dataSourceName = "")
     {
         return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
     }

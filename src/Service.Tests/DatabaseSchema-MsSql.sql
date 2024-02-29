@@ -51,6 +51,8 @@ DROP TABLE IF EXISTS fte_data;
 DROP TABLE IF EXISTS intern_data;
 DROP TABLE IF EXISTS books_sold;
 DROP TABLE IF EXISTS default_with_function_table;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS user_profiles;
 DROP SCHEMA IF EXISTS [foo];
 COMMIT;
 
@@ -259,6 +261,18 @@ CREATE TABLE mappedbookmarks
 	id int IDENTITY(1,1) PRIMARY KEY,
 	bkname nvarchar(50) NOT NULL
 )
+
+CREATE TABLE users (
+    userid INT PRIMARY KEY IDENTITY,
+    username NVARCHAR(50) UNIQUE,
+    email NVARCHAR(100)
+);
+
+CREATE TABLE user_profiles (
+    userid INT PRIMARY KEY IDENTITY,
+    username NVARCHAR(50) UNIQUE,
+    profilepictureurl NVARCHAR(255)
+);
 
 create Table fte_data(
 id int IDENTITY(5001,1),
@@ -515,6 +529,10 @@ INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 
 (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
 
 INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GETDATE());
+
+INSERT INTO users (username, email) VALUES ('john_doe', 'john.doe@example.com'), ('jane_smith', 'jane.smith@example.com');
+
+INSERT INTO user_profiles (Username, ProfilePictureURL) VALUES ('john_doe', 'https://example.com/profiles/john_doe.jpg'), ('jane_smith', 'https://example.com/profiles/jane_smith.jpg');
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');

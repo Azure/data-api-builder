@@ -285,7 +285,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             foreach ((string sourceEntityName, ObjectTypeDefinitionNode sourceObjectTypeDefinitionNode) in objectTypes)
             {
-                if(!entities.TryGetValue(sourceEntityName, out Entity? entity))
+                if (!entities.TryGetValue(sourceEntityName, out Entity? entity))
                 {
                     continue;
                 }
@@ -316,14 +316,14 @@ namespace Azure.DataApiBuilder.Core.Services
                         // Thus, it is not required to add the directive to any field in this entity.
                         continue;
                     }
-                    
+
                     // From the relationship information, obtain the foreign key definition for the given target entity and add the
                     // referencing field directive to the referencing fields from the referencing table (whether it is the source entity or the target entity).
                     if (relationshipInfo is not null &&
                         relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName, out List<ForeignKeyDefinition>? listOfForeignKeys))
                     {
                         // Find the foreignkeys in which the source entity is the referencing object.
-                        IEnumerable <ForeignKeyDefinition> sourceReferencingForeignKeysInfo =
+                        IEnumerable<ForeignKeyDefinition> sourceReferencingForeignKeysInfo =
                             listOfForeignKeys.Where(fk =>
                                 fk.ReferencingColumns.Count > 0
                                 && fk.ReferencedColumns.Count > 0

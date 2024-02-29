@@ -423,12 +423,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             );
             createMutationNodes.Add(createOneNode);
 
-            // Multiple insertion node.
-            FieldDefinitionNode createMultipleNode = new(
-                location: null,
-                name: new NameNode(GetMultipleCreateMutationNodeName(name.Value, entity)),
-                description: new StringValueNode($"Creates multiple new {GetDefinedPluralName(name.Value, entity)}"),
-                arguments: new List<InputValueDefinitionNode> {
+            if (DoesRelationalDBSupportNestedCreate(databaseType))
+            {
+                // Multiple insertion node.
+                FieldDefinitionNode createMultipleNode = new(
+                    location: null,
+                    name: new NameNode(GetMultipleCreateMutationNodeName(name.Value, entity)),
+                    description: new StringValueNode($"Creates multiple new {GetDefinedPluralName(name.Value, entity)}"),
+                    arguments: new List<InputValueDefinitionNode> {
                 new(
                     location : null,
                     new NameNode(MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME),
@@ -436,11 +438,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(input.Name))),
                     defaultValue: null,
                     new List<DirectiveNode>())
-                },
-                type: new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(dbEntityName, entity))),
-                directives: fieldDefinitionNodeDirectives
-            );
-            createMutationNodes.Add(createMultipleNode);
+                    },
+                    type: new NamedTypeNode(QueryBuilder.GeneratePaginationTypeName(GetDefinedSingularName(dbEntityName, entity))),
+                    directives: fieldDefinitionNodeDirectives
+                );
+                createMutationNodes.Add(createMultipleNode);
+            }
+
             return createMutationNodes;
         }
 

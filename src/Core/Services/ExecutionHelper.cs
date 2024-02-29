@@ -223,7 +223,9 @@ namespace Azure.DataApiBuilder.Service.Services
         /// it will contain the "list" of results.
         /// </summary>
         /// <param name="context">PureResolver context provided by HC middleware.</param>
-        /// <returns>The resolved list, a JSON array.</returns>
+        /// <returns>The resolved list, a JSON array, returned as type 'object?'.</returns>
+        /// <remarks>Return type is 'object?' instead of a 'List of JsonElements' because when this function returns JsonElement,
+        /// the HC12 engine doesn't know how to handle the JsonElement and results in requests failing at runtime.</remarks>
         public object? ExecuteListField(IPureResolverContext context)
         {
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, _runtimeConfigProvider.GetConfig());
@@ -233,7 +235,7 @@ namespace Azure.DataApiBuilder.Service.Services
             if (TryGetPropertyFromParent(context, out JsonElement listValue) &&
                 listValue.ValueKind is not JsonValueKind.Null and not JsonValueKind.Undefined)
             {
-                IMetadata metadata = GetMetadata(context);
+                IMetadata? metadata = GetMetadata(context);
                 object result = queryEngine.ResolveList(listValue, context.Selection.Field, ref metadata);
                 SetNewMetadataChildren(context, metadata);
                 return result;
@@ -439,8 +441,10 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Get metadata from HotChocolate's GraphQL request MiddlewareContext.
         /// The metadata key is the root field name + _PURE_RESOLVER_CTX + :: + PathDepth.
+        /// CosmosDB does not utilize pagination metadata. So this function will return null
+        /// when executing GraphQl queries against CosmosDB.
         /// </summary>
-        private static IMetadata GetMetadata(IPureResolverContext context)
+        private static IMetadata? GetMetadata(IPureResolverContext context)
         {
             if (context.Selection.ResponseName == QueryBuilder.PAGINATION_FIELD_NAME && context.Path.Parent is not null)
             {
@@ -457,7 +461,7 @@ namespace Azure.DataApiBuilder.Service.Services
                 // /books/items/items[idx]/authors -> Depth: 3 (0-indexed) which maps to the
                 // pagination metadata for the "authors/items" subquery.
                 string paginationObjectParentName = GetMetadataKey(context.Path) + "::" + context.Path.Parent.Depth;
-                return (IMetadata)context.ContextData[paginationObjectParentName]!;
+                return (IMetadata?)context.ContextData[paginationObjectParentName];
             }
 
             // This section would be reached when processing a Cosmos query of the form:
@@ -524,27 +528,18 @@ namespace Azure.DataApiBuilder.Service.Services
 
         private static string GetMetadataKey(HotChocolate.Path path)
         {
-            HotChocolate.Path current = path;
+            HotChocolate.Path currentPath = path;
 
-            if (current.Parent is RootPathSegment or null)
+            if (currentPath.Parent is RootPathSegment or null)
             {
                 // current: "/entity/items -> "items"
-                return ((NamePathSegment)current).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
-            }
-            // current: "/entity/items -> current.Parent: "entity"
-            while (current.Parent is not null)
-            {
-                current = current.Parent;
-
-                if (current.Parent is RootPathSegment or null)
-                {
-                    // current: "/entity"
-                    // Resolved NamePathSegment.Name -> "entity"
-                    return ((NamePathSegment)current).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
-                }
+                return ((NamePathSegment)currentPath).Name + PURE_RESOLVER_CONTEXT_SUFFIX;
             }
 
-            throw new InvalidOperationException("The path is not rooted.");
+            // If execution reaches this point, the state of currentPath looks something
+            // like the following where there exists a Parent path element:
+            // "/entity/items -> current.Parent: "entity"
+            return GetMetadataKey(path: currentPath.Parent);
         }
 
         /// <summary>

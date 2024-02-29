@@ -195,6 +195,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
+        /// metadata is not used in this method, but it is required by the interface.
         public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
             IType listType = fieldSchema.Type;

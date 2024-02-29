@@ -197,24 +197,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="array">JsonElement representing a JSON array. The possible representations:
         /// JsonValueKind.Array -> ["item1","itemN"]
-        /// JsonValueKind.String (array of objects) -> [ { "field1": "field1Value", "field2": "field2Value" }, { ... } ]
-        /// The passed in JSON element's value kind may be an array or string.</param>
+        /// JsonValueKind.String -> "[ { "field1": "field1Value" }, { "field2": "field2Value" }, { ... } ]"
+        /// - Input JsonElement is JsonValueKind.String because the array and enclosed objects haven't been deserialized yet.
+        /// - This method deserializes the JSON string (representing a JSON array) and collects each element (Json object) within the
+        /// list of json elements returned by this method.</param>
         /// <param name="fieldSchema">Definition of field being resolved. For lists: [/]items:[entity!]!]</param>
         /// <param name="metadata">PaginationMetadata of the parent field of the currently processed field in HC middlewarecontext.</param>
         /// <returns>List of JsonElements parsed from the provided JSON array.</returns>
-        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
+        /// <remarks>Return type is 'object' instead of a 'List of JsonElements' because when this function returns JsonElement,
+        /// the HC12 engine doesn't know how to handle the JsonElement and results in requests failing at runtime.</remarks>
+        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata? metadata)
         {
-            PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
-            metadata = currentMetadata;
+            if (metadata is not null)
+            {
+                PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
+                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
+                metadata = currentMetadata;
+            }
 
-            List<JsonElement> list = new();
+            List<JsonElement> resolvedList = new();
 
             if (array.ValueKind is JsonValueKind.Array)
             {
                 foreach (JsonElement element in array.EnumerateArray())
                 {
-                    list.Add(element);
+                    resolvedList.Add(element);
                 }
             }
             else if (array.ValueKind is JsonValueKind.String)
@@ -229,11 +236,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Utf8JsonReader reader = new(buffer.GetWrittenSpan());
                 foreach (JsonElement element in JsonElement.ParseValue(ref reader).EnumerateArray())
                 {
-                    list.Add(element);
+                    resolvedList.Add(element);
                 }
             }
 
-            return list;
+            return resolvedList;
         }
 
         // <summary>

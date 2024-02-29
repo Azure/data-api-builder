@@ -188,6 +188,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
             }
 
+            // In certain cirumstances (e.g. when processing a DW result), the JsonElement will be JsonValueKind.String instead
+            // of JsonValueKind.Object. In this case, we need to parse the JSON. This snippet can be removed when DW result is consistent
+            // with MSSQL result.
+            if (element.ValueKind is JsonValueKind.String)
+            {
+                return JsonDocument.Parse(element.ToString()).RootElement.Clone();
+            }
+
             return element;
         }
 

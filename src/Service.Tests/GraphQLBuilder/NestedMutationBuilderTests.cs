@@ -9,26 +9,25 @@ using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
-using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Azure.DataApiBuilder.Core.Services.Cache;
 using ZiggyCreatures.Caching.Fusion;
-using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Config.ObjectModel;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
-using Azure.DataApiBuilder.Service.GraphQLBuilder;
-using Sprache;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 {
@@ -139,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             string referencingEntityName = "stocks_price";
 
             // List of referencing columns.
-            HashSet<string> referencingColumns = new(){ "categoryid", "pieceid" };
+            HashSet<string> referencingColumns = new() { "categoryid", "pieceid" };
             ObjectTypeDefinitionNode objectTypeDefinitionNode = GetObjectTypeDefinitionNode(
                 GetDefinedSingularName(
                     entityName: referencingEntityName,

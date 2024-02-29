@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             inputs.Add(input.Name, input);
 
             // Generate fields for related entities only if nested mutations are supported for the database flavor.
-            if(DoesRelationalDBSupportNestedCreate(databaseType))
+            if (DoesRelationalDBSupportNestedCreate(databaseType))
             {
                 // 2. Complex input fields.
                 // Evaluate input objects for related entities.
@@ -385,7 +385,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             InputObjectTypeDefinitionNode input = GenerateCreateInputType(
                 inputs: inputs,
                 objectTypeDefinitionNode: objectTypeDefinitionNode,
-                entityName:dbEntityName,
+                entityName: dbEntityName,
                 name: name,
                 baseEntityName: name,
                 definitions: root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),

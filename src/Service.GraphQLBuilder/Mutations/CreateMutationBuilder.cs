@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             inputs.Add(input.Name, input);
 
             // Generate fields for related entities only if nested mutations are supported for the database flavor.
-            if(DoesRelationalDBSupportNestedInsertions(databaseType))
+            if(DoesRelationalDBSupportNestedCreate(databaseType))
             {
                 // 2. Complex input fields.
                 // Evaluate input objects for related entities.
@@ -117,7 +117,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         }
 
                         string targetEntityName = entity.Relationships[field.Name.Value].TargetEntity;
-                        if (DoesRelationalDBSupportNestedInsertions(databaseType) && IsMToNRelationship(entity, field.Name.Value))
+                        if (DoesRelationalDBSupportNestedCreate(databaseType) && IsMToNRelationship(entity, field.Name.Value))
                         {
                             // The field can represent a related entity with M:N relationship with the parent.
                             NameNode baseObjectTypeNameForField = new(typeName);
@@ -170,7 +170,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
                 // Support for inserting nested entities with relationship cardinalities of 1-N or N-N is only supported for MsSql.
-                return DoesRelationalDBSupportNestedInsertions(databaseType);
+                return DoesRelationalDBSupportNestedCreate(databaseType);
             }
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
@@ -178,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // For cosmos, allow updating nested objects
             if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)
             {
-                return DoesRelationalDBSupportNestedInsertions(databaseType);
+                return DoesRelationalDBSupportNestedCreate(databaseType);
             }
 
             return true;
@@ -232,7 +232,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 fieldDefinition.Name,
                 new StringValueNode($"Input for field {fieldDefinition.Name} on type {GenerateInputTypeName(name.Value)}"),
                 defaultValue is not null ||
-                (DoesRelationalDBSupportNestedInsertions(databaseType) && DoesFieldHaveReferencingFieldDirective(fieldDefinition)) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
+                (DoesRelationalDBSupportNestedCreate(databaseType) && DoesFieldHaveReferencingFieldDirective(fieldDefinition)) ? fieldDefinition.Type.NullableType() : fieldDefinition.Type,
                 defaultValue,
                 new List<DirectiveNode>()
             );
@@ -281,7 +281,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             ITypeNode type = new NamedTypeNode(node.Name);
-            if (DoesRelationalDBSupportNestedInsertions(databaseType))
+            if (DoesRelationalDBSupportNestedCreate(databaseType))
             {
                 if (RelationshipDirectiveType.Cardinality(field) is Cardinality.Many)
                 {

@@ -6,13 +6,13 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 {
-    [TestClass]
+    [TestClass, TestCategory(TestCategory.MSSQL)]
     public class MsSqlNestedMutationBuilderTests : NestedMutationBuilderTests
     {
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)
         {
-            databaseEngine = "MsSql";
+            databaseEngine = TestCategory.MSSQL;
             await InitializeAsync();
         }
     }

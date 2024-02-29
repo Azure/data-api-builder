@@ -31,13 +31,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string OBJECT_TYPE_QUERY = "query";
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
         public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
+        public const string DB_OPERATION_RESULT_FIELD_NAME = "result";
 
         // String used as a prefix for the name of a linking entity.
         private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
         // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
         private const string ENTITY_NAME_DELIMITER = "$";
 
-        public static HashSet<DatabaseType> RELATIONAL_DB_SUPPORTING_NESTED_MUTATIONS = new() { DatabaseType.MSSQL };
+        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_NESTED_CREATE = new() { DatabaseType.MSSQL };
+
+        public static HashSet<DatabaseType> NOSQL_DBS = new() { DatabaseType.CosmosDB_NoSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -75,11 +78,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to evaluate whether DAB supports nested mutations for particular database type.
+        /// Helper method to evaluate whether DAB supports nested create for a particular database type.
         /// </summary>
-        public static bool DoesRelationalDBSupportNestedMutations(DatabaseType databaseType)
+        public static bool DoesRelationalDBSupportNestedCreate(DatabaseType databaseType)
         {
-            return RELATIONAL_DB_SUPPORTING_NESTED_MUTATIONS.Contains(databaseType);
+            return RELATIONAL_DBS_SUPPORTING_NESTED_CREATE.Contains(databaseType);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether database type represents a NoSQL database.
+        /// </summary>
+        public static bool IsNoSQLDb(DatabaseType databaseType)
+        {
+            return NOSQL_DBS.Contains(databaseType);
         }
 
         /// <summary>
@@ -335,9 +346,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         public static string GetEntityNameFromContext(IMiddlewareContext context)
         {
-            string entityName = context.Selection.Field.Type.TypeName();
+            IOutputType type = context.Selection.Field.Type;
+            string graphQLTypeName = type.TypeName();
+            string entityName = graphQLTypeName;
 
-            if (entityName is DB_OPERATION_RESULT_TYPE)
+            if (graphQLTypeName is DB_OPERATION_RESULT_TYPE)
             {
                 // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
                 if (TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
@@ -349,7 +362,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 // for rest of scenarios get entity name from output object type.
                 ObjectType underlyingFieldType;
-                IOutputType type = context.Selection.Field.Type;
                 underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
                 // Example: CustomersConnectionObject - for get all scenarios.
                 if (QueryBuilder.IsPaginationType(underlyingFieldType))
@@ -429,6 +441,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// </summary>
         /// <param name="linkingEntityName">linking entity name of the format 'LinkingEntity$SourceEntityName$TargetEntityName'.</param>
         /// <returns>tuple of source, target entities name of the format (SourceEntityName, TargetEntityName).</returns>
+        /// <exception cref="ArgumentException">Thrown when the linking entity name is not of the expected format.</exception>
         public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
         {
             if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER))

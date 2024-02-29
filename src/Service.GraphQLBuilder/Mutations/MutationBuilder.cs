@@ -129,7 +129,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 switch (operation)
                 {
                     case EntityActionOperation.Create:
-                        // Get the point/batch fields for the create mutation.
+                        // Get the create one/many fields for the create mutation.
                         IEnumerable<FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, returnEntityName, rolesAllowedForMutation);
                         mutationFields.AddRange(createMutationNodes);
                         break;

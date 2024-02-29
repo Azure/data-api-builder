@@ -26,13 +26,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // we successfully determine at the startup, that Review is the referencing entity.
 
             // Review is the higher level entity.
-            ValidateReferencingEntitiesForRelationship(
+            ValidateReferencingEntityForRelationship(
                 higherLevelEntityName: "Review",
                 lowerLevelEntityName: "Book",
                 expectedreferencingEntityName: "Review" );
 
             // Book is the higher level entity.
-            ValidateReferencingEntitiesForRelationship(
+            ValidateReferencingEntityForRelationship(
                 higherLevelEntityName: "Book",
                 lowerLevelEntityName: "Review",
                 expectedreferencingEntityName: "Review");
@@ -42,13 +42,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // we successfully determine at the startup, that Book is the referencing entity.
 
             // Book is the higher level entity.
-            ValidateReferencingEntitiesForRelationship(
+            ValidateReferencingEntityForRelationship(
                 higherLevelEntityName: "Book",
                 lowerLevelEntityName: "Publisher",
                 expectedreferencingEntityName: "Book");
 
             // Publisher is the higher level entity.
-            ValidateReferencingEntitiesForRelationship(
+            ValidateReferencingEntityForRelationship(
                 higherLevelEntityName: "Publisher",
                 lowerLevelEntityName: "Book",
                 expectedreferencingEntityName: "Book");
@@ -57,13 +57,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // exists from stocks_price -> Stock, we successfully determine at the startup, that stocks_price is the
             // referencing entity.
             // Stock is the higher level entity.
-            ValidateReferencingEntitiesForRelationship(
+            ValidateReferencingEntityForRelationship(
                 higherLevelEntityName: "Stock",
                 lowerLevelEntityName: "stocks_price",
                 expectedreferencingEntityName: "stocks_price");
         }
 
-        private static void ValidateReferencingEntitiesForRelationship(
+        private static void ValidateReferencingEntityForRelationship(
             string higherLevelEntityName,
             string lowerLevelEntityName,
             string expectedreferencingEntityName)

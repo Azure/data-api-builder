@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Net;
+using System.Security.Cryptography.Xml;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Transactions;
@@ -24,6 +26,7 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using static Npgsql.Replication.PgOutput.Messages.RelationMessage;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -238,13 +241,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                // Absence of model directive on the mutation indicates that we are dealing with a `mutate many`
+                // Model directive is not added to the output type of 'mutate many' mutations.
+                // Thus, absence of model directive here indicates that we are dealing with a 'mutate many'
                 // mutation like createBooks.
                 isPointMutation = false;
 
-                // For a mutation like createBooks which inserts multiple records into the Book entity, the underlying field type is a paginated response
-                // type like 'BookConnection'. To determine the underlying entity name, we have to look at the type of the `items` field which stores a list of items of
-                // the underlying entity's type - here, Book type.
+                // For a mutation like createBooks which inserts multiple records into the Book entity,
+                // the underlying field type is a paginated response type like 'BookConnection'.
+                // To determine the underlying entity name, we have to look at the type of the `items` field
+                // which stores a list of items of the underlying entity's type - here, Book type.
                 IOutputType entityOutputType = _underlyingFieldType.Fields[MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME].Type;
                 ObjectType _underlyingEntityFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(entityOutputType);
                 if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingEntityFieldType.Directives, out modelName))
@@ -1159,7 +1164,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="context">Middleware context.</param>
         /// <param name="clientRole">Client role header value extracted from the middleware context of the mutation</param>
-        /// <param name="entityName">Top level entity name.</param>
+        /// <param name="topLevelEntityName">Top level entity name.</param>
         /// <param name="operation">Mutation operation</param>
         /// <param name="inputArgumentName">Name of the input argument (differs based on point/multiple mutation).</param>
         /// <param name="parametersDictionary">Dictionary of key/value pairs for the argument name/value.</param>
@@ -1167,41 +1172,48 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private void AuthorizeEntityAndFieldsForMutation(
             IMiddlewareContext context,
             string clientRole,
-            string entityName,
+            string topLevelEntityName,
             EntityActionOperation operation,
             string inputArgumentName,
             IDictionary<string, object?> parametersDictionary
-            )
+        )
         {
-            IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
-
-            // Dictionary to store a mapping from entityName to all field names being referenced from that entity in the mutation.
-            Dictionary<string, HashSet<string>> entityToFields = new();
-            object? parameters;
-            if (parametersDictionary.TryGetValue(inputArgumentName, out parameters))
+            if (context.Selection.Field.Arguments.TryGetField(inputArgumentName, out IInputField? schemaForArgument))
             {
-                // Get all the entity names and field names referenced in the mutation.
-                PopulateMutationEntityAndFieldsToAuthorize(entityToFields, schemaForArgument, entityName, context, parameters);
-            }
-
-            // Perform authorization checks at field level.
-            foreach ((string entityNameInMutation, HashSet<string> fieldsInEntity) in entityToFields)
-            {
-                if (!AreFieldsAuthorizedForEntity(clientRole, entityNameInMutation, operation, fieldsInEntity))
+                // Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.
+                Dictionary<string, HashSet<string>> entityToExposedColumns = new();
+                if (parametersDictionary.TryGetValue(inputArgumentName, out object? parameters))
                 {
-                    throw new DataApiBuilderException(
-                        message: $"Unauthorized due to one or more fields in this mutation.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
-                    );
+                    // Get all the entity names and field names referenced in the mutation.
+                    PopulateMutationEntityAndFieldsToAuthorize(entityToExposedColumns, schemaForArgument, topLevelEntityName, context, parameters!);
                 }
+
+                // Perform authorization checks at field level.
+                foreach ((string entityNameInMutation, HashSet<string> exposedColumnsInEntity) in entityToExposedColumns)
+                {
+                    if (!AreFieldsAuthorizedForEntity(clientRole, entityNameInMutation, operation, exposedColumnsInEntity))
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Unauthorized due to one or more fields in this mutation.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed
+                        );
+                    }
+                }
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Could not interpret the schema for the input argument: {inputArgumentName}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 
         /// <summary>
         /// Helper method to collect names of all the fields referenced from every entity in a GraphQL mutation.
         /// </summary>
-        /// <param name="entityToFields">Dictionary to store all the entities and their corresponding fields referenced in the mutation.</param>
+        /// <param name="entityToExposedColumns">Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.</param>
         /// <param name="schema">Schema for the input field.</param>
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="context">Middleware Context.</param>
@@ -1238,11 +1250,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                     }
         ///                 }</example>
         private void PopulateMutationEntityAndFieldsToAuthorize(
-            Dictionary<string, HashSet<string>> entityToFields,
+            Dictionary<string, HashSet<string>> entityToExposedColumns,
             IInputField schema,
             string entityName,
             IMiddlewareContext context,
-            object? parameters)
+            object parameters)
         {
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
             {
@@ -1253,14 +1265,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     entityName: entityName,
                     schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
                     fieldNodes: listOfObjectFieldNode,
-                    entityTofields: entityToFields);
+                    entityToExposedColumns: entityToExposedColumns);
             }
             else if (parameters is List<IValueNode> listOfIValueNode)
             {
                 // For the example createbooks mutation written above, the list value for `items` is interpreted as a List<IValueNode>
                 // i.e. items is a list of ObjectValueNode(s).
                 listOfIValueNode.ForEach(iValueNode => PopulateMutationEntityAndFieldsToAuthorize(
-                    entityToFields: entityToFields,
+                    entityToExposedColumns: entityToExposedColumns,
                     schema: schema,
                     entityName: entityName,
                     context: context,
@@ -1275,14 +1287,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     entityName: entityName,
                     schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
                     fieldNodes: objectValueNode.Fields,
-                    entityTofields: entityToFields);
+                    entityToExposedColumns: entityToExposedColumns);
             }
             else if (parameters is ListValueNode listValueNode)
             {
                 // For the example createbook mutation written above, the list values for reviews and authors fields are interpreted as ListValueNode.
                 // All the nodes in the ListValueNode are parsed one by one.
                 listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => PopulateMutationEntityAndFieldsToAuthorize(
-                    entityToFields: entityToFields,
+                    entityToExposedColumns: entityToExposedColumns,
                     schema: schema,
                     entityName: entityName,
                     context: context,
@@ -1298,16 +1310,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="entityName">Name of the entity.</param>
         /// <param name="schemaObject">Input object type for the field.</param>
         /// <param name="fieldNodes">List of ObjectFieldNodes for the the input field.</param>
-        /// <param name="entityTofields">Dictionary to store all the entities and their corresponding fields referenced in the mutation.</param>
+        /// <param name="entityToExposedColumns">Dictionary to store all the entities and their corresponding exposed column names referenced in the mutation.</param>
         private void ProcessObjectFieldNodesForAuthZ(
             IMiddlewareContext context,
             string entityName,
             InputObjectType schemaObject,
             IReadOnlyList<ObjectFieldNode> fieldNodes,
-            Dictionary<string, HashSet<string>> entityTofields)
+            Dictionary<string, HashSet<string>> entityToExposedColumns)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            entityTofields.TryAdd(entityName, new HashSet<string>());
+            entityToExposedColumns.TryAdd(entityName, new HashSet<string>());
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             foreach (ObjectFieldNode field in fieldNodes)
@@ -1316,16 +1328,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 SyntaxKind underlyingFieldKind = fieldDetails.Item2;
 
                 // For a column field, we do not have to recurse to process fields in the value - which is required for relationship fields.
-                if (GraphQLUtils.IsScalarField(underlyingFieldKind))
+                if (GraphQLUtils.IsScalarField(underlyingFieldKind) || underlyingFieldKind is SyntaxKind.NullValue)
                 {
-                    // It might be the case that we are currently processing the fields for a linking input object.
-                    // Linking input objects enable users to provide input for fields belonging to the target entity and the linking entity.
-                    // Hence the backing column for fields belonging to the linking entity will not be present in the source definition of this target entity.
+                    // This code block can be hit in 3 cases:
+                    // Case 1. We are processing a column which belongs to this entity,
+                    //
+                    // Case 2. We are processing the fields for a linking input object. Linking input objects enable users to provide
+                    // input for fields belonging to the target entity and the linking entity. Hence the backing column for fields
+                    // belonging to the linking entity will not be present in the source definition of this target entity.
                     // We need to skip such fields belonging to linking table as we do not perform authorization checks on them.
+                    //
+                    // Case 3. When a relationship field is assigned a null value. Such a field also needs to be ignored.
                     if (metadataProvider.TryGetBackingColumn(entityName, field.Name.Value, out string? _))
                     {
-                        // Only add those fields to this entity's set of fields which belong to this entity and not the linking entity.
-                        entityTofields[entityName].Add(field.Name.Value);
+                        // Only add those fields to this entity's set of fields which belong to this entity and not the linking entity,
+                        // i.e. for Case 1.
+                        entityToExposedColumns[entityName].Add(field.Name.Value);
                     }
                 }
                 else
@@ -1335,7 +1353,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     // Recurse to process fields in the value of this relationship field.
                     PopulateMutationEntityAndFieldsToAuthorize(
-                        entityTofields,
+                        entityToExposedColumns,
                         schemaObject.Fields[relationshipName],
                         targetEntityName,
                         context,

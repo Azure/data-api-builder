@@ -401,7 +401,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to get the field details i.e. the field value and the field kind, from the GraphQL request body.
+        /// Helper method to get the field details i.e. (field value, field kind) from the GraphQL request body.
         /// If the field value is being provided as a variable in the mutation, a recursive call is made to the method
         /// to get the actual value of the variable.
         /// </summary>

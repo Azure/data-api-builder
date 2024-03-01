@@ -1,13 +1,20 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
+using System.Net;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using HotChocolate.Types;
+using HotChocolate.Types.NodaTime;
+using NodaTime.Text;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
@@ -121,6 +128,58 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 arguments: new List<InputValueDefinitionNode>(),
                 type: new StringType().ToTypeNode(),
                 directives: new List<DirectiveNode>());
+        }
+
+        /// <summary>
+        /// Translates a JSON string or number value defined as a stored procedure's default value
+        /// within the runtime configuration to a GraphQL {Type}ValueNode which represents
+        /// the associated GraphQL type. The target value type is referenced from the passed in parameterDefinition which
+        /// holds database schema metadata.
+        /// </summary>
+        /// <param name="defaultValueFromConfig">String representation of default value defined in runtime config.</param>
+        /// <param name="parameterDefinition">Database schema metadata for stored procedure parameter which include value and value type.</param>
+        /// <returns>Tuple where first item is the string representation of a GraphQLType (e.g. "Byte", "Int", "Decimal")
+        /// and the second item is the GraphQL {type}ValueNode </returns>
+        /// <exception cref="DataApiBuilderException">Raised when parameter casting fails due to unsupported type.</exception>
+        private static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
+        {
+            string paramValueType = SchemaConverter.GetGraphQLTypeFromSystemType(type: parameterDefinition.SystemType);
+
+            try
+            {
+                Tuple<string, IValueNode> valueNode = paramValueType switch
+                {
+                    UUID_TYPE => new(UUID_TYPE, new UuidType().ParseValue(Guid.Parse(defaultValueFromConfig))),
+                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
+                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
+                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
+                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
+                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
+                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
+                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
+                    STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
+                    BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(bool.Parse(defaultValueFromConfig))),
+                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
+                        DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
+                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
+                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
+                    _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
+                };
+
+                return valueNode;
+            }
+            catch (Exception error) when (
+                error is FormatException ||
+                error is OverflowException ||
+                error is ArgumentException ||
+                error is NotSupportedException)
+            {
+                throw new DataApiBuilderException(
+                        message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
+                        innerException: error);
+            }
         }
     }
 }

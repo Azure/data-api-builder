@@ -2,20 +2,14 @@
 // Licensed under the MIT License.
 
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Net;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
-using HotChocolate.Types.NodaTime;
-using NodaTime.Text;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder
@@ -46,9 +40,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         public static bool IsBuiltInType(ITypeNode typeNode)
         {
-            HashSet<string> inBuiltTypes = new()
+            HashSet<string> builtInTypes = new()
             {
-                "ID",
+                "ID", // Required for CosmosDB
                 UUID_TYPE,
                 BYTE_TYPE,
                 SHORT_TYPE,
@@ -64,7 +58,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 LOCALTIME_TYPE
             };
             string name = typeNode.NamedType().Name.Value;
-            return inBuiltTypes.Contains(name);
+            return builtInTypes.Contains(name);
         }
 
         /// <summary>
@@ -223,57 +217,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             return UnderlyingGraphQLEntityType(type.InnerType());
-        }
-
-        /// <summary>
-        /// Translates a JSON string or number value defined in the runtime configuration to a GraphQL {Type}ValueNode which represents
-        /// the associated GraphQL type. The target value type is referenced from the passed in parameterDefinition which
-        /// holds database schema metadata.
-        /// </summary>
-        /// <param name="defaultValueFromConfig">String representation of default value defined in runtime config.</param>
-        /// <param name="parameterDefinition">Database schema metadata for stored procedure parameter which include value and value type.</param>
-        /// <returns>Tuple where first item is the string representation of a GraphQLType (e.g. "Byte", "Int", "Decimal")
-        /// and the second item is the GraphQL {type}ValueNode </returns>
-        /// <exception cref="DataApiBuilderException">Raised when parameter casting fails due to unsupported type.</exception>
-        public static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
-        {
-            string paramValueType = SchemaConverter.GetGraphQLTypeFromSystemType(type: parameterDefinition.SystemType);
-
-            try
-            {
-                Tuple<string, IValueNode> valueNode = paramValueType switch
-                {
-                    BYTE_TYPE => new(BYTE_TYPE, new IntValueNode(byte.Parse(defaultValueFromConfig))),
-                    SHORT_TYPE => new(SHORT_TYPE, new IntValueNode(short.Parse(defaultValueFromConfig))),
-                    INT_TYPE => new(INT_TYPE, new IntValueNode(int.Parse(defaultValueFromConfig))),
-                    LONG_TYPE => new(LONG_TYPE, new IntValueNode(long.Parse(defaultValueFromConfig))),
-                    STRING_TYPE => new(STRING_TYPE, new StringValueNode(defaultValueFromConfig)),
-                    UUID_TYPE => new(UUID_TYPE, new UuidType().ParseValue(Guid.Parse(defaultValueFromConfig))),
-                    BOOLEAN_TYPE => new(BOOLEAN_TYPE, new BooleanValueNode(bool.Parse(defaultValueFromConfig))),
-                    SINGLE_TYPE => new(SINGLE_TYPE, new SingleType().ParseValue(float.Parse(defaultValueFromConfig))),
-                    FLOAT_TYPE => new(FLOAT_TYPE, new FloatValueNode(double.Parse(defaultValueFromConfig))),
-                    DECIMAL_TYPE => new(DECIMAL_TYPE, new FloatValueNode(decimal.Parse(defaultValueFromConfig))),
-                    DATETIME_TYPE => new(DATETIME_TYPE, new DateTimeType().ParseResult(
-                        DateTime.Parse(defaultValueFromConfig, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal))),
-                    BYTEARRAY_TYPE => new(BYTEARRAY_TYPE, new ByteArrayType().ParseValue(Convert.FromBase64String(defaultValueFromConfig))),
-                    LOCALTIME_TYPE => new(LOCALTIME_TYPE, new LocalTimeType().ParseResult(LocalTimePattern.ExtendedIso.Parse(defaultValueFromConfig).Value)),
-                    _ => throw new NotSupportedException(message: $"The {defaultValueFromConfig} parameter's value type [{paramValueType}] is not supported.")
-                };
-
-                return valueNode;
-            }
-            catch (Exception error) when (
-                error is FormatException ||
-                error is OverflowException ||
-                error is ArgumentException ||
-                error is NotSupportedException)
-            {
-                throw new DataApiBuilderException(
-                        message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping,
-                        innerException: error);
-            }
         }
 
         /// <summary>

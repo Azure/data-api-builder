@@ -1,8 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using HotChocolate.Language;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
 
@@ -12,26 +13,22 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// This class is a visitor for an AST generated when parsing a $filter query string
     /// with the OData Uri Parser.
     /// </summary>
-    public class ODataASTVisitorForCosmos : QueryNodeVisitor<string>
+    public class ODataASTVisitorForCosmos : QueryNodeVisitor<ObjectFieldNode>
     {
+        private readonly CosmosQueryStructure _struct;
         private readonly string _entityName;
         private readonly string _sourceAlias;
         private readonly ISqlMetadataProvider _metadataProvider;
 
-        public IncrementingInteger Counter { get; }
-        public Dictionary<string, DbConnectionParam> Parameters { get; set; }
-
-        public ODataASTVisitorForCosmos(string entityName,
+        public ODataASTVisitorForCosmos(CosmosQueryStructure cosmosQueryStructure,
+            string entityName,
             string sourceAlias,
-            ISqlMetadataProvider metadataProvider,
-            IncrementingInteger? counter = null)
+            ISqlMetadataProvider metadataProvider)
         {
+            _struct = cosmosQueryStructure;
             _entityName = entityName;
             _sourceAlias = sourceAlias;
             _metadataProvider = metadataProvider;
-
-            Parameters = new Dictionary<string, DbConnectionParam>();
-            Counter = counter ?? new IncrementingInteger();
         }
 
         /// <summary>
@@ -40,12 +37,20 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// </summary>
         /// <param name="nodeIn">The node visited.</param>
         /// <returns>String concatenation of (left op right).</returns>
-        public override string Visit(BinaryOperatorNode nodeIn)
+        public override ObjectFieldNode Visit(BinaryOperatorNode nodeIn)
         {
             // In order traversal but add parens to maintain order of logical operations
-            string left = nodeIn.Left.Accept(this);
+            ObjectFieldNode left = nodeIn.Left.Accept(this);
             string right = nodeIn.Right.Accept(this);
 
+/*            if (IsSimpleBinaryExpression(nodeIn))
+            {
+                // Whenever we encounter a simple binary expression like "@item.name ne 'DAB'", we know that we would have just added a parameter for 'name',
+                // and are coming back to the root node after traversing the left and right child.
+                // Thats when we need to populate the DbType for the parameter.
+                PopulateDbTypeForProperty(nodeIn);
+            }
+*/
             return CreateResult(nodeIn.OperatorKind, left, right);
         }
 
@@ -96,8 +101,8 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <inheritdoc/>
         public string MakeDbConnectionParam(object? value, string? columnName = null)
         {
-            string encodedParamName = $"@param{this.Counter.Next()}";
-            Parameters.Add(encodedParamName, new(value));
+            string encodedParamName = $"@param{_struct.Counter.Next()}";
+            _struct.Parameters.Add(encodedParamName, new(value));
             return encodedParamName;
         }
 
@@ -175,13 +180,17 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <param name="left">left side of the predicate</param>
         /// <param name="right">right side of the predicate</param>
         /// <returns>string representing the correct formatting.</returns>
-        private static string CreateResult(BinaryOperatorKind op, string left, string right)
+        private static ObjectFieldNode CreateResult(BinaryOperatorKind op, string left, string right)
         {
             if (left.Equals("NULL") || right.Equals("NULL"))
             {
                 return CreateNullResult(op, left, right);
             }
 
+            
+            ObjectFieldNode obfieldNode = new();
+            obfieldNode.
+            obfieldNode.
             return $"({left} {GetFilterPredicateOperator(op)} {right})";
         }
 
@@ -274,14 +283,14 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// We just need to populate the DbType.
         /// </summary>
         /// <param name="nodeIn">Binary operator node<</param>
-      /*  private void PopulateDbTypeForProperty(BinaryOperatorNode nodeIn)
+        private void PopulateDbTypeForProperty(BinaryOperatorNode nodeIn)
         {
             SingleValuePropertyAccessNode propertyNode = nodeIn.Left.GetType() == typeof(SingleValuePropertyAccessNode) ?
                     (SingleValuePropertyAccessNode)nodeIn.Left : (SingleValuePropertyAccessNode)nodeIn.Right;
-            string? paramName = BaseQueryStructure.GetEncodedParamName(this.Counter.Current() - 1);
+            string? paramName = BaseQueryStructure.GetEncodedParamName(_struct.Counter.Current() - 1);
             _metadataProvider.TryGetBackingColumn(_entityName, propertyNode.Property.Name, out string? backingColumnName);
-            Parameters[paramName].DbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType;
-        }*/
+            _struct.Parameters[paramName].DbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType;
+        }
 
         /// <summary>
         /// Helper method to determine if the BinaryOperatorNode represents a simple binary expression -

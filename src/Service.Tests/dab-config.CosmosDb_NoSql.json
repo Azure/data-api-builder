@@ -531,7 +531,7 @@
             {
               "action": "read",
               "policy": {
-                "database": "@item.name eq 'volcano0'"
+                "database": "@item.name eq 'volcano0' and @item.name eq 'volcano1' or @item.name eq 'volcano2'"
               }
             }
           ]

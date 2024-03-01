@@ -42,6 +42,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
 
+        private Dictionary<string, List<string>> _listTypeFieldNodeNameToParentEntities = new();
+
         public DocumentNode GraphQLSchemaRoot { get; set; }
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
@@ -277,6 +279,20 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 _graphQLTypeToFieldsMap.TryAdd(typeName, new List<FieldDefinitionNode>());
                 foreach (FieldDefinitionNode field in node.Fields)
                 {
+                    if(field.Type.IsListType())
+                    {
+                        _listTypeFieldNodeNameToParentEntities.TryGetValue(field.Name.Value, out List<string>? parentEntities);
+                        if (parentEntities is null)
+                        {
+                            _listTypeFieldNodeNameToParentEntities.Add(field.Name.Value, new List<string> { typeName });
+                        }
+                        else
+                        {
+                            parentEntities.Add(typeName);
+                            _listTypeFieldNodeNameToParentEntities[field.Name.Value] = parentEntities;
+                        }
+                    }
+                    
                     _graphQLTypeToFieldsMap[typeName].Add(field);
                 }
 
@@ -289,6 +305,11 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     _graphQLTypeToFieldsMap.TryAdd(modelName, _graphQLTypeToFieldsMap[typeName]);
                 }
             }
+        }
+
+        public bool TryGetParentEntitiesForListType(string entityName, out List<string>? parentEntities)
+        {
+            return _listTypeFieldNodeNameToParentEntities.TryGetValue(entityName, out parentEntities);
         }
 
         public List<string> GetSchemaGraphQLFieldNamesForEntityName(string entityName)

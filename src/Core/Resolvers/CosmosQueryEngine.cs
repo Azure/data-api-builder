@@ -63,8 +63,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
-            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
-
             // Add Item level policies defined in config for all related entities in query structure, it doesn't matter if that entity was part of the query or not.
             HttpContext httpContext = GetHttpContextFromMiddlewareContext(context);
             if (httpContext is not null)
@@ -73,9 +71,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     EntityActionOperation.Read,
                     httpContext,
                     _authorizationResolver,
-                    metadataStoreProvider,
-                    structure);
+                    metadataStoreProvider as CosmosSqlMetadataProvider,
+                    parameters);
             }
+
+            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
@@ -166,6 +166,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+/*
+            // Add Item level policies defined in config for all related entities in query structure, it doesn't matter if that entity was part of the query or not.
+            HttpContext httpContext = GetHttpContextFromMiddlewareContext(context);
+            if (httpContext is not null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    EntityActionOperation.Read,
+                    httpContext,
+                    _authorizationResolver,
+                    metadataStoreProvider as CosmosSqlMetadataProvider,
+                    structure);
+            }*/
+
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             string queryString = _queryBuilder.Build(structure);

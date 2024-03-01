@@ -37,6 +37,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindOnTableWithNamingCollision",
+                $"SELECT upc, comic_name, issue FROM { _collisionTable } " +
+                $"WHERE 1 = 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindOnTableWithUniqueCharacters",
                 $"SELECT [NoteNum] AS [┬─┬ノ( º _ ºノ)], [DetailAssessmentAndPlanning] AS [始計], " +
                 $"[WagingWar] AS [作戰], [StrategicAttack] AS [謀攻] FROM { _integrationUniqueCharactersTable } " +

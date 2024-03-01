@@ -209,7 +209,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string Build(SqlExecuteStructure structure)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support executes");
+            return $"EXECUTE {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
+                $"{BuildProcedureParameterList(structure.ProcedureParameters)}";
         }
 
         /// <inheritdoc />
@@ -306,7 +307,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
-            throw new NotImplementedException("DataWarehouse sql currently does not support stored procedures");
+            string query = $"EXEC sp_describe_first_result_set @tsql = N'{databaseObjectName}';";
+            return query;
         }
 
         /// <summary>
@@ -337,6 +339,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "On ST.object_id = STE.object_id AND ST.parent_id = object_id(@param0 + '.' + @param1) WHERE ST.is_disabled = 0;";
 
             return query;
+        }
+
+        /// <summary>
+        /// Builds the parameter list for the stored procedure execute call
+        /// paramKeys are the user-generated procedure parameter names
+        /// paramValues are the auto-generated, parameterized values (@param0, @param1..)
+        /// </summary>
+        private static string BuildProcedureParameterList(Dictionary<string, object> procedureParameters)
+        {
+            StringBuilder sb = new();
+            foreach ((string paramKey, object paramValue) in procedureParameters)
+            {
+                sb.Append($"@{paramKey} = {paramValue}, ");
+            }
+
+            string parameterList = sb.ToString();
+            // If at least one parameter added, remove trailing comma and space, else return empty string
+            return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }
     }
 }

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -320,6 +321,64 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that returns a single row
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingSingleRow()
+        {
+            string dwSqlQuery = $"EXEC dbo.get_publisher_by_id @id=1234";
+            await TestStoredProcedureQueryForGettingSingleRow(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that returns a list(multiple rows)
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingMultipleRows()
+        {
+            string dwSqlQuery = $"EXEC dbo.get_books";
+            await TestStoredProcedureQueryForGettingMultipleRows(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that counts the total number of rows
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryForGettingTotalNumberOfRows()
+        {
+            string dwSqlQuery = $"EXEC dbo.count_books";
+            await TestStoredProcedureQueryForGettingTotalNumberOfRows(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Test to execute stored-procedure in graphQL that contains null in the result set.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryWithResultsContainingNull()
+        {
+            string dwSqlQuery = $"EXEC dbo.get_authors_history_by_first_name @firstName='Aaron'";
+            await TestStoredProcedureQueryWithResultsContainingNull(dwSqlQuery);
+        }
+
+        /// <summary>
+        /// Checks failure on providing arguments with no default in runtimeconfig.
+        /// In this test, there is no default value for the argument 'id' in runtimeconfig, nor is it specified in the query.
+        /// Stored procedure expects id argument to be provided.
+        /// </summary>
+        [TestMethod]
+        public async Task TestStoredProcedureQueryWithNoDefaultInConfig()
+        {
+            string graphQLQueryName = "executeGetPublisher";
+            string graphQLQuery = @"{
+                executeGetPublisher {
+                    name
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), message: "Did not provide all procedure params");
+        }
         #endregion
     }
 }

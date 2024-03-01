@@ -472,8 +472,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
         {
+            // The system type name column is aliased while the other columns are not to ensure
+            // names are consistent across different sql implementations as all go through same deserialization logic
             string query = "SELECT " +
-                            "name as result_field_name, TYPE_NAME(system_type_id) as result_type, is_nullable " +
+                            $"{STOREDPROC_COLUMN_NAME}, TYPE_NAME(system_type_id) as {STOREDPROC_COLUMN_SYSTEMTYPENAME}, {STOREDPROC_COLUMN_ISNULLABLE} " +
                             "FROM " +
                             "sys.dm_exec_describe_first_result_set_for_object (" +
                             $"OBJECT_ID('{databaseObjectName}'), 0) " +

@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS [foo].[magazines];
+DROP TABLE IF EXISTS [bar].[magazines];
 DROP TABLE IF EXISTS stocks_price;
 DROP TABLE IF EXISTS stocks;
 DROP TABLE IF EXISTS comics;
@@ -30,7 +31,18 @@ DROP TABLE IF EXISTS GQLmappings;
 DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS publishers;
+DROP TABLE IF EXISTS authors_history;
+DROP PROCEDURE IF EXISTS get_books;
+DROP PROCEDURE IF EXISTS get_book_by_id;
+DROP PROCEDURE IF EXISTS get_publisher_by_id;
+DROP PROCEDURE IF EXISTS count_books;
+DROP PROCEDURE IF EXISTS get_authors_history_by_first_name;
+DROP PROCEDURE IF EXISTS insert_book;
+DROP PROCEDURE IF EXISTS delete_last_inserted_book;
+DROP PROCEDURE IF EXISTS update_book_title;
+DROP PROCEDURE IF EXISTS insert_and_display_all_books_for_given_publisher;
 DROP SCHEMA IF EXISTS [foo];
+DROP SCHEMA IF EXISTS [bar];
 COMMIT;
 
 CREATE TABLE books(
@@ -73,6 +85,14 @@ CREATE TABLE [foo].[magazines](
     id int NOT NULL,
     title varchar(2048) NOT NULL,
     issue_number int NULL
+);
+
+EXEC('CREATE SCHEMA [bar]');
+
+CREATE TABLE [bar].[magazines](
+    upc int NOT NULL,
+    comic_name varchar(2048) NOT NULL,
+    issue int NULL
 );
 
 CREATE TABLE comics(
@@ -196,7 +216,74 @@ CREATE TABLE type_table(
     uuid_types uniqueidentifier
 );
 
+CREATE TABLE authors_history (
+    id int NOT NULL,
+    first_name varchar(100) NOT NULL,
+    middle_name varchar(100),
+    last_name varchar(100) NOT NULL,
+    year_of_publish int,
+    books_published int
+);
+
+EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
+      SELECT * FROM dbo.publishers
+      WHERE id = @id');
+EXEC('CREATE PROCEDURE get_books AS
+      SELECT * FROM dbo.books');
+EXEC('CREATE PROCEDURE get_book_by_id @id int AS
+      SELECT * FROM dbo.books
+      WHERE id = @id');
+EXEC('CREATE PROCEDURE count_books AS
+	  SELECT COUNT(*) AS total_books FROM dbo.books');
+EXEC('CREATE PROCEDURE get_authors_history_by_first_name @firstName varchar(100) AS
+      BEGIN
+        SELECT
+          concat(first_name, '' '', (middle_name + '' ''), last_name) as author_name,
+          min(year_of_publish) as first_publish_year,
+          sum(books_published) as total_books_published
+        FROM
+          authors_history
+        WHERE
+          first_name=@firstName
+        GROUP BY
+          concat(first_name, '' '', (middle_name + '' ''), last_name)
+      END');
+EXEC('CREATE PROCEDURE insert_book @book_id int, @title varchar(max), @publisher_id int AS
+      INSERT INTO dbo.books(id, title, publisher_id) VALUES (@book_id, @title, @publisher_id)');
+EXEC('CREATE PROCEDURE delete_last_inserted_book AS
+      BEGIN
+        DELETE FROM dbo.books
+        WHERE
+        id = (select max(id) from dbo.books)
+      END');
+EXEC('CREATE PROCEDURE update_book_title @id int, @title varchar(max) AS
+      BEGIN
+        UPDATE dbo.books SET title = @title WHERE id = @id
+        SELECT * from dbo.books WHERE id = @id
+      END');
+EXEC('CREATE PROCEDURE insert_and_display_all_books_for_given_publisher @book_id int,@title varchar(max), @publisher_name varchar(max) AS
+      BEGIN
+        DECLARE @publisher_id AS INT;
+        SET @publisher_id = (SELECT id FROM dbo.publishers WHERE name = @publisher_name);
+        INSERT INTO dbo.books(id, title, publisher_id)
+        VALUES(@book_id, @title, @publisher_id);
+
+        SELECT * FROM dbo.books WHERE publisher_id = @publisher_id;
+      END');
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
+
+INSERT INTO authors_history(id, first_name, middle_name, last_name, year_of_publish, books_published)
+VALUES
+(1, 'Isaac', null, 'Asimov', 1993, 6),
+(2, 'Robert', 'A.', 'Heinlein', 1886, null),
+(3, 'Robert', null, 'Silvenberg', null, null),
+(4, 'Dan', null, 'Simmons', 1759, 3),
+(5, 'Isaac', null, 'Asimov', 2000, null),
+(6, 'Robert', 'A.', 'Heinlein', 1899, 2),
+(7, 'Isaac', null, 'Silvenberg', 1664, null),
+(8, 'Dan', null, 'Simmons', 1799, 3),
+(9, 'Aaron', null, 'Mitchells', 2001, 1),
+(10, 'Aaron', 'F.', 'Burtle', null, null)
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');
@@ -235,6 +322,7 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 (5, 'Snow White', 'AnotherTales', 3001);
 
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
+INSERT INTO [bar].[magazines](upc, comic_name, issue) VALUES (0, 'NotVogue', 0);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);

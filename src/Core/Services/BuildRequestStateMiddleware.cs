@@ -29,7 +29,7 @@ public sealed class BuildRequestStateMiddleware
         if (context.ContextData.TryGetValue(nameof(HttpContext), out object? value) &&
             value is HttpContext httpContext)
         {
-            // Because Request.Headers is a NameValueCollection type, key not found will return null and not an exception.
+            // Because Request.Headers is a NameValueCollection type, key not found will return StringValues.Empty and not an exception.
             StringValues clientRoleHeader = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
             context.ContextData.TryAdd(key: AuthorizationResolver.CLIENT_ROLE_HEADER, value: clientRoleHeader);
         }

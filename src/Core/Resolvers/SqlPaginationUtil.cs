@@ -4,6 +4,7 @@
 using System.Collections.Specialized;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
@@ -29,16 +30,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <list>*Connection.hasNextPage which is decided on whether structure.Limit() elements have been returned</list>
         /// </list>
         /// </summary>
-        public static JsonDocument CreatePaginationConnectionFromJsonElement(JsonElement root, PaginationMetadata paginationMetadata)
+        public static JsonElement CreatePaginationConnectionFromJsonElement(JsonElement root, PaginationMetadata paginationMetadata)
+            => CreatePaginationConnection(root, paginationMetadata).ToJsonElement();
+
+        /// <summary>
+        /// Wrapper for CreatePaginationConnectionFromJsonElement
+        /// </summary>
+        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
+        {
+            // necessary for MsSql because it doesn't coalesce list query results like Postgres
+            if (jsonDocument is null)
+            {
+                jsonDocument = JsonDocument.Parse("[]");
+            }
+
+            JsonElement root = jsonDocument.RootElement.Clone();
+
+            // create the connection object.
+            return CreatePaginationConnection(root, paginationMetadata).ToJsonDocument();
+        }
+
+        private static JsonObject CreatePaginationConnection(JsonElement root, PaginationMetadata paginationMetadata)
         {
             // Maintains the connection JSON object *Connection
-            Dictionary<string, object> connectionJson = new();
+            JsonObject connection = new();
 
             // in dw we wrap array with "" and hence jsonValueKind is string instead of array.
             if (root.ValueKind is JsonValueKind.String)
             {
-                JsonDocument document = JsonDocument.Parse(root.GetString()!);
-                root = document.RootElement;
+                using JsonDocument document = JsonDocument.Parse(root.GetString()!);
+                root = document.RootElement.Clone();
             }
 
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
@@ -51,7 +72,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure!.Limit();
 
                 // add hasNextPage to connection elements
-                connectionJson.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement ? true : false);
+                connection.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement);
 
                 if (hasExtraElement)
                 {
@@ -68,12 +89,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // use rootEnumerated to make the *Connection.items since the last element of rootEnumerated
                     // is removed if the result has an extra element
-                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, JsonSerializer.Serialize(rootEnumerated.ToArray()));
+                    connection.Add(QueryBuilder.PAGINATION_FIELD_NAME, JsonSerializer.Serialize(rootEnumerated.ToArray()));
                 }
                 else
                 {
                     // if the result doesn't have an extra element, just return the dbResult for *Connection.items
-                    connectionJson.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
+                    connection.Add(QueryBuilder.PAGINATION_FIELD_NAME, root.ToString()!);
                 }
             }
 
@@ -84,7 +105,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (returnedElemNo > 0)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
-                    connectionJson.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
+                    connection.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
                         MakeCursorFromJsonElement(
                             lastElemInRoot,
                             paginationMetadata.Structure!.PrimaryKey(),
@@ -96,30 +117,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            return JsonDocument.Parse(JsonSerializer.Serialize(connectionJson));
-        }
-
-        /// <summary>
-        /// Wrapper for CreatePaginationConnectionFromJsonElement
-        /// Disposes the JsonDocument passed to it
-        /// <summary>
-        public static JsonDocument CreatePaginationConnectionFromJsonDocument(JsonDocument? jsonDocument, PaginationMetadata paginationMetadata)
-        {
-            // necessary for MsSql because it doesn't coalesce list query results like Postgres
-            if (jsonDocument is null)
-            {
-                jsonDocument = JsonDocument.Parse("[]");
-            }
-
-            JsonElement root = jsonDocument.RootElement;
-
-            // this is intentionally not disposed since it will be used for processing later
-            JsonDocument result = CreatePaginationConnectionFromJsonElement(root, paginationMetadata);
-
-            // no longer needed, so it is disposed
-            jsonDocument.Dispose();
-
-            return result;
+            return connection;
         }
 
         /// <summary>

@@ -610,7 +610,148 @@ query {{
                                              );
 
                 // Asserting cached data is returned
-                Assert.IsFalse(queryResponse.GetProperty("name").GetString() != name, "Query didn't return cached value");
+                Assert.IsFalse(queryResponse2.GetProperty("name").GetString() != name, "Query didn't return cached value");
+            }
+        }
+
+        [TestMethod]
+        public async Task QueryWithCacheEnabledShouldReturnCachedResponseForPaginatedQueries()
+        {
+            const string SCHEMA = @"
+type Planet @model(name:""Planet"") {
+    id : ID!,
+    name : String,
+    age : Int,
+}";
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+            Dictionary<string, object> dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), _containerName);
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
+            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
+                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityAction deleteAction = new(
+                Action: EntityActionOperation.Delete,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { createAction, readAction, deleteAction }) };
+
+            Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
+                                  Rest: null,
+                                  GraphQL: new(Singular: "Planet", Plural: "Planets"),
+                                  Permissions: permissions,
+                                  Relationships: null,
+                                  Mappings: null,
+                                  Cache: new EntityCacheOptions()
+                                  {
+                                      Enabled = true,
+                                      TtlSeconds = 5,
+                                  }
+                                  );
+
+            string entityName = "Planet";
+
+            // cache configuration
+            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName, new EntityCacheOptions() { Enabled = true, TtlSeconds = 50 });
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            const string CUSTOM_SCHEMA = "custom-schema.gql";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+            File.WriteAllText(CUSTOM_SCHEMA, SCHEMA);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+            List<string> pagedResponse = new();
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                const int pagesize = TOTAL_ITEM_COUNT / 2;
+                int totalElementsFromPaginatedQuery = 0;
+                string afterToken = null;
+                Dictionary<int, string> continuationTokenList = new();
+                int tokenCount = 0;
+                do
+                {
+                    string planetConnectionQueryStringFormat = @$"
+query {{
+    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}) {{
+        items {{
+            id
+            name
+        }}
+        endCursor
+        hasNextPage
+    }}
+}}";
+                    JsonElement page = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                       client,
+                                       server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                       query: planetConnectionQueryStringFormat,
+                                       queryName: "planets"
+                                       );
+
+                    JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
+                    afterToken = after.ToString();
+
+                    // Keeping track of afterToken sequence and valu. This later will be compared with cached value.
+                    continuationTokenList.Add(tokenCount++, afterToken);
+
+                    totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
+                    ConvertJsonElementToStringList(page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME), pagedResponse);
+                } while (!string.IsNullOrEmpty(afterToken));
+
+                // Assert Paginated query retured all records
+                Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
+
+                // reset token counters
+                tokenCount = 0;
+                afterToken = null;
+
+                // Second query.
+                do
+                {
+                    string planetConnectionQueryStringFormat = @$"
+query {{
+    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}) {{
+        items {{
+            id
+            name
+        }}
+        endCursor
+        hasNextPage
+    }}
+}}";
+                    JsonElement page = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                       client,
+                                       server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                       query: planetConnectionQueryStringFormat,
+                                       queryName: "planets"
+                                       );
+
+                    JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
+                    afterToken = after.ToString();
+
+                    // Asserting continuation are returned in the same sequence as original query.
+                    Assert.IsTrue(continuationTokenList[tokenCount++].Equals(afterToken) , "ContinuationToken not found in the cached response");
+
+                } while (!string.IsNullOrEmpty(afterToken));
             }
         }
 

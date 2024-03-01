@@ -321,9 +321,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             Assert.IsFalse(mockExecuteQuery.Invocations.Count is 2, message: "Expected a cache hit, but observed two cache misses.");
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
-
-            // Validates that the expected database response is returned by the cache service.
-            Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }
 
         // Validates that the provided cacheEntryOptions are honored by checking the number of Func Invocations within.
@@ -364,9 +361,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             JObject? result = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
 
             // Assert
-            Assert.IsFalse(mockExecuteQuery.Invocations.Count is 1, message: "QueryExecutor invocation count too low. A cache hit shouldn't have occurred since the entry should have expired.");
-            Assert.IsFalse(mockExecuteQuery.Invocations.Count is 3, message: "Unexpected cache misses. The cache entry was never used as the factory method was called on every cache access attempt.");
-            Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 2, message: ERROR_UNEXPECTED_INVOCATIONS);
+            Assert.IsFalse(mockExecuteQuery.Invocations.Count < 2, message: "QueryExecutor invocation count too low. A cache hit shouldn't have occurred since the entry should have expired.");
+            Assert.IsFalse(mockExecuteQuery.Invocations.Count > 2, message: "Unexpected cache misses. The cache entry was never used as the factory method was called on every cache access attempt.");
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }
 

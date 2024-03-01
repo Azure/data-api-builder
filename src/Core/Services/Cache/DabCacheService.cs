@@ -111,6 +111,10 @@ public class DabCacheService
     /// Creates a cache key using the request metadata resolved from a built SqlQueryStructure
     /// Format: DataSourceName:QueryText:JSON_QueryParameters
     /// Example: 7a07f92a-1aa2-4e2a-81d6-b9af0a25bbb6:select * from MyTable where id = @param1 = :{"@param1":{"Value":"42","DbType":null}}
+    /// Format CosmosDB: DataSourceName:IsPaginated:ContinuationToken:QueryText:JSON_QueryParameters
+    /// IsPaginated and ContinuationToken are optional and will be present only for paginated queries
+    /// Example without Pagination : 11bbfedb-df1d-47ad-ac2c-8dfeecc5f1a1:SELECT c.id, c.name FROM c:{}
+    /// Example with Pagination: 11bbfedb-df1d-47ad-ac2c-8dfeecc5f1a1:True:W3sidG9rZW4iOiItUklEOn56dG9NQUxQaGhpWUZBQUFBQUFBQUFBPT0jUlQ6MSNUUkM6NSNJU1Y6MiNJRU86NjU1NjcjUUNGOjgiLCJyYW5nZSI6eyJtaW4iOiIiLCJtYXgiOiJGRiJ9fV0=:SELECT c.id, c.name FROM c:{}
     /// </summary>
     /// <returns>Cache key string</returns>
     private string CreateCacheKey(DatabaseQueryMetadata queryMetadata)

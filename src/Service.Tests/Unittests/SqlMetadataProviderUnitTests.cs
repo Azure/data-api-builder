@@ -97,20 +97,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// <code>Do: </code> Tests with different combinations of connection string to ensure
-        /// tableprefix generated is correctly.
-        /// <code>Check: </code> Making sure table prefix matches expected prefix.
+        /// <code>Do: </code> Tests with different combinations of schema and table names
+        /// to validate that the correct full table name with schema as prefix is generated. For example if
+        /// schemaName = model, and tableName = TrainedModel, then correct would mean
+        /// [model].[TrainedModel], and any other form would be incorrect.
+        /// <code>Check: </code> Making sure table name with prefix matches expected name with prefix.
         /// </summary>
         [DataTestMethod]
-        [DataRow("", "", "")]
-        [DataRow("", "model", "[model]")]
-        [DataRow("TestDB", "", "[TestDB]")]
-        [DataRow("TestDB", "model", "[TestDB].[model]")]
-        public void CheckTablePrefix(string databaseName, string schemaName, string expectedPrefix)
+        [DataRow("", "", "[]")]
+        [DataRow("model", "TrainedModel", "[model].[TrainedModel]")]
+        [DataRow("", "TestTable", "[TestTable]")]
+        [DataRow("model", "TrainedModel", "[model].[TrainedModel]")]
+        public void CheckTablePrefix(string schemaName, string tableName, string expectedTableNameWithPrefix)
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
+            RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
+            string dataSourceName = runtimeConfig.GetDefaultDataSourceName();
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             Mock<IQueryExecutor> queryExecutor = new();
@@ -120,9 +124,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
 
-            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().GetDefaultDataSourceName());
-            string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
-            Assert.AreEqual(tableprefix, expectedPrefix);
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(
+                runtimeConfigProvider,
+                queryManagerFactory.Object,
+                sqlMetadataLogger,
+                dataSourceName);
+            string tableNameWithPrefix = provider.GetTableNameWithSchemaPrefix(schemaName, tableName);
+            Assert.AreEqual(expectedTableNameWithPrefix, tableNameWithPrefix);
         }
 
         /// <summary>
@@ -176,6 +184,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig runtimeConfig = baseConfigFromDisk with { DataSource = baseConfigFromDisk.DataSource with { ConnectionString = connectionString } };
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
+
+            // MySQL test will not error out before calling the query builder's format function and
+            // therefore can not be null
+            if (string.Equals(databaseType, TestCategory.MYSQL))
+            {
+                _queryBuilder = new MySqlQueryBuilder();
+            }
 
             try
             {

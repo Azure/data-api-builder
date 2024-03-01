@@ -31,6 +31,12 @@ namespace Azure.DataApiBuilder.Config.Converters
                     }
 
                     string? propertyName = reader.GetString();
+
+                    if (propertyName is null)
+                    {
+                        throw new JsonException("Invalid property : null");
+                    }
+
                     switch (propertyName)
                     {
                         case "enabled":
@@ -49,7 +55,7 @@ namespace Azure.DataApiBuilder.Config.Converters
                 return nestedCreateOptions;
             }
 
-            throw new JsonException();
+            throw new JsonException("Failed to read the GraphQL Nested Create options");
         }
 
         /// <inheritdoc/>

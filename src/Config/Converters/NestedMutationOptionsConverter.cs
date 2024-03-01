@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Config.Converters
                 return nestedMutationOptions;
             }
 
-            throw new JsonException();
+            throw new JsonException("Failed to read the GraphQL Nested Mutation options");
         }
 
         /// <inheritdoc/>

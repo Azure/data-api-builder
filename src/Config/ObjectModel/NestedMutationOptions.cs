@@ -1,6 +1,5 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
-using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -11,7 +10,6 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 public class NestedMutationOptions
 {
     // Options for nested create operation.
-    [JsonPropertyName("insert")]
     public NestedCreateOptions? NestedCreateOptions;
 
     public NestedMutationOptions(NestedCreateOptions? nestedCreateOptions = null)

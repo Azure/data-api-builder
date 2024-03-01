@@ -1644,7 +1644,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         ///     }
         /// }
         /// 
-        /// For all the above mentioned scenarios, the expected value for NestedMutationOptions field in null.
+        /// For all the above mentioned scenarios, the expected value for NestedMutationOptions field is null.
         /// </summary>
         /// <param name="baseConfig">Base Config Json string.</param>
         [DataTestMethod]
@@ -1654,7 +1654,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD, DisplayName = "Validate successful deserialization when create field within nested mutation section is empty")]
         public void ValidateDeserializationOfConfigWithNullOrEmptyInvalidNestedMutationSection(string baseConfig)
         {
-            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
+            string configJson = TestHelper.AddPropertiesToJson(baseConfig, BOOK_ENTITY_JSON);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
             Assert.IsNotNull(deserializedConfig.Runtime);
             Assert.IsNotNull(deserializedConfig.Runtime.GraphQL);

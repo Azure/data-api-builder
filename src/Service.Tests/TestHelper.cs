@@ -195,22 +195,34 @@ namespace Azure.DataApiBuilder.Service.Tests
           "}";
 
         /// <summary>
-        /// A minimal valid config json with nested mutations section as null.
+        /// An empty entities section of the config file. This is used in constructing config json strings utilized for testing.
         /// </summary>
-        public const string BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD =
-          "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+        public const string EMPTY_ENTITIES_CONFIG_JSON =
             @"
+                ""entities"": {}
+            ";
+
+        /// <summary>
+        /// A json string with Runtime Rest and GraphQL options. This is used in constructing config json strings utilized for testing. 
+        /// </summary>
+        public const string RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON =
+             "{" +
+             SAMPLE_SCHEMA_DATA_SOURCE + "," +
+             @"
             ""runtime"": {
               ""rest"": {
                 ""path"": ""/api""
               },
               ""graphql"": {
                 ""path"": ""/graphql"",
-                ""allow-introspection"": true,
-                ""nested-mutations"": null
-              },
-              ""host"": {
+                ""allow-introspection"": true,";
+
+        /// <summary>
+        /// A json string with host and empty entity options. This is used in constructing config json strings utilized for testing.
+        /// </summary>
+        public const string HOST_AND_ENTITY_OPTIONS_CONFIG_JSON =
+            @"
+            ""host"": {
                 ""mode"": ""development"",
                 ""cors"": {
                   ""origins"": [""http://localhost:5000""],
@@ -220,103 +232,56 @@ namespace Azure.DataApiBuilder.Service.Tests
                   ""provider"": ""StaticWebApps""
                 }
               }
-            },
-            ""entities"": {}" +
-          "}";
+            }" + "," +
+            EMPTY_ENTITIES_CONFIG_JSON +
+            "}";
+
+        /// <summary>
+        /// A minimal valid config json with nested mutations section as null.
+        /// </summary>
+        public const string BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD =
+            RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON +
+              @"
+                ""nested-mutations"": null   
+              }," +
+            HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
 
         /// <summary>
         /// A minimal valid config json with an empty nested mutations section.
         /// </summary>
         public const string BASE_CONFIG_EMPTY_NESTED_MUTATIONS_FIELD =
-          "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE + "," +
-            @"
-            ""runtime"": {
-              ""rest"": {
-                ""path"": ""/api""
-              },
-              ""graphql"": {
-                ""path"": ""/graphql"",
-                ""allow-introspection"": true,
+
+            RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON +
+              @"
                 ""nested-mutations"": {}
-              },
-              ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [""http://localhost:5000""],
-                  ""allow-credentials"": false
-                },
-                ""authentication"": {
-                  ""provider"": ""StaticWebApps""
-                }
-              }
-            },
-            ""entities"": {}" +
-          "}";
+              }," +
+            HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
 
         /// <summary>
         /// A minimal valid config json with the create field within nested mutation as null.
         /// </summary>
         public const string BASE_CONFIG_NULL_NESTED_CREATE_FIELD =
-          "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE + "," +
-            @"
-            ""runtime"": {
-              ""rest"": {
-                ""path"": ""/api""
-              },
-              ""graphql"": {
-                ""path"": ""/graphql"",
-                ""allow-introspection"": true,
-                 ""nested-mutations"": {
+
+            RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON +
+              @"
+                ""nested-mutations"": {
                       ""create"": null
                  }
-              },
-              ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [""http://localhost:5000""],
-                  ""allow-credentials"": false
-                },
-                ""authentication"": {
-                  ""provider"": ""StaticWebApps""
-                }
-              }
-            },
-            ""entities"": {}" +
-          "}";
+              }," +
+            HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
 
         /// <summary>
         /// A minimal valid config json with an empty create field within nested mutation.
         /// </summary>
         public const string BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD =
-          "{" +
-            SAMPLE_SCHEMA_DATA_SOURCE + "," +
+
+            RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON +
             @"
-            ""runtime"": {
-              ""rest"": {
-                ""path"": ""/api""
-              },
-              ""graphql"": {
-                ""path"": ""/graphql"",
-                ""allow-introspection"": true,
                 ""nested-mutations"": {
                       ""create"": {}
                 }
-              },
-              ""host"": {
-                ""mode"": ""development"",
-                ""cors"": {
-                  ""origins"": [""http://localhost:5000""],
-                  ""allow-credentials"": false
-                },
-                ""authentication"": {
-                  ""provider"": ""StaticWebApps""
-                }
-              }
-            },
-            ""entities"": {}" +
-          "}";
+            }," +
+            HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
 
         public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
         {

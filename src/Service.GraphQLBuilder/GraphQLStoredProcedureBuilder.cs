@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <param name="defaultValueFromConfig">String representation of default value defined in runtime config.</param>
         /// <param name="parameterDefinition">Database schema metadata for stored procedure parameter which include value and value type.</param>
         /// <returns>Tuple where first item is the string representation of a GraphQLType (e.g. "Byte", "Int", "Decimal")
-        /// and the second item is the GraphQL {type}ValueNode </returns>
+        /// and the second item is the GraphQL {type}ValueNode.</returns>
         /// <exception cref="DataApiBuilderException">Raised when parameter casting fails due to unsupported type.</exception>
         private static Tuple<string, IValueNode> ConvertValueToGraphQLType(string defaultValueFromConfig, ParameterDefinition parameterDefinition)
         {
@@ -168,11 +168,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
                 return valueNode;
             }
-            catch (Exception error) when (
-                error is FormatException ||
-                error is OverflowException ||
-                error is ArgumentException ||
-                error is NotSupportedException)
+            catch (Exception error)
             {
                 throw new DataApiBuilderException(
                         message: $"The parameter value {defaultValueFromConfig} provided in configuration cannot be converted to the type {paramValueType}",

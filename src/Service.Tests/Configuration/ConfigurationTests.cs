@@ -1062,6 +1062,47 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             configValidator.ValidateConfigProperties();
         }
 
+        /// <summary>
+        /// This method tests that config file is validated correctly and no exceptions are thrown.
+        /// This tests gets the json from the integration test config file and then uses that
+        /// to validate the complete config file.
+        /// </summary>
+        [TestMethod("Validates the complete config."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestConfigIsValid()
+        {
+            // Fetch the MS_SQL integration test config file.
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystemRuntimeConfigLoader testConfigPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfig configuration = TestHelper.GetRuntimeConfigProvider(testConfigPath).GetConfig();
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            MockFileSystem fileSystem = new();
+
+            // write it to the custom-config file and add it to the filesystem.
+            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(configuration.ToJson()));
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    fileSystem,
+                    configValidatorLogger.Object,
+                    true);
+
+            try
+            {
+                // Run the validate on the custom config json file.
+                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+            }
+            catch (Exception e)
+            {
+                Assert.Fail(e.Message);
+            }
+        }
+
         /// <summary> 
         /// This test method checks a valid config's entities against 
         /// the database and ensures they are valid. 
@@ -1155,7 +1196,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(2, configValidator.ConfigValidationExceptions.Count);
             List<Exception> exceptionsList = configValidator.ConfigValidationExceptions;
             Assert.AreEqual("Cannot obtain Schema for entity Book with underlying database "
-                + "object source: dbo.bokos due to: Invalid object name 'master.dbo.bokos'.", exceptionsList[0].Message);
+                + "object source: dbo.bokos due to: Invalid object name 'dbo.bokos'.", exceptionsList[0].Message);
             Assert.AreEqual("No stored procedure definition found for the given database object publishers", exceptionsList[1].Message);
         }
 

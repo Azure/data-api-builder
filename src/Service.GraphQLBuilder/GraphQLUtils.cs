@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string OBJECT_TYPE_QUERY = "query";
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
         public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
+        public const string DB_OPERATION_RESULT_FIELD_NAME = "result";
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -278,7 +279,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Generates the datasource name from the GraphQL context.
         /// </summary>
         /// <param name="context">Middleware context.</param>
-        public static string GetDataSourceNameFromGraphQLContext(IMiddlewareContext context, RuntimeConfig runtimeConfig)
+        /// <returns>Datasource name used to execute request.</returns>
+        public static string GetDataSourceNameFromGraphQLContext(IPureResolverContext context, RuntimeConfig runtimeConfig)
         {
             string rootNode = context.Selection.Field.Coordinate.TypeName.Value;
             string dataSourceName;
@@ -317,11 +319,13 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Get entity name from context object.
         /// </summary>
-        public static string GetEntityNameFromContext(IMiddlewareContext context)
+        public static string GetEntityNameFromContext(IPureResolverContext context)
         {
-            string entityName = context.Selection.Field.Type.TypeName();
+            IOutputType type = context.Selection.Field.Type;
+            string graphQLTypeName = type.TypeName();
+            string entityName = graphQLTypeName;
 
-            if (entityName is DB_OPERATION_RESULT_TYPE)
+            if (graphQLTypeName is DB_OPERATION_RESULT_TYPE)
             {
                 // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
                 if (GraphQLUtils.TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
@@ -333,7 +337,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 // for rest of scenarios get entity name from output object type.
                 ObjectType underlyingFieldType;
-                IOutputType type = context.Selection.Field.Type;
                 underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
                 // Example: CustomersConnectionObject - for get all scenarios.
                 if (QueryBuilder.IsPaginationType(underlyingFieldType))
@@ -355,7 +358,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return entityName;
         }
 
-        private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
+        private static string GenerateDataSourceNameKeyFromPath(IPureResolverContext context)
         {
             return $"{context.Path.ToList()[0]}";
         }

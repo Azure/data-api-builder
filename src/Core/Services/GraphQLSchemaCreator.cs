@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -100,8 +101,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 .AddDocument(mutationNode)
                 // Enable the OneOf directive (https://github.com/graphql/graphql-spec/pull/825) to support the DefaultValue type
                 .ModifyOptions(o => o.EnableOneOf = true)
-                // Add our custom middleware for GraphQL resolvers
-                .Use((services, next) => new ResolverMiddleware(next, _queryEngineFactory, _mutationEngineFactory, _runtimeConfigProvider));
+                // Adds our type interceptor that will create the resolvers.
+                .TryAddTypeInterceptor(new ResolverTypeInterceptor(new ExecutionHelper(_queryEngineFactory, _mutationEngineFactory, _runtimeConfigProvider)));
         }
 
         /// <summary>
@@ -234,10 +235,12 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             Dictionary<string, FieldDefinitionNode> fields = new();
+
+            // Add the DBOperationResult type to the schema
             NameNode nameNode = new(value: GraphQLUtils.DB_OPERATION_RESULT_TYPE);
             FieldDefinitionNode field = GetDbOperationResultField();
 
-            fields.TryAdd("result", field);
+            fields.TryAdd(GraphQLUtils.DB_OPERATION_RESULT_FIELD_NAME, field);
 
             objectTypes.Add(GraphQLUtils.DB_OPERATION_RESULT_TYPE, new ObjectTypeDefinitionNode(
                 location: null,
@@ -290,7 +293,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             return new(
                 location: null,
-                name: new("result"),
+                name: new(GraphQLUtils.DB_OPERATION_RESULT_FIELD_NAME),
                 description: new StringValueNode("Contains result for mutation execution"),
                 arguments: new List<InputValueDefinitionNode>(),
                 type: new StringType().ToTypeNode(),

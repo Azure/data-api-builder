@@ -105,19 +105,19 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         {
             Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
-            bool success = TryParseConfig(
+            bool isParsed = TryParseConfig(
                 json: json,
                 config: out config,
                 connectionString: _connectionString,
-                replaceEnvVar: replaceEnvVar,
-                dataSourceName: dataSourceName);
-            // investigating empty datasource name on startup
-            //if (success && !string.IsNullOrEmpty(dataSourceName))
-            //{
-            //    config!.DefaultDataSourceName = dataSourceName;
-            //}
+                replaceEnvVar: replaceEnvVar);
 
-            return success;
+            if (isParsed && !string.IsNullOrEmpty(dataSourceName))
+            {
+                config!.UpdateDefaultDataSourceNameDependantDictionaries(dataSourceName);
+                config!.DefaultDataSourceName = dataSourceName;
+            }
+
+            return isParsed;
         }
         else
         {
@@ -139,7 +139,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string dataSourceName = "")
     {
-        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
+        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar, dataSourceName);
     }
 
     /// <summary>

@@ -318,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             // Assert
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
-            Assert.IsFalse(mockExecuteQuery.Invocations.Count is 2, message: "Expected a cache hit, but observed two cache misses.");
+            Assert.IsFalse(mockExecuteQuery.Invocations.Count > 1, message: "Expected a cache hit, but observed cache misses.");
             Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
             Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }

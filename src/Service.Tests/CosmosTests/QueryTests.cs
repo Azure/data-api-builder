@@ -19,6 +19,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -488,12 +489,198 @@ fragment p on Planet { id }
         [TestMethod]
         public async Task QueryWithCacheEnabledShouldReturnCachedResponse()
         {
+            string[] args = GetArgumentsForHost();
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string id = _idList[0];
+
+                string graphQLQuery = @$"
+query {{
+    planet_by_pk (id: ""{id}"") {{
+        id
+        name
+    }}
+}}";
+                // First query
+                JsonElement firstQueryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                   client,
+                                   server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                   query: graphQLQuery,
+                                   queryName: "planet_by_pk"
+                                   );
+
+                string name = firstQueryResponse.GetProperty("name").GetString();
+
+                // Performing mutation
+                string newName = "new_name";
+                string mutation = $@"
+mutation {{
+    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
+        id
+        name
+    }}
+}}";
+
+                var update = new
+                {
+                    id = id,
+                    name = "new_name",
+                };
+
+                // Mutated name property
+                JsonElement mutationResponse = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new());
+
+                // Asserting name is mutated
+                Assert.IsTrue(mutationResponse.GetProperty("name").GetString().Equals(newName), "Mutation didn't change the name successfully");
+
+                // Second query - the data returned is from the cache, not the mutated one
+                JsonElement secondQueryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                   client,
+                                   server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                   query: graphQLQuery,
+                                   queryName: "planet_by_pk"
+                                   );
+
+                // Asserting cached data is returned
+                Assert.IsTrue(secondQueryResponse.GetProperty("name").GetString() == name, "Query didn't return cached value");
+            }
+        }
+
+        /// <summary>
+        /// Validates that cached data is returned for Paginated query.
+        /// First step - Execute Paginated query.
+        /// Second step - Modify the name field for one of the document queried in the first step.
+        /// Third step - Execute Paginated query again to verify that cached data is returned and not modified one.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryWithCacheEnabledShouldReturnCachedResponseForPaginatedQueries()
+        {
+            string[] args = GetArgumentsForHost();
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // Execute the first query and hold the last item for comparison with the cached value at a later step
+                JObject lastItemFromFirstQuery = await ExecutePaginatedQueryAndReturnLastPage(server, client);
+
+                // Perform a mutation to update the name for the last returned item from the first query.
+                string newName = "new_name";
+                string id = lastItemFromFirstQuery.GetValue("id").ToString();
+
+                string mutation = $@"
+mutation {{
+    updatePlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{ id: ""{id}"", name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
+        id
+        name
+    }}
+}}";
+
+                var update = new
+                {
+                    id = id,
+                    name = "new_name",
+                };
+
+                // Mutated name property
+                JsonElement mutationResponse = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new());
+
+                // Asserting name is mutated
+                Assert.IsTrue(mutationResponse.GetProperty("name").GetString().Equals(update.name), "Mutation didn't change the name successfully");
+
+                // Execute Second query. Response should be returned from cache and not from sdk call.
+                JObject lastItemFromSecondQuery = await ExecutePaginatedQueryAndReturnLastPage(server, client);
+
+                // Assert data returned from First query with second cached query
+                Assert.IsTrue(lastItemFromFirstQuery.GetValue("id").ToString() == lastItemFromSecondQuery.GetValue("id").ToString(), "Same Page sequence not returned from cached response");
+                Assert.IsTrue(lastItemFromFirstQuery.GetValue("name").ToString() == lastItemFromSecondQuery.GetValue("name").ToString(), "Cached value not returned from second request");
+            }
+        }
+
+        [TestMethod]
+        public async Task GraphQLQueryWithMultipleOfTheSameFieldReturnsFieldOnce()
+        {
+            string query = @"
+query {
+    planets {
+        items {
+            id
+            id
+        }
+    }
+}
+            ";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);
+
+            Assert.AreEqual(TOTAL_ITEM_COUNT, response.GetProperty("items").GetArrayLength());
+            Assert.AreEqual(_idList[0], response.GetProperty("items").EnumerateArray().First().GetProperty("id").GetString());
+        }
+
+        private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)
+        {
+            if (ele.ValueKind == JsonValueKind.Array)
+            {
+                JsonElement.ArrayEnumerator enumerator = ele.EnumerateArray();
+
+                while (enumerator.MoveNext())
+                {
+                    JsonElement prop = enumerator.Current;
+                    strList.Add(prop.ToString());
+                }
+            }
+        }
+
+        private static async Task<JObject> ExecutePaginatedQueryAndReturnLastPage(TestServer server, HttpClient client)
+        {
+            const int pagesize = TOTAL_ITEM_COUNT / 2;
+            int totalElementsFromPaginatedQuery = 0;
+            string afterToken = null;
+            JsonElement page;
+            List<string> pagedResponse = new();
+
+            do
+            {
+                string planetConnectionQueryStringFormat = @$"
+query {{
+    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}) {{
+        items {{
+            id
+            name
+        }}
+        endCursor
+        hasNextPage
+    }}
+}}";
+                page = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                   client,
+                                   server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                   query: planetConnectionQueryStringFormat,
+                                   queryName: "planets"
+                                   );
+
+                JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
+                afterToken = after.ToString();
+                totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
+                ConvertJsonElementToStringList(page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME), pagedResponse);
+            } while (!string.IsNullOrEmpty(afterToken));
+
+            // Asserting Paginated query retured all records
+            Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
+
+            return JObject.Parse(pagedResponse.Last());
+        }
+
+        private string[] GetArgumentsForHost()
+        {
             const string SCHEMA = @"
 type Planet @model(name:""Planet"") {
     id : ID!,
     name : String,
     age : Int,
 }";
+
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
             Dictionary<string, object> dbOptions = new();
@@ -545,248 +732,11 @@ type Planet @model(name:""Planet"") {
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
             File.WriteAllText(CUSTOM_SCHEMA, SCHEMA);
 
-            string id = _idList[0];
-            string name;
-            string[] args = new[]
+
+            return new[]
             {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
             };
-
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
-            {
-                string mutation = @"
-mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetInput!) {
-    updatePlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
-        id
-        name
-     }
-}";
-
-                string graphQLQuery = @$"
-query {{
-    planet_by_pk (id: ""{id}"") {{
-        id
-        name
-    }}
-}}";
-                string queryName = "planet_by_pk";
-
-                // First query
-                JsonElement queryResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                            client,
-                                            server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                            query: graphQLQuery,
-                                            queryName: queryName
-                                            );
-                name = queryResponse.GetProperty("name").GetString();
-
-                var update = new
-                {
-                    id = id,
-                    name = "new_name",
-                };
-
-                // Mutated name property
-                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                client,
-                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                query: mutation,
-                                queryName: "updatePlanet",
-                                variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } },
-                                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(),
-                                clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED
-                                );
-
-                // Asserting name is mutated
-                Assert.IsFalse(queryResponse.GetProperty("name").GetString().Equals(update.name), "Mutation didn't change the name successfully");
-
-                // Second query - the data returned is from the cache, not the mutated one
-                JsonElement queryResponse2 = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                             client,
-                                             server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                             query: graphQLQuery,
-                                             queryName: queryName
-                                             );
-
-                // Asserting cached data is returned
-                Assert.IsFalse(queryResponse2.GetProperty("name").GetString() != name, "Query didn't return cached value");
-            }
-        }
-
-        [TestMethod]
-        public async Task QueryWithCacheEnabledShouldReturnCachedResponseForPaginatedQueries()
-        {
-            const string SCHEMA = @"
-type Planet @model(name:""Planet"") {
-    id : ID!,
-    name : String,
-    age : Int,
-}";
-            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true);
-            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
-            Dictionary<string, object> dbOptions = new();
-            HyphenatedNamingPolicy namingPolicy = new();
-
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), _containerName);
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
-            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
-                ConfigurationTests.GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), dbOptions);
-
-            EntityAction createAction = new(
-                Action: EntityActionOperation.Create,
-                Fields: null,
-                Policy: new());
-
-            EntityAction readAction = new(
-                Action: EntityActionOperation.Read,
-                Fields: null,
-                Policy: new());
-
-            EntityAction deleteAction = new(
-                Action: EntityActionOperation.Delete,
-                Fields: null,
-                Policy: new());
-
-            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { createAction, readAction, deleteAction }) };
-
-            Entity entity = new(Source: new($"graphqldb.{_containerName}", null, null, null),
-                                  Rest: null,
-                                  GraphQL: new(Singular: "Planet", Plural: "Planets"),
-                                  Permissions: permissions,
-                                  Relationships: null,
-                                  Mappings: null,
-                                  Cache: new EntityCacheOptions()
-                                  {
-                                      Enabled = true,
-                                      TtlSeconds = 5,
-                                  }
-                                  );
-
-            string entityName = "Planet";
-
-            // cache configuration
-            RuntimeConfig configuration = ConfigurationTests.InitMinimalRuntimeConfig(dataSource, graphqlOptions, restRuntimeOptions, entity, entityName, new EntityCacheOptions() { Enabled = true, TtlSeconds = 50 });
-
-            const string CUSTOM_CONFIG = "custom-config.json";
-            const string CUSTOM_SCHEMA = "custom-schema.gql";
-            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
-            File.WriteAllText(CUSTOM_SCHEMA, SCHEMA);
-
-            string[] args = new[]
-            {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
-            List<string> pagedResponse = new();
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
-            {
-                const int pagesize = TOTAL_ITEM_COUNT / 2;
-                int totalElementsFromPaginatedQuery = 0;
-                string afterToken = null;
-                Dictionary<int, string> continuationTokenList = new();
-                int tokenCount = 0;
-                do
-                {
-                    string planetConnectionQueryStringFormat = @$"
-query {{
-    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}) {{
-        items {{
-            id
-            name
-        }}
-        endCursor
-        hasNextPage
-    }}
-}}";
-                    JsonElement page = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                       client,
-                                       server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                       query: planetConnectionQueryStringFormat,
-                                       queryName: "planets"
-                                       );
-
-                    JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
-                    afterToken = after.ToString();
-
-                    // Keeping track of afterToken sequence and valu. This later will be compared with cached value.
-                    continuationTokenList.Add(tokenCount++, afterToken);
-
-                    totalElementsFromPaginatedQuery += page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME).GetArrayLength();
-                    ConvertJsonElementToStringList(page.GetProperty(QueryBuilder.PAGINATION_FIELD_NAME), pagedResponse);
-                } while (!string.IsNullOrEmpty(afterToken));
-
-                // Assert Paginated query retured all records
-                Assert.AreEqual(TOTAL_ITEM_COUNT, totalElementsFromPaginatedQuery);
-
-                // reset token counters
-                tokenCount = 0;
-                afterToken = null;
-
-                // Second query.
-                do
-                {
-                    string planetConnectionQueryStringFormat = @$"
-query {{
-    planets (first: {pagesize}, after: {(afterToken == null ? "null" : "\"" + afterToken + "\"")}) {{
-        items {{
-            id
-            name
-        }}
-        endCursor
-        hasNextPage
-    }}
-}}";
-                    JsonElement page = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                       client,
-                                       server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                       query: planetConnectionQueryStringFormat,
-                                       queryName: "planets"
-                                       );
-
-                    JsonElement after = page.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME);
-                    afterToken = after.ToString();
-
-                    // Asserting continuation are returned in the same sequence as original query.
-                    Assert.IsTrue(continuationTokenList[tokenCount++].Equals(afterToken) , "ContinuationToken not found in the cached response");
-
-                } while (!string.IsNullOrEmpty(afterToken));
-            }
-        }
-
-        [TestMethod]
-        public async Task GraphQLQueryWithMultipleOfTheSameFieldReturnsFieldOnce()
-        {
-            string query = @"
-query {
-    planets {
-        items {
-            id
-            id
-        }
-    }
-}
-            ";
-
-            JsonElement response = await ExecuteGraphQLRequestAsync("planets", query);
-
-            Assert.AreEqual(TOTAL_ITEM_COUNT, response.GetProperty("items").GetArrayLength());
-            Assert.AreEqual(_idList[0], response.GetProperty("items").EnumerateArray().First().GetProperty("id").GetString());
-        }
-
-        private static void ConvertJsonElementToStringList(JsonElement ele, List<string> strList)
-        {
-            if (ele.ValueKind == JsonValueKind.Array)
-            {
-                JsonElement.ArrayEnumerator enumerator = ele.EnumerateArray();
-
-                while (enumerator.MoveNext())
-                {
-                    JsonElement prop = enumerator.Current;
-                    strList.Add(prop.ToString());
-                }
-            }
         }
 
         [TestCleanup]

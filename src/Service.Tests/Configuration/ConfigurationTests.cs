@@ -1856,6 +1856,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                     ValidateMutationSucceededAtDbLayer(server, client, graphQLQuery, queryName, authToken, AuthorizationResolver.ROLE_AUTHENTICATED);
                 }
+                catch(Exception e)
+                {
+                    Assert.Fail(message: "Unexpected test failure:" + e.Message);
+                }
                 finally
                 {
                     // Clean-up steps. The record created by the create mutation operation is deleted to reset the database

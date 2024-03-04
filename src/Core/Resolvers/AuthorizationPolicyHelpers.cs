@@ -10,10 +10,10 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OData.UriParser;
-using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -236,10 +236,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     innerException: ex);
             }
         }
-
+/*
         private static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitorForCosmos visitor)
         {
             return filterClause.Expression.Accept<string>(visitor);
-        }
+        }*/
     }
 }

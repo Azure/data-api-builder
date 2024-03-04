@@ -189,14 +189,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonDocument ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
-            //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonDocument.Parse(element.ToString());
+            return element;
         }
 
         /// <inheritdoc />
-        public object ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        /// metadata is not used in this method, but it is required by the interface.
+        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
             IType listType = fieldSchema.Type;
             // Is the List type nullable? [...]! vs [...]
@@ -217,10 +217,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (listType.IsObjectType())
             {
-                return JsonSerializer.Deserialize<List<JsonElement>>(element);
+                return JsonSerializer.Deserialize<List<JsonElement>>(array);
             }
 
-            return JsonSerializer.Deserialize(element, fieldSchema.RuntimeType);
+            return JsonSerializer.Deserialize(array, fieldSchema.RuntimeType);
         }
 
         /// <summary>

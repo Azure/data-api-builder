@@ -15,9 +15,6 @@ trigger:
 
 strategy:
   matrix:
-    linux:
-      imageName: "ubuntu-latest"
-      ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'
     windows:
       imageName: "windows-latest"
       ADDITIONAL_TEST_ARGS: '--collect "XPlat Code coverage"'

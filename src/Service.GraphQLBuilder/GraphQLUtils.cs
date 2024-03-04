@@ -278,7 +278,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Generates the datasource name from the GraphQL context.
         /// </summary>
         /// <param name="context">Middleware context.</param>
-        public static string GetDataSourceNameFromGraphQLContext(IMiddlewareContext context, RuntimeConfig runtimeConfig)
+        /// <returns>Datasource name used to execute request.</returns>
+        public static string GetDataSourceNameFromGraphQLContext(IPureResolverContext context, RuntimeConfig runtimeConfig)
         {
             string rootNode = context.Selection.Field.Coordinate.TypeName.Value;
             string dataSourceName;
@@ -317,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Get entity name from context object.
         /// </summary>
-        public static string GetEntityNameFromContext(IMiddlewareContext context)
+        public static string GetEntityNameFromContext(IPureResolverContext context)
         {
             string entityName = context.Selection.Field.Type.TypeName();
 
@@ -355,7 +356,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return entityName;
         }
 
-        private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
+        private static string GenerateDataSourceNameKeyFromPath(IPureResolverContext context)
         {
             return $"{context.Path.ToList()[0]}";
         }

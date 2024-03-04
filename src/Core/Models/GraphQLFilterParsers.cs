@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics.Metrics;
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -295,7 +294,7 @@ public class GQLFilterParser
             }
         }
 
-        if(string.IsNullOrEmpty(tableAlias))
+        if (string.IsNullOrEmpty(tableAlias))
         {
             tableAlias = $"table{_tableCounter?.Next()}";
         }

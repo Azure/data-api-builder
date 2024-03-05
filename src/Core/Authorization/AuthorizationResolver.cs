@@ -232,7 +232,7 @@ public class AuthorizationResolver : IAuthorizationResolver
         {
             throw new DataApiBuilderException(
                 message: "No ClientRoleHeader available to perform authorization.",
-                statusCode: HttpStatusCode.Unauthorized,
+                statusCode: HttpStatusCode.Forbidden,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
         }
 

@@ -269,9 +269,10 @@ CREATE TABLE users (
 );
 
 CREATE TABLE user_profiles (
-    userid INT PRIMARY KEY IDENTITY,
+    profileid INT PRIMARY KEY IDENTITY,
     username NVARCHAR(50) UNIQUE,
-    profilepictureurl NVARCHAR(255)
+    profilepictureurl NVARCHAR(255),
+	userid INT
 );
 
 create Table fte_data(
@@ -532,7 +533,7 @@ INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GE
 
 INSERT INTO users (username, email) VALUES ('john_doe', 'john.doe@example.com'), ('jane_smith', 'jane.smith@example.com');
 
-INSERT INTO user_profiles (Username, ProfilePictureURL) VALUES ('john_doe', 'https://example.com/profiles/john_doe.jpg'), ('jane_smith', 'https://example.com/profiles/jane_smith.jpg');
+INSERT INTO user_profiles (username, profilepictureurl, userid) VALUES ('john_doe', 'https://example.com/profiles/john_doe.jpg', 1), ('jane_smith', 'https://example.com/profiles/jane_smith.jpg', 2);
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');

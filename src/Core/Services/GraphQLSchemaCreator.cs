@@ -434,6 +434,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// 2. Column fields from the linking node which are not part of the Foreign key constraint (or relationship fields when the relationship
         /// is defined in the config).
         /// </summary>
+        /// <example>
+        /// Target node definition contains fields: TField1, TField2, TField3
+        /// Linking node definition contains fields:  LField1, LField2, LField3
+        /// Relationship : linkingTable(Lfield3) -> targetTable(TField3)
+        ///
+        /// Result:
+        /// SourceTargetLinkingNodeDefinition contains fields:
+        /// 1. TField1, TField2, TField3 (All the fields from the target node.)
+        /// 2. LField1, LField2 (Non-relationship fields from linking table.)
+        /// </example>
         /// <param name="objectTypes">Collection of object types.</param>
         /// <param name="linkingObjectTypes">Collection of object types for linking entities.</param>
         private void GenerateSourceTargetLinkingObjectDefinitions(

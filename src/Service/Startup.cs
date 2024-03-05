@@ -639,7 +639,7 @@ namespace Azure.DataApiBuilder.Service
                     }
                     catch (DataApiBuilderException dabException)
                     {
-                        _logger.LogError(exception: dabException, message: "OpenAPI Documentor initialization failed.");
+                        _logger.LogWarning(exception: dabException, message: "OpenAPI Documentor initialization failed. This will not affect DAB engine startup.");
                     }
                 }
 

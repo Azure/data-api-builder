@@ -397,7 +397,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns>true if the field is a scalar field, else false.</returns>
         public static bool IsScalarField(SyntaxKind fieldSyntaxKind)
         {
-            return fieldSyntaxKind is SyntaxKind.IntValue || fieldSyntaxKind is not SyntaxKind.FloatValue ||
+            return fieldSyntaxKind is SyntaxKind.IntValue || fieldSyntaxKind is SyntaxKind.FloatValue ||
                 fieldSyntaxKind is SyntaxKind.StringValue || fieldSyntaxKind is SyntaxKind.BooleanValue ||
                 fieldSyntaxKind is SyntaxKind.EnumValue;
         }

@@ -314,6 +314,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(INT_TYPE, "0")]
         [DataRow(INT_TYPE, "-9999")]
         [DataRow(INT_TYPE, "null")]
+        [DataRow(UUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
+        [DataRow(UUID_TYPE, "null")]
         [DataRow(LONG_TYPE, "0")]
         [DataRow(LONG_TYPE, "9000000000000000000")]
         [DataRow(LONG_TYPE, "-9000000000000000000")]
@@ -419,6 +421,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
         [DataRow(TIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
+        [DataRow(UUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
         public async Task InsertIntoTypeColumnWithArgument(string type, object value)
         {
             if (!IsSupportedType(type))

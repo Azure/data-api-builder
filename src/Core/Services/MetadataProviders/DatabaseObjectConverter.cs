@@ -97,4 +97,35 @@ public class DatabaseObjectConverter : JsonConverter<DatabaseObject>
 
         return type;
     }
+
+    private static  DatabaseObject InfiniteLoopCode(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        JsonElement objElement = JsonSerializer.Deserialize<JsonElement>(ref reader, options);
+
+        // Read the TypeName property
+        if (!objElement.TryGetProperty("TypeName", out JsonElement typeNameElement) || typeNameElement.ValueKind != JsonValueKind.String)
+        {
+            throw new JsonException("TypeName is missing or invalid.");
+        }
+
+        string typeName = typeNameElement.GetString()!;
+
+        if (typeName == null)
+        {
+            throw new JsonException("TypeName is missing or invalid.");
+        }
+
+        // Resolve the concrete type based on the type name
+        Type concreteType = GetTypeFromName(typeName);
+
+        if (concreteType == null)
+        {
+            throw new JsonException($"Unknown type: {typeName}");
+        }
+
+        // Create an instance of the concrete type
+        DatabaseObject objA = JsonSerializer.Deserialize<DatabaseObject>(objElement.GetRawText()!, options)!;
+        
+        return objA;
+    }
 }

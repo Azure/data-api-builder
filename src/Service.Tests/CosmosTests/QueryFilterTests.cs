@@ -277,7 +277,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             if (!ignoreBlankResults)
             {
-                // Making sure we are not asserting emply results
+                // Making sure we are not asserting empty results
                 Assert.IsFalse(expected.ToString().Equals("[]"), "Expected  Response is Empty.");
                 Assert.IsFalse(actual.ToString().Equals("[]"), "Actual  Response is Empty.");
             }

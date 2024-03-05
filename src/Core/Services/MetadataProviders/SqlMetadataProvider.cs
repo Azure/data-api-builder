@@ -285,6 +285,17 @@ namespace Azure.DataApiBuilder.Core.Services
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
+        /// <inheritdoc />
+        public void InitializeAsync(Dictionary<string, DatabaseObject> dictionary)
+        {
+            GenerateDatabaseObjectForEntities();
+            
+            EntityToDatabaseObject = dictionary;
+            // will initialise other objects sent from Graphql workload
+            
+            GenerateExposedToBackingColumnMapsForEntities();
+        }
+
         /// <inheritdoc/>
         public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {

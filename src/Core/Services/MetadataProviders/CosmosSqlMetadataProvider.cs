@@ -371,5 +371,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             throw new NotImplementedException();
         }
+
+        public void InitializeAsync(Dictionary<string, DatabaseObject> dictionary)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

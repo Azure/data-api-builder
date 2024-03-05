@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Runtime.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -9,7 +10,7 @@ namespace Azure.DataApiBuilder.Config.DatabasePrimitives;
 /// <summary>
 /// Represents a database object - which could be a view, table, or stored procedure.
 /// </summary>
-public abstract class DatabaseObject
+public abstract class DatabaseObject :ISerializable
 {
     public string SchemaName { get; set; } = null!;
 
@@ -32,22 +33,12 @@ public abstract class DatabaseObject
             return string.IsNullOrEmpty(SchemaName) ? Name : $"{SchemaName}.{Name}";
         }
     }
-
-    public override bool Equals(object? other)
+    public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
     {
-        return Equals(other as DatabaseObject);
-    }
-
-    public bool Equals(DatabaseObject? other)
-    {
-        return other is not null &&
-               SchemaName.Equals(other.SchemaName) &&
-               Name.Equals(other.Name);
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(SchemaName, Name);
+        info.AddValue("name", Name);
+        info.AddValue("schemaName", SchemaName);
+        info.AddValue("sourceDefinition", SourceDefinition);
+        info.AddValue("sourceType", SourceType);
     }
 
     /// <summary>
@@ -79,6 +70,11 @@ public class DatabaseTable : DatabaseObject
 
     public DatabaseTable() { }
     public SourceDefinition TableDefinition { get; set; } = null!;
+
+    public override void GetObjectData(SerializationInfo info, StreamingContext context)
+    {
+        info.AddValue("tableDefinition", TableDefinition);
+    }
 }
 
 /// <summary>

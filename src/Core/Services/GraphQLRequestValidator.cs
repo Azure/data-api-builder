@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
-            Dictionary<string, IValueNode?> columnData = MutationOrderHelper.GetBackingColumnDataFromFields(context, entityName, objectFieldNodes, metadataProvider);
+            Dictionary<string, IValueNode?> columnData = NestedCreateOrderHelper.GetBackingColumnDataFromFields(context, entityName, objectFieldNodes, metadataProvider);
 
             // Set of columns in the current entity whose values can be derived via:
             // a. User input,
@@ -197,7 +197,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
 
                 // Determine the referencing entity for the current relationship field input.
-                string referencingEntityName = MutationOrderHelper.GetReferencingEntityName(
+                string referencingEntityName = NestedCreateOrderHelper.GetReferencingEntityName(
                     context: context,
                     sourceEntityName: entityName,
                     targetEntityName: targetEntityName,

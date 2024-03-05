@@ -42,9 +42,6 @@ namespace Cli
 
         public static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader)
         {
-            // To know if `--help` or `--version` was requested.
-            bool isHelpOrVersionRequested = false;
-
             Parser parser = new(settings =>
             {
                 settings.CaseInsensitiveEnumValues = true;

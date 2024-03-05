@@ -205,7 +205,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// <summary>
         /// A json string with Runtime Rest and GraphQL options. This is used in constructing config json strings utilized for testing. 
         /// </summary>
-        public const string RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON =
+        public const string RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON =
              "{" +
              SAMPLE_SCHEMA_DATA_SOURCE + "," +
              @"
@@ -240,7 +240,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// A minimal valid config json with nested mutations section as null.
         /// </summary>
         public const string BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD =
-            RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON +
+            RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
               @"
                 ""nested-mutations"": null   
               }," +
@@ -251,7 +251,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         public const string BASE_CONFIG_EMPTY_NESTED_MUTATIONS_FIELD =
 
-            RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON +
+            RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
               @"
                 ""nested-mutations"": {}
               }," +
@@ -262,7 +262,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         public const string BASE_CONFIG_NULL_NESTED_CREATE_FIELD =
 
-            RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON +
+            RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
               @"
                 ""nested-mutations"": {
                       ""create"": null
@@ -275,7 +275,7 @@ namespace Azure.DataApiBuilder.Service.Tests
         /// </summary>
         public const string BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD =
 
-            RUNTIME_REST_GRAPQL_OPTIONS_CONFIG_JSON +
+            RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
             @"
                 ""nested-mutations"": {
                       ""create"": {}

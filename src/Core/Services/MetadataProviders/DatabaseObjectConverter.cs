@@ -48,16 +48,8 @@ public class DatabaseObjectConverter : JsonConverter<DatabaseObject>
             throw new JsonException($"Unknown type: {typeName}");
         }
 
-        // Move to the next token
-        if (!reader.Read())
-        {
-            throw new JsonException("Unexpected end of JSON while reading.");
-        }
-
-        JsonDocument doc = JsonDocument.ParseValue(ref reader);
-
-        // Deserialize the object using the concrete type
-        DatabaseObject objA = (DatabaseObject)JsonSerializer.Deserialize(doc, concreteType, options)!;
+        // Deserialize the object using the concrete type - error cannot convert json value into DatabaseTable
+        DatabaseObject objA = (DatabaseObject)JsonSerializer.Deserialize(ref reader, concreteType, options)!;
 
         // Return the deserialized object
         return objA;
@@ -123,9 +115,41 @@ public class DatabaseObjectConverter : JsonConverter<DatabaseObject>
             throw new JsonException($"Unknown type: {typeName}");
         }
 
-        // Create an instance of the concrete type
+        // Create an instance of the concrete type - goes into infinite loop
         DatabaseObject objA = JsonSerializer.Deserialize<DatabaseObject>(objElement.GetRawText()!, options)!;
         
+        return objA;
+    }
+
+    private static DatabaseObject ColumnDefinitionEmpty(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        JsonElement objElement = JsonSerializer.Deserialize<JsonElement>(ref reader, options);
+
+        // Read the TypeName property
+        if (!objElement.TryGetProperty("TypeName", out JsonElement typeNameElement) || typeNameElement.ValueKind != JsonValueKind.String)
+        {
+            throw new JsonException("TypeName is missing or invalid.");
+        }
+
+        string typeName = typeNameElement.GetString()!;
+
+        if (typeName == null)
+        {
+            throw new JsonException("TypeName is missing or invalid.");
+        }
+
+        // Resolve the concrete type based on the type name
+        Type concreteType = GetTypeFromName(typeName);
+
+        if (concreteType == null)
+        {
+            throw new JsonException($"Unknown type: {typeName}");
+        }
+
+        // Create an instance of the concrete type
+        DatabaseObject objA = (DatabaseObject)JsonSerializer.Deserialize(objElement.GetRawText()!, concreteType, options)!;
+
+        // the object gets created but Columns in SourceDefinition is empty
         return objA;
     }
 }

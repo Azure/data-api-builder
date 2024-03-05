@@ -63,6 +63,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
+            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+
             // Add Item level policies defined in config for all related entities in query structure, it doesn't matter if that entity was part of the query or not.
             HttpContext httpContext = GetHttpContextFromMiddlewareContext(context);
             if (httpContext is not null)
@@ -72,10 +74,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     httpContext,
                     _authorizationResolver,
                     metadataStoreProvider as CosmosSqlMetadataProvider,
+                    structure as CosmosQueryStructure,
                     parameters);
             }
-
-            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
 
             string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);

@@ -1,11 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
+using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Parsers
 {
@@ -15,11 +18,11 @@ namespace Azure.DataApiBuilder.Core.Parsers
     /// </summary>
     public class ODataASTVisitor : QueryNodeVisitor<string>
     {
-        private readonly BaseSqlQueryStructure _struct;
+        private readonly BaseQueryStructure _struct;
         private readonly ISqlMetadataProvider _metadataProvider;
         private readonly EntityActionOperation _operation;
 
-        public ODataASTVisitor(BaseSqlQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
+        public ODataASTVisitor(BaseQueryStructure structure, ISqlMetadataProvider metadataProvider, EntityActionOperation operation = EntityActionOperation.None)
         {
             _struct = structure;
             _metadataProvider = metadataProvider;
@@ -71,13 +74,87 @@ namespace Azure.DataApiBuilder.Core.Parsers
         /// <returns>String representing the Field name</returns>
         public override string Visit(SingleValuePropertyAccessNode nodeIn)
         {
-            _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
-            if (_operation is EntityActionOperation.Create)
+            if (_struct is not CosmosQueryStructure)
             {
-                _struct.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
+                _metadataProvider.TryGetBackingColumn(_struct.EntityName, nodeIn.Property.Name, out string? backingColumnName);
+                if (_struct is BaseSqlQueryStructure baseSqlQueryStructure && _operation is EntityActionOperation.Create)
+                {
+                    baseSqlQueryStructure.FieldsReferencedInDbPolicyForCreateAction.Add(backingColumnName!);
+                }
+
+                return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
+            }
+            else if (_struct is CosmosQueryStructure cosmosQueryStructure)
+            {
+                // In Cosmos DB things are little different, given db policy might be or might not be part of the query.
+                // Hence,
+                // a) Get the entity type
+                // b) Get the whole hierarichy of entity(backtracking) till container entity
+                // c) for all the parents
+                //      d1) If entity is array type then
+                //          i) Check If join is already there in given SqlQueryStructure
+                //          ii) If not then create a new join and add it to the structure
+                //      d2) If entity is object type
+
+                string? tableAlias = null;
+                string entityType = ((EdmNamedElement)((ResourceRangeVariableReferenceNode)nodeIn.Source).NavigationSource).Name;
+
+                if (((CosmosSqlMetadataProvider)_metadataProvider).TryGetParentEntitiesForListType(entityType, out List<string>? parentEntities))
+                {
+                    // check if there is join alread
+                    List<CosmosJoinStructure>? joins = cosmosQueryStructure.Joins?.ToList();
+
+                    if (joins != null)
+                    {
+                        foreach (CosmosJoinStructure j in joins)
+                        {
+                            if (j.DbObject.Name == entityType)
+                            {
+                                tableAlias = j.TableAlias;
+
+                                break;
+                            }
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(tableAlias))
+                    {
+
+                        cosmosQueryStructure.Joins ??= new Stack<CosmosJoinStructure>();
+
+                        tableAlias = $"table{cosmosQueryStructure.Counter?.Next()}";
+                        cosmosQueryStructure
+                            .Joins
+                            .Push(new CosmosJoinStructure(
+                                        DbObject: new DatabaseTable(schemaName: "sourceAlias", tableName: entityType),
+                                        TableAlias: tableAlias));
+                    }
+                   
+
+                     //   ((CosmosSqlMetadataProvider)_metadataProvider).TryGetExposedFieldToBackingFieldMap(entityName, parentEntities);
+                        //if not create a alias and join
+                }
+                else
+                {
+                    // if not arraytype
+                }
+
+                return _metadataProvider.GetQueryBuilder().QuoteIdentifier($"{tableAlias}.{nodeIn.Property.Name!}");
+
+                // for filterclause entity
+                // check if entity type is list then(
+                // get list of joins
+                // if join is already there then
+                //          get the alias and use it
+                // if not then
+                //          create a new join with new alias and add join for tis alias)
+                // else just append prefix
+                // 
+
             }
 
-            return _metadataProvider.GetQueryBuilder().QuoteIdentifier(backingColumnName!);
+            return string.Empty;
+
         }
 
         /// <summary>

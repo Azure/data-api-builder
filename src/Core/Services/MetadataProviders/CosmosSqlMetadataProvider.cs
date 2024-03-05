@@ -281,15 +281,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     if(field.Type.IsListType())
                     {
-                        _listTypeFieldNodeNameToParentEntities.TryGetValue(field.Name.Value, out List<string>? parentEntities);
+                        _listTypeFieldNodeNameToParentEntities.TryGetValue(field.Type.ToString(), out List<string>? parentEntities);
                         if (parentEntities is null)
                         {
-                            _listTypeFieldNodeNameToParentEntities.Add(field.Name.Value, new List<string> { typeName });
+                            _listTypeFieldNodeNameToParentEntities.Add(field.Type.ToString(), new List<string> { typeName });
                         }
                         else
                         {
                             parentEntities.Add(typeName);
-                            _listTypeFieldNodeNameToParentEntities[field.Name.Value] = parentEntities;
+                            _listTypeFieldNodeNameToParentEntities[field.Type.ToString()] = parentEntities;
                         }
                     }
                     

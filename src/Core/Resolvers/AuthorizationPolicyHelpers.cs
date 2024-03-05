@@ -79,6 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
           HttpContext context,
           IAuthorizationResolver authorizationResolver,
           CosmosSqlMetadataProvider sqlMetadataProvider,
+          CosmosQueryStructure cosmosQueryStructure,
           IDictionary<string, object> parameters)
         {
             if (!context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeaderValue))
@@ -114,7 +115,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 filterClauseList.Add(filterClause);
             }
 
-            ProcessOdataClause(sqlMetadataProvider, filterClauseList, parameters, operationType);
+            ProcessOdataClause(sqlMetadataProvider, filterClauseList, parameters, operationType, cosmosQueryStructure);
         }
 
         /// <summary>
@@ -183,9 +184,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosSqlMetadataProvider sqlMetadataProvider,
             List<FilterClause?> dbPolicyClauseList,
             IDictionary<string, object> parameters,
-            EntityActionOperation operationType)
+            EntityActionOperation operationType,
+            CosmosQueryStructure cosmosQueryStructure)
         {
-           //string? conditionForWhereClause = null;
+            string? conditionForWhereClause = null;
             try
             {
                 foreach (FilterClause? filterClause in dbPolicyClauseList)
@@ -196,25 +198,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         continue;
                     }
 
-                   /* if (sqlMetadataProvider.TryGetParentEntitiesForListType(entityName, out List<string>? parentEntities) && parentEntities != null)
-                    {
-                        foreach (string pEntity in parentEntities)
-                        {
-                            Stack<CosmosJoinStructure> joins = cosmosQueryStructure.Joins ?? new();
-                            joins?.Push(new CosmosJoinStructure(
-                                                    DbObject: new DatabaseTable()
-                                                    {
-                                                        SchemaName = pEntity,
-                                                        Name = entityName
-                                                    },
-                                                    TableAlias: entityName));
-                            cosmosQueryStructure.Joins = joins;
-                        }
-                    }
-*/
-                    /* ODataASTVisitorForCosmos visitor = new(sqlMetadataProvider);
-                    GetFilterPredicatesFromOdataClause(filterClause, visitor);*/
-                    /*parameters.Add(entityName, filterClause.ItemType.Definition);
+                    ODataASTVisitor visitor = new(cosmosQueryStructure, sqlMetadataProvider, operationType);
+
                     if (string.IsNullOrEmpty(conditionForWhereClause))
                     {
                         conditionForWhereClause = GetFilterPredicatesFromOdataClause(filterClause, visitor);
@@ -222,10 +207,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     else
                     {
                         conditionForWhereClause += " AND " + GetFilterPredicatesFromOdataClause(filterClause, visitor);
-                    }*/
+                    }
                 }
 
-               //CosmosQueryStructure.DbPolicyPredicatesForOperations[operationType] = conditionForWhereClause;
+                cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType] = conditionForWhereClause;
             }
             catch (Exception ex)
             {
@@ -236,10 +221,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     innerException: ex);
             }
         }
-/*
-        private static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitorForCosmos visitor)
+
+        private static string? GetFilterPredicatesFromOdataClause(FilterClause filterClause, ODataASTVisitor visitor)
         {
             return filterClause.Expression.Accept<string>(visitor);
-        }*/
+        }
     }
 }

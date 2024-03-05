@@ -1674,7 +1674,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
                         // 
-                        // Scenario 1: When a FK constraint is defined between source and target entities
+                        // Scenario 1: When a FK constraint is defined between source and target entities in the database.
                         // In this case, there will be exactly one ForeignKeyDefinition with the right pair of Referencing and Referenced tables. 
                         // Scenario 2: When no FK constraint is defined between source and target entities, but the relationship fields are configured through config file
                         // In this case, two entries will be created. 

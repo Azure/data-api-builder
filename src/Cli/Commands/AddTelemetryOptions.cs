@@ -32,7 +32,7 @@ namespace Cli.Commands
         [Option("app-insights-enabled", Default = CliBool.True, Required = false, HelpText = "(Default: true) Enable/Disable Application Insights")]
         public CliBool AppInsightsEnabled { get; }
 
-        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
 
@@ -46,6 +46,8 @@ namespace Cli.Commands
             {
                 logger.LogError("Failed to add telemetry to the configuration file.");
             }
+
+            return isSuccess ? 0 : -1;
         }
     }
 }

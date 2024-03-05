@@ -35,7 +35,7 @@ namespace Cli.Commands
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]
         public bool IsHttpsRedirectionDisabled { get; }
 
-        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             bool isSuccess = ConfigGenerator.TryStartEngineWithOptions(this, loader, fileSystem);
@@ -44,6 +44,8 @@ namespace Cli.Commands
             {
                 logger.LogError("Failed to start the engine.");
             }
+
+            return isSuccess ? 0 : -1;
         }
     }
 }

@@ -96,12 +96,12 @@ namespace Cli.Commands
         [Option('m', "map", Separator = ',', Required = false, HelpText = "Specify mappings between database fields and GraphQL and REST fields. format: --map \"backendName1:exposedName1,backendName2:exposedName2,...\".")]
         public IEnumerable<string>? Map { get; }
 
-        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             if (!IsEntityProvided(Entity, logger, command: "update"))
             {
-                return;
+                return -1;
             }
 
             bool isSuccess = ConfigGenerator.TryUpdateEntityWithOptions(this, loader, fileSystem);
@@ -114,6 +114,8 @@ namespace Cli.Commands
             {
                 logger.LogError("Could not update the entity: {Entity}.", Entity);
             }
+
+            return isSuccess ? 0 : -1;
         }
     }
 }

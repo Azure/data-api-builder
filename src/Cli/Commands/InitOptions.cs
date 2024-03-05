@@ -120,7 +120,9 @@ namespace Cli.Commands
         [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
         public CliBool RestRequestBodyStrict { get; }
 
-        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+       // public int returnCode;
+
+        public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             bool isSuccess = ConfigGenerator.TryGenerateConfig(this, loader, fileSystem);
@@ -128,10 +130,12 @@ namespace Cli.Commands
             {
                 logger.LogInformation("Config file generated.");
                 logger.LogInformation("SUGGESTION: Use 'dab add [entity-name] [options]' to add new entities in your config.");
+                return 0;
             }
             else
             {
                 logger.LogError("Could not generate config file.");
+                return -1;
             }
         }
     }

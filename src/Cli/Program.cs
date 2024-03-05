@@ -52,33 +52,18 @@ namespace Cli
             });
 
             // Parsing user arguments and executing required methods.
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions>(args)
-                .WithParsed((Action<InitOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<AddOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<UpdateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<StartOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<ValidateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<AddTelemetryOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<ExportOptions>)(options => Exporter.Export(options, cliLogger, loader, fileSystem)))
-                .WithNotParsed(err =>
-                {
-                    /// System.CommandLine considers --help and --version as NonParsed Errors
-                    /// ref: https://github.com/commandlineparser/commandline/issues/630
-                    /// This is a workaround to make sure our app exits with exit code 0,
-                    /// when user does --help or --versions.
-                    /// dab --help -> ErrorType.HelpVerbRequestedError
-                    /// dab [command-name] --help -> ErrorType.HelpRequestedError
-                    /// dab --version -> ErrorType.VersionRequestedError
-                    List<Error> errors = err.ToList();
-                    if (errors.Any(e => e.Tag == ErrorType.VersionRequestedError
-                                        || e.Tag == ErrorType.HelpRequestedError
-                                        || e.Tag == ErrorType.HelpVerbRequestedError))
-                    {
-                        isHelpOrVersionRequested = true;
-                    }
-                });
+            int result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions>(args)
+                .MapResult(
+                    (InitOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (AddOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (UpdateOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (StartOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (ValidateOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (AddTelemetryOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (ExportOptions options) => Exporter.Export(options, cliLogger, loader, fileSystem),
+                    errors => ResultHandler.ProcessErrorsAndReturnExitCode(errors));
 
-            return ((result is Parsed<object>) || (isHelpOrVersionRequested)) ? 0 : -1;
+            return result;
         }
     }
 }

@@ -122,7 +122,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// ExecuteQueryAsync Performs single partition and cross partition queries. 
         /// </summary>
         /// <param name="structure">CosmosQueryStructure</param>
-        /// <param name="querySpec">QueryDefinition Define a Cosmos SQL Query</param>
+        /// <param name="querySpec">QueryDefinition defining a Cosmos SQL Query</param>
         /// <param name="queryRequestOptions">The Cosmos query request options</param>
         /// <param name="container">CosmosDB Container</param>
         /// <param name="idValue">Id param</param>

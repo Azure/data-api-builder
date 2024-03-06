@@ -732,7 +732,6 @@ type Planet @model(name:""Planet"") {
             File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
             File.WriteAllText(CUSTOM_SCHEMA, SCHEMA);
 
-
             return new[]
             {
                 $"--ConfigFileName={CUSTOM_CONFIG}"

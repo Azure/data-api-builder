@@ -281,8 +281,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 Assert.IsFalse(expected.ToString().Equals("[]"), "Expected  Response is Empty.");
                 Assert.IsFalse(actual.ToString().Equals("[]"), "Actual  Response is Empty.");
             }
-            Console.WriteLine("ACTUAL " + JToken.Parse(actual.ToString()));
-            Console.WriteLine("EXPECTED " + JToken.Parse(expected.ToString()));
 
             Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));
         }

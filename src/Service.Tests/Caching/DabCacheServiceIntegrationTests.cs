@@ -349,7 +349,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
 
             int cacheEntryTtl = 1;
 
-            // Act
             // First call. Cache miss
             _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
             _ = await dabCache.GetOrSetAsync<JObject>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);

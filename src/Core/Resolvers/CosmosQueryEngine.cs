@@ -96,13 +96,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 StringBuilder dataSourceKey = new(dataSourceName);
 
                 // to support caching for paginated query adding continuation token in the datasource
-                if (structure.IsPaginated)
-                {
-                    dataSourceKey.Append(":");
-                    dataSourceKey.Append(structure.IsPaginated);
-                    dataSourceKey.Append(":");
-                    dataSourceKey.Append(structure.Continuation);
-                }
+                dataSourceKey.Append(":");
+                dataSourceKey.Append(structure.Continuation);
 
                 DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceKey.ToString(), queryParameters: structure.Parameters);
 

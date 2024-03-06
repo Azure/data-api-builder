@@ -70,27 +70,55 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     // Following code is just POC specific, this wont be part of final implementation in DAB
                     // this is just for me to test directly on DAB (as I cannot test in GraphQL repo without new DAB package support)
 
-
-                    // Following code is how we will serialise the object on our end when we attach with a source
-                    string json = JsonConvert.SerializeObject(provider.EntityToDatabaseObject, new JsonSerializerSettings
+                    try
                     {
-                        TypeNameHandling = TypeNameHandling.All,
-                        Converters = { new DatabaseObjectConverter() }
-                    });
 
-                    Console.WriteLine(json);
+                        //Solution 1 : Use TypeNameHandling.All
+                        SolutionWithoutConverter(provider);
 
-                    // Following code is how we will deserialise the object on our end before sending to DAB 
-                    Dictionary<string, DatabaseObject> deserializedDictionary = JsonConvert.DeserializeObject<Dictionary<string, DatabaseObject>>(json, new JsonSerializerSettings
+                        //Solution 2: Use Converter and add TypeName at DatabaseObject Level - works
+                        JsonSerializerSettings options = new ()
+                        {
+                            Converters = { new DatabaseObjectConverter() }
+                        };
+
+                        // Following code is how we will serialise the object on our end when we attach with a source
+                        string json = JsonConvert.SerializeObject(provider.EntityToDatabaseObject,options);
+
+                        Console.WriteLine(json);
+
+                        // Following code is how we will deserialise the object on our end before sending to DAB 
+                        Dictionary<string, DatabaseObject> deserializedDictionary = JsonConvert.DeserializeObject<Dictionary<string, DatabaseObject>>(json,options)!;
+
+                        // GraphQL Workload will call this new initialise method
+                        provider.InitializeAsync(deserializedDictionary);
+
+                    }
+                    catch(Exception ex)
                     {
-                        TypeNameHandling = TypeNameHandling.All,
-                        Converters = { new DatabaseObjectConverter() },
-                    })!;
+                        Console.WriteLine(ex.ToString());
+                    }
 
-                    // GraphQL Workload will call this new initialise method
-                    provider.InitializeAsync(deserializedDictionary);
                 }
             }
+        }
+
+        private static void SolutionWithoutConverter(ISqlMetadataProvider provider)
+        {
+            JsonSerializerSettings options = new()
+            {
+                TypeNameHandling = TypeNameHandling.All,
+                PreserveReferencesHandling = PreserveReferencesHandling.Arrays,
+            };
+
+            // Following code is how we will serialise the object on our end when we attach with a source
+            string json = JsonConvert.SerializeObject(provider.EntityToDatabaseObject, options);
+
+            Console.WriteLine(json);
+
+            // Following code is how we will deserialise the object on our end before sending to DAB 
+            Dictionary<string, DatabaseObject> deserializedDictionary = JsonConvert.DeserializeObject<Dictionary<string, DatabaseObject>>(json, options)!;
+            provider.InitializeAsync(deserializedDictionary);
         }
        
         /// <summary>

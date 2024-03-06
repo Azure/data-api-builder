@@ -3,7 +3,6 @@
 
 using System.Data;
 using System.Data.Common;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -296,7 +295,6 @@ namespace Azure.DataApiBuilder.Core.Services
             
             GenerateExposedToBackingColumnMapsForEntities();
         }
-
 
         /// <inheritdoc/>
         public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)

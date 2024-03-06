@@ -89,8 +89,6 @@ public class DatabaseView : DatabaseObject
     public DatabaseView(string schemaName, string tableName)
         : base(schemaName, tableName) { }
     public ViewDefinition ViewDefinition { get; set; } = null!;
-
-    public DatabaseView() { }
 }
 
 /// <summary>
@@ -101,8 +99,6 @@ public class DatabaseStoredProcedure : DatabaseObject
     public DatabaseStoredProcedure(string schemaName, string tableName)
         : base(schemaName, tableName) { }
     public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
-
-    public DatabaseStoredProcedure() {}
 }
 
 public class StoredProcedureDefinition : SourceDefinition
@@ -210,9 +206,7 @@ public class SourceDefinition
 /// <summary>
 /// Class to store the database view definition.
 /// </summary>
-public class ViewDefinition : SourceDefinition {
-
-}
+public class ViewDefinition : SourceDefinition {}
 
 /// <summary>
 /// Class encapsulating foreign keys corresponding to target entities.

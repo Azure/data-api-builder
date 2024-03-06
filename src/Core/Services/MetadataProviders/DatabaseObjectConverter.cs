@@ -92,33 +92,21 @@ public class DatabaseObjectConverter : JsonConverter<DatabaseObject>
 
     private static  DatabaseObject InfiniteLoopCode(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        JsonElement objElement = JsonSerializer.Deserialize<JsonElement>(ref reader, options);
-
-        // Read the TypeName property
-        if (!objElement.TryGetProperty("TypeName", out JsonElement typeNameElement) || typeNameElement.ValueKind != JsonValueKind.String)
+        using (JsonDocument document = JsonDocument.ParseValue(ref reader))
         {
-            throw new JsonException("TypeName is missing or invalid.");
+            JsonElement root = document.RootElement;
+            string typeName = root.GetProperty("TypeName").GetString() ?? throw new JsonException("TypeName is missing");
+            Type concreteType = GetTypeFromName(typeName);
+
+            if (concreteType == null)
+            {
+                throw new JsonException($"Unknown type: {typeName}");
+            }
+
+            DatabaseObject objA = JsonSerializer.Deserialize<DatabaseObject>(root.GetRawText(), options)!;
+
+            return objA;
         }
-
-        string typeName = typeNameElement.GetString()!;
-
-        if (typeName == null)
-        {
-            throw new JsonException("TypeName is missing or invalid.");
-        }
-
-        // Resolve the concrete type based on the type name
-        Type concreteType = GetTypeFromName(typeName);
-
-        if (concreteType == null)
-        {
-            throw new JsonException($"Unknown type: {typeName}");
-        }
-
-        // Create an instance of the concrete type - goes into infinite loop
-        DatabaseObject objA = JsonSerializer.Deserialize<DatabaseObject>(objElement.GetRawText()!, options)!;
-        
-        return objA;
     }
 
     private static DatabaseObject ColumnDefinitionEmpty(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

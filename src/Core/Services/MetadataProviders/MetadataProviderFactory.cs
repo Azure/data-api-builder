@@ -88,17 +88,5 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             return _metadataProviders.Values;
         }
-
-        public Dictionary<string, bool> GetMetadataProviderLoadStatus()
-        {
-            Dictionary<string, bool> metadataProviderLoadStatus = new();
-            foreach ((string providerKey, ISqlMetadataProvider provider) in _metadataProviders)
-            {
-                string key = provider.GetDatabaseType().ToString() + "::" + providerKey;
-                metadataProviderLoadStatus.Add(key, provider.DidInitFailureOccur());
-            }
-
-            return metadataProviderLoadStatus;
-        }
     }
 }

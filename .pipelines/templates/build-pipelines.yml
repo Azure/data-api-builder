@@ -18,7 +18,7 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      [xml]$directoryBuildProps = Get-Content -Path $(Build.SourcesDirectory)/Directory.Build.props
+      [xml]$directoryBuildProps = Get-Content -Path $(Build.SourcesDirectory)/src/Directory.Build.props
       # Get Version from Directory.Build.props
       $version = $directoryBuildProps.Project.PropertyGroup.Version
       # Get Major , Minor, Patch from Version

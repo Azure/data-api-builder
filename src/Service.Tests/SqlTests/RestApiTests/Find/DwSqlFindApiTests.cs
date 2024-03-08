@@ -338,7 +338,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
-
             {
                 "FindTestWithFirstTwoOrderByAndPagination",
                 $"SELECT TOP 2 * FROM { _integrationTableName } " +

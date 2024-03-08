@@ -120,7 +120,7 @@ public class EndToEndTests
             replaceEnvVar: true));
 
         SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
-        Assert.AreEqual(ProductInfo.GetDataApiBuilderApplicationName(), builder.ApplicationName);
+        Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false), builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
@@ -657,18 +657,15 @@ public class EndToEndTests
 
     /// <summary>
     /// Test to verify that help writer window generates output on the console.
+    /// Every test here validates that the first line of the output contains the product name and version.
     /// </summary>
     [DataTestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
     [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
-    [DataRow("", "--version", new string[] { "Microsoft.DataApiBuilder 1.0.0" }, DisplayName = "Checking version.")]
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        using Process process = ExecuteDabCommand(
-            command,
-            flags
-        );
+        using Process process = ExecuteDabCommand(command, flags);
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
@@ -682,24 +679,25 @@ public class EndToEndTests
         process.Kill();
     }
 
-    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
-    [DataTestMethod]
-    public void TestVersionHasBuildHash(
-        string command,
-        string options
-    )
+    /// <summary>
+    /// When CLI is started via: dab --version, it should print the version number
+    /// which includes the commit hash. For example:
+    /// Microsoft.DataApiBuilder 0.12+2d181463e5dd46cf77fea31b7295c4e02e8ef031
+    /// </summary>
+    [TestMethod]
+    public void TestVersionHasBuildHash()
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
         using Process process = ExecuteDabCommand(
-            command: $"{command} ",
-            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
+            command: string.Empty,
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} --version"
         );
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
 
-        // Check that build hash is returned as part of  version number
+        // Check that the build hash is returned as part of the version number.
         string[] versionParts = output.Split('+');
         Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
         Assert.AreEqual(40, versionParts[1].Length, "Build hash is not of expected length.");

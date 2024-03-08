@@ -19,7 +19,7 @@ public class AppInsightsTelemetryInitializer : ITelemetryInitializer
     /// <param name="telemetry">The telemetry object to initialize</param>
     public void Initialize(ITelemetry telemetry)
     {
-        telemetry.Context.Cloud.RoleName = ProductInfo.ROLE_NAME;
+        telemetry.Context.Cloud.RoleName = ProductInfo.CLOUD_ROLE_NAME;
         telemetry.Context.Session.Id = Guid.NewGuid().ToString();
         telemetry.Context.Component.Version = ProductInfo.GetProductVersion();
 

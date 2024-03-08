@@ -30,6 +30,8 @@ public class GQLFilterParser
     private readonly RuntimeConfigProvider _configProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
 
+    private IncrementingInteger? _tableCounter;
+
     /// <summary>
     /// Constructor for GQLFilterParser
     /// </summary>
@@ -39,6 +41,7 @@ public class GQLFilterParser
     {
         _configProvider = runtimeConfigProvider;
         _metadataProviderFactory = metadataProviderFactory;
+        _tableCounter = new IncrementingInteger();
     }
 
     /// <summary>
@@ -279,6 +282,23 @@ public class GQLFilterParser
     {
         string entityName = metadataProvider.GetEntityName(entityType);
 
+        HashSet<CosmosJoinStructure>? jstruct = queryStructure.Joins?.ToHashSet();
+
+        string? tableAlias = null;
+        foreach (CosmosJoinStructure join in jstruct ?? new HashSet<CosmosJoinStructure>())
+        {
+            if (join.DbObject.Name == columnName)
+            {
+                tableAlias = join.TableAlias;
+                break;
+            }
+        }
+
+        if (string.IsNullOrEmpty(tableAlias))
+        {
+            tableAlias = $"table{_tableCounter?.Next()}";
+        }
+
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
             entityIdentifier: entityName,
@@ -304,7 +324,8 @@ public class GQLFilterParser
                 counter: queryStructure.Counter);
 
         comosQueryStructure.DatabaseObject.SchemaName = queryStructure.SourceAlias;
-        comosQueryStructure.SourceAlias = entityName;
+        comosQueryStructure.DatabaseObject.Name = tableAlias;
+        comosQueryStructure.SourceAlias = tableAlias;
         comosQueryStructure.EntityName = entityName;
 
         PredicateOperand joinpredicate = new(
@@ -325,7 +346,7 @@ public class GQLFilterParser
             .Joins
             .Push(new CosmosJoinStructure(
                         DbObject: new DatabaseTable(schemaName: queryStructure.SourceAlias, tableName: columnName),
-                        TableAlias: entityName));
+                        TableAlias: tableAlias));
 
         // Add all parameters from the exists subquery to the main queryStructure.
         foreach ((string key, DbConnectionParam value) in comosQueryStructure.Parameters)

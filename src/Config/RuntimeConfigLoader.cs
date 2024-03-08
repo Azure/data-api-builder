@@ -196,7 +196,7 @@ public abstract class RuntimeConfigLoader
             return connectionString;
         }
 
-        string applicationName = ProductInfo.GetDataApiBuilderApplicationName();
+        string applicationName = ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false);
 
         // Create a StringBuilder from the connection string.
         SqlConnectionStringBuilder connectionStringBuilder;

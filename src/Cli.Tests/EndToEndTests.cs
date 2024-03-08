@@ -657,7 +657,7 @@ public class EndToEndTests
 
     /// <summary>
     /// Test to verify that help writer window generates output on the console.
-    /// For every test, validates that the first line of the output contains the product name and version.
+    /// Every test here validates that the first line of the output contains the product name and version.
     /// </summary>
     [DataTestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
@@ -665,10 +665,7 @@ public class EndToEndTests
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        using Process process = ExecuteDabCommand(
-            command,
-            flags
-        );
+        using Process process = ExecuteDabCommand(command, flags);
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);

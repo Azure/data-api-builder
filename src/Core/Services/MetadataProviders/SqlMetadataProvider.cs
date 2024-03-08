@@ -1240,7 +1240,14 @@ namespace Azure.DataApiBuilder.Core.Services
             string schemaName,
             string tableName)
         {
-            DataTable? dataTable = EntitiesDataSet.Tables[tableName];
+            // Because we have an instance of SqlMetadataProvider for each individual database
+            // (note: this means each actual database not each database type), we do not
+            // need to worry about collisions beyond that schema, hence no database name is needed.
+            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(
+                schemaName: schemaName,
+                tableName: tableName);
+
+            DataTable? dataTable = EntitiesDataSet.Tables[tableNameWithSchemaPrefix];
             if (dataTable is null)
             {
                 try
@@ -1360,35 +1367,31 @@ namespace Azure.DataApiBuilder.Core.Services
                 Connection = conn
             };
 
-            string tablePrefix = GetTablePrefix(conn.Database, schemaName);
-            string queryPrefix = string.IsNullOrEmpty(tablePrefix) ? string.Empty : $"{tablePrefix}.";
+            string tableNameWithSchemaPrefix = GetTableNameWithSchemaPrefix(schemaName, tableName);
             selectCommand.CommandText
-                = $"SELECT * FROM {queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
+                = $"SELECT * FROM {tableNameWithSchemaPrefix}";
             adapterForTable.SelectCommand = selectCommand;
 
-            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableName);
+            DataTable[] dataTable = adapterForTable.FillSchema(EntitiesDataSet, SchemaType.Source, tableNameWithSchemaPrefix);
             return dataTable[0];
         }
 
-        internal string GetTablePrefix(string databaseName, string schemaName)
+        /// <summary>
+        /// Gets the correctly formatted table name with schema as prefix, if one exists.
+        /// A schema prefix is simply the correctly formatted and prefixed schema name that
+        /// is provided, separated from the table name by a ".". The formatting for both the
+        /// schema and table name is based on database type and may or may not include
+        /// [] quotes depending how the particular database type handles said format.
+        /// </summary>
+        /// <param name="schemaName">Name of schema the table belongs within.</param>
+        /// <param name="tableName">Name of the table.</param>
+        /// <returns>Properly formatted table name with schema prefix if it exists.</returns>
+        internal string GetTableNameWithSchemaPrefix(string schemaName, string tableName)
         {
             IQueryBuilder queryBuilder = GetQueryBuilder();
             StringBuilder tablePrefix = new();
 
-            if (!string.IsNullOrEmpty(databaseName))
-            {
-                // Determine databaseName for prefix.
-                databaseName = queryBuilder.QuoteIdentifier(databaseName);
-                tablePrefix.Append(databaseName);
-
-                if (!string.IsNullOrEmpty(schemaName))
-                {
-                    // Determine schemaName for prefix.
-                    schemaName = queryBuilder.QuoteIdentifier(schemaName);
-                    tablePrefix.Append($".{schemaName}");
-                }
-            }
-            else if (!string.IsNullOrEmpty(schemaName))
+            if (!string.IsNullOrEmpty(schemaName))
             {
                 // Determine schemaName for prefix.
                 schemaName = queryBuilder.QuoteIdentifier(schemaName);
@@ -1396,7 +1399,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 tablePrefix.Append(schemaName);
             }
 
-            return tablePrefix.ToString();
+            string queryPrefix = string.IsNullOrEmpty(tablePrefix.ToString()) ? string.Empty : $"{tablePrefix}.";
+            return $"{queryPrefix}{SqlQueryBuilder.QuoteIdentifier(tableName)}";
         }
 
         /// <summary>

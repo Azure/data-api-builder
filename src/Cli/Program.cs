@@ -26,20 +26,29 @@ namespace Cli
             // Load environment variables from .env file if present.
             DotNetEnv.Env.Load();
 
-            // Setting up Logger for CLI.
+            // Logger setup and configuration
             ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
-
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
+
+            // Sets up the filesystem used for reading and writing runtime configuration files.
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
             return Execute(args, cliLogger, fileSystem, loader);
         }
 
+        /// <summary>
+        /// Execute the CLI command
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        /// <param name="cliLogger">Logger used as sink for informational and error messages.</param>
+        /// <param name="fileSystem">Filesystem used for reading and writing configuration files, and exporting GraphQL schemas.</param>
+        /// <param name="loader">Loads the runtime config.</param>
+        /// <returns>Exit Code: 0 success, -1 failure</returns>
         public static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader)
         {
             Parser parser = new(settings =>
@@ -58,7 +67,7 @@ namespace Cli
                     (ValidateOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (AddTelemetryOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (ExportOptions options) => Exporter.Export(options, cliLogger, loader, fileSystem),
-                    errors => ResultHandler.ProcessErrorsAndReturnExitCode(errors));
+                    errors => DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(errors));
 
             return result;
         }

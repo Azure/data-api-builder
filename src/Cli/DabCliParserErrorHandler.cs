@@ -5,8 +5,19 @@ using CommandLine;
 
 namespace Cli
 {
-    public class ResultHandler
+    /// <summary>
+    /// Processes errors that occur during parsing of CLI verbs (start, init, export, add, update, etc) and their arguments.
+    /// </summary>
+    public class DabCliParserErrorHandler
     {
+        /// <summary>
+        /// Processes errors accumulated by each parser in parser.ParseArguments<parsers>().
+        /// For DAB CLI, this only includes scenarios where the user provides invalid DAB CLI input.
+        /// e.g. incorrectly formed or missing options and parameters.
+        /// Additionally, an error is tracked if the user uses an unsupported CLI verb or uses --help.
+        /// </summary>
+        /// <param name="err">Collection of Error objects collected by the CLI parser.</param>
+        /// <returns>Return code: 0 when --help is used, otherwise -1.</returns>
         public static int ProcessErrorsAndReturnExitCode(IEnumerable<Error> err)
         {
             // To know if `--help` or `--version` was requested.

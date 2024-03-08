@@ -25,7 +25,7 @@ public static class ProductInfo
         {
             return GetMajorMinorPatchVersion();
         }
- 
+
         Assembly assembly = Assembly.GetExecutingAssembly();
         FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
         string? version = fileVersionInfo.ProductVersion;

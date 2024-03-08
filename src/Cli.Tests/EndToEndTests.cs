@@ -21,9 +21,10 @@ public class EndToEndTests
     public void TestInitialize()
     {
         MockFileSystem fileSystem = FileSystemUtils.ProvisionMockFileSystem();
-        fileSystem.AddFile(
-            TEST_SCHEMA_FILE,
-            new MockFileData(""));
+        // Mock GraphQL Schema File
+        fileSystem.AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
+        // Empty runtime config file
+        fileSystem.AddFile("dab-config-empty.json", new MockFileData(""));
 
         _fileSystem = fileSystem;
 
@@ -631,8 +632,22 @@ public class EndToEndTests
     [DataRow(new string[] { "--remove-telemetry" }, DisplayName = "Usage of non-existent verb remove-telemetry")]
     [DataRow(new string[] { "--initialize" }, DisplayName = "Usage of invalid verb (longform of init not supported) initialize")]
     [DataRow(new string[] { "init", "--database-name", "mssql" }, DisplayName = "Invalid init options database-name")]
-    [DataRow(new string[] { "start", "--config", "nonexistentfile.json" }, DisplayName = "Valid verb with supported option, but value triggers exception.")]
     public void InvalidVerbsAndOptionsReturnNonZeroExitCode(string[] cliArguments)
+    {
+        Assert.AreEqual(expected: -1, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+    }
+
+    /// <summary>
+    /// Usage of valid verbs and options with values triggering exceptions should produce a non-zero exit code.
+    /// - File read/write issues when reading/writing to the config file.
+    /// - DAB engine failure.
+    /// </summary>
+    /// <param name="cliArguments">cli verbs, options, and option values</param>
+    [DataTestMethod]
+    [DataRow(new string[] { "init", "--config", "dab-config-empty.json", "--database-type", "mssql", "--connection-string", "SampleValue" },
+ DisplayName = "Config file value used already exists on the file system and results in init failure.")]
+    [DataRow(new string[] { "start", "--config", "dab-config-empty.json" }, DisplayName = "Config file value used is empty and engine startup fails")]
+    public void CliAndEngineFailuresReturnNonZeroExitCode(string[] cliArguments)
     {
         Assert.AreEqual(expected: -1, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }

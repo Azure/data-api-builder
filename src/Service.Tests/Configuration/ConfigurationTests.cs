@@ -2731,6 +2731,65 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Ensures that the health check endpoint at the app root (/) returns a 200 OK status code
+        /// and the expected JSON response body.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task HealthEndpoint_ValidateContents()
+        {
+            // At least one entity is required in the runtime config for the engine to start.
+            // Even though this entity is not under test, it must be supplied to the config
+            // file creation function.
+            Entity requiredEntity = new(
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: false),
+                GraphQL: new("book", "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", requiredEntity }
+            };
+
+            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+            // Setup and send GET request to root path.
+            HttpRequestMessage getHealthEndpointContents = new(HttpMethod.Get, $"/");
+            HttpResponseMessage response = await client.SendAsync(getHealthEndpointContents);
+
+            // Validate response
+            // Process response body
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+
+            // Validate response body
+            Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+
+            Assert.IsTrue(
+                condition: responseProperties.TryGetValue(key: "status", out JsonElement statusValue) && statusValue.ToString() == "Healthy",
+                message: "Expected endpoint to be healthy.");
+
+            Assert.IsTrue(
+                condition: responseProperties.TryGetValue(key: "version", out JsonElement versionValue) && versionValue.ToString() == ProductInfo.GetMajorMinorPatchVersion(),
+                message: "Unexpected or missing version value.");
+
+            Assert.IsTrue(
+                condition: responseProperties.TryGetValue(key: "appName", out JsonElement appNameValue) && appNameValue.ToString() == ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false),
+                message: "Unexpected or missing DAB user agent string.");
+        }
+
+        /// <summary>
         /// Validates the behavior of the OpenApiDocumentor when the runtime config has entities with
         /// REST endpoint enabled and disabled.
         /// Enabled -> path should be created

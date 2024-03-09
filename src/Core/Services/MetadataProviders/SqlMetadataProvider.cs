@@ -34,6 +34,7 @@ namespace Azure.DataApiBuilder.Core.Services
         where CommandT : DbCommand, new()
     {
         private ODataParser _oDataParser = new();
+
         private readonly DatabaseType _databaseType;
 
         private readonly IReadOnlyDictionary<string, Entity> _entities;

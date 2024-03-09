@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -71,6 +72,8 @@ public class DatabaseView : DatabaseObject
 {
     public DatabaseView(string schemaName, string tableName)
         : base(schemaName, tableName) { }
+
+    public DatabaseView() { }
     public ViewDefinition ViewDefinition { get; set; } = null!;
 }
 
@@ -81,6 +84,8 @@ public class DatabaseStoredProcedure : DatabaseObject
 {
     public DatabaseStoredProcedure(string schemaName, string tableName)
         : base(schemaName, tableName) { }
+
+    public DatabaseStoredProcedure() { }
     public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
 }
 
@@ -126,6 +131,7 @@ public class SourceDefinition
     /// <summary>
     /// The list of columns in this source.
     /// </summary>
+    [JsonInclude]
     public Dictionary<string, ColumnDefinition> Columns { get; private set; } =
         new(StringComparer.InvariantCultureIgnoreCase);
 
@@ -134,6 +140,7 @@ public class SourceDefinition
     /// All these entities share this source definition
     /// as their underlying database object.
     /// </summary>
+    [JsonInclude]
     public Dictionary<string, RelationshipMetadata> SourceEntityRelationshipMap { get; private set; } =
         new(StringComparer.InvariantCultureIgnoreCase);
 
@@ -199,6 +206,7 @@ public class RelationshipMetadata
     /// <summary>
     /// Dictionary of target entity name to ForeignKeyDefinition.
     /// </summary>
+    [JsonInclude]
     public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; private set; }
         = new(StringComparer.InvariantCultureIgnoreCase);
 }

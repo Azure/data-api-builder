@@ -10,8 +10,13 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
     {
         public override Type Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            // Implement the deserialization logic here if needed
-            throw new NotImplementedException();
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                throw new JsonException();
+            }
+
+            string typeName = reader.GetString()!;
+            return Type.GetType(typeName)!;
         }
 
         public override void Write(Utf8JsonWriter writer, Type value, JsonSerializerOptions options)

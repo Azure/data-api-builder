@@ -1,12 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-# nullable disable
+#nullable disable
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
@@ -27,6 +30,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly CosmosQueryBuilder _queryBuilder;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly DabCacheService _cache;
 
         /// <summary>
         /// Constructor 
@@ -35,13 +40,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosClientProvider clientProvider,
             IMetadataProviderFactory metadataProviderFactory,
             IAuthorizationResolver authorizationResolver,
-            GQLFilterParser gQLFilterParser)
+            GQLFilterParser gQLFilterParser,
+            RuntimeConfigProvider runtimeConfigProvider,
+            DabCacheService cache
+            )
         {
             _clientProvider = clientProvider;
             _metadataProviderFactory = metadataProviderFactory;
             _queryBuilder = new CosmosQueryBuilder();
             _gQLFilterParser = gQLFilterParser;
             _authorizationResolver = authorizationResolver;
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _cache = cache;
         }
 
         /// <summary>
@@ -53,15 +63,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object> parameters,
             string dataSourceName)
         {
-            // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
-            string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
@@ -80,6 +89,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryRequestOptions.PartitionKey = new PartitionKey(partitionKeyValue);
             }
 
+            JObject executeQueryResult = null;
+
+            if (runtimeConfig.CanUseCache() && runtimeConfig.Entities[structure.EntityName].IsCachingEnabled)
+            {
+                StringBuilder dataSourceKey = new(dataSourceName);
+
+                // to support caching for paginated query adding continuation token in the datasource
+                dataSourceKey.Append(":");
+                dataSourceKey.Append(structure.Continuation);
+
+                DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceKey.ToString(), queryParameters: structure.Parameters);
+
+                executeQueryResult = await _cache.GetOrSetAsync<JObject>(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+            }
+            else
+            {
+                executeQueryResult = await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue);
+            }
+
+            JsonDocument response = executeQueryResult != null ? JsonDocument.Parse(executeQueryResult.ToString()) : null;
+
+            return new Tuple<JsonDocument, IMetadata>(response, null);
+        }
+
+        /// <summary>
+        /// ExecuteQueryAsync Performs single partition and cross partition queries. 
+        /// </summary>
+        /// <param name="structure">CosmosQueryStructure</param>
+        /// <param name="querySpec">QueryDefinition defining a Cosmos SQL Query</param>
+        /// <param name="queryRequestOptions">The Cosmos query request options</param>
+        /// <param name="container">CosmosDB Container</param>
+        /// <param name="idValue">Id param</param>
+        /// <param name="partitionKeyValue">PartitionKey Value</param>
+        /// <returns>JObject</returns>
+        private static async Task<JObject> ExecuteQueryAsync(
+            CosmosQueryStructure structure,
+            QueryDefinition querySpec,
+            QueryRequestOptions queryRequestOptions,
+            Container container,
+            string idValue,
+            string partitionKeyValue)
+        {
+            string requestContinuation = null;
             if (structure.IsPaginated)
             {
                 queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
@@ -121,20 +173,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseContinuation != null),
                             new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
-                        // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                        return res;
                     }
 
                     if (page.Count > 0)
                     {
-                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(page.First().ToString()), null);
+                        return page.First();
                     }
                 }
                 while (query.HasMoreResults);
             }
 
-            // Return empty list when query gets no result back
-            return new Tuple<JsonDocument, IMetadata>(null, null);
+            // Return null when query gets no result back
+            return null;
         }
 
         /// <summary>
@@ -231,7 +282,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="partitionKeyValue"></param>
         /// <param name="IsPaginated"></param>
         /// <returns></returns>
-        private static async Task<Tuple<JsonDocument, IMetadata>> QueryByIdAndPartitionKey(Container container, string idValue, string partitionKeyValue, bool IsPaginated)
+        private static async Task<JObject> QueryByIdAndPartitionKey(Container container, string idValue, string partitionKeyValue, bool IsPaginated)
         {
             try
             {
@@ -241,17 +292,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (IsPaginated)
                 {
                     JObject res = new(
-                        new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, null),
-                        new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, false),
-                        new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, new JArray { item }));
-                    return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                         new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, null),
+                         new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, false),
+                         new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, new JArray { item }));
+                    return res;
                 }
 
-                return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(item.ToString()), null);
+                return item;
             }
             catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                return new Tuple<JsonDocument, IMetadata>(null, null);
+                return null;
             }
         }
 

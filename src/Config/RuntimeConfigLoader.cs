@@ -81,7 +81,7 @@ public abstract class RuntimeConfigLoader
             // set dataSourceName to default if not provided
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = config.GetDefaultDataSourceName();
+                dataSourceName = config.DefaultDataSourceName;
             }
 
             if (!string.IsNullOrEmpty(connectionString))
@@ -114,7 +114,7 @@ public abstract class RuntimeConfigLoader
                 ds = ds with { ConnectionString = updatedConnection };
                 config.UpdateDataSourceNameToDataSource(dataSourceName, ds);
 
-                if (string.Equals(dataSourceKey, config.GetDefaultDataSourceName(), StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
                 {
                     config = config with { DataSource = ds };
                 }

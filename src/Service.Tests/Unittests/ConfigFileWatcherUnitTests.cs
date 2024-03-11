@@ -112,9 +112,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             fileSystem.File.WriteAllText(configName, initialConfig);
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configName, string.Empty);
             RuntimeConfigProvider configProvider = new(configLoader);
+
             // Must GetConfig() to start file watching
             RuntimeConfig runtimeConfig = configProvider.GetConfig();
             string initialDefaultDataSourceName = runtimeConfig.DefaultDataSourceName;
+
             // assert we have a valid config
             Assert.IsNotNull(runtimeConfig);
             Assert.AreEqual(initialRestEnabled, runtimeConfig.Runtime.Rest.Enabled);
@@ -123,12 +125,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.AreEqual(initialGQLPath, runtimeConfig.Runtime.GraphQL.Path);
             Assert.AreEqual(initialGQLIntrospection, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
             Assert.AreEqual(initialMode, runtimeConfig.Runtime.Host.Mode);
+
             // Simulate change to the config file
             fileSystem.File.WriteAllText(configName, updatedConfig);
+
             // Give ConfigFileWatcher enough time to hot reload the change
             System.Threading.Thread.Sleep(1000);
+
             // Hot Reloaded config
             runtimeConfig = configProvider.GetConfig();
+
             string updatedDefaultDataSourceName = runtimeConfig.DefaultDataSourceName;
             Assert.AreEqual(updatedRestEnabled, runtimeConfig.Runtime.Rest.Enabled);
             Assert.AreEqual(updatedRestPath, runtimeConfig.Runtime.Rest.Path);
@@ -136,6 +142,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.AreEqual(updatedGQLPath, runtimeConfig.Runtime.GraphQL.Path);
             Assert.AreEqual(updatedGQLIntrospection, runtimeConfig.Runtime.GraphQL.AllowIntrospection);
             Assert.AreEqual(updatedMode, runtimeConfig.Runtime.Host.Mode);
+
             // DefaultDataSourceName should not change after a hot reload.
             Assert.AreEqual(initialDefaultDataSourceName, updatedDefaultDataSourceName);
             if (File.Exists(configName))

@@ -328,17 +328,6 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Get the default datasource name.
-    /// </summary>
-    /// <returns>default datasourceName.</returns>
-#pragma warning disable CA1024 // Use properties where appropriate. Reason: Do not want datasource serialized and want to keep it private to restrict set;
-    public string GetDefaultDataSourceName()
-#pragma warning restore CA1024 // Use properties where appropriate
-    {
-        return DefaultDataSourceName;
-    }
-
-    /// <summary>
     /// Serializes the RuntimeConfig object to JSON for writing to file.
     /// </summary>
     /// <returns></returns>

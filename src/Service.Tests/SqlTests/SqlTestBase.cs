@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             _sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             _queryManagerFactory = new Mock<IAbstractQueryManagerFactory>();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
-            string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = runtimeConfigProvider.GetConfig().DefaultDataSourceName;
             switch (DatabaseEngine)
             {
                 case TestCategory.POSTGRESQL:

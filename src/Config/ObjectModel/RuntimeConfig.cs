@@ -293,7 +293,7 @@ public record RuntimeConfig
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.Remove(entity.Key);
-            _entityNameToDataSourceName.Add(entity.Key,initialDefaultDataSourceName);
+            _entityNameToDataSourceName.Add(entity.Key, initialDefaultDataSourceName);
         }
     }
 

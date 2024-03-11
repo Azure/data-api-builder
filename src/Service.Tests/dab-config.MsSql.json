@@ -3128,7 +3128,7 @@
         }
       ],
       "relationships": {
-        "UserProfile_AutogenToNonAutogenRelationshipColumn": {
+        "UserProfile_NonAutogenToAutogenRelationshipColumn": {
           "cardinality": "one",
           "target.entity": "UserProfile_NonAutogenToAutogenRelationshipColumn",
           "source.fields": [ "userid", "username" ],
@@ -3162,7 +3162,7 @@
         }
       ],
       "relationships": {
-        "User_NonAutogenToAutogenRelationshipColumn": {
+        "User_AutogenToNonAutogenRelationshipColumn": {
           "cardinality": "one",
           "target.entity": "User_AutogenToNonAutogenRelationshipColumn",
           "source.fields": [ "userid", "username" ],

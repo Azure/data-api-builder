@@ -149,9 +149,10 @@ public class RuntimeConfigProvider
     /// Hot Reloads the runtime config when the file watcher
     /// is active and detects a change to the underlying config file.
     /// </summary>
-    public void HotReloadConfig(string dataSourceName)
+    public void HotReloadConfig()
     {
-        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true, dataSourceName: dataSourceName);
+        // _runtimeconfig can not be null in a hot reload scenario
+        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true, _runtimeConfig!.DefaultDataSourceName);
     }
 
     /// <summary>

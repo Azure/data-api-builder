@@ -94,6 +94,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
+    /// <param name="dataSourceName">If provided and not empty, this is the data source name that will be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public bool TryLoadConfig(
         string path,
@@ -105,19 +106,21 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
         {
             Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
-            bool isParsed = TryParseConfig(
+
+            if (TryParseConfig(
                 json: json,
                 config: out config,
                 connectionString: _connectionString,
-                replaceEnvVar: replaceEnvVar);
-
-            if (isParsed && !string.IsNullOrEmpty(dataSourceName))
+                replaceEnvVar: replaceEnvVar))
             {
-                config!.UpdateDefaultDataSourceNameDependantDictionaries(dataSourceName);
-                config!.DefaultDataSourceName = dataSourceName;
-            }
+                if (!string.IsNullOrEmpty(dataSourceName))
+                {
+                    config.UpdateDefaultDataSourceNameDependantDictionaries(dataSourceName);
+                    config.DefaultDataSourceName = dataSourceName;
+                }
 
-            return isParsed;
+                return true;
+            }
         }
         else
         {
@@ -136,6 +139,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
+    /// <param name="dataSourceName">The data source name to be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
     public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string dataSourceName = "")
     {

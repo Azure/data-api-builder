@@ -130,6 +130,7 @@ public record RuntimeConfig
         }
     }
 
+    [JsonIgnore]
     public string DefaultDataSourceName;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
@@ -169,7 +170,7 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        DefaultDataSourceName = Guid.NewGuid().ToString();
+        this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>
@@ -275,21 +276,24 @@ public record RuntimeConfig
 
     /// <summary>
     /// In a Hot Reload scenario we should maintain the same default data source
-    /// name before the hot reload as after the hot reload. This method takes
+    /// name before the hot reload as after the hot reload. This is because we hold
+    /// references such as to the Data Source itself which depend on this data source name
+    /// for lookups. To correctly retrieve this information after a hot reload
+    /// we need the data source name to say the same after hot reloading. This method takes
     /// a default data source name, such as the one from before hot reload, and
     /// replaces the current dictionary entries of this RuntimeConfig that were
     /// built using a new, unique guid during the construction of this RuntimeConfig
     /// with entries using the provided default data source name.
     /// </summary>
     /// <param name="defaultDataSourceName">The name used to update the dictionaries.</param>
-    public void UpdateDefaultDataSourceNameDependantDictionaries(string defaultDataSourceName)
+    public void UpdateDefaultDataSourceNameDependantDictionaries(string initialDefaultDataSourceName)
     {
         _dataSourceNameToDataSource.Remove(DefaultDataSourceName);
-        _dataSourceNameToDataSource.Add(defaultDataSourceName, this.DataSource);
+        _dataSourceNameToDataSource.Add(initialDefaultDataSourceName, this.DataSource);
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName.Remove(entity.Key);
-            _entityNameToDataSourceName.TryAdd(entity.Key, DefaultDataSourceName);
+            _entityNameToDataSourceName.Add(entity.Key,initialDefaultDataSourceName);
         }
     }
 

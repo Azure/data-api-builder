@@ -313,12 +313,7 @@ namespace Cli
         /// <returns>True/False</returns>
         private static bool IsNestedCreateOperationEnabled(CliBool nestedCreateEnabledOptionValue)
         {
-            if (nestedCreateEnabledOptionValue is CliBool.None or CliBool.False)
-            {
-                return false;
-            }
-
-            return true;
+            return nestedCreateEnabledOptionValue is CliBool.True;
         }
 
         /// <summary>

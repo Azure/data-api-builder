@@ -178,7 +178,7 @@
             },
             "nested-mutations": {
               "type": "object",
-              "description": "Feature flags for nested mutation operations",
+              "description": "Configuration properties for nested mutation operations",
               "additionalProperties": false,
               "properties": {
                 "create":{

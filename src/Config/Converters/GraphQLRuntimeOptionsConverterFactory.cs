@@ -87,7 +87,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             }
                             else
                             {
-                                throw new JsonException($"Unexpected type of value entered for enabled: {reader.TokenType}");
+                                throw new JsonException($"Unsupported value entered for the property 'enabled': {reader.TokenType}");
                             }
 
                             break;

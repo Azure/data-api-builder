@@ -411,6 +411,22 @@ namespace Cli.Tests
 
         /// <summary>
         /// Test to validate the contents of the config file generated when init command is used with --graphql.nested-create.enabled flag option for different database types.
+        ///
+        /// 1. For database types other than MsSQL:
+        ///      - Irrespective of whether the --graphql.nested-create.enabled option is used or not, fields related to nested-create will NOT be written to the config file.
+        ///
+        /// 2. For MsSQL database type:
+        ///      a. When --graphql.nested-create.enabled option is used
+        ///           - In this case, the fields related to nested mutation and nested create operations will be written to the config file.
+        ///                "nested-mutations": {
+        ///                    "create": {
+        ///                       "enabled": true/false
+        ///                    }
+        ///                }
+        ///
+        ///      b. When --graphql.nested-create.enabled option is not used
+        ///           - In this case, fields related to nested mutation and nested create operations will NOT be written to the config file.
+        /// 
         /// </summary>
         [DataTestMethod]
         [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for MsSQL database type")]

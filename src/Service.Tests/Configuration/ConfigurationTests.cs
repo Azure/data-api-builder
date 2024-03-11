@@ -1648,10 +1648,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         /// <param name="baseConfig">Base Config Json string.</param>
         [DataTestMethod]
-        [DataRow(TestHelper.BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD, DisplayName = "Validate successful deserialization when nested mutation section is null")]
-        [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_MUTATIONS_FIELD, DisplayName = "Validate successful deserialization when nested mutation section is empty")]
-        [DataRow(TestHelper.BASE_CONFIG_NULL_NESTED_CREATE_FIELD, DisplayName = "Validate successful deserialization when create field within nested mutation section is null")]
-        [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD, DisplayName = "Validate successful deserialization when create field within nested mutation section is empty")]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD, DisplayName = "NestedMutationOptions field deserialized as null when nested mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_MUTATIONS_FIELD, DisplayName = "NestedMutationOptions field deserialized as null when nested mutation section is empty")]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_NESTED_CREATE_FIELD, DisplayName = "NestedMutationOptions field deserialized as null when create field within nested mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD, DisplayName = "NestedMutationOptions field deserialized as null when create field within nested mutation section is empty")]
         public void ValidateDeserializationOfConfigWithNullOrEmptyInvalidNestedMutationSection(string baseConfig)
         {
             string configJson = TestHelper.AddPropertiesToJson(baseConfig, BOOK_ENTITY_JSON);

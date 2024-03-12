@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using Microsoft.Data.SqlClient;
 
 namespace Cli.Tests;
@@ -608,7 +609,7 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Validates that valid usage of verbs and associated options produce exit code 0 indicated success.
+    /// Validates that valid usage of verbs and associated options produce exit code 0 (CliReturnCode.SUCCESS).
     /// Verifies that explicitly implemented verbs (add, update, init, start) and appropriately
     /// supplied options produce exit code 0.
     /// Verifies that non-explicitly implemented DAB CLI options `--help` and `--version` produce exit code 0.
@@ -621,11 +622,11 @@ public class EndToEndTests
     [DataRow(new string[] { "init", "--database-type", "mssql", "-c", TEST_RUNTIME_CONFIG_FILE }, DisplayName = "Valid verb with supported option.")]
     public void ValidVerbsAndOptionsReturnZero(string[] cliArguments)
     {
-        Assert.AreEqual(expected: 0, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+        Assert.AreEqual(expected: CliReturnCode.SUCCESS, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }
 
     /// <summary>
-    /// Validates that invalid verbs and options produce a non-zero exit code. (-1)
+    /// Validates that invalid verbs and options produce exit code -1 (CliReturnCode.GENERAL_ERROR).
     /// </summary>
     /// <param name="cliArguments">cli verbs, options, and option values</param>
     [DataTestMethod]
@@ -634,7 +635,7 @@ public class EndToEndTests
     [DataRow(new string[] { "init", "--database-name", "mssql" }, DisplayName = "Invalid init options database-name")]
     public void InvalidVerbsAndOptionsReturnNonZeroExitCode(string[] cliArguments)
     {
-        Assert.AreEqual(expected: -1, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }
 
     /// <summary>
@@ -649,7 +650,7 @@ public class EndToEndTests
     [DataRow(new string[] { "start", "--config", "dab-config-empty.json" }, DisplayName = "Config file value used is empty and engine startup fails")]
     public void CliAndEngineFailuresReturnNonZeroExitCode(string[] cliArguments)
     {
-        Assert.AreEqual(expected: -1, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }
 
     /// <summary>

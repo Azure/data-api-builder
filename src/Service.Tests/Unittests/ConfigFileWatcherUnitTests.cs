@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             // Must GetConfig() to start file watching
             RuntimeConfig runtimeConfig = configProvider.GetConfig();
-            string initialDefaultDataSourceName = runtimeConfig.GetDefaultDataSourceName();
+            string initialDefaultDataSourceName = runtimeConfig.DefaultDataSourceName;
 
             // assert we have a valid config
             Assert.IsNotNull(runtimeConfig);
@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Act
             // 1. Hot reload the runtime config
             runtimeConfig = configProvider.GetConfig();
-            string updatedDefaultDataSourceName = runtimeConfig.GetDefaultDataSourceName();
+            string updatedDefaultDataSourceName = runtimeConfig.DefaultDataSourceName;
 
             // Assert
             // 1. Assert we have the correcr values after a hot reload.

@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public void TestFixtureSetup()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
@@ -740,7 +740,7 @@ type Planet @model(name:""Planet"") {
         public void TestFixtureTearDown()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }

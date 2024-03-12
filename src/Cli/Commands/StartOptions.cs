@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -45,7 +46,7 @@ namespace Cli.Commands
                 logger.LogError("Failed to start the engine.");
             }
 
-            return isSuccess ? 0 : -1;
+            return isSuccess ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;
         }
     }
 }

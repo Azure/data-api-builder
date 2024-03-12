@@ -5,6 +5,7 @@ using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -120,8 +121,6 @@ namespace Cli.Commands
         [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
         public CliBool RestRequestBodyStrict { get; }
 
-        // public int returnCode;
-
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
@@ -130,12 +129,12 @@ namespace Cli.Commands
             {
                 logger.LogInformation("Config file generated.");
                 logger.LogInformation("SUGGESTION: Use 'dab add [entity-name] [options]' to add new entities in your config.");
-                return 0;
+                return CliReturnCode.SUCCESS;
             }
             else
             {
                 logger.LogError("Could not generate config file.");
-                return -1;
+                return CliReturnCode.GENERAL_ERROR;
             }
         }
     }

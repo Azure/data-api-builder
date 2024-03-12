@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -38,7 +39,7 @@ namespace Cli.Commands
                 logger.LogError("Config is invalid. Check above logs for details.");
             }
 
-            return isValidConfig ? 0 : -1;
+            return isValidConfig ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;
         }
     }
 }

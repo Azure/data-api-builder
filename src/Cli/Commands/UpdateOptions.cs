@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -101,7 +102,7 @@ namespace Cli.Commands
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             if (!IsEntityProvided(Entity, logger, command: "update"))
             {
-                return -1;
+                return CliReturnCode.GENERAL_ERROR;
             }
 
             bool isSuccess = ConfigGenerator.TryUpdateEntityWithOptions(this, loader, fileSystem);
@@ -115,7 +116,7 @@ namespace Cli.Commands
                 logger.LogError("Could not update the entity: {Entity}.", Entity);
             }
 
-            return isSuccess ? 0 : -1;
+            return isSuccess ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;
         }
     }
 }

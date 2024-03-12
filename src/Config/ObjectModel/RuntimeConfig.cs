@@ -285,15 +285,14 @@ public record RuntimeConfig
     /// built using a new, unique guid during the construction of this RuntimeConfig
     /// with entries using the provided default data source name.
     /// </summary>
-    /// <param name="defaultDataSourceName">The name used to update the dictionaries.</param>
+    /// <param name="initialDefaultDataSourceName">The name used to update the dictionaries.</param>
     public void UpdateDefaultDataSourceNameDependantDictionaries(string initialDefaultDataSourceName)
     {
         _dataSourceNameToDataSource.Remove(DefaultDataSourceName);
         _dataSourceNameToDataSource.Add(initialDefaultDataSourceName, this.DataSource);
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            _entityNameToDataSourceName.Remove(entity.Key);
-            _entityNameToDataSourceName.Add(entity.Key, initialDefaultDataSourceName);
+            _entityNameToDataSourceName[entity.Key] = initialDefaultDataSourceName;
         }
     }
 

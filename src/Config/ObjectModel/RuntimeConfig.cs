@@ -388,7 +388,7 @@ public record RuntimeConfig
     public bool CanUseCache()
     {
         bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
-        return IsCachingEnabled && SqlDataSourceUsed && !setSessionContextEnabled;
+        return IsCachingEnabled && !setSessionContextEnabled;
     }
 
     /// <summary>

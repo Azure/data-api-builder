@@ -13,6 +13,7 @@ DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
 DROP TABLE IF EXISTS books;
 DROP TABLE IF EXISTS [foo].[magazines];
+DROP TABLE IF EXISTS [bar].[magazines];
 DROP TABLE IF EXISTS stocks_price;
 DROP TABLE IF EXISTS stocks;
 DROP TABLE IF EXISTS comics;
@@ -41,6 +42,7 @@ DROP PROCEDURE IF EXISTS delete_last_inserted_book;
 DROP PROCEDURE IF EXISTS update_book_title;
 DROP PROCEDURE IF EXISTS insert_and_display_all_books_for_given_publisher;
 DROP SCHEMA IF EXISTS [foo];
+DROP SCHEMA IF EXISTS [bar];
 COMMIT;
 
 CREATE TABLE books(
@@ -83,6 +85,14 @@ CREATE TABLE [foo].[magazines](
     id int NOT NULL,
     title varchar(2048) NOT NULL,
     issue_number int NULL
+);
+
+EXEC('CREATE SCHEMA [bar]');
+
+CREATE TABLE [bar].[magazines](
+    upc int NOT NULL,
+    comic_name varchar(2048) NOT NULL,
+    issue int NULL
 );
 
 CREATE TABLE comics(
@@ -312,6 +322,7 @@ VALUES (1, 'Star Trek', 'SciFi', NULL), (2, 'Cinderella', 'Tales', 3001),(3,'Ún
 (5, 'Snow White', 'AnotherTales', 3001);
 
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
+INSERT INTO [bar].[magazines](upc, comic_name, issue) VALUES (0, 'NotVogue', 0);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);

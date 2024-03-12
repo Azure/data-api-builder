@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     return await DispatchMutation(context, sqlMetadataProvider.GetDatabaseType());
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
-            };
+            }
         }
 
         /// <summary>
@@ -486,7 +486,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (requirement is not RoleContextPermissionsRequirement && resource is null)
             {
-                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType}");
+                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType()}");
             }
 
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(

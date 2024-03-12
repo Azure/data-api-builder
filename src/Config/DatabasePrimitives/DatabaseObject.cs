@@ -51,14 +51,23 @@ public abstract class DatabaseObject
             };
         }
     }
-
-    public bool Equals(DatabaseObject other)
+    public override bool Equals(object? other)
     {
-        return other != null &&
+        return Equals(other as DatabaseObject);
+    }
+
+    public bool Equals(DatabaseObject? other)
+    {
+        return other is not null &&
                SchemaName.Equals(other.SchemaName) &&
                Name.Equals(other.Name) &&
                FullName.Equals(other.FullName) &&
                ((SourceDefinition == null && other.SourceDefinition == null) || SourceDefinition?.Equals(other.SourceDefinition) == true);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(SchemaName, Name);
     }
 }
 
@@ -90,6 +99,12 @@ public class DatabaseView : DatabaseObject
 
     public DatabaseView() { }
     public ViewDefinition ViewDefinition { get; set; } = null!;
+
+    public virtual bool Equals(DatabaseView other)
+    {
+        return
+            base.Equals(other) && ((ViewDefinition == null && other.ViewDefinition == null) || ViewDefinition?.Equals(other.ViewDefinition) == true);
+    }
 }
 
 /// <summary>
@@ -102,6 +117,12 @@ public class DatabaseStoredProcedure : DatabaseObject
 
     public DatabaseStoredProcedure() { }
     public StoredProcedureDefinition StoredProcedureDefinition { get; set; } = null!;
+
+    public virtual bool Equals(DatabaseStoredProcedure other)
+    {
+        return
+            base.Equals(other) && ((StoredProcedureDefinition == null && other.StoredProcedureDefinition == null) || StoredProcedureDefinition?.Equals(other.StoredProcedureDefinition) == true);
+    }
 }
 
 public class StoredProcedureDefinition : SourceDefinition

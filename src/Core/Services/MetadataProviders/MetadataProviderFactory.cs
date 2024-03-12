@@ -3,8 +3,6 @@
 
 using System.IO.Abstractions;
 using System.Net;
-using System.Text.Json;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
@@ -64,36 +62,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 if (provider is not null)
                 {
                     await provider.InitializeAsync();
-
-                    // How will the changes on GraphQL workload look like ? 
-
-                    // Following code is just POC specific, this wont be part of final implementation in DAB
-                    // this is just for me to test directly on DAB (as I cannot test in GraphQL repo without new DAB package support)
-
-                    try
-                    {
-                        // Following code is how we will serialise the object on our end when we attach with a source
-                        JsonSerializerOptions options = new()
-                        {
-                            Converters = {
-                                new DatabaseObjectConverter(),
-                                new TypeConverter()
-                            }
-                        };
-                        string json = JsonSerializer.Serialize(provider.EntityToDatabaseObject, options);
-                        Console.WriteLine(json);
-
-                        // Following code is how we will deserialise the object on our end before sending to DAB 
-
-                        Dictionary<string, DatabaseObject>? deserializedDictionary = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(json, options)!;
-                        // GraphQL Workload will call this new initialise method
-                        provider.InitializeAsync(deserializedDictionary);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex);
-                    }
-
                 }
             }
         }

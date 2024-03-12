@@ -198,6 +198,6 @@ namespace Azure.DataApiBuilder.Core.Services
         /// This method will take in various objects which we can use directly rather than recreating the objects
         /// using multiple tsql query
         /// </summary>
-        void InitializeAsync(Dictionary<string,DatabaseObject> entityDatabaseObject, Dictionary<RelationShipPair, ForeignKeyDefinition>? pairToFkDefinition, Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap);
+        void InitializeAsync(Dictionary<string,DatabaseObject> entityDatabaseObject, Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap);
     }
 }

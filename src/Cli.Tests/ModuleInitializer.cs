@@ -51,6 +51,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
+        // Ignore DefaultDataSourceName as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DefaultDataSourceName);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

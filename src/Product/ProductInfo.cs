@@ -18,11 +18,18 @@ public static class ProductInfo
     /// FileVersionInfo is used to retrieve the version information from the executing assembly
     /// set by the Version property in Directory.Build.props
     /// </summary>
+    /// <param name="includeCommitHash">If true, returns the version string with the commit hash</param>
     /// <returns>Version string "Major.Minor.Patch"</returns>
-    public static string GetProductVersion()
+    public static string GetProductVersion(bool includeCommitHash = false)
     {
         Assembly assembly = Assembly.GetExecutingAssembly();
         FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+
+        if (includeCommitHash)
+        {
+            return fileVersionInfo.ProductVersion ?? "DAB_UNVERSIONED";
+        }
+
         string version = fileVersionInfo.ProductMajorPart + "." + fileVersionInfo.ProductMinorPart + "." + fileVersionInfo.ProductBuildPart;
         return version;
     }

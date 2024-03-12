@@ -599,7 +599,7 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
         output = process.StandardOutput.ReadLine();
         process.Kill();
         Assert.IsNotNull(output);
@@ -669,7 +669,7 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
-        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
 
         foreach (string expectedOutput in expectedOutputArray)
         {
@@ -733,7 +733,7 @@ public class EndToEndTests
         Assert.IsNotNull(output);
 
         // Version Info logged by dab irrespective of commands being parsed correctly.
-        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
 
         if (isParsableDabCommandName)
         {
@@ -766,7 +766,7 @@ public class EndToEndTests
         );
         string? output = await process.StandardOutput.ReadLineAsync();
         Assert.IsNotNull(output);
-        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
 
         output = await process.StandardOutput.ReadLineAsync();
         Assert.IsNotNull(output);

@@ -26,7 +26,7 @@ namespace Cli.Commands
         /// </summary>
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
+            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion(includeCommitHash: true));
             bool isValidConfig = ConfigGenerator.IsConfigValid(this, loader, fileSystem);
 
             if (isValidConfig)

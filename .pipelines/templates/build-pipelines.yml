@@ -20,7 +20,7 @@ steps:
     script: |
       [xml]$directoryBuildProps = Get-Content -Path $(Build.SourcesDirectory)/src/Directory.Build.props
       # Get Version from Directory.Build.props
-      # When you access this XML property, it returns an array of elements (even if there’s only one element with that name).
+      # When you access this XML property, it returns an array of elements (even if there's only one element with that name).
       # To extract the actual value as a string, you need to access the first element of the array.
       $version = $directoryBuildProps.Project.PropertyGroup.Version[0]
       # Get Major and Minor version from the version extracted

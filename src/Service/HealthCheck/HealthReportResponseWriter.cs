@@ -18,8 +18,6 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     {
         private byte[]? _responseBytes;
         private const string JSON_CONTENT_TYPE = "application/json; charset=utf-8";
-        private const string DAB_VERSION_KEY = "version";
-        private const string DAB_APPNAME_KEY = "appName";
 
         /// <summary>
         /// Function provided to the health check middleware to write the response.
@@ -64,14 +62,14 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
 
                 if (healthReport.Entries.TryGetValue(key: typeof(DabHealthCheck).Name, out HealthReportEntry healthReportEntry))
                 {
-                    if (healthReportEntry.Data.TryGetValue(DAB_VERSION_KEY, out object? versionValue) && versionValue is string versionNumber)
+                    if (healthReportEntry.Data.TryGetValue(DabHealthCheck.DAB_VERSION_KEY, out object? versionValue) && versionValue is string versionNumber)
                     {
-                        jsonWriter.WriteString(DAB_VERSION_KEY, versionNumber);
+                        jsonWriter.WriteString(DabHealthCheck.DAB_VERSION_KEY, versionNumber);
                     }
 
-                    if (healthReportEntry.Data.TryGetValue(DAB_APPNAME_KEY, out object? appNameValue) && appNameValue is string appName)
+                    if (healthReportEntry.Data.TryGetValue(DabHealthCheck.DAB_APPNAME_KEY, out object? appNameValue) && appNameValue is string appName)
                     {
-                        jsonWriter.WriteString(DAB_APPNAME_KEY, appName);
+                        jsonWriter.WriteString(DabHealthCheck.DAB_APPNAME_KEY, appName);
                     }
                 }
 

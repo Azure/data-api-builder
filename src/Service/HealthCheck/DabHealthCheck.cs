@@ -9,14 +9,29 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
+    /// <summary>
+    /// Health check which returns the DAB engine's version and app name (User Agent string).
+    /// - version: Major.Minor.Patch
+    /// - app-name: dab_oss_Major.Minor.Patch
+    /// </summary>
     internal class DabHealthCheck : IHealthCheck
     {
+        public const string DAB_VERSION_KEY = "version";
+        public const string DAB_APPNAME_KEY = "app-name";
+
+        /// <summary>
+        /// Method to check the health of the DAB engine which is executed by dotnet internals when registered as a health check
+        /// in startup.cs
+        /// </summary>
+        /// <param name="context">dotnet provided health check context.</param>
+        /// <param name="cancellationToken">cancellation token.</param>
+        /// <returns>HealthCheckResult with version and appname/useragent string.</returns>
         public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
         {
             Dictionary<string, object> dabVersionMetadata = new()
             {
-                { "version", ProductInfo.GetMajorMinorPatchVersion() },
-                { "appName", ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false) }
+                { DAB_VERSION_KEY, ProductInfo.GetMajorMinorPatchVersion() },
+                { DAB_APPNAME_KEY, ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false) }
             };
 
             HealthCheckResult healthCheckResult = HealthCheckResult.Healthy(

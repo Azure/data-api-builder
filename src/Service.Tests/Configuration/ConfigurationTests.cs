@@ -32,6 +32,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -563,7 +564,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Checks if the connection string provided in the config is remains unchanged for MySQL, PostgreSQL, CosmosDB_PostgreSQl, CosmosDB_NoSQL.
+        /// Checks if the connection string provided in the config remains unchanged for MySQL, PostgreSQL, CosmosDB_PostgreSQl, CosmosDB_NoSQL.
         /// If the connection string already contains the `Application Name` property, it should append the DataApiBuilder Application Name to the existing value.
         /// If not, it should NOT append the property `Application Name` to the connection string.
         /// </summary>
@@ -2781,11 +2782,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 message: "Expected endpoint to be healthy.");
 
             Assert.IsTrue(
-                condition: responseProperties.TryGetValue(key: "version", out JsonElement versionValue) && versionValue.ToString() == ProductInfo.GetMajorMinorPatchVersion(),
+                condition: responseProperties.TryGetValue(key: DabHealthCheck.DAB_VERSION_KEY, out JsonElement versionValue) && versionValue.ToString() == ProductInfo.GetMajorMinorPatchVersion(),
                 message: "Unexpected or missing version value.");
 
             Assert.IsTrue(
-                condition: responseProperties.TryGetValue(key: "appName", out JsonElement appNameValue) && appNameValue.ToString() == ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false),
+                condition: responseProperties.TryGetValue(key: DabHealthCheck.DAB_APPNAME_KEY, out JsonElement appNameValue) && appNameValue.ToString() == ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false),
                 message: "Unexpected or missing DAB user agent string.");
         }
 

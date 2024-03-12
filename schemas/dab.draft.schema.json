@@ -175,6 +175,25 @@
             "enabled": {
               "type": "boolean",
               "description": "Allow enabling/disabling GraphQL requests for all entities."
+            },
+            "nested-mutations": {
+              "type": "object",
+              "description": "Configuration properties for nested mutation operations",
+              "additionalProperties": false,
+              "properties": {
+                "create":{
+                  "type": "object",
+                  "description": "Options for nested create operations",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Allow enabling/disabling nested create operations for all entities.",
+                      "default": false
+                    }
+                  }
+                }
+              }
             }
           }
         },

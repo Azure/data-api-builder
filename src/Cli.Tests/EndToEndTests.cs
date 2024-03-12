@@ -132,6 +132,90 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// Test to validate the usage of --graphql.nested-create.enabled option of the init command for all database types.
+    ///
+    /// 1. Behavior for database types other than MsSQL:
+    ///      - Irrespective of whether the --graphql.nested-create.enabled option is used or not, fields related to nested-create will NOT be written to the config file.
+    ///      - As a result, after deserialization of such a config file, the Runtime.GraphQL.NestedMutationOptions is expected to be null.
+    /// 2. Behavior for MsSQL database type:
+    ///
+    ///      a. When --graphql.nested-create.enabled option is used
+    ///           - In this case, the fields related to nested mutation and nested create operations will be written to the config file.
+    ///                "nested-mutations": {
+    ///                    "create": {
+    ///                       "enabled": true/false
+    ///                    }
+    ///                }
+    ///         After deserializing such a config file, the Runtime.GraphQL.NestedMutationOptions is expected to be non-null and the value of the "enabled" field is expected to be the same as the value passed in the init command.
+    ///
+    ///      b. When --graphql.nested-create.enabled option is not used
+    ///           - In this case, fields related to nested mutation and nested create operations will NOT be written to the config file.
+    ///           - As a result, after deserialization of such a config file, the Runtime.GraphQL.NestedMutationOptions is expected to be null.
+    ///
+    /// </summary>
+    /// <param name="isNestedCreateEnabled">Value interpreted by the CLI for '--graphql.nested-create.enabled' option of the init command.
+    ///    When not used, CLI interprets the value for the option as CliBool.None
+    ///    When used with true/false, CLI interprets the value as CliBool.True/CliBool.False respectively.
+    /// </param>
+    /// <param name="expectedValueForNestedCreateEnabledFlag"> Expected value for the nested create enabled flag in the config file.</param>
+    [DataTestMethod]
+    [DataRow(CliBool.True, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.nested-create.enabled true' for MsSql database type")]
+    [DataRow(CliBool.False, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.nested-create.enabled false' for MsSql database type")]
+    [DataRow(CliBool.None, "mssql", DatabaseType.MSSQL, DisplayName = "Init command without '--graphql.nested-create.enabled' option for MsSql database type")]
+    [DataRow(CliBool.True, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.nested-create.enabled true' for MySql database type")]
+    [DataRow(CliBool.False, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.nested-create.enabled false' for MySql database type")]
+    [DataRow(CliBool.None, "mysql", DatabaseType.MySQL, DisplayName = "Init command without '--graphql.nested-create.enabled' option for MySql database type")]
+    [DataRow(CliBool.True, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.nested-create.enabled true' for PostgreSql database type")]
+    [DataRow(CliBool.False, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.nested-create.enabled false' for PostgreSql database type")]
+    [DataRow(CliBool.None, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command without '--graphql.nested-create.enabled' option for PostgreSql database type")]
+    [DataRow(CliBool.True, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.nested-create.enabled true' for dwsql database type")]
+    [DataRow(CliBool.False, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.nested-create.enabled false' for dwsql database type")]
+    [DataRow(CliBool.None, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command without '--graphql.nested-create.enabled' option for dwsql database type")]
+    [DataRow(CliBool.True, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.nested-create.enabled true' for cosmosdb_nosql database type")]
+    [DataRow(CliBool.False, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.nested-create.enabled false' for cosmosdb_nosql database type")]
+    [DataRow(CliBool.None, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command without '--graphql.nested-create.enabled' option for cosmosdb_nosql database type")]
+    public void TestEnablingNestedCreateOperation(CliBool isNestedCreateEnabled, string dbType, DatabaseType expectedDbType)
+    {
+        List<string> args = new() { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", dbType };
+
+        if (string.Equals("cosmosdb_nosql", dbType, StringComparison.OrdinalIgnoreCase))
+        {
+            List<string> cosmosNoSqlArgs = new() { "--cosmosdb_nosql-database",
+                          "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", TEST_SCHEMA_FILE};
+            args.AddRange(cosmosNoSqlArgs);
+        }
+
+        if (isNestedCreateEnabled is not CliBool.None)
+        {
+            args.Add("--graphql.nested-create.enabled");
+            args.Add(isNestedCreateEnabled.ToString()!);
+        }
+
+        Program.Execute(args.ToArray(), _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
+            TEST_RUNTIME_CONFIG_FILE,
+            out RuntimeConfig? runtimeConfig,
+            replaceEnvVar: true));
+
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(expectedDbType, runtimeConfig.DataSource.DatabaseType);
+        Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
+        if (runtimeConfig.DataSource.DatabaseType is DatabaseType.MSSQL && isNestedCreateEnabled is not CliBool.None)
+        {
+            Assert.IsNotNull(runtimeConfig.Runtime.GraphQL.NestedMutationOptions);
+            Assert.IsNotNull(runtimeConfig.Runtime.GraphQL.NestedMutationOptions.NestedCreateOptions);
+            bool expectedValueForNestedCreateEnabled = isNestedCreateEnabled == CliBool.True;
+            Assert.AreEqual(expectedValueForNestedCreateEnabled, runtimeConfig.Runtime.GraphQL.NestedMutationOptions.NestedCreateOptions.Enabled);
+        }
+        else
+        {
+            Assert.IsNull(runtimeConfig.Runtime.GraphQL.NestedMutationOptions, message: "NestedMutationOptions is expected to be null because a) DB type is not MsSQL or b) Either --graphql.nested-create.enabled option was not used or no value was provided.");
+        }
+    }
+
+    /// <summary>
     /// Test to verify adding a new Entity.
     /// </summary>
     [TestMethod]

@@ -276,9 +276,9 @@ public record RuntimeConfig
     /// <summary>
     /// In a Hot Reload scenario we should maintain the same default data source
     /// name before the hot reload as after the hot reload. This is because we hold
-    /// references such as to the Data Source itself which depend on this data source name
+    /// references to the Data Source itself which depend on this data source name
     /// for lookups. To correctly retrieve this information after a hot reload
-    /// we need the data source name to say the same after hot reloading. This method takes
+    /// we need the data source name to stay the same after hot reloading. This method takes
     /// a default data source name, such as the one from before hot reload, and
     /// replaces the current dictionary entries of this RuntimeConfig that were
     /// built using a new, unique guid during the construction of this RuntimeConfig

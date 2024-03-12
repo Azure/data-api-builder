@@ -548,7 +548,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string assemblyResolvedVersion = ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false);
+            string assemblyResolvedVersion = ProductInfo.GetDataApiBuilderUserAgent();
             expectedUpdatedConnectionString += assemblyResolvedVersion;
 
             RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, providedConnectionString);
@@ -2782,11 +2782,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 message: "Expected endpoint to be healthy.");
 
             Assert.IsTrue(
-                condition: responseProperties.TryGetValue(key: DabHealthCheck.DAB_VERSION_KEY, out JsonElement versionValue) && versionValue.ToString() == ProductInfo.GetMajorMinorPatchVersion(),
+                condition: responseProperties.TryGetValue(key: DabHealthCheck.DAB_VERSION_KEY, out JsonElement versionValue) && versionValue.ToString() == ProductInfo.GetProductVersion(),
                 message: "Unexpected or missing version value.");
 
             Assert.IsTrue(
-                condition: responseProperties.TryGetValue(key: DabHealthCheck.DAB_APPNAME_KEY, out JsonElement appNameValue) && appNameValue.ToString() == ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false),
+                condition: responseProperties.TryGetValue(key: DabHealthCheck.DAB_APPNAME_KEY, out JsonElement appNameValue) && appNameValue.ToString() == ProductInfo.GetDataApiBuilderUserAgent(),
                 message: "Unexpected or missing DAB user agent string.");
         }
 

@@ -8,7 +8,7 @@ public class AppInsightsTelemetryInitializer : ITelemetryInitializer
 {
     public static readonly IReadOnlyDictionary<string, string> GlobalProperties = new Dictionary<string, string>
     {
-        { "ProductName", $"{ProductInfo.DEFAULT_APP_NAME}"},
+        { "ProductName", $"{ProductInfo.DAB_USER_AGENT}"},
         { "UserAgent", $"{ProductInfo.GetDataApiBuilderUserAgent()}" }
         // Add more custom properties here
     };

@@ -132,7 +132,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     Info = new OpenApiInfo
                     {
-                        Version = ProductInfo.GetMajorMinorPatchVersion(),
+                        Version = ProductInfo.GetProductVersion(),
                         Title = DOCUMENTOR_UI_TITLE
                     },
                     Servers = new List<OpenApiServer>

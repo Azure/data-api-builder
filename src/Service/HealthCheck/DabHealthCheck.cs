@@ -30,8 +30,8 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
         {
             Dictionary<string, object> dabVersionMetadata = new()
             {
-                { DAB_VERSION_KEY, ProductInfo.GetMajorMinorPatchVersion() },
-                { DAB_APPNAME_KEY, ProductInfo.GetDataApiBuilderUserAgent(includeCommitHash: false) }
+                { DAB_VERSION_KEY, ProductInfo.GetProductVersion() },
+                { DAB_APPNAME_KEY, ProductInfo.GetDataApiBuilderUserAgent() }
             };
 
             HealthCheckResult healthCheckResult = HealthCheckResult.Healthy(

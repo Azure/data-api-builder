@@ -130,7 +130,7 @@ public record RuntimeConfig
         }
     }
 
-    public string _defaultDataSourceName;
+    private string _defaultDataSourceName;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 

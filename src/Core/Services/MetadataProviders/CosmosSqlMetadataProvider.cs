@@ -372,7 +372,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             throw new NotImplementedException();
         }
 
-        public void InitializeAsync(Dictionary<string, DatabaseObject> dictionary)
+        public void InitializeAsync(
+            Dictionary<string, DatabaseObject> dictionary,
+            Dictionary<RelationShipPair, ForeignKeyDefinition>? pairToFkDefinition,
+            Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap)
         {
             throw new NotImplementedException();
         }

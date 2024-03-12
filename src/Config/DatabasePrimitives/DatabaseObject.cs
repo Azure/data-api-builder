@@ -51,6 +51,15 @@ public abstract class DatabaseObject
             };
         }
     }
+
+    public bool Equals(DatabaseObject other)
+    {
+        return other != null &&
+               SchemaName.Equals(other.SchemaName) &&
+               Name.Equals(other.Name) &&
+               FullName.Equals(other.FullName) &&
+               ((SourceDefinition == null && other.SourceDefinition == null) || SourceDefinition?.Equals(other.SourceDefinition) == true);
+    }
 }
 
 /// <summary>
@@ -63,6 +72,12 @@ public class DatabaseTable : DatabaseObject
 
     public DatabaseTable() { }
     public SourceDefinition TableDefinition { get; set; } = null!;
+
+    public virtual bool Equals(DatabaseTable other)
+    {
+        return
+            base.Equals(other) && ((TableDefinition == null && other.TableDefinition == null) || TableDefinition?.Equals(other.TableDefinition) == true);
+    }
 }
 
 /// <summary>

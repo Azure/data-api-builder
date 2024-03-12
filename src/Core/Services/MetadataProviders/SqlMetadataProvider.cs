@@ -286,13 +286,18 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc />
-        public void InitializeAsync(Dictionary<string, DatabaseObject> dictionary)
+        public void InitializeAsync(
+            Dictionary<string, DatabaseObject> entityDatabaseObject,
+            Dictionary<RelationShipPair, ForeignKeyDefinition>? pairToFkDefinition,
+            Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap)
         {
             GenerateDatabaseObjectForEntities();
             
-            EntityToDatabaseObject = dictionary;
-            // will initialise other objects sent from Graphql workload
-            
+            EntityToDatabaseObject = entityDatabaseObject ?? EntityToDatabaseObject;
+            PairToFkDefinition = pairToFkDefinition ?? PairToFkDefinition;
+            GraphQLStoredProcedureExposedNameToEntityNameMap = graphQLStoredProcedureExposedNameToEntityNameMap ?? GraphQLStoredProcedureExposedNameToEntityNameMap;
+
+            // will initialise other objects sent from Graphql workload            
             GenerateExposedToBackingColumnMapsForEntities();
         }
 

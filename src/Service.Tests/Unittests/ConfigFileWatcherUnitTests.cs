@@ -69,6 +69,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         [TestMethod]
         public void HotReloadConfigRestRuntimeOptions()
         {
+            // Arrange
+            // 1. Setup the strings that are turned into our initital and runtime config to reload.
+            // 2. Generate initial runtimeconfig, start file watching, and assert we have valid initial values.
             string initialRestPath = "/api";
             string updatedRestPath = "/rest";
             string initialGQLPath = "/api";
@@ -132,10 +135,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Give ConfigFileWatcher enough time to hot reload the change
             System.Threading.Thread.Sleep(1000);
 
-            // Hot Reloaded config
+            // Act
+            // 1. Hot reload the runtime config
             runtimeConfig = configProvider.GetConfig();
-
             string updatedDefaultDataSourceName = runtimeConfig.DefaultDataSourceName;
+
+            // Assert
+            // 1. Assert we have the correcr values after a hot reload.
             Assert.AreEqual(updatedRestEnabled, runtimeConfig.Runtime.Rest.Enabled);
             Assert.AreEqual(updatedRestPath, runtimeConfig.Runtime.Rest.Path);
             Assert.AreEqual(updatedGQLEnabled, runtimeConfig.Runtime.GraphQL.Enabled);

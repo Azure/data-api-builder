@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
             if (!ConnectionStringBuilders.ContainsKey(dataSourceName))

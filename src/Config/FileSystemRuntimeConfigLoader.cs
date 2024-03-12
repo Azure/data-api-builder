@@ -115,8 +115,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
             {
                 if (!string.IsNullOrEmpty(dataSourceName))
                 {
-                    config.UpdateDefaultDataSourceNameDependantDictionaries(dataSourceName);
-                    config.DefaultDataSourceName = dataSourceName;
+                    config.UpdateDefaultDataSourceName(dataSourceName);
                 }
 
                 return true;

@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
         {
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
-            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
 
             if (context is FindRequestContext findRequestContext)
             {
@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private Task<IActionResult?> DispatchMutation(RestRequestContext context, DatabaseType databaseType)
         {
             IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(databaseType);
-            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             return context switch
             {
                 StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, defaultDataSourceName),
@@ -437,7 +437,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string routeAfterPathBase)
         {
 
-            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements

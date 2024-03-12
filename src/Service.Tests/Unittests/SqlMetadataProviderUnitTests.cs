@@ -120,7 +120,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor.Object);
 
-            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().DefaultDataSourceName);
+            SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand> provider = new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory.Object, sqlMetadataLogger, runtimeConfigProvider.GetConfig().GetDefaultDataSourceName());
             string tableprefix = provider.GetTablePrefix(databaseName, schemaName);
             Assert.AreEqual(tableprefix, expectedPrefix);
         }
@@ -179,7 +179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                string dataSourceName = runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+                string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
                 // Setup Mock query manager Factory
                 Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);

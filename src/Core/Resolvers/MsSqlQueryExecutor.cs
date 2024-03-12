@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
             }
 
             if (httpContext is null || !_dataSourceToSessionContextUsage[dataSourceName])

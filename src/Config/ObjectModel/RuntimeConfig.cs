@@ -130,8 +130,7 @@ public record RuntimeConfig
         }
     }
 
-    [JsonIgnore]
-    public string DefaultDataSourceName;
+    public string _defaultDataSourceName;
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
@@ -170,18 +169,18 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        this.DefaultDataSourceName = Guid.NewGuid().ToString();
+        _defaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>
         {
-            { DefaultDataSourceName, this.DataSource }
+            { _defaultDataSourceName, this.DataSource }
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            _entityNameToDataSourceName.TryAdd(entity.Key, DefaultDataSourceName);
+            _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
         }
 
         // Process data source and entities information for each database in multiple database scenario.
@@ -242,7 +241,7 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        this.DefaultDataSourceName = DefaultDataSourceName;
+        _defaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
         this.DataSourceFiles = DataSourceFiles;
@@ -283,17 +282,19 @@ public record RuntimeConfig
     /// a default data source name, such as the one from before hot reload, and
     /// replaces the current dictionary entries of this RuntimeConfig that were
     /// built using a new, unique guid during the construction of this RuntimeConfig
-    /// with entries using the provided default data source name.
+    /// with entries using the provided default data source name. We then update the DefaultDataSourceName.
     /// </summary>
     /// <param name="initialDefaultDataSourceName">The name used to update the dictionaries.</param>
-    public void UpdateDefaultDataSourceNameDependantDictionaries(string initialDefaultDataSourceName)
+    public void UpdateDefaultDataSourceName(string initialDefaultDataSourceName)
     {
-        _dataSourceNameToDataSource.Remove(DefaultDataSourceName);
+        _dataSourceNameToDataSource.Remove(_defaultDataSourceName);
         _dataSourceNameToDataSource.Add(initialDefaultDataSourceName, this.DataSource);
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName[entity.Key] = initialDefaultDataSourceName;
         }
+
+        _defaultDataSourceName = initialDefaultDataSourceName;
     }
 
     /// <summary>
@@ -324,6 +325,17 @@ public record RuntimeConfig
     public bool CheckDataSourceExists(string dataSourceName)
     {
         return _dataSourceNameToDataSource.ContainsKey(dataSourceName);
+    }
+
+    /// <summary>
+    /// Get the default datasource name.
+    /// </summary>
+    /// <returns>default datasourceName.</returns>
+#pragma warning disable CA1024 // Use properties where appropriate. Reason: Do not want datasource serialized and want to keep it private to restrict set;
+    public string GetDefaultDataSourceName()
+#pragma warning restore CA1024 // Use properties where appropriate
+    {
+        return _defaultDataSourceName;
     }
 
     /// <summary>

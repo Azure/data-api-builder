@@ -289,7 +289,17 @@ public record RuntimeConfig
     public void UpdateDefaultDataSourceName(string initialDefaultDataSourceName)
     {
         _dataSourceNameToDataSource.Remove(DefaultDataSourceName);
-        _dataSourceNameToDataSource.Add(initialDefaultDataSourceName, this.DataSource);
+        if (!_dataSourceNameToDataSource.TryAdd(initialDefaultDataSourceName, this.DataSource))
+        {
+            // An exception here means that a default data source name was generated as a GUID that
+            // matches the original default data source name. This should never happen but we add this
+            // to be extra safe.
+            throw new DataApiBuilderException(
+                message: $"Duplicate data source name: {initialDefaultDataSourceName}.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError); 
+            ;
+        }
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName[entity.Key] = initialDefaultDataSourceName;

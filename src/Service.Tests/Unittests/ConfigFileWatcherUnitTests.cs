@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             string updatedDefaultDataSourceName = runtimeConfig.DefaultDataSourceName;
 
             // Assert
-            // 1. Assert we have the correcr values after a hot reload.
+            // 1. Assert we have the correct values after a hot reload.
             Assert.AreEqual(updatedRestEnabled, runtimeConfig.Runtime.Rest.Enabled);
             Assert.AreEqual(updatedRestPath, runtimeConfig.Runtime.Rest.Path);
             Assert.AreEqual(updatedGQLEnabled, runtimeConfig.Runtime.GraphQL.Enabled);

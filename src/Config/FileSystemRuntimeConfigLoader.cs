@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Config;
 
@@ -28,7 +29,7 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     // This stores either the default config name e.g. dab-config.json
     // or user provided config file which could be a relative file path, absolute file path or simply the file name assumed to be in current directory.
     private string _baseConfigFilePath;
-
+    private ILogger? _logger;
     private readonly IFileSystem _fileSystem;
 
     public const string CONFIGFILE_NAME = "dab-config";
@@ -53,11 +54,12 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// </summary>
     public string ConfigFilePath { get; internal set; }
 
-    public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null)
+    public FileSystemRuntimeConfigLoader(IFileSystem fileSystem, string baseConfigFilePath = DEFAULT_CONFIG_FILE_NAME, string? connectionString = null, ILogger? logger = null)
         : base(connectionString)
     {
         _fileSystem = fileSystem;
         _baseConfigFilePath = baseConfigFilePath;
+        _logger = logger;
         ConfigFilePath = GetFinalConfigFilePath();
     }
 
@@ -98,23 +100,21 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     public bool TryLoadConfig(
         string path,
         [NotNullWhen(true)] out RuntimeConfig? config,
-        bool replaceEnvVar = false)
+        bool replaceEnvVar = false,
+        ILogger? logger = null)
     {
-        if (_fileSystem.File.Exists(path))
+        try
         {
-            Console.WriteLine($"Loading config file from {path}.");
             string json = _fileSystem.File.ReadAllText(path);
+            logger?.LogInformation(message: "Loaded config file from: {filePath}", path );
             return TryParseConfig(json, out config, connectionString: _connectionString, replaceEnvVar: replaceEnvVar);
         }
-        else
+        catch(Exception ex)
         {
-            // Unable to use ILogger because this code is invoked before LoggerFactory
-            // is instantiated.
-            Console.WriteLine($"Unable to find config file: {path} does not exist.");
+            logger?.LogError(ex, "Error while loading config file.");
+            config = null;
+            return false;
         }
-
-        config = null;
-        return false;
     }
 
     /// <summary>
@@ -124,9 +124,9 @@ public class FileSystemRuntimeConfigLoader : RuntimeConfigLoader
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false)
+    public override bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, ILogger? logger = null)
     {
-        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar);
+        return TryLoadConfig(ConfigFilePath, out config, replaceEnvVar, logger: logger);
     }
 
     /// <summary>

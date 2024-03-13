@@ -80,7 +80,7 @@ namespace Azure.DataApiBuilder.Service
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
-            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString, logger: _logger);
             RuntimeConfigProvider configProvider = new(configLoader);
 
             services.AddSingleton(fileSystem);

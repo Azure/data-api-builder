@@ -296,7 +296,7 @@ namespace Cli
                 return false;
             }
 
-            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig, logger: _logger))
             {
                 _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
@@ -1025,14 +1025,14 @@ namespace Cli
 
             // Validates that config file has data and follows the correct json schema
             // Replaces all the environment variables while deserializing when starting DAB.
-            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
+            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true, logger: _logger))
             {
                 _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
                 return false;
             }
             else
             {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
+                _logger.LogInformation("DAB CLI successfully preprocessed config file: {runtimeConfigFile}", runtimeConfigFile);
             }
 
             if (string.IsNullOrWhiteSpace(deserializedRuntimeConfig.DataSource.ConnectionString))

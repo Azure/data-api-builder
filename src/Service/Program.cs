@@ -29,6 +29,15 @@ namespace Azure.DataApiBuilder.Service
             }
         }
 
+        /// <summary>
+        /// Notes: all the console.error/log should not occur here and should be emitted by ILogger within the created service
+        /// container. That will ensure engine specific messaging isn't:
+        /// 1. Duplicated here
+        /// 2. Can be sent to configured Application Insights or custom log sink(when built).
+        /// The StartEngine() function should return an int error code to callees: the CLI or Program.Main()
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
         public static bool StartEngine(string[] args)
         {
             // Unable to use ILogger because this code is invoked before LoggerFactory

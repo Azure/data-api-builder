@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             // Dictionary to store:
             // 1. Object types for every entity exposed for MySql/PgSql/MsSql/DwSql in the config file.
-            // 2. Object type for source->target linking object for M:N relationships to support nested insertion in the target table,
+            // 2. Object type for source->target linking object for M:N relationships to support insertion in the target table,
             // followed by an insertion in the linking table. The directional linking object contains all the fields from the target entity
             // (relationship/column) and non-relationship fields from the linking table.
             Dictionary<string, ObjectTypeDefinitionNode> objectTypes = new();
@@ -233,7 +233,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            // For all the fields in the object which hold a foreign key reference to any referenced entity, add a foriegn key directive.
+            // For all the fields in the object which hold a foreign key reference to any referenced entity, add a foreign key directive.
             AddReferencingFieldDirective(entities, objectTypes);
 
             // Pass two - Add the arguments to the many-to-* relationship fields
@@ -294,7 +294,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 if (!entity.GraphQL.Enabled || entity.Source.Type is not EntitySourceType.Table || entity.Relationships is null)
                 {
-                    // Nested insertions are only supported on database tables for which GraphQL endpoint is enabled.
+                    // Multiple create is only supported on database tables for which GraphQL endpoint is enabled.
                     continue;
                 }
 

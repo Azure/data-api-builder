@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             // The input fields for a create object will be a combination of:
             // 1. Scalar input fields corresponding to columns which belong to the table.
-            // 2. 2. Complex input fields corresponding to related (target) entities (table backed entities, for now)
+            // 2. Complex input fields corresponding to related (target) entities (table backed entities, for now)
             // which are defined in the runtime config.
             List<InputValueDefinitionNode> inputFields = new();
 
@@ -82,14 +82,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // we find that the input object has already been created for the entity.
             inputs.Add(input.Name, input);
 
-            // Generate fields for related entities only if nested mutations are supported for the database flavor.
-            if (DoesRelationalDBSupportNestedCreate(databaseType))
+            // Generate fields for related entities only if multiple mutations are supported for the database flavor.
+            if (DoesRelationalDBSupportMultipleCreate(databaseType))
             {
                 // 2. Complex input fields.
                 // Evaluate input objects for related entities.
                 IEnumerable<InputValueDefinitionNode> complexInputFields =
                     objectTypeDefinitionNode.Fields
-                    .Where(field => !IsBuiltInType(field.Type) && IsComplexFieldAllowedForCreateInput(field, databaseType, definitions))
+                    .Where(field => !IsBuiltInType(field.Type) && IsComplexFieldAllowedForCreateInputInRelationalDb(field, databaseType, definitions))
                     .Select(field =>
                     {
                         string typeName = RelationshipDirectiveType.Target(field);
@@ -127,7 +127,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                                 definitions: definitions,
                                 field: field,
                                 typeName: typeName,
-                                baseObjectTypeName: baseObjectTypeNameForField,
+                                targetObjectTypeName: baseObjectTypeNameForField,
                                 objectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
                                 databaseType: databaseType,
                                 entities: entities);
@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             definitions: definitions,
                             field: field,
                             typeName: typeName,
-                            baseObjectTypeName: new(typeName),
+                            targetObjectTypeName: new(typeName),
                             objectTypeDefinitionNode: (ObjectTypeDefinitionNode)def,
                             databaseType: databaseType,
                             entities: entities);
@@ -222,26 +222,25 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// This method is used to determine if a field is allowed to be sent from the client in a Create mutation (eg, id field is not settable during create).
+        /// This method is used to determine if a relationship field is allowed to be sent from the client in a Create mutation
+        /// for a relational database. If the field is a pagination field (for *:N relationships) or if we infer an object
+        /// definition for the field (for *:1 relationships), the field is allowed in the create input.
         /// </summary>
         /// <param name="field">Field to check</param>
         /// <param name="databaseType">The type of database to generate for</param>
         /// <param name="definitions">The other named types in the schema</param>
         /// <returns>true if the field is allowed, false if it is not.</returns>
-        private static bool IsComplexFieldAllowedForCreateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
+        private static bool IsComplexFieldAllowedForCreateInputInRelationalDb(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions)
         {
             if (QueryBuilder.IsPaginationType(field.Type.NamedType()))
             {
-                // Support for inserting nested entities with relationship cardinalities of 1-N or N-N is only supported for MsSql.
-                return DoesRelationalDBSupportNestedCreate(databaseType);
+                return DoesRelationalDBSupportMultipleCreate(databaseType);
             }
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
-
-            // When creating, you don't need to provide the data for nested models, but you will for other nested types
             if (definition != null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType))
             {
-                return DoesRelationalDBSupportNestedCreate(databaseType);
+                return DoesRelationalDBSupportMultipleCreate(databaseType);
             }
 
             return false;
@@ -273,7 +272,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             bool isFieldNullable = defaultValue is not null ||
-                (!IsNoSQLDb(databaseType) && DoesRelationalDBSupportNestedCreate(databaseType) && DoesFieldHaveReferencingFieldDirective(fieldDefinition));
+                (IsRelationalDb(databaseType) && DoesRelationalDBSupportMultipleCreate(databaseType) && DoesFieldHaveReferencingFieldDirective(fieldDefinition));
 
             return new(
                 location: null,
@@ -286,13 +285,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Generates a GraphQL Input Type value for an object type, generally one provided from the relational database.
+        /// Generates a GraphQL Input Type value for:
+        /// 1. An object type sourced from the relational database (for entities exposed in config),
+        /// 2. For source->target linking object types needed to support multiple create.
         /// </summary>
         /// <param name="inputs">Dictionary of all input types, allowing reuse where possible.</param>
         /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
         /// <param name="field">Field that the input type is being generated for.</param>
         /// <param name="typeName">In case of relationships with M:N cardinality, typeName = type name of linking object, else typeName = type name of target entity.</param>
-        /// <param name="baseObjectTypeName">Object type name of the target entity.</param>
+        /// <param name="targetObjectTypeName">Object type name of the target entity.</param>
         /// <param name="objectTypeDefinitionNode">The GraphQL object type to create the input type for.</param>
         /// <param name="databaseType">Database type to generate the input type for.</param>
         /// <param name="entities">Runtime configuration information for entities.</param>
@@ -303,7 +304,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             IEnumerable<HotChocolate.Language.IHasName> definitions,
             FieldDefinitionNode field,
             string typeName,
-            NameNode baseObjectTypeName,
+            NameNode targetObjectTypeName,
             ObjectTypeDefinitionNode objectTypeDefinitionNode,
             DatabaseType databaseType,
             RuntimeEntities entities)
@@ -317,7 +318,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     objectTypeDefinitionNode,
                     entityName,
                     new NameNode(typeName),
-                    baseObjectTypeName,
+                    targetObjectTypeName,
                     definitions,
                     databaseType,
                     entities);
@@ -331,7 +332,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Generates a GraphQL Input Type value for an object type, generally one provided from the non-relational database.
+        /// Generates a GraphQL Input Type value for an object type, provided from the non-relational database.
         /// </summary>
         /// <param name="inputs">Dictionary of all input types, allowing reuse where possible.</param>
         /// <param name="definitions">All named GraphQL types from the schema (objects, enums, etc.) for referencing.</param>
@@ -368,7 +369,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         }
 
         /// <summary>
-        /// Creates and returns InputValueDefinitionNode for a a field representing a related entity in it's
+        /// Creates and returns InputValueDefinitionNode for a field representing a related entity in it's
         /// parent's InputObjectTypeDefinitionNode.
         /// </summary>
         /// <param name="relatedFieldDefinition">Related field's definition.</param>
@@ -383,7 +384,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             NameNode parentInputTypeName)
         {
             ITypeNode type = new NamedTypeNode(relatedFieldInputObjectTypeDefinition.Name);
-            if (!IsNoSQLDb(databaseType) && DoesRelationalDBSupportNestedCreate(databaseType))
+            if (IsRelationalDb(databaseType) && DoesRelationalDBSupportMultipleCreate(databaseType))
             {
                 if (RelationshipDirectiveType.Cardinality(relatedFieldDefinition) is Cardinality.Many)
                 {
@@ -484,7 +485,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             List<FieldDefinitionNode> createMutationNodes = new();
             Entity entity = entities[dbEntityName];
             InputObjectTypeDefinitionNode input;
-            if (IsNoSQLDb(databaseType))
+            if (!IsRelationalDb(databaseType))
             {
                 input = GenerateCreateInputTypeForNonRelationalDb(
                     inputs,
@@ -538,7 +539,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 
             createMutationNodes.Add(createOneNode);
 
-            if (!IsNoSQLDb(databaseType) && DoesRelationalDBSupportNestedCreate(databaseType))
+            if (IsRelationalDb(databaseType) && DoesRelationalDBSupportMultipleCreate(databaseType))
             {
                 // Create multiple node.
                 FieldDefinitionNode createMultipleNode = new(

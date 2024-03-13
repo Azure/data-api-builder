@@ -297,9 +297,9 @@ public record RuntimeConfig
             throw new DataApiBuilderException(
                 message: $"Duplicate data source name: {initialDefaultDataSourceName}.",
                 statusCode: HttpStatusCode.InternalServerError,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError); 
-            ;
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
         }
+
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
             _entityNameToDataSourceName[entity.Key] = initialDefaultDataSourceName;

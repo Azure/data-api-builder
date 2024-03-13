@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Core.Services
         // Represents the entities exposed in the runtime config.
         private IReadOnlyDictionary<string, Entity> _entities;
 
-        // Represents the linking entities created by DAB to support nested mutations for entities having an M:N relationship between them.
+        // Represents the linking entities created by DAB to support multiple mutations for entities having an M:N relationship between them.
         protected Dictionary<string, Entity> _linkingEntities = new();
 
         protected readonly string _dataSourceName;
@@ -757,7 +757,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // When a linking object is encountered for a database table, we will create a linking entity for the object.
                     // Subsequently, we will also populate the Database object for the linking entity. This is used to infer
-                    // metadata about linking object needed to create GQL schema for nested insertions.
+                    // metadata about linking object needed to create GQL schema for multiple insertions.
                     if (entity.Source.Type is EntitySourceType.Table)
                     {
                         PopulateMetadataForLinkingObject(
@@ -826,7 +826,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Helper method to create a linking entity and a database object for the given linking object (which relates the source and target with an M:N relationship).
         /// The created linking entity and its corresponding database object definition is later used during GraphQL schema generation
-        /// to enable nested mutations.
+        /// to enable multiple mutations.
         /// </summary>
         /// <param name="entityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>

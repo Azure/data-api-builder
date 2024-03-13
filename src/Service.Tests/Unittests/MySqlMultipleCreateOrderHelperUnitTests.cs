@@ -6,13 +6,13 @@ using System.Threading.Tasks;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
-    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
-    public class PgSqlNestedCreateOrderHelperUnitTests : NestedCreateOrderHelperUnitTests
+    [TestClass, TestCategory(TestCategory.MYSQL)]
+    public class MySqlMultipleCreateOrderHelperUnitTests : MultipleCreateOrderHelperUnitTests
     {
         [ClassInitialize]
         public static async Task Initialize(TestContext testContext)
         {
-            DatabaseEngine = TestCategory.POSTGRESQL;
+            DatabaseEngine = TestCategory.MSSQL;
             await InitializeTestFixture();
         }
     }

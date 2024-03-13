@@ -1,18 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Threading.Tasks;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
-    [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlNestedCreateOrderHelperUnitTests : NestedCreateOrderHelperUnitTests
+    [TestClass, TestCategory(TestCategory.POSTGRESQL)]
+    public class PgSqlMultipleCreateOrderHelperUnitTests : MultipleCreateOrderHelperUnitTests
     {
         [ClassInitialize]
         public static async Task Initialize(TestContext testContext)
         {
-            DatabaseEngine = TestCategory.MSSQL;
+            DatabaseEngine = TestCategory.POSTGRESQL;
             await InitializeTestFixture();
         }
     }

@@ -52,7 +52,8 @@ type Planet @model {
     tags: [String!],
     stars: [Star],
     additionalAttributes: [AdditionalAttribute],
-    moons: [Moon]
+    moons: [Moon],
+    suns: [Sun]
 }
 
 type Star @model(name:""StarAlias"") {

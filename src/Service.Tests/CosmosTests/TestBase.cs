@@ -52,7 +52,8 @@ type Planet @model {
     tags: [String!],
     stars: [Star],
     additionalAttributes: [AdditionalAttribute],
-    moons: [Moon]
+    moons: [Moon],
+    suns: [Sun]
 }
 
 type Star @model(name:""StarAlias"") {
@@ -97,7 +98,8 @@ type MoonAdditionalAttribute @model(name:""MoonAdditionalAttribute"") {
 
 type MoreAttribute @model(name:""MoreAttrAlias"") {
     id : ID,
-    name : String
+    name : String,
+    type: String @authorize(roles: [""authenticated""])
 }";
 
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };

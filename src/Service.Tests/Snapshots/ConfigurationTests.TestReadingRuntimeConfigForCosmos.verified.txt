@@ -82,6 +82,14 @@
                 Action: Delete
               }
             ]
+          },
+          {
+            Role: limited-read-role,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
           }
         ]
       }
@@ -89,7 +97,7 @@
     {
       Character: {
         Source: {
-          Object: graphqldb.character
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Character,
@@ -123,7 +131,7 @@
     {
       StarAlias: {
         Source: {
-          Object: graphqldb.star
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Star,
@@ -174,7 +182,7 @@
     {
       TagAlias: {
         Source: {
-          Object: graphqldb.tag
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Tag,
@@ -208,7 +216,7 @@
     {
       Moon: {
         Source: {
-          Object: graphqldb.moon
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Moon,
@@ -259,7 +267,7 @@
     {
       Earth: {
         Source: {
-          Object: graphqldb.earth
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Earth,
@@ -271,18 +279,22 @@
         },
         Permissions: [
           {
-            Role: anonymous,
+            Role: field-mutation-with-read-permission,
             Actions: [
               {
                 Action: Update,
                 Fields: {
                   Exclude: [
-                    *
+                    name
+                  ],
+                  Include: [
+                    id,
+                    type
                   ]
                 }
               },
               {
-                Action: Read,
+                Action: Delete,
                 Fields: {
                   Exclude: [
                     name
@@ -305,7 +317,7 @@
                 }
               },
               {
-                Action: Delete
+                Action: Read
               }
             ]
           },
@@ -325,6 +337,84 @@
                 Action: Delete
               }
             ]
+          },
+          {
+            Role: limited-read-role,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id,
+                    type
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            Role: wildcard-exclude-fields-role,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Delete,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            Role: only-create-role,
+            Actions: [
+              {
+                Action: Create
+              }
+            ]
+          },
+          {
+            Role: only-update-role,
+            Actions: [
+              {
+                Action: Update
+              }
+            ]
+          },
+          {
+            Role: only-delete-role,
+            Actions: [
+              {
+                Action: Delete
+              }
+            ]
           }
         ]
       }
@@ -332,7 +422,7 @@
     {
       Sun: {
         Source: {
-          Object: graphqldb.sun
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Sun,
@@ -374,7 +464,7 @@
     {
       AdditionalAttribute: {
         Source: {
-          Object: graphqldb.additionalAttribute
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: AdditionalAttribute,
@@ -399,7 +489,7 @@
     {
       MoonAdditionalAttribute: {
         Source: {
-          Object: graphqldb.moonAdditionalAttributes
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: MoonAdditionalAttribute,
@@ -424,7 +514,7 @@
     {
       MoreAttrAlias: {
         Source: {
-          Object: graphqldb.moreAttribute
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: MoreAttribute,
@@ -439,7 +529,54 @@
             Role: anonymous,
             Actions: [
               {
-                Action: *
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id
+                  ]
+                }
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id
+                  ]
+                }
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
               }
             ]
           }

@@ -4,12 +4,12 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-/// <summary>
-/// This is a converter to serialize and deserialize the a object of Type : System.Type
-/// for example currently in ColumnDefiniton object, one of the property type is of System.Type property
-/// </summary>
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
+    /// <summary>
+    /// This is a converter to serialize and deserialize the a object of Type : System.Type
+    /// for example currently in ColumnDefiniton object, one of the property type is of System.Type property
+    /// </summary>
     public class TypeConverter : JsonConverter<Type>
     {
         public override Type Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

@@ -198,6 +198,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// This method will take in various objects which we can use directly rather than recreating the objects
         /// using multiple tsql query
         /// </summary>
-        void InitializeAsync(Dictionary<string,DatabaseObject> entityDatabaseObject, Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap);
+        /// <param name="entityDatabaseObject">maps entity to DatabaseObject</param>
+        /// <param name="graphQLStoredProcedureExposedNameToEntityNameMap">Dictionary containing mapping of graphQL stored procedure exposed query/mutation name to their corresponding entity names defined in the config.</param>
+        void InitializeAsync(Dictionary<string, DatabaseObject> entityDatabaseObject, Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap);
     }
 }

@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
-            // A linking entity is not exposed in the runtime config file but is used by DAB to support nested mutations on entities with M:N relationship.
+            // A linking entity is not exposed in the runtime config file but is used by DAB to support multiple mutations on entities with M:N relationship.
             // Hence we don't need to process relationships for the linking entity itself.
             if (!configEntity.IsLinkingEntity)
             {
@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
         /// <summary>
         /// Helper method to generate field for a relationship for an entity. These relationship fields are populated with relationship directive
-        /// which stores the (cardinality, target entity) for the relationship. This enables nested queries/mutations on the relationship fields.
+        /// which stores the (cardinality, target entity) for the relationship. This enables nested queries/multiple mutations on the relationship fields.
         ///
         /// While processing the relationship, it helps in keeping track of fields from the source entity which hold foreign key references to the target entity.
         /// </summary>

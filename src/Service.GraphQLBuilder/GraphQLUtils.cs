@@ -37,9 +37,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
         private const string ENTITY_NAME_DELIMITER = "$";
 
-        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_NESTED_CREATE = new() { DatabaseType.MSSQL };
+        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE = new() { DatabaseType.MSSQL };
 
-        public static HashSet<DatabaseType> NOSQL_DBS = new() { DatabaseType.CosmosDB_NoSQL };
+        public static HashSet<DatabaseType> RELATIONAL_DBS = new() { DatabaseType.MSSQL, DatabaseType.MySQL,
+            DatabaseType.DWSQL, DatabaseType.PostgreSQL, DatabaseType.CosmosDB_PostgreSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -77,19 +78,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to evaluate whether DAB supports nested create for a particular database type.
+        /// Helper method to evaluate whether DAB supports multiple create for a particular database type.
         /// </summary>
-        public static bool DoesRelationalDBSupportNestedCreate(DatabaseType databaseType)
+        public static bool DoesRelationalDBSupportMultipleCreate(DatabaseType databaseType)
         {
-            return RELATIONAL_DBS_SUPPORTING_NESTED_CREATE.Contains(databaseType);
+            return RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE.Contains(databaseType);
         }
 
         /// <summary>
         /// Helper method to evaluate whether database type represents a NoSQL database.
         /// </summary>
-        public static bool IsNoSQLDb(DatabaseType databaseType)
+        public static bool IsRelationalDb(DatabaseType databaseType)
         {
-            return NOSQL_DBS.Contains(databaseType);
+            return RELATIONAL_DBS.Contains(databaseType);
         }
 
         /// <summary>

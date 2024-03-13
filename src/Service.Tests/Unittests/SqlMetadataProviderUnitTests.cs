@@ -349,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public async Task ValidateInferredRelationshipInfoForMsSql()
         {
             DatabaseEngine = TestCategory.MSSQL;
-            await InferMetadata();
+            await SetupTestFixtureAndInferMetadata();
             ValidateInferredRelationshipInfoForTables();
         }
 
@@ -361,7 +361,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public async Task ValidateInferredRelationshipInfoForMySql()
         {
             DatabaseEngine = TestCategory.MYSQL;
-            await InferMetadata();
+            await SetupTestFixtureAndInferMetadata();
             ValidateInferredRelationshipInfoForTables();
         }
 
@@ -373,7 +373,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public async Task ValidateInferredRelationshipInfoForPgSql()
         {
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await InferMetadata();
+            await SetupTestFixtureAndInferMetadata();
             ValidateInferredRelationshipInfoForTables();
         }
 
@@ -401,10 +401,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             ValidateReferencingEntitiesForRelationship("Book", "Publisher", new List<string>() { "Book" });
         }
 
+        /// <summary>
+        /// Helper method to validate that for given source, target entities, we correctly infer the referencing entity/entities
+        /// at the startup.
+        /// 1. For relationships backed by an FK, there would be only one referencing entity.
+        /// 2. For relationships not backed by an FK, there would be two referencing entities. This is because
+        /// at startup, We ÇANNOT determine which entity is the referencing entity and hence we keep ourselves open to the possibility
+        /// of either entity acting as the referencing entity. The actual referencing entity is determined during request execution.
+        /// </summary>
+        /// <param name="sourceEntityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="expectedReferencingEntityNames">List of expected referencing entity names.</param>
         private static void ValidateReferencingEntitiesForRelationship(
             string sourceEntityName,
             string targetEntityName,
-            List<string> referencingEntityNames)
+            List<string> expectedReferencingEntityNames)
         {
             _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject sourceDbo);
             _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject targetDbo);
@@ -413,7 +424,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             List<ForeignKeyDefinition> foreignKeys = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
             HashSet<DatabaseTable> expectedReferencingTables = new();
             HashSet<DatabaseTable> actualReferencingTables = new();
-            foreach (string referencingEntityName in referencingEntityNames)
+            foreach (string referencingEntityName in expectedReferencingEntityNames)
             {
                 DatabaseTable referencingTable = referencingEntityName.Equals(sourceEntityName) ? sourceTable : targetTable;
                 expectedReferencingTables.Add(referencingTable);
@@ -433,7 +444,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.IsTrue(actualReferencingTables.SetEquals(expectedReferencingTables));
         }
 
-        private static async Task InferMetadata()
+        /// <summary>
+        /// Resets the database state and infers metadata for all the entities exposed in the config.
+        /// </summary>
+        private static async Task SetupTestFixtureAndInferMetadata()
         {
             TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
             RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();

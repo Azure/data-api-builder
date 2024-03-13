@@ -421,8 +421,8 @@
         "stocks_price": {
           "cardinality": "one",
           "target.entity": "stocks_price",
-          "source.fields": [ "categoryid", "pieceid" ],
-          "target.fields": [ "categoryid", "pieceid" ],
+          "source.fields": [],
+          "target.fields": [],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -838,8 +838,8 @@
         "reviews": {
           "cardinality": "many",
           "target.entity": "Review",
-          "source.fields": [ "id" ],
-          "target.fields": [ "book_id" ],
+          "source.fields": [],
+          "target.fields": [],
           "linking.source.fields": [],
           "linking.target.fields": []
         },
@@ -855,12 +855,6 @@
           "linking.target.fields": [
             "author_id"
           ]
-        },
-        "customRelationshipWithStock": {
-          "cardinality": "one",
-          "target.entity": "Stock",
-          "source.fields": [ "title" ],
-          "target.fields": [ "categoryName" ]
         }
       }
     },
@@ -1066,8 +1060,8 @@
         "books": {
           "cardinality": "one",
           "target.entity": "Book",
-          "source.fields": [ "book_id" ],
-          "target.fields": [ "id" ],
+          "source.fields": [],
+          "target.fields": [],
           "linking.source.fields": [],
           "linking.target.fields": []
         }

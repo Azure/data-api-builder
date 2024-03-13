@@ -33,24 +33,6 @@ public abstract class DatabaseObject
             return string.IsNullOrEmpty(SchemaName) ? Name : $"{SchemaName}.{Name}";
         }
     }
-
-    /// <summary>
-    /// Get the underlying SourceDefinition based on database object source type
-    /// </summary>
-    public SourceDefinition SourceDefinition
-    {
-        get
-        {
-            return SourceType switch
-            {
-                EntitySourceType.Table => ((DatabaseTable)this).TableDefinition,
-                EntitySourceType.View => ((DatabaseView)this).ViewDefinition,
-                EntitySourceType.StoredProcedure => ((DatabaseStoredProcedure)this).StoredProcedureDefinition,
-                _ => throw new Exception(
-                        message: $"Unsupported EntitySourceType. It can either be Table,View, or Stored Procedure.")
-            };
-        }
-    }
     public override bool Equals(object? other)
     {
         return Equals(other as DatabaseObject);
@@ -68,6 +50,24 @@ public abstract class DatabaseObject
     public override int GetHashCode()
     {
         return HashCode.Combine(SchemaName, Name);
+    }
+
+    /// <summary>
+    /// Get the underlying SourceDefinition based on database object source type
+    /// </summary>
+    public SourceDefinition SourceDefinition
+    {
+        get
+        {
+            return SourceType switch
+            {
+                EntitySourceType.Table => ((DatabaseTable)this).TableDefinition,
+                EntitySourceType.View => ((DatabaseView)this).ViewDefinition,
+                EntitySourceType.StoredProcedure => ((DatabaseStoredProcedure)this).StoredProcedureDefinition,
+                _ => throw new Exception(
+                        message: $"Unsupported EntitySourceType. It can either be Table,View, or Stored Procedure.")
+            };
+        }
     }
 }
 

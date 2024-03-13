@@ -6,6 +6,11 @@ using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
+    /// <summary>
+    /// This is a converter to serialize and deserialize object type
+    /// can object can be of different types int, long, string, datetime. this converter handles different basic object types supported by
+    /// Hotchocolate
+    /// </summary>
     public class ObjectConverter : JsonConverter<object>
     {
         public override object Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)

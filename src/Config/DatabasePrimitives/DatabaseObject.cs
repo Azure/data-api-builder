@@ -84,8 +84,7 @@ public class DatabaseTable : DatabaseObject
 
     public virtual bool Equals(DatabaseTable other)
     {
-        return
-            base.Equals(other) && ((TableDefinition == null && other.TableDefinition == null) || TableDefinition?.Equals(other.TableDefinition) == true);
+        return base.Equals(other) && ((TableDefinition == null && other.TableDefinition == null) || TableDefinition?.Equals(other.TableDefinition) == true);
     }
 }
 
@@ -102,8 +101,7 @@ public class DatabaseView : DatabaseObject
 
     public virtual bool Equals(DatabaseView other)
     {
-        return
-            base.Equals(other) && ((ViewDefinition == null && other.ViewDefinition == null) || ViewDefinition?.Equals(other.ViewDefinition) == true);
+        return base.Equals(other) && ((ViewDefinition == null && other.ViewDefinition == null) || ViewDefinition?.Equals(other.ViewDefinition) == true);
     }
 }
 
@@ -120,8 +118,7 @@ public class DatabaseStoredProcedure : DatabaseObject
 
     public virtual bool Equals(DatabaseStoredProcedure other)
     {
-        return
-            base.Equals(other) && ((StoredProcedureDefinition == null && other.StoredProcedureDefinition == null) || StoredProcedureDefinition?.Equals(other.StoredProcedureDefinition) == true);
+        return base.Equals(other) && ((StoredProcedureDefinition == null && other.StoredProcedureDefinition == null) || StoredProcedureDefinition?.Equals(other.StoredProcedureDefinition) == true);
     }
 }
 

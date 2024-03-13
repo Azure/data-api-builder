@@ -599,7 +599,7 @@ public class EndToEndTests
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
-        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
         output = process.StandardOutput.ReadLine();
         process.Kill();
         Assert.IsNotNull(output);
@@ -706,18 +706,15 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to verify that the version info is logged for both correct/incorrect command,
-    /// and that the config name is displayed in the logs.
+    /// For valid CLI commands (Valid verbs and options) validate that the correct
+    /// version is logged (without commit hash) and that the config file name is printed to console.
     /// </summary>
-    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
-    [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
-    [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
     [DataRow("init", "--database-type mssql", true, DisplayName = "Version printed with valid command init.")]
     [DataRow("add", "MyEntity -s my_entity --permissions \"anonymous:*\"", true, DisplayName = "Version printed with valid command add.")]
     [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Version printed with valid command update.")]
     [DataRow("start", "", true, DisplayName = "Version printed with valid command start.")]
     [DataTestMethod]
-    public void TestVersionInfoAndConfigIsCorrectlyDisplayedWithDifferentCommand(
+    public void ValidCliVerbsAndOptions_DisplayVersionAndConfigFileName(
         string command,
         string options,
         bool isParsableDabCommandName)
@@ -733,6 +730,43 @@ public class EndToEndTests
         Assert.IsNotNull(output);
 
         // Version Info logged by dab irrespective of commands being parsed correctly.
+        // When DAB CLI (CommandLineParser) detects that usage of parsable verbs and options, CommandLineParser
+        // uses the options.Handler() method to display relevant info and process the command.
+        // All options.Handler() methods print the version without commit hash.
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+
+        if (isParsableDabCommandName)
+        {
+            output = process.StandardOutput.ReadLine();
+            StringAssert.Contains(output, TEST_RUNTIME_CONFIG_FILE, StringComparison.Ordinal);
+        }
+
+        process.Kill();
+    }
+
+    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
+    [DataTestMethod]
+    public void InvalidCliVerbsAndOptions_DisplayVersionWithCommitHashAndConfigFileName(
+    string command,
+    string options,
+    bool isParsableDabCommandName)
+    {
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+
+        // Version Info logged by dab irrespective of commands being parsed correctly.
+        // When DAB CLI (CommandLineParser) detects that usage includes --version, --help, or invalid verbs/options,
+        // CommandLineParser's default HelpWriter is used to display the version and help information.
+        // Because the HelpWriter uses fileVersionInfo.ProductVersion, the version includes the commit hash.
         StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
 
         if (isParsableDabCommandName)

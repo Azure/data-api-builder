@@ -122,7 +122,7 @@ namespace Cli.Commands
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
-            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion(includeCommitHash: true));
+            logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
             bool isSuccess = ConfigGenerator.TryGenerateConfig(this, loader, fileSystem);
             if (isSuccess)
             {

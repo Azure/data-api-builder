@@ -7,7 +7,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 {
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MsSqlNestedMutationBuilderTests : NestedMutationBuilderTests
+    public class MsSqlMultipleMutationBuilderTests : MultipleMutationBuilderTests
     {
         [ClassInitialize]
         public static async Task SetupAsync(TestContext context)

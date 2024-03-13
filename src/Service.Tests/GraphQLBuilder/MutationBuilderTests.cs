@@ -1079,7 +1079,7 @@ type Foo @model(name:""Foo"") {{
             int totalExpectedMutations = 0;
             foreach ((_, DatabaseType dbType) in entityNameToDatabaseType)
             {
-                if (GraphQLUtils.DoesRelationalDBSupportNestedCreate(dbType))
+                if (GraphQLUtils.DoesRelationalDBSupportMultipleCreate(dbType))
                 {
                     totalExpectedMutations += 4;
                 }

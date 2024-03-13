@@ -38,9 +38,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
         private const string ENTITY_NAME_DELIMITER = "$";
 
-        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_NESTED_CREATE = new() { DatabaseType.MSSQL };
+        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE = new() { DatabaseType.MSSQL };
 
-        public static HashSet<DatabaseType> NOSQL_DBS = new() { DatabaseType.CosmosDB_NoSQL };
+        public static HashSet<DatabaseType> RELATIONAL_DBS = new() { DatabaseType.MSSQL, DatabaseType.MySQL,
+            DatabaseType.DWSQL, DatabaseType.PostgreSQL, DatabaseType.CosmosDB_PostgreSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -78,19 +79,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to evaluate whether DAB supports nested create for a particular database type.
+        /// Helper method to evaluate whether DAB supports multiple create for a particular database type.
         /// </summary>
-        public static bool DoesRelationalDBSupportNestedCreate(DatabaseType databaseType)
+        public static bool DoesRelationalDBSupportMultipleCreate(DatabaseType databaseType)
         {
-            return RELATIONAL_DBS_SUPPORTING_NESTED_CREATE.Contains(databaseType);
+            return RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE.Contains(databaseType);
         }
 
         /// <summary>
         /// Helper method to evaluate whether database type represents a NoSQL database.
         /// </summary>
-        public static bool IsNoSQLDb(DatabaseType databaseType)
+        public static bool IsRelationalDb(DatabaseType databaseType)
         {
-            return NOSQL_DBS.Contains(databaseType);
+            return RELATIONAL_DBS.Contains(databaseType);
         }
 
         /// <summary>
@@ -391,17 +392,19 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <summary>
         /// Helper method to determine whether a field is a column or complex (relationship) field based on its syntax kind.
         /// If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column/scalar field which
-        /// has an IntValue, FloatValue, StringValue, BooleanValue, NullValue or an EnumValue.
+        /// has an IntValue, FloatValue, StringValue, BooleanValue or an EnumValue.
         /// </summary>
         /// <param name="fieldSyntaxKind">SyntaxKind of the field.</param>
         /// <returns>true if the field is a scalar field, else false.</returns>
         public static bool IsScalarField(SyntaxKind fieldSyntaxKind)
         {
-            return fieldSyntaxKind is not SyntaxKind.ObjectValue && fieldSyntaxKind is not SyntaxKind.ListValue;
+            return fieldSyntaxKind is SyntaxKind.IntValue || fieldSyntaxKind is SyntaxKind.FloatValue ||
+                fieldSyntaxKind is SyntaxKind.StringValue || fieldSyntaxKind is SyntaxKind.BooleanValue ||
+                fieldSyntaxKind is SyntaxKind.EnumValue;
         }
 
         /// <summary>
-        /// Helper method to get the field details i.e. the field value and the field kind, from the GraphQL request body.
+        /// Helper method to get the field details i.e. (field value, field kind) from the GraphQL request body.
         /// If the field value is being provided as a variable in the mutation, a recursive call is made to the method
         /// to get the actual value of the variable.
         /// </summary>

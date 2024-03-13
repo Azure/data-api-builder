@@ -29,13 +29,14 @@ using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
 {
     /// <summary>
-    /// Parent class containing tests to validate different aspects of schema generation for nested mutations for different types of
-    /// relational database flavours supported by DAB.
+    /// Parent class containing tests to validate different aspects of schema generation for multiple mutations for different types of
+    /// relational database flavours supported by DAB. All the tests in the class validate the side effect of the GraphQL schema created
+    /// as a result of the execution of the InitializeAsync method.
     /// </summary>
     [TestClass]
-    public abstract class NestedMutationBuilderTests
+    public abstract class MultipleMutationBuilderTests
     {
-        // Stores the type of database - MsSql, MySql, PgSql, DwSql. Currently nested mutations are only supported for MsSql.
+        // Stores the type of database - MsSql, MySql, PgSql, DwSql. Currently multiple mutations are only supported for MsSql.
         protected static string databaseEngine;
 
         // Stores mutation definitions for entities.
@@ -47,7 +48,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         // Runtime config instance.
         private static RuntimeConfig _runtimeConfig;
 
-        #region Nested Create tests
+        #region Multiple Create tests
 
         /// <summary>
         /// Test to validate that we don't expose the object definitions inferred for linking entity/table to the end user as that is an information
@@ -134,19 +135,19 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             // Name of the referencing entity.
             string referencingEntityName = "stocks_price";
 
-            // List of referencing columns.
-            HashSet<string> referencingColumns = new() { "categoryid", "pieceid" };
-            ObjectTypeDefinitionNode objectTypeDefinitionNode = GetObjectTypeDefinitionNode(
+            // List of expected referencing columns.
+            HashSet<string> expectedReferencingColumns = new() { "categoryid", "pieceid" };
+            ObjectTypeDefinitionNode actualObjectTypeDefinitionNode = GetObjectTypeDefinitionNode(
                 GetDefinedSingularName(
                     entityName: referencingEntityName,
                     configEntity: _runtimeConfig.Entities[referencingEntityName]));
-            List<FieldDefinitionNode> fieldsInObjectDefinitionNode = objectTypeDefinitionNode.Fields.ToList();
-            foreach (FieldDefinitionNode fieldInObjectDefinitionNode in fieldsInObjectDefinitionNode)
+            List<FieldDefinitionNode> actualFieldsInObjectDefinitionNode = actualObjectTypeDefinitionNode.Fields.ToList();
+            foreach (FieldDefinitionNode fieldInObjectDefinitionNode in actualFieldsInObjectDefinitionNode)
             {
-                if (!referencingColumns.Contains(fieldInObjectDefinitionNode.Name.Value))
+                if (!expectedReferencingColumns.Contains(fieldInObjectDefinitionNode.Name.Value))
                 {
                     int countOfReferencingFieldDirectives = fieldInObjectDefinitionNode.Directives.Where(directive => directive.Name.Value == ReferencingFieldDirectiveType.DirectiveName).Count();
-                    Assert.AreEqual(0, countOfReferencingFieldDirectives);
+                    Assert.AreEqual(0, countOfReferencingFieldDirectives, message: "Scalar fields should not have referencing field directives.");
                 }
             }
         }
@@ -287,7 +288,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         /// some other entity in the config are of nullable type. Making the FK referencing columns nullable allows the user to not specify them.
         /// In such a case, for a valid mutation request, the value for these referencing columns is derived from the insertion in the referenced entity.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         public void ValidateNullabilityOfReferencingColumnsInInputType()
         {
             string referencingEntityName = "Book";

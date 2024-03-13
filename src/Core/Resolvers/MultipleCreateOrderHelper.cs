@@ -12,10 +12,10 @@ using System.Net;
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     /// <summary>
-    /// Helper class to determine the order of insertion for a nested insertion. For a nested insertion, the insertion needs to be performed first
-    /// in the referenced entity followed by insertion in the referencing entity.
+    /// Helper class to determine the order of insertion for a multiple create mutation. For insertion in related entity using
+    /// multiple create, the insertion needs to be performed first in the referenced entity followed by insertion in the referencing entity.
     /// </summary>
-    public class NestedCreateOrderHelper
+    public class MultipleCreateOrderHelper
     {
         /// <summary>
         /// Given a source and target entity with their metadata and request input data,
@@ -250,7 +250,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 canTargetAssumeAllRelationshipFieldsValues = canTargetAssumeAllRelationshipFieldsValues && canTargetAssumeThisFieldValue;
 
                 // If the values for all relationship fields cannot be assumed for neither source nor target,
-                // the nested create request cannot be executed.
+                // the multiple create request cannot be executed.
                 if (!canSourceAssumeAllRelationshipFieldValues && !canTargetAssumeAllRelationshipFieldsValues)
                 {
                     throw new DataApiBuilderException(

@@ -2076,13 +2076,13 @@
             {
               "action": "create",
               "fields": {
-                "include": [
-                  "*"
-                ],
-                "exclude": [
-                  "current_date",
-                  "next_date"
-                ]
+                  "include": [
+                      "*"
+                  ],
+                  "exclude": [
+                      "current_date",
+                      "next_date"
+                  ]
               }
             },
             "read",

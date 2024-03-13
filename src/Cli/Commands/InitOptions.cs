@@ -37,7 +37,7 @@ namespace Cli.Commands
             CliBool restEnabled = CliBool.None,
             CliBool graphqlEnabled = CliBool.None,
             CliBool restRequestBodyStrict = CliBool.None,
-            CliBool nestedCreateOperationEnabled = CliBool.None,
+            CliBool multipleCreateOperationEnabled = CliBool.None,
             string? config = null)
             : base(config)
         {
@@ -60,7 +60,7 @@ namespace Cli.Commands
             RestEnabled = restEnabled;
             GraphQLEnabled = graphqlEnabled;
             RestRequestBodyStrict = restRequestBodyStrict;
-            NestedCreateOperationEnabled = nestedCreateOperationEnabled;
+            MultipleCreateOperationEnabled = multipleCreateOperationEnabled;
         }
 
         [Option("database-type", Required = true, HelpText = "Type of database to connect. Supported values: mssql, cosmosdb_nosql, cosmosdb_postgresql, mysql, postgresql, dwsql")]
@@ -122,8 +122,8 @@ namespace Cli.Commands
         [Option("rest.request-body-strict", Required = false, HelpText = "(Default: true) Allow extraneous fields in the request body for REST.")]
         public CliBool RestRequestBodyStrict { get; }
 
-        [Option("graphql.nested-create.enabled", Required = false, HelpText = "(Default: false) Enables nested create operation for GraphQL. Supported values: true, false.")]
-        public CliBool NestedCreateOperationEnabled { get; }
+        [Option("graphql.multiple-create.enabled", Required = false, HelpText = "(Default: false) Enables multiple create operation for GraphQL. Supported values: true, false.")]
+        public CliBool MultipleCreateOperationEnabled { get; }
 
         public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {

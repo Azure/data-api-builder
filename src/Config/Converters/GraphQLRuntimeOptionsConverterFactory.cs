@@ -57,10 +57,10 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 
             if (reader.TokenType == JsonTokenType.StartObject)
             {
-                // Initialize with Nested Mutation operations disabled by default
+                // Initialize with Multiple Mutation operations disabled by default
                 GraphQLRuntimeOptions graphQLRuntimeOptions = new();
-                NestedMutationOptionsConverter nestedMutationOptionsConverter = options.GetConverter(typeof(NestedMutationOptions)) as NestedMutationOptionsConverter ??
-                                            throw new JsonException("Failed to get nested mutation options converter");
+                MultipleMutationOptionsConverter multipleMutationOptionsConverter = options.GetConverter(typeof(MultipleMutationOptions)) as MultipleMutationOptionsConverter ??
+                                            throw new JsonException("Failed to get multiple mutation options converter");
 
                 while (reader.Read())
                 {
@@ -121,8 +121,8 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 
                             break;
 
-                        case "nested-mutations":
-                            graphQLRuntimeOptions = graphQLRuntimeOptions with { NestedMutationOptions = nestedMutationOptionsConverter.Read(ref reader, typeToConvert, options) };
+                        case "multiple-mutations":
+                            graphQLRuntimeOptions = graphQLRuntimeOptions with { MultipleMutationOptions = multipleMutationOptionsConverter.Read(ref reader, typeToConvert, options) };
                             break;
 
                         default:
@@ -143,13 +143,13 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteString("path", value.Path);
             writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
 
-            if (value.NestedMutationOptions is not null)
+            if (value.MultipleMutationOptions is not null)
             {
 
-                NestedMutationOptionsConverter nestedMutationOptionsConverter = options.GetConverter(typeof(NestedMutationOptions)) as NestedMutationOptionsConverter ??
-                                            throw new JsonException("Failed to get nested mutation options converter");
+                MultipleMutationOptionsConverter multipleMutationOptionsConverter = options.GetConverter(typeof(MultipleMutationOptions)) as MultipleMutationOptionsConverter ??
+                                            throw new JsonException("Failed to get multiple mutation options converter");
 
-                nestedMutationOptionsConverter.Write(writer, value.NestedMutationOptions, options);
+                multipleMutationOptionsConverter.Write(writer, value.MultipleMutationOptions, options);
             }
 
             writer.WriteEndObject();

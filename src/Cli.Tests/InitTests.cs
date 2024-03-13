@@ -410,44 +410,44 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Test to validate the contents of the config file generated when init command is used with --graphql.nested-create.enabled flag option for different database types.
+        /// Test to validate the contents of the config file generated when init command is used with --graphql.multiple-create.enabled flag option for different database types.
         ///
         /// 1. For database types other than MsSQL:
-        ///      - Irrespective of whether the --graphql.nested-create.enabled option is used or not, fields related to nested-create will NOT be written to the config file.
+        ///      - Irrespective of whether the --graphql.multiple-create.enabled option is used or not, fields related to multiple-create will NOT be written to the config file.
         ///
         /// 2. For MsSQL database type:
-        ///      a. When --graphql.nested-create.enabled option is used
-        ///           - In this case, the fields related to nested mutation and nested create operations will be written to the config file.
-        ///                "nested-mutations": {
+        ///      a. When --graphql.multiple-create.enabled option is used
+        ///           - In this case, the fields related to multiple mutation and multiple create operations will be written to the config file.
+        ///                "multiple-mutations": {
         ///                    "create": {
         ///                       "enabled": true/false
         ///                    }
         ///                }
         ///
-        ///      b. When --graphql.nested-create.enabled option is not used
-        ///           - In this case, fields related to nested mutation and nested create operations will NOT be written to the config file.
+        ///      b. When --graphql.multiple-create.enabled option is not used
+        ///           - In this case, fields related to multiple mutation and multiple create operations will NOT be written to the config file.
         /// 
         /// </summary>
         [DataTestMethod]
-        [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for MsSQL database type")]
-        [DataRow(DatabaseType.MSSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-create.enabled false' for MsSQL database type")]
-        [DataRow(DatabaseType.MSSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-create.enabled' option for MsSQL database type")]
-        [DataRow(DatabaseType.PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for PostgreSQL database type")]
-        [DataRow(DatabaseType.PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-create.enabled false' for PostgreSQL database type")]
-        [DataRow(DatabaseType.PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-create.enabled' option for PostgreSQL database type")]
-        [DataRow(DatabaseType.MySQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for MySQL database type")]
-        [DataRow(DatabaseType.MySQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-create.enabled false' for MySQL database type")]
-        [DataRow(DatabaseType.MySQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-create.enabled' option for MySQL database type")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for CosmosDB_NoSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-create.enabled false' for CosmosDB_NoSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-create.enabled' option for CosmosDB_NoSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for CosmosDB_PostgreSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-create.enabled false' for CosmosDB_PostgreSQL database type")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-create.enabled' option for CosmosDB_PostgreSQL database type")]
-        [DataRow(DatabaseType.DWSQL, CliBool.True, DisplayName = "Init command with '--graphql.nested-create.enabled true' for DWSQL database type")]
-        [DataRow(DatabaseType.DWSQL, CliBool.False, DisplayName = "Init command with '--graphql.nested-create.enabled false' for DWSQL database type")]
-        [DataRow(DatabaseType.DWSQL, CliBool.None, DisplayName = "Init command without '--graphql.nested-create.enabled' option for DWSQL database type")]
-        public Task VerifyCorrectConfigGenerationWithNestedMutationOptions(DatabaseType databaseType, CliBool isNestedCreateEnabled)
+        [DataRow(DatabaseType.MSSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MsSQL database type")]
+        [DataRow(DatabaseType.MSSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MsSQL database type")]
+        [DataRow(DatabaseType.MSSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MsSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for PostgreSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for PostgreSQL database type")]
+        [DataRow(DatabaseType.PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for PostgreSQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MySQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MySQL database type")]
+        [DataRow(DatabaseType.MySQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MySQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for CosmosDB_NoSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for CosmosDB_PostgreSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.True, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for DWSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.False, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for DWSQL database type")]
+        [DataRow(DatabaseType.DWSQL, CliBool.None, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for DWSQL database type")]
+        public Task VerifyCorrectConfigGenerationWithMultipleMutationOptions(DatabaseType databaseType, CliBool isMultipleCreateEnabled)
         {
             InitOptions options;
 
@@ -468,7 +468,7 @@ namespace Cli.Tests
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE,
-                nestedCreateOperationEnabled: isNestedCreateEnabled);
+                multipleCreateOperationEnabled: isMultipleCreateEnabled);
             }
             else
             {
@@ -484,11 +484,11 @@ namespace Cli.Tests
                 authenticationProvider: EasyAuthType.StaticWebApps.ToString(),
                 restPath: "rest-api",
                 config: TEST_RUNTIME_CONFIG_FILE,
-                nestedCreateOperationEnabled: isNestedCreateEnabled);
+                multipleCreateOperationEnabled: isMultipleCreateEnabled);
             }
 
             VerifySettings verifySettings = new();
-            verifySettings.UseHashedParameters(databaseType, isNestedCreateEnabled);
+            verifySettings.UseHashedParameters(databaseType, isMultipleCreateEnabled);
             return ExecuteVerifyTest(options, verifySettings);
         }
 

@@ -8,12 +8,12 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 namespace Azure.DataApiBuilder.Config.Converters
 {
     /// <summary>
-    /// Converter for the nested create operation options.
+    /// Converter for the multiple create operation options.
     /// </summary>
-    internal class NestedCreateOptionsConverter : JsonConverter<NestedCreateOptions>
+    internal class MultipleCreateOptionsConverter : JsonConverter<MultipleCreateOptions>
     {
         /// <inheritdoc/>
-        public override NestedCreateOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override MultipleCreateOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.Null)
             {
@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Config.Converters
 
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-                NestedCreateOptions? nestedCreateOptions = null;
+                MultipleCreateOptions? multipleCreateOptions = null;
                 while (reader.Read())
                 {
                     if (reader.TokenType == JsonTokenType.EndObject)
@@ -43,7 +43,7 @@ namespace Azure.DataApiBuilder.Config.Converters
                             reader.Read();
                             if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
                             {
-                                nestedCreateOptions = new(reader.GetBoolean());
+                                multipleCreateOptions = new(reader.GetBoolean());
                             }
 
                             break;
@@ -52,14 +52,14 @@ namespace Azure.DataApiBuilder.Config.Converters
                     }
                 }
 
-                return nestedCreateOptions;
+                return multipleCreateOptions;
             }
 
-            throw new JsonException("Failed to read the GraphQL Nested Create options");
+            throw new JsonException("Failed to read the GraphQL Multiple Create options");
         }
 
         /// <inheritdoc/>
-        public override void Write(Utf8JsonWriter writer, NestedCreateOptions? value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, MultipleCreateOptions? value, JsonSerializerOptions options)
         {
             // If the value is null, it is not written to the config file.
             if (value is null)

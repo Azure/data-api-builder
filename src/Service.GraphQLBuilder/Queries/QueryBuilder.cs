@@ -54,10 +54,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                     NameNode name = objectTypeDefinitionNode.Name;
                     string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     Entity entity = entities[entityName];
-                    if (entity.IsLinkingEntity)
-                    {
-                        continue;
-                    }
 
                     if (entity.Source.Type is EntitySourceType.StoredProcedure)
                     {

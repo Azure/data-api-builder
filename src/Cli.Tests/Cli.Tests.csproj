@@ -26,7 +26,13 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Content Include="..\..\config-generators\*commands.txt">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+    
+    <ItemGroup>
         <ProjectReference Include="..\Cli\Cli.csproj" />
     </ItemGroup>
-
+    
 </Project>

@@ -43,12 +43,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string? FilterPredicates { get; set; }
 
         /// <summary>
-        /// DbPolicyPredicates is a string that represents the filter portion of our query
-        /// in the WHERE Clause added by virtue of the database policy.
-        /// </summary>
-        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
-
-        /// <summary>
         /// Collection of all the fields referenced in the database policy for create action.
         /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
         /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.

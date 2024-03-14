@@ -169,7 +169,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 earth = new
                 {
                     id = id,
-                    name = "blue earth"
+                    name = "blue earth" + numericVal,
+                    type = "earth" + numericVal
                 },
                 additionalAttributes = new[]
                 {

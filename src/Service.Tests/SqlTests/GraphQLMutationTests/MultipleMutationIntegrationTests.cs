@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 {
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class NestedMutationIntegrationTests : SqlTestBase
+    public class MultipleMutationIntegrationTests : SqlTestBase
     {
         /// <summary>
         /// Set the database engine for the tests

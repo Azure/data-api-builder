@@ -4,13 +4,16 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -18,6 +21,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private readonly IMiddlewareContext _context;
         private readonly string _containerAlias = "c";
+        private IncrementingInteger _tableCounter = new();
 
         public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
 
@@ -39,6 +43,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="DbObject">The name of the database object containing table metadata like joined tables.</param>
         /// <param name="TableAlias">The alias of the table that is joined with.</param>
         public record CosmosJoinStructure(DatabaseObject DbObject, string TableAlias);
+
+        public string GetTableAlias()
+        {
+            return $"table{_tableCounter.Next()}";
+        }
 
         public CosmosQueryStructure(
             IMiddlewareContext context,
@@ -136,6 +145,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
+            }
+
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(_context);
+            if (httpContext is not null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPoliciesForCosmos(
+                    EntityActionOperation.Read,
+                    this,
+                    httpContext,
+                    AuthorizationResolver,
+                    (CosmosSqlMetadataProvider)MetadataProvider);
             }
 
             // first and after will not be part of query parameters. They will be going into headers instead.

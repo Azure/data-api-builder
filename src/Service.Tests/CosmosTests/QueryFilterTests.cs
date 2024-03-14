@@ -881,6 +881,36 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuth_Only_AuthorizedArrayItem()
+        {
+            string gqlQuery = @"{
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : { character: {type: {eq: ""Mars""}}})
+                {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            // MoonAdditionalAttributes (array inside moon object which is an array in container): "@item.name eq 'moonattr0'"
+            // Earth(object in object): "@item.type eq 'earth0'"
+            // AdditionalAttribute (array in container): "@item.type eq 'volcano0'"
+
+            // Now get the item with item level permission
+            string clientRoleHeader = "item-level-permission-role";
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQuery,
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            string dbQuery = $"SELECT top 1 c.id FROM c where c.earth.id = \"{_idList[0]}\"";
+            JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
+            // Validate the result contains the GraphQL authorization error code.
+            ValidateResults(actual.GetProperty("items"), expected.RootElement, false);
+        }
+
         #region Field Level Auth
         /// <summary>
         /// Tests that the field level query filter succeeds requests when filter fields are authorized

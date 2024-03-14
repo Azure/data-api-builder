@@ -2,14 +2,19 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
+using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -63,6 +68,89 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     sqlMetadataProvider);
                 queryStructure.ProcessOdataClause(filterClause, elementalOperation);
             }
+        }
+
+        public static void ProcessAuthorizationPoliciesForCosmos(
+          EntityActionOperation operationType,
+          CosmosQueryStructure queryStructure,
+          HttpContext context,
+          IAuthorizationResolver authorizationResolver,
+          CosmosSqlMetadataProvider cosmosMetadataProvider)
+        {
+            if(cosmosMetadataProvider is null)
+            {
+                return;
+            }
+
+            CosmosSqlMetadataProvider metadataProvider = (CosmosSqlMetadataProvider)cosmosMetadataProvider;
+            if (!context.Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues roleHeaderValue))
+            {
+                throw new DataApiBuilderException(
+                    message: "No ClientRoleHeader found in request context.",
+                    statusCode: System.Net.HttpStatusCode.Forbidden,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+            }
+
+            IEnumerable<IEdmEntitySet>? entitySets = metadataProvider.EdmModel?.EntityContainer?.EntitySets();
+            if (entitySets == null)
+            {
+                return;
+            }
+
+            Dictionary<string, FilterClause> filterClauses = new();
+            foreach (IEdmEntitySet entitySet in entitySets)
+            {
+                string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
+                    entitySet.Name,
+                    roleHeaderValue.ToString(),
+                    operationType,
+                    context);
+
+                if(string.IsNullOrEmpty(dbQueryPolicy))
+                {
+                    continue;
+                }
+
+                Uri relativeUri = new(entitySet.Name + "/?$filter=" + dbQueryPolicy, UriKind.Relative);
+                ODataUriParser parser = new(metadataProvider.EdmModel, relativeUri);
+                filterClauses.Add(entitySet.Name, parser.ParseFilter());
+            }
+
+            Dictionary<string, List<object>> pathConfigMap = cosmosMetadataProvider.EntityPaths;
+
+            string? filterString = null;
+            foreach ((string key, FilterClause filterClause) in filterClauses)
+            {
+                foreach (dynamic pathConfig in pathConfigMap[key])
+                {
+                    string configPath = pathConfig.path;
+                    if (pathConfig.type is ListTypeNode listTypeNode)
+                    {
+                        string tableAlias = queryStructure.GetTableAlias();
+                        queryStructure.Joins ??= new Stack<CosmosJoinStructure>();
+                        queryStructure.Joins.Push(new CosmosJoinStructure(
+                                    DbObject: new DatabaseTable(schemaName: pathConfig.path, tableName: pathConfig.entityName),
+                                    TableAlias: tableAlias));
+
+                        configPath = tableAlias;
+                    }
+                    else
+                    {
+                        configPath+= "." + pathConfig.entityName;
+                    }
+
+                    if (filterString is null)
+                    {
+                        filterString = filterClause.Expression.Accept(new ODataASTVisitorForCosmos(configPath));
+                    }
+                    else
+                    {
+                        filterString += " AND " + filterClause.Expression.Accept(new ODataASTVisitorForCosmos(configPath));
+                    }
+                }
+            }
+
+            queryStructure.DbPolicyPredicatesForOperations[operationType] = filterString;
         }
 
         /// <summary>

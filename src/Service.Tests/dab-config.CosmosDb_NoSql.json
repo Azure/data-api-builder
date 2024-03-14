@@ -96,6 +96,14 @@
               "action": "read"
             }
           ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
         }
       ]
     },
@@ -128,6 +136,14 @@
             },
             {
               "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read"
             }
           ]
         }
@@ -421,6 +437,17 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.type eq 'earth0'"
+              }
+            }
+          ]
         }
       ]
     },
@@ -488,6 +515,17 @@
               "action": "*"
             }
           ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.type eq 'volcano0'"
+              }
+            }
+          ]
         }
       ]
     },
@@ -511,6 +549,17 @@
           "actions": [
             {
               "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.name eq 'moonattr0'"
+              }
             }
           ]
         }

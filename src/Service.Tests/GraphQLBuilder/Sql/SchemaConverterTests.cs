@@ -824,9 +824,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 IsNullable = isNullable
             });
 
-            fkDefinitions[0].Pair.ReferencingDbTable.TableDefinition = table;
-            fkDefinitions[0].Pair.ReferencedDbTable.TableDefinition = table;
-
             return table;
         }
     }

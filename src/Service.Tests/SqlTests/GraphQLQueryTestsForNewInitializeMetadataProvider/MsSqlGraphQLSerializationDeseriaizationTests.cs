@@ -1,16 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json.Serialization;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders.Coverters;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters;
 using Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTestsForNewInitializeMetadataProvider
 {

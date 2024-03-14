@@ -4,7 +4,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Coverters
+namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 {
     /// <summary>
     /// This is a converter to serialize and deserialize the a object of Type : System.Type

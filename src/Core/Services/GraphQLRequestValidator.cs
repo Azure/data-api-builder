@@ -15,6 +15,55 @@ namespace Azure.DataApiBuilder.Core.Services
 {
     public class GraphQLRequestValidator
     {
+        /// <summary>
+        /// Recursive method to validate a GraphQL value node which can represent the input for item/items
+        /// argument for the mutation node, or can represent an object value (*:1 relationship)
+        /// or a list value (*:N relationship) node for related target entities.
+        /// </summary>
+        /// <param name="schema">Schema for the input field</param>
+        /// <param name="entityName">Current entity's name.</param>
+        /// <param name="context">Middleware Context.</param>
+        /// <param name="parameters">Value for the input field.</param>
+        /// <param name="runtimeConfig">Runtime config</param>
+        /// <param name="columnsDerivedFromParentEntity">Set of columns in this entity whose values should be
+        /// derived from insertion in the parent entity (i.e. parent entity would have been the referenced entity).</param>
+        /// <param name="columnsToBeDerivedFromEntity">Set of columns in this entity whose values are to be
+        /// derived from insertion in the this entity and returned to the parent entity so as to provide values for
+        /// the corresponding referencing fields (i.e. parent entity would have been the referencing entity).</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        /// <param name="parentEntityName">Parent entity's name.</param>
+        /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
+        /// <example>       1. mutation {
+        ///                 createbook(
+        ///                     item: {
+        ///                         title: "book #1",
+        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///                         publisher: { name: "Macmillan publishers" },
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                     })
+        ///                 {
+        ///                     id
+        ///                 }
+        ///                 2. mutation {
+        ///                 createbooks(
+        ///                     items: [{
+        ///                         title: "book #1",
+        ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
+        ///                         publisher: { name: "Macmillan publishers" },
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                     },
+        ///                     {
+        ///                         title: "book #2",
+        ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
+        ///                         publisher: { name: "Pearson Education" },
+        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", author_name: "William Shakespeare" }]
+        ///                     }])
+        ///                 {
+        ///                     items{
+        ///                         id
+        ///                         title
+        ///                     }
+        ///                 }</example>
         public static void ValidateGraphQLValueNode(
             IInputField schema,
             string entityName,
@@ -32,9 +81,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
                 ValidateObjectFieldNodes(
-                    context: context,
-                    entityName: entityName,
                     schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    entityName: entityName,
+                    context: context,
                     objectFieldNodes: listOfObjectFieldNode,
                     runtimeConfig: runtimeConfig,
                     columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
@@ -64,9 +113,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 // For the example createbook mutation written above, the node for publisher field is interpreted as an ObjectValueNode.
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
                 ValidateObjectFieldNodes(
-                    context: context,
-                    entityName: entityName,
                     schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    entityName: entityName,
+                    context: context,
                     objectFieldNodes: objectValueNode.Fields,
                     runtimeConfig: runtimeConfig,
                     columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
@@ -93,10 +142,27 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
+        /// <summary>
+        /// Helper method to iterate over all the fields present in the input for the current field and
+        /// validate that the presence/absence of fields make logical sense for the multiple-create request.
+        /// </summary>
+        /// <param name="schemaObject">Input object type for the field.</param>
+        /// <param name="entityName">Current entity's name.</param>
+        /// <param name="context">Middleware Context.</param>
+        /// <param name="objectFieldNodes">List of ObjectFieldNodes for the the input field.</param>
+        /// <param name="runtimeConfig">Runtime config</param>
+        /// <param name="columnsDerivedFromParentEntity">Set of columns in this entity whose values should be
+        /// derived from insertion in the parent entity (i.e. parent entity would have been the referenced entity).</param>
+        /// <param name="columnsToBeDerivedFromEntity">Set of columns in this entity whose values are to be
+        /// derived from insertion in the this entity and returned to the parent entity so as to provide values for
+        /// the corresponding referencing fields (i.e. parent entity would have been the referencing entity).</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        /// <param name="parentEntityName">Parent entity's name.</param>
+        /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
         private static void ValidateObjectFieldNodes(
-            IMiddlewareContext context,
-            string entityName,
             InputObjectType schemaObject,
+            string entityName,
+            IMiddlewareContext context,
             IReadOnlyList<ObjectFieldNode> objectFieldNodes,
             RuntimeConfig runtimeConfig,
             HashSet<string> columnsDerivedFromParentEntity,
@@ -108,7 +174,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
-            Dictionary<string, IValueNode?> columnData = NestedCreateOrderHelper.GetBackingColumnDataFromFields(context, entityName, objectFieldNodes, metadataProvider);
+            Dictionary<string, IValueNode?> columnData = MultipleCreateOrderHelper.GetBackingColumnDataFromFields(context, entityName, objectFieldNodes, metadataProvider);
 
             // Set of columns in the current entity whose values can be derived via:
             // a. User input,
@@ -160,16 +226,21 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
+            // Dictionary storing the mapping from relationship name to the set of referencing fields for all
+            // the relationships for which the current entity is the referenced entity.
             Dictionary<string, HashSet<string>> columnsDerivedForRelationships = new();
+
+            // Dictionary storing the mapping from relationship name to the set of referenced fields for all
+            // the relationships for which the current entity is the referencing entity.
             Dictionary<string, HashSet<string>> columnsToBeDerivedFromRelationships = new();
 
             // Loop over all the relationship fields input provided for the current entity.
             foreach (ObjectFieldNode fieldNode in objectFieldNodes)
             {
                 (IValueNode? fieldValue, SyntaxKind fieldKind) = GraphQLUtils.GetFieldDetails(fieldNode.Value, context.Variables);
-                if (GraphQLUtils.IsScalarField(fieldKind))
+                if (GraphQLUtils.IsScalarField(fieldKind) || fieldKind is SyntaxKind.NullValue)
                 {
-                    // If the current field is a column/scalar field, continue.
+                    // If the current field is a column/scalar field or has a null value, continue.
                     continue;
                 }
 
@@ -197,7 +268,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
 
                 // Determine the referencing entity for the current relationship field input.
-                string referencingEntityName = NestedCreateOrderHelper.GetReferencingEntityName(
+                string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(
                     context: context,
                     sourceEntityName: entityName,
                     targetEntityName: targetEntityName,
@@ -280,15 +351,15 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Recurse to validate input data for the relationship fields.
             ValidateRelationshipFields(
-                context: context,
-                entityName: entityName,
                 schemaObject: schemaObject,
+                entityName: entityName,
+                context: context,
                 objectFieldNodes: objectFieldNodes,
                 runtimeConfig: runtimeConfig,
-                nestingLevel: nestingLevel,
-                sqlMetadataProviderFactory: sqlMetadataProviderFactory,
                 columnsDerivedForRelationships: columnsDerivedForRelationships,
-                columnsToBeDerivedFromRelationships: columnsToBeDerivedFromRelationships);
+                columnsToBeDerivedFromRelationships: columnsToBeDerivedFromRelationships,
+                nestingLevel: nestingLevel,
+                sqlMetadataProviderFactory: sqlMetadataProviderFactory);
         }
 
         private static void ValidatePresenceOfRequiredColumnsForInsertion(HashSet<string> derivableBackingColumns, string entityName, ISqlMetadataProvider metadataProvider)
@@ -310,15 +381,30 @@ namespace Azure.DataApiBuilder.Core.Services
             }
         }
 
+        /// <summary>
+        /// Helper method to validate input data for the relationship fields present in the input for the current entity.
+        /// </summary>
+        /// <param name="schemaObject">Input object type for the field.</param>
+        /// <param name="entityName">Current entity's name.</param>
+        /// <param name="context">Middleware context.</param>
+        /// <param name="objectFieldNodes">List of ObjectFieldNodes for the the input field.</param>
+        /// <param name="runtimeConfig">Runtime config</param>
+        /// <param name="columnsDerivedForRelationships">Dictionary storing the mapping from relationship name to the set of
+        /// referencing fields for all the relationships for which the current entity is the referenced entity.</param>
+        /// <param name="columnsToBeDerivedFromRelationships">Dictionary storing the mapping from relationship name
+        /// to the set of referenced fields for all the relationships for which the current entity is the referencing entity.</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
         private static void ValidateRelationshipFields(
-            IMiddlewareContext context,
-            string entityName,
             InputObjectType schemaObject,
+            string entityName,
+            IMiddlewareContext context,           
             IReadOnlyList<ObjectFieldNode> objectFieldNodes,
-            RuntimeConfig runtimeConfig, int nestingLevel,
-            IMetadataProviderFactory sqlMetadataProviderFactory,
+            RuntimeConfig runtimeConfig,
             Dictionary<string, HashSet<string>> columnsDerivedForRelationships,
-            Dictionary<string, HashSet<string>> columnsToBeDerivedFromRelationships)
+            Dictionary<string, HashSet<string>> columnsToBeDerivedFromRelationships,
+            int nestingLevel,
+            IMetadataProviderFactory sqlMetadataProviderFactory)
         {
             foreach (ObjectFieldNode field in objectFieldNodes)
             {
@@ -327,7 +413,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 // For non-scalar fields, i.e. relationship fields, we have to recurse to process fields in the relationship field -
                 // which represents input data for a related entity.
-                if (!GraphQLUtils.IsScalarField(fieldKind))
+                if (!GraphQLUtils.IsScalarField(fieldKind) && fieldKind is not SyntaxKind.NullValue)
                 {
                     string relationshipName = field.Name.Value;
                     string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;

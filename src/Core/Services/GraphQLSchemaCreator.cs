@@ -87,7 +87,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 .AddDocument(root)
                 .AddAuthorizeDirectiveType()
                 // Add our custom directives
-                .AddDirectiveType<ContainerDirectiveType>()
                 .AddDirectiveType<ModelDirectiveType>()
                 .AddDirectiveType<RelationshipDirectiveType>()
                 .AddDirectiveType<PrimaryKeyDirectiveType>()

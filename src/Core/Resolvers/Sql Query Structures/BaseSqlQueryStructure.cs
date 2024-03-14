@@ -442,6 +442,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     mutationInput = new Dictionary<string, object?>();
                     foreach (ObjectFieldNode node in mutationInputRaw)
                     {
+                        //node.
                         string nodeName = node.Name.Value;
                         mutationInput.Add(nodeName, ResolverMiddleware.ExtractValueFromIValueNode(
                             value: node.Value,

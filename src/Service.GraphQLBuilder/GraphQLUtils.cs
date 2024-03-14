@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Sql;
+using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -353,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             if (graphQLTypeName is DB_OPERATION_RESULT_TYPE)
             {
                 // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
+                if (TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
                 {
                     entityName = modelName;
                 }
@@ -374,7 +375,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
                 // if name on schema is different from name in config.
                 // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
+                if (TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
                 {
                     entityName = modelName;
                 }
@@ -386,6 +387,45 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
         {
             return $"{context.Path.ToList()[0]}";
+        }
+
+        /// <summary>
+        /// Helper method to determine whether a field is a column or complex (relationship) field based on its syntax kind.
+        /// If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column/scalar field which
+        /// has an IntValue, FloatValue, StringValue, BooleanValue or an EnumValue.
+        /// </summary>
+        /// <param name="fieldSyntaxKind">SyntaxKind of the field.</param>
+        /// <returns>true if the field is a scalar field, else false.</returns>
+        public static bool IsScalarField(SyntaxKind fieldSyntaxKind)
+        {
+            return fieldSyntaxKind is SyntaxKind.IntValue || fieldSyntaxKind is SyntaxKind.FloatValue ||
+                fieldSyntaxKind is SyntaxKind.StringValue || fieldSyntaxKind is SyntaxKind.BooleanValue ||
+                fieldSyntaxKind is SyntaxKind.EnumValue;
+        }
+
+        /// <summary>
+        /// Helper method to get the field details i.e. (field value, field kind) from the GraphQL request body.
+        /// If the field value is being provided as a variable in the mutation, a recursive call is made to the method
+        /// to get the actual value of the variable.
+        /// </summary>
+        /// <param name="value">Value of the field.</param>
+        /// <param name="variables">Collection of variables declared in the GraphQL mutation request.</param>
+        /// <returns>A tuple containing a constant field value and the field kind.</returns>
+        public static Tuple<IValueNode?, SyntaxKind> GetFieldDetails(IValueNode? value, IVariableValueCollection variables)
+        {
+            if (value is null)
+            {
+                return new(null, SyntaxKind.NullValue);
+            }
+
+            if (value.Kind == SyntaxKind.Variable)
+            {
+                string variableName = ((VariableNode)value).Name.Value;
+                IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
+                return GetFieldDetails(variableValue, variables);
+            }
+
+            return new(value, value.Kind);
         }
 
         /// <summary>

@@ -17,6 +17,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
 
@@ -36,8 +37,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private readonly DatabaseType _databaseType;
 
+        // Represents the entities exposed in the runtime config.
         private IReadOnlyDictionary<string, Entity> _entities;
 
+        // Represents the linking entities created by DAB to support multiple mutations for entities having an M:N relationship between them.
         protected Dictionary<string, Entity> _linkingEntities = new();
 
         protected readonly string _dataSourceName;
@@ -286,10 +289,8 @@ namespace Azure.DataApiBuilder.Core.Services
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
-        /// <summary>
-        /// Given entity name, gets the entity to column mappings if present.
-        /// </summary>
-        public bool TryGetEntityToColumnMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        /// <inheritdoc/>
+        public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             Dictionary<string, string>? entityToColumnMappings;
             mappings = null;
@@ -302,10 +303,8 @@ namespace Azure.DataApiBuilder.Core.Services
             return false;
         }
 
-        /// <summary>
-        /// Given entity name, gets the column to entity mappings if present.
-        /// </summary>
-        public bool TryGetColumnToEntityMappings(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
+        /// <inheritdoc/>
+        public bool TryGetBackingFieldToExposedFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {
             Dictionary<string, string>? columntoEntityMappings;
             mappings = null;
@@ -756,13 +755,17 @@ namespace Azure.DataApiBuilder.Core.Services
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
 
-                    // When a linking object is encountered, we will create a linking entity for the object.
-                    // Subsequently, we will also populate the Database object for the linking entity.
-                    PopulateMetadataForLinkingObject(
-                        entityName: entityName,
-                        targetEntityName: targetEntityName,
-                        linkingObject: relationship.LinkingObject,
-                        sourceObjects: sourceObjects);
+                    // When a linking object is encountered for a database table, we will create a linking entity for the object.
+                    // Subsequently, we will also populate the Database object for the linking entity. This is used to infer
+                    // metadata about linking object needed to create GQL schema for multiple insertions.
+                    if (entity.Source.Type is EntitySourceType.Table)
+                    {
+                        PopulateMetadataForLinkingObject(
+                            entityName: entityName,
+                            targetEntityName: targetEntityName,
+                            linkingObject: relationship.LinkingObject,
+                            sourceObjects: sourceObjects);
+                    }
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
@@ -823,7 +826,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Helper method to create a linking entity and a database object for the given linking object (which relates the source and target with an M:N relationship).
         /// The created linking entity and its corresponding database object definition is later used during GraphQL schema generation
-        /// to enable nested mutations.
+        /// to enable multiple mutations.
         /// </summary>
         /// <param name="entityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>
@@ -931,6 +934,10 @@ namespace Azure.DataApiBuilder.Core.Services
         public string? GetSchemaGraphQLFieldTypeFromFieldName(string graphQLType, string fieldName)
             => throw new NotImplementedException();
 
+        /// <inheritdoc />
+        public FieldDefinitionNode? GetSchemaGraphQLFieldFromFieldName(string graphQLType, string fieldName)
+            => throw new NotImplementedException();
+
         public IReadOnlyDictionary<string, Entity> GetLinkingEntities()
         {
             return _linkingEntities;
@@ -971,7 +978,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         GetDatabaseObjectName(entityName),
                         GetStoredProcedureDefinition(entityName));
 
-                    if (GetDatabaseType() == DatabaseType.MSSQL)
+                    if (GetDatabaseType() == DatabaseType.MSSQL || GetDatabaseType() == DatabaseType.DWSQL)
                     {
                         await PopulateResultSetDefinitionsForStoredProcedureAsync(
                             GetSchemaName(entityName),
@@ -1034,9 +1041,9 @@ namespace Azure.DataApiBuilder.Core.Services
             // one row in the result set.
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())
             {
-                string resultFieldName = element.GetProperty("result_field_name").ToString();
-                Type resultFieldType = SqlToCLRType(element.GetProperty("result_type").ToString());
-                bool isResultFieldNullable = element.GetProperty("is_nullable").GetBoolean();
+                string resultFieldName = element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_NAME).ToString();
+                Type resultFieldType = SqlToCLRType(element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_SYSTEMTYPENAME).ToString());
+                bool isResultFieldNullable = element.GetProperty(BaseSqlQueryBuilder.STOREDPROC_COLUMN_ISNULLABLE).GetBoolean();
 
                 // Store the dictionary containing result set field with its type as Columns
                 storedProcedureDefinition.Columns.TryAdd(resultFieldName, new(resultFieldType) { IsNullable = isResultFieldNullable });

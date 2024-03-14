@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -217,14 +218,20 @@ namespace Azure.DataApiBuilder.Core.Services
             string linkingObject,
             Dictionary<string, DatabaseObject> sourceObjects)
         {
-            if (GetDatabaseType() is DatabaseType.DWSQL)
+            if (!GraphQLUtils.DoesRelationalDBSupportMultipleCreate(GetDatabaseType()))
             {
                 // Currently we have this same class instantiated for both MsSql and DwSql.
                 // This is a refactor we need to take care of in future.
                 return;
             }
 
-            string linkingEntityName = RuntimeConfig.GenerateLinkingEntityName(entityName, targetEntityName);
+            string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(entityName, targetEntityName);
+
+            // Create linking entity with disabled REST/GraphQL endpoints.
+            // Even though GraphQL endpoint is disabled, we will be able to later create an object type definition
+            // for this linking entity (which is later used to generate source->target linking object definition)
+            // because the logic for creation of object definition for linking entity does not depend on whether
+            // GraphQL is enabled/disabled. The linking object definitions are not exposed in the schema to the user.
             Entity linkingEntity = new(
                 Source: new EntitySource(Type: EntitySourceType.Table, Object: linkingObject, Parameters: null, KeyFields: null),
                 Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),

@@ -206,6 +206,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                         WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @" AND 0 = 1 
                     ) AS subq
                 "
+            },
+            {
+                "InsertOneRowWithBuiltInMethodAsDefaultvaluesTest",
+                @"
+                    SELECT JSON_OBJECT('id', id, 'user_value', user_value, 'current_date', current_date, 'current_timestamp', current_timestamp,
+                                        'random_number', random_number, 'next_date', next_date, 'default_string_with_parenthesis', default_string_with_parenthesis,
+                                        'default_function_string_with_parenthesis', default_function_string_with_parenthesis, 'default_integer', default_integer,
+                                        'default_date_string', default_date_string) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _defaultValueAsBuiltInMethodsTable + @"
+                        WHERE id = " + STARTING_ID_FOR_TEST_INSERTS + @"
+                    ) AS subq
+                "
             }
         };
 
@@ -294,6 +308,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
         [Ignore]
         public override Task InsertOneInTableWithFieldsInDbPolicyNotPresentInBody()
         {
+            throw new NotImplementedException();
+        }
+
+        [TestMethod]
+        [Ignore]
+        public override Task InsertOneRowWithBuiltInMethodAsDefaultvaluesTest()
+        {
+            // FIXME: This test is failing because of incorrect SQL query. Issue: https://github.com/Azure/data-api-builder/issues/1696
             throw new NotImplementedException();
         }
         #endregion

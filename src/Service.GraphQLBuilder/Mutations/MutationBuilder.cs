@@ -46,12 +46,12 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             {
                 if (definition is ObjectTypeDefinitionNode objectTypeDefinitionNode && IsModelType(objectTypeDefinitionNode))
                 {
-                    NameNode name = objectTypeDefinitionNode.Name;
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
+                    NameNode name = objectTypeDefinitionNode.Name;
                     Entity entity = entities[dbEntityName];
                     // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.
-                    if (entities[dbEntityName].Source.Type is EntitySourceType.StoredProcedure)
+                    if (entity.Source.Type is EntitySourceType.StoredProcedure)
                     {
                         // check graphql sp config
                         bool isSPDefinedAsMutation = (entity.GraphQL.Operation ?? GraphQLOperation.Mutation) is GraphQLOperation.Mutation;
@@ -73,9 +73,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     }
                     else
                     {
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields);
+                        string returnEntityName = databaseTypes[dbEntityName] is DatabaseType.DWSQL ? GraphQLUtils.DB_OPERATION_RESULT_TYPE : name.Value;
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
                     }
                 }
             }
@@ -118,7 +119,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DocumentNode root,
             DatabaseType databaseType,
             RuntimeEntities entities,
-            List<FieldDefinitionNode> mutationFields
+            List<FieldDefinitionNode> mutationFields,
+            string returnEntityName
             )
         {
             IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
@@ -127,16 +129,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 switch (operation)
                 {
                     case EntityActionOperation.Create:
-                        // Get the point/batch fields for the create mutation.
-                        Tuple<FieldDefinitionNode, FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, rolesAllowedForMutation);
-                        mutationFields.Add(createMutationNodes.Item1); // Add field corresponding to point insertion.
-                        mutationFields.Add(createMutationNodes.Item2); // Add field corresponding to batch insertion.
+                        // Get the create one/many fields for the create mutation.
+                        IEnumerable<FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, returnEntityName, rolesAllowedForMutation);
+                        mutationFields.AddRange(createMutationNodes);
                         break;
                     case EntityActionOperation.Update:
-                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, rolesAllowedForMutation));
+                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));
                         break;
                     case EntityActionOperation.Delete:
-                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entities[dbEntityName], databaseType, rolesAllowedForMutation));
+                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entities[dbEntityName], dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(paramName: "action", message: "Invalid argument value provided.");

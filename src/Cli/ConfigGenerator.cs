@@ -4,7 +4,6 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
-using System.Text.Json;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
@@ -89,7 +88,7 @@ namespace Cli
             string? restPath = options.RestPath;
             string graphQLPath = options.GraphQLPath;
             string? runtimeBaseRoute = options.RuntimeBaseRoute;
-            Dictionary<string, JsonElement> dbOptions = new();
+            Dictionary<string, object?> dbOptions = new();
 
             HyphenatedNamingPolicy namingPolicy = new();
 
@@ -142,20 +141,20 @@ namespace Cli
                         _logger.LogWarning("Configuration option --rest.path is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
-                    if (options.RestRequestBodyStrict is not CliBoolean.None)
+                    if (options.RestRequestBodyStrict is not CliBool.None)
                     {
                         _logger.LogWarning("Configuration option --rest.request-body-strict is not honored for cosmosdb_nosql since CosmosDB does not support REST.");
                     }
 
                     restPath = null;
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), JsonSerializer.SerializeToElement(cosmosDatabase));
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), JsonSerializer.SerializeToElement(cosmosContainer));
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), JsonSerializer.SerializeToElement(graphQLSchemaPath));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), cosmosDatabase);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), cosmosContainer);
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), graphQLSchemaPath);
                     break;
 
                 case DatabaseType.DWSQL:
                 case DatabaseType.MSSQL:
-                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), JsonSerializer.SerializeToElement(options.SetSessionContext));
+                    dbOptions.Add(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext)), options.SetSessionContext);
 
                     break;
                 case DatabaseType.MySQL:
@@ -232,7 +231,7 @@ namespace Cli
                 Schema: dabSchemaLink,
                 DataSource: dataSource,
                 Runtime: new(
-                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBoolean.False ? false : true),
+                    Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
                     GraphQL: new(graphQLEnabled, graphQLPath),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
@@ -1316,6 +1315,54 @@ namespace Cli
             }
 
             return graphQLType with { Operation = graphQLOperation };
+        }
+
+        /// <summary>
+        /// This method will add the telemetry options to the config file. If the config file already has telemetry options,
+        /// it will overwrite the existing options.
+        /// Data API builder consumes the config file with provided telemetry options to send telemetry to Application Insights.
+        /// </summary>
+        public static bool TryAddTelemetry(AddTelemetryOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (runtimeConfig.Runtime is null)
+            {
+                _logger.LogError("Invalid or missing 'runtime' section in config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(options.AppInsightsConnString))
+            {
+                _logger.LogError("Invalid Application Insights connection string provided.");
+                return false;
+            }
+
+            ApplicationInsightsOptions applicationInsightsOptions = new(
+                Enabled: options.AppInsightsEnabled is CliBool.True ? true : false,
+                ConnectionString: options.AppInsightsConnString
+            );
+
+            runtimeConfig = runtimeConfig with
+            {
+                Runtime = runtimeConfig.Runtime with
+                {
+                    Telemetry = runtimeConfig.Runtime.Telemetry is null
+                        ? new TelemetryOptions(ApplicationInsights: applicationInsightsOptions)
+                        : runtimeConfig.Runtime.Telemetry with { ApplicationInsights = applicationInsightsOptions }
+                }
+            };
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
         }
     }
 }

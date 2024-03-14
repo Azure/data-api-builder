@@ -39,17 +39,118 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         name = name + "_star"
                     }
                 },
-                moon = new
+                moons = new[]
                 {
-                    id = id,
-                    name = "first moon",
-                    details = "12 Craters"
+                    new
+                    {
+                        id = id,
+                        name = numericVal + " moon",
+                        details = "12 Craters",
+                        moonAdditionalAttributes = new []
+                        {
+                            new
+                            {
+                                id = id + "v1",
+                                name = "moonattr" + numericVal,
+                                moreAttributes = new[]
+                                {
+                                    new
+                                    {
+                                        id = id + "v1v1",
+                                        name = "moonattr" + numericVal
+                                    },
+                                    new
+                                    {
+                                        id = id + "v1v2",
+                                        name = "moonattr" + numericVal
+                                    }
+                                }
+                            },
+                            new
+                            {
+                                id = id + "v2",
+                                name = "moonattr" +  (numericVal + 1),
+                                moreAttributes = new[]
+                                {
+                                    new
+                                    {
+                                        id = id + "v1v1",
+                                        name = "moonattr" + numericVal
+                                    },
+                                    new
+                                    {
+                                        id = id + "v1v2",
+                                        name = "moonattr" + numericVal
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    new
+                    {
+                        id = id,
+                        name = (numericVal + 1) + " moon",
+                        details = "11 Craters",
+                        moonAdditionalAttributes = new []
+                        {
+                            new
+                            {
+                                id = id + "v1",
+                                name = "moonattr" + numericVal,
+                                moreAttributes = new[]
+                                {
+                                    new
+                                    {
+                                        id = id + "v1v1",
+                                        name = "moonattr" + numericVal
+                                    },
+                                    new
+                                    {
+                                        id = id + "v1v2",
+                                        name = "moonattr" + numericVal
+                                    }
+                                }
+                            },
+                            new
+                            {
+                                id = id + "v2",
+                                name = "moonattr" +  (numericVal + 1),
+                                moreAttributes = new[]
+                                {
+                                    new
+                                    {
+                                        id = id + "v1v1",
+                                        name = "moonattr" + numericVal
+                                    },
+                                    new
+                                    {
+                                        id = id + "v1v2",
+                                        name = "moonattr" + numericVal
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
                 earth = new
                 {
                     id = id,
                     name = "blue earth"
                 },
+                additionalAttributes = new[]
+                {
+                    new
+                    {
+                        id = id + "v1",
+                        name = "volcano" + numericVal
+                    },
+                    new
+                    {
+                        id = id + "v2",
+                        name = "volcano" +  (numericVal + 1)
+                    }
+                },
+
                 tags = new[] { "tag1", "tag2" }
             };
         }

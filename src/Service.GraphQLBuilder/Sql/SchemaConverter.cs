@@ -31,18 +31,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// currently used to lookup relationship metadata.</param>
         /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
         /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
-        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
         /// <returns>A GraphQL object type to be provided to a Hot Chocolate GraphQL document.</returns>
-        public static ObjectTypeDefinitionNode FromDatabaseObject(
+        public static ObjectTypeDefinitionNode GenerateObjectTypeDefinitionForDatabaseObject(
             string entityName,
             DatabaseObject databaseObject,
             [NotNull] Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            bool isNestedMutationSupported = false,
-            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships = null)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
             ObjectTypeDefinitionNode objectDefinitionNode;
             switch (databaseObject.SourceType)
@@ -63,9 +59,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         configEntity: configEntity,
                         entities: entities,
                         rolesAllowedForEntity: rolesAllowedForEntity,
-                        rolesAllowedForFields: rolesAllowedForFields,
-                        isNestedMutationSupported: isNestedMutationSupported,
-                        entitiesWithManyToManyRelationships: entitiesWithManyToManyRelationships);
+                        rolesAllowedForFields: rolesAllowedForFields);
                     break;
                 default:
                     throw new DataApiBuilderException(
@@ -108,7 +102,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             foreach ((string columnName, ColumnDefinition column) in storedProcedureDefinition.Columns)
             {
                 List<DirectiveNode> directives = new();
-                // A field is added to the schema when there is atleast one roles allowed to access the field.
+                // A field is added to the schema when there is atleast one role allowed to access the field.
                 if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles))
                 {
                     // Even if roles is empty, we create a field for columns returned by a stored-procedures since they only support 1 CRUD action,
@@ -141,8 +135,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         /// currently used to lookup relationship metadata.</param>
         /// <param name="rolesAllowedForEntity">Roles to add to authorize directive at the object level (applies to query/read ops).</param>
         /// <param name="rolesAllowedForFields">Roles to add to authorize directive at the field level (applies to mutations).</param>
-        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
         /// <returns>A GraphQL object type for the table/view to be provided to a Hot Chocolate GraphQL document.</returns>
         private static ObjectTypeDefinitionNode CreateObjectTypeDefinitionForTableOrView(
             string entityName,
@@ -150,11 +142,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            bool isNestedMutationSupported,
-            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
-            Dictionary<string, FieldDefinitionNode> fields = new();
+            Dictionary<string, FieldDefinitionNode> fieldDefinitionNodes = new();
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             foreach ((string columnName, ColumnDefinition column) in sourceDefinition.Columns)
             {
@@ -176,44 +166,40 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                     directives.Add(new DirectiveNode(DefaultValueDirectiveType.DirectiveName, new ArgumentNode("value", arg)));
                 }
 
-                // A field is added to the schema when:
+                // A field is added to the ObjectTypeDefinition when:
                 // 1. The entity is a linking entity. A linking entity is not exposed by DAB for query/mutation but the fields are required to generate
-                // object definitions of directional linking entities between (source, target) and (target, source).
-                // 2. The entity is not a linking entity and there is atleast one roles allowed to access the field.
+                // object definitions of directional linking entities from source to target.
+                // 2. The entity is not a linking entity and there is atleast one role allowed to access the field.
                 if (rolesAllowedForFields.TryGetValue(key: columnName, out IEnumerable<string>? roles) || configEntity.IsLinkingEntity)
                 {
                     // Roles will not be null here if TryGetValue evaluates to true, so here we check if there are any roles to process.
-                    // This check is bypassed for lnking entities for the same reason explained above.
+                    // This check is bypassed for linking entities for the same reason explained above.
                     if (configEntity.IsLinkingEntity || roles is not null && roles.Count() > 0)
                     {
                         FieldDefinitionNode field = GenerateFieldForColumn(configEntity, columnName, column, directives, roles);
-                        fields.Add(columnName, field);
+                        fieldDefinitionNodes.Add(columnName, field);
                     }
                 }
             }
 
-            // A linking entity is not exposed in the runtime config file but is used by DAB to support nested mutations on entities with M:N relationship.
+            // A linking entity is not exposed in the runtime config file but is used by DAB to support multiple mutations on entities with M:N relationship.
             // Hence we don't need to process relationships for the linking entity itself.
             if (!configEntity.IsLinkingEntity)
             {
+                // For an entity exposed in the config, process the relationships (if there are any)
+                // sequentially and generate fields for them - to be added to the entity's ObjectTypeDefinition at the end.
                 if (configEntity.Relationships is not null)
                 {
-                    HashSet<string> foreignKeyFieldsInEntity = new();
                     foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
                     {
                         FieldDefinitionNode relationshipField = GenerateFieldForRelationship(
                             entityName,
                             databaseObject,
                             entities,
-                            isNestedMutationSupported,
-                            entitiesWithManyToManyRelationships,
-                            foreignKeyFieldsInEntity,
                             relationshipName,
                             relationship);
-                        fields.Add(relationshipField.Name.Value, relationshipField);
+                        fieldDefinitionNodes.Add(relationshipField.Name.Value, relationshipField);
                     }
-
-                    AddForeignKeyDirectiveToFields(fields, foreignKeyFieldsInEntity);
                 }
             }
 
@@ -227,7 +213,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 description: null,
                 directives: GenerateObjectTypeDirectivesForEntity(entityName, configEntity, rolesAllowedForEntity),
                 new List<NamedTypeNode>(),
-                fields.Values.ToImmutableList());
+                fieldDefinitionNodes.Values.ToImmutableList());
         }
 
         /// <summary>
@@ -266,71 +252,28 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
         }
 
         /// <summary>
-        /// Helper method to generate field for a relationship for an entity. While processing the relationship, it does some other things:
-        /// 1. Helps in keeping track of relationships with cardinality M:N as whenever such a relationship is encountered,
-        /// the (soure, target) pair of entities is added to the collection of entities with many to many relationship.
-        /// 2. Helps in keeping track of fields from the source entity which hold foreign key references to the target entity.
+        /// Helper method to generate field for a relationship for an entity. These relationship fields are populated with relationship directive
+        /// which stores the (cardinality, target entity) for the relationship. This enables nested queries/multiple mutations on the relationship fields.
+        ///
+        /// While processing the relationship, it helps in keeping track of fields from the source entity which hold foreign key references to the target entity.
         /// </summary>
         /// <param name="entityName">Name of the entity in the runtime config to generate the GraphQL object type for.</param>
         /// <param name="databaseObject">SQL database object information.</param>
         /// <param name="entities">Key/Value Collection mapping entity name to the entity object, currently used to lookup relationship metadata.</param>
-        /// <param name="isNestedMutationSupported">Whether nested mutation is supported for the entity.</param>
-        /// <param name="entitiesWithManyToManyRelationships">Collection of (source, target) entities which have an M:N relationship between them.</param>
-        /// <param name="foreignKeyFieldsInEntity">Set of fields from source entity holding foreign key references to a target entity.</param>
         /// <param name="relationshipName">Name of the relationship.</param>
         /// <param name="relationship">Relationship data.</param>
         private static FieldDefinitionNode GenerateFieldForRelationship(
             string entityName,
             DatabaseObject databaseObject,
             RuntimeEntities entities,
-            bool isNestedMutationSupported,
-            HashSet<Tuple<string, string>>? entitiesWithManyToManyRelationships,
-            HashSet<string> foreignKeyFieldsInEntity,
             string relationshipName,
             EntityRelationship relationship)
         {
             // Generate the field that represents the relationship to ObjectType, so you can navigate through it
             // and walk the graph.
-            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
             string targetEntityName = relationship.TargetEntity.Split('.').Last();
             Entity referencedEntity = entities[targetEntityName];
-            bool isNullableRelationship = false;
-
-            if (// Retrieve all the relationship information for the source entity which is backed by this table definition
-                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
-                &&
-                // From the relationship information, obtain the foreign key definition for the given target entity
-                relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
-                    out List<ForeignKeyDefinition>? listOfForeignKeys))
-            {
-                ForeignKeyDefinition? foreignKeyInfo = listOfForeignKeys.FirstOrDefault();
-
-                // Determine whether the relationship should be nullable by obtaining the nullability
-                // of the referencing(if source entity is the referencing object in the pair)
-                // or referenced columns (if source entity is the referenced object in the pair).
-                if (foreignKeyInfo is not null)
-                {
-                    RelationShipPair pair = foreignKeyInfo.Pair;
-                    // The given entity may be the referencing or referenced database object in the foreign key
-                    // relationship. To determine this, compare with the entity's database object.
-                    if (pair.ReferencingDbTable.Equals(databaseObject))
-                    {
-                        isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
-                        foreignKeyFieldsInEntity.UnionWith(foreignKeyInfo.ReferencingColumns);
-                    }
-                    else
-                    {
-                        isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencedColumns);
-                    }
-                }
-                else
-                {
-                    throw new DataApiBuilderException(
-                        message: $"No relationship exists between {entityName} and {targetEntityName}",
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
-                }
-            }
+            bool isNullableRelationship = FindNullabilityOfRelationship(entityName, databaseObject, targetEntityName);
 
             INullableTypeNode targetField = relationship.Cardinality switch
             {
@@ -344,11 +287,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping),
             };
-
-            if (isNestedMutationSupported && relationship.LinkingObject is not null && entitiesWithManyToManyRelationships is not null)
-            {
-                entitiesWithManyToManyRelationships.Add(new(entityName, targetEntityName));
-            }
 
             FieldDefinitionNode relationshipField = new(
                 location: null,
@@ -367,6 +305,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
 
         /// <summary>
         /// Helper method to generate the list of directives for an entity's object type definition.
+        /// Generates and returns the authorize and model directives to be later added to the object's definition. 
         /// </summary>
         /// <param name="entityName">Name of the entity for whose object type definition, the list of directives are to be created.</param>
         /// <param name="configEntity">Entity definition.</param>
@@ -387,29 +326,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             }
 
             return objectTypeDirectives;
-        }
-
-        /// <summary>
-        /// Helper method to add foreign key directive type to all the fields in the entity which
-        /// hold a foreign key reference to another entity exposed in the config.
-        /// The values of such fields holding foreign key references can come via insertions in the related entity.
-        /// By adding ForiegnKeyDirective here, we can later ensure that while creating input type for create mutations,
-        /// these fields can be marked as nullable/optional.
-        /// </summary>
-        /// <param name="fields">All fields present in the entity.</param>
-        /// <param name="foreignKeys">List of keys holding foreign key reference to another entity.</param>
-        private static void AddForeignKeyDirectiveToFields(Dictionary<string, FieldDefinitionNode> fields, IEnumerable<string> foreignKeys)
-        {
-            foreach (string foreignKey in foreignKeys)
-            {
-                FieldDefinitionNode foreignKeyField = fields[foreignKey];
-                List<DirectiveNode> directives = (List<DirectiveNode>)foreignKeyField.Directives;
-
-                // Add foreign key directive.
-                directives.Add(new DirectiveNode(ForeignKeyDirectiveType.DirectiveName));
-                foreignKeyField = foreignKeyField.WithDirectives(directives);
-                fields[foreignKey] = foreignKeyField;
-            }
         }
 
         /// <summary>
@@ -478,6 +394,87 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             };
 
             return arg;
+        }
+
+        /// <summary>
+        /// Given the source entity name, its underlying database object and the targetEntityName,
+        /// finds if the relationship field corresponding to the target should be nullable
+        /// based on whether the source is the referencing or referenced object or both.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException">Raised no relationship exists between the source and target
+        /// entities.</exception>
+        private static bool FindNullabilityOfRelationship(
+            string entityName,
+            DatabaseObject databaseObject,
+            string targetEntityName)
+        {
+            bool isNullableRelationship = false;
+            SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
+            if (// Retrieve all the relationship information for the source entity which is backed by this table definition
+                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipInfo)
+                &&
+                // From the relationship information, obtain the foreign key definition for the given target entity
+                relationshipInfo.TargetEntityToFkDefinitionMap.TryGetValue(targetEntityName,
+                out List<ForeignKeyDefinition>? listOfForeignKeys))
+            {
+                // DAB optimistically adds entries to 'listOfForeignKeys' representing each relationship direction
+                // between a pair of entities when 1:1 or many:1 relationships are defined in the runtime config.
+                // Entries which don't have a matching corresponding foreign key in the database
+                // will have 0 referencing/referenced columns. So, we need to filter out these
+                // invalid entries. Non-zero referenced columns indicate valid matching foreign key definition in the
+                // database and hence only those can be used to determine the directionality.
+
+                // Find the foreignkeys in which the source entity is the referencing object.
+                IEnumerable<ForeignKeyDefinition> referencingForeignKeyInfo =
+                    listOfForeignKeys.Where(fk =>
+                        fk.ReferencingColumns.Count > 0
+                        && fk.ReferencedColumns.Count > 0
+                        && fk.Pair.ReferencingDbTable.Equals(databaseObject));
+
+                // Find the foreignkeys in which the source entity is the referenced object.
+                IEnumerable<ForeignKeyDefinition> referencedForeignKeyInfo =
+                    listOfForeignKeys.Where(fk =>
+                        fk.ReferencingColumns.Count > 0
+                        && fk.ReferencedColumns.Count > 0
+                        && fk.Pair.ReferencedDbTable.Equals(databaseObject));
+
+                // The source entity should at least be a referencing or referenced db object or both
+                // in the foreign key relationship.
+                if (referencingForeignKeyInfo.Count() > 0 || referencedForeignKeyInfo.Count() > 0)
+                {
+                    // The source entity could be both the referencing and referenced entity
+                    // in case of missing foreign keys in the db or self referencing relationships.
+                    // Use the nullability of referencing columns to determine
+                    // the nullability of the relationship field only if
+                    // 1. there is exactly one relationship where source is the referencing entity.
+                    // DAB doesn't support multiple relationships at the moment.
+                    // and
+                    // 2. when the source is not a referenced entity in any of the relationships.
+                    if (referencingForeignKeyInfo.Count() == 1 && referencedForeignKeyInfo.Count() == 0)
+                    {
+                        ForeignKeyDefinition foreignKeyInfo = referencingForeignKeyInfo.First();
+                        isNullableRelationship = sourceDefinition.IsAnyColumnNullable(foreignKeyInfo.ReferencingColumns);
+                    }
+                    else
+                    {
+                        // a record of the "referenced" entity may or may not have a relationship with
+                        // any other record of the referencing entity in the database
+                        // (irrespective of nullability of the referenced columns)
+                        // Setting the relationship field to nullable ensures even those records
+                        // that are not related are considered while querying.
+                        isNullableRelationship = true;
+                    }
+                }
+                else
+                {
+                    throw new DataApiBuilderException(
+                        message: $"No relationship exists between {entityName} and {targetEntityName}",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                }
+            }
+
+            return isNullableRelationship;
         }
     }
 }

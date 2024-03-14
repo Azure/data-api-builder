@@ -47,12 +47,13 @@ namespace Azure.DataApiBuilder.Core.Parsers
             // since we allow for aliases to be used in place of the names of the actual
             // columns of the database object (such as table's columns), we need to
             // account for these potential aliases in our EDM Model.
-            HashSet<string> linkingEntityNames = new(sqlMetadataProvider.GetLinkingEntities().Keys);
+            IReadOnlyDictionary<string, Entity> linkingEntities = sqlMetadataProvider.GetLinkingEntities();
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (linkingEntityNames.Contains(entityAndDbObject.Key))
+                if (linkingEntities.ContainsKey(entityAndDbObject.Key))
                 {
-                    // No need to create entity types for linking entity.
+                    // No need to create entity types for linking entity because the linking entity is not exposed for REST and GraphQL.
+                    // Hence, there is no possibility of having a `filter` operation against it.
                     continue;
                 }
 
@@ -116,10 +117,10 @@ namespace Azure.DataApiBuilder.Core.Parsers
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows.
-            HashSet<string> linkingEntityNames = new(sqlMetadataProvider.GetLinkingEntities().Keys);
+            IReadOnlyDictionary<string, Entity> linkingEntities = sqlMetadataProvider.GetLinkingEntities();
             foreach ((string entityName, DatabaseObject dbObject) in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (linkingEntityNames.Contains(entityName))
+                if (linkingEntities.ContainsKey(entityName))
                 {
                     // No need to create entity set for linking entity.
                     continue;

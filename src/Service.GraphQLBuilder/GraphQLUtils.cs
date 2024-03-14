@@ -29,6 +29,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string OBJECT_TYPE_MUTATION = "mutation";
         public const string OBJECT_TYPE_QUERY = "query";
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
+        public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
+        public const string DB_OPERATION_RESULT_FIELD_NAME = "result";
+
+        // String used as a prefix for the name of a linking entity.
+        private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
+        // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
+        private const string ENTITY_NAME_DELIMITER = "$";
+
+        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE = new() { DatabaseType.MSSQL };
+
+        public static HashSet<DatabaseType> RELATIONAL_DBS = new() { DatabaseType.MSSQL, DatabaseType.MySQL,
+            DatabaseType.DWSQL, DatabaseType.PostgreSQL, DatabaseType.CosmosDB_PostgreSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -63,6 +75,22 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             };
             string name = typeNode.NamedType().Name.Value;
             return inBuiltTypes.Contains(name);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether DAB supports multiple create for a particular database type.
+        /// </summary>
+        public static bool DoesRelationalDBSupportMultipleCreate(DatabaseType databaseType)
+        {
+            return RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE.Contains(databaseType);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether database type represents a NoSQL database.
+        /// </summary>
+        public static bool IsRelationalDb(DatabaseType databaseType)
+        {
+            return RELATIONAL_DBS.Contains(databaseType);
         }
 
         /// <summary>
@@ -274,10 +302,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Generates the entity name from the GraphQL context.
+        /// Generates the datasource name from the GraphQL context.
         /// </summary>
         /// <param name="context">Middleware context.</param>
-        /// <returns></returns>
         public static string GetDataSourceNameFromGraphQLContext(IMiddlewareContext context, RuntimeConfig runtimeConfig)
         {
             string rootNode = context.Selection.Field.Coordinate.TypeName.Value;
@@ -287,27 +314,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             {
                 // we are at the root query node - need to determine return type and store on context.
                 // Output type below would be the graphql object return type - Books,BooksConnectionObject.
-                IOutputType outputType = context.Selection.Field.Type;
-                string entityName = outputType.TypeName();
-
-                // Below is only needed if say we have an Array return type or items object for plural case.
-                ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
-
-                // Example: CustomersConnectionObject - for get all scenarios.
-                if (QueryBuilder.IsPaginationType(underlyingFieldType))
-                {
-                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
-                    outputType = subField.Type;
-                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
-                    entityName = underlyingFieldType.Name;
-                }
-
-                // if name on schema is different from name in config.
-                // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
-                {
-                    entityName = modelName;
-                }
+                string entityName = GetEntityNameFromContext(context);
 
                 dataSourceName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
 
@@ -319,15 +326,100 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
                 // Derive node from path - e.g. /books/{id} - node would be books.
                 // for this queryNode path we have stored the datasourceName needed to retrieve query and mutation engine of inner objects
                 object? obj = context.ContextData[GenerateDataSourceNameKeyFromPath(context)];
-                dataSourceName = obj?.ToString()!;
+
+                if (obj is null)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Unable to determine datasource name for operation.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.GraphQLMapping);
+                }
+
+                dataSourceName = obj.ToString()!;
             }
 
             return dataSourceName;
         }
 
+        /// <summary>
+        /// Get entity name from context object.
+        /// </summary>
+        public static string GetEntityNameFromContext(IMiddlewareContext context)
+        {
+            IOutputType type = context.Selection.Field.Type;
+            string graphQLTypeName = type.TypeName();
+            string entityName = graphQLTypeName;
+
+            if (graphQLTypeName is DB_OPERATION_RESULT_TYPE)
+            {
+                // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
+                if (GraphQLUtils.TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
+                {
+                    entityName = modelName;
+                }
+            }
+            else
+            {
+                // for rest of scenarios get entity name from output object type.
+                ObjectType underlyingFieldType;
+                underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                // Example: CustomersConnectionObject - for get all scenarios.
+                if (QueryBuilder.IsPaginationType(underlyingFieldType))
+                {
+                    IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+                    type = subField.Type;
+                    underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(type);
+                    entityName = underlyingFieldType.Name;
+                }
+
+                // if name on schema is different from name in config.
+                // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
+                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
+                {
+                    entityName = modelName;
+                }
+            }
+
+            return entityName;
+        }
+
         private static string GenerateDataSourceNameKeyFromPath(IMiddlewareContext context)
         {
             return $"{context.Path.ToList()[0]}";
+        }
+
+        /// <summary>
+        /// Helper method to generate the linking entity name using the source and target entity names.
+        /// </summary>
+        /// <param name="source">Source entity name.</param>
+        /// <param name="target">Target entity name.</param>
+        /// <returns>Name of the linking entity 'LinkingEntity$SourceEntityName$TargetEntityName'.</returns>
+        public static string GenerateLinkingEntityName(string source, string target)
+        {
+            return LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER + source + ENTITY_NAME_DELIMITER + target;
+        }
+
+        /// <summary>
+        ///  Helper method to decode the names of source and target entities from the name of a linking entity.
+        /// </summary>
+        /// <param name="linkingEntityName">linking entity name of the format 'LinkingEntity$SourceEntityName$TargetEntityName'.</param>
+        /// <returns>tuple of source, target entities name of the format (SourceEntityName, TargetEntityName).</returns>
+        /// <exception cref="ArgumentException">Thrown when the linking entity name is not of the expected format.</exception>
+        public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
+        {
+            if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER))
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            string[] sourceTargetEntityNames = linkingEntityName.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
+
+            if (sourceTargetEntityNames.Length != 3)
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            return new(sourceTargetEntityNames[1], sourceTargetEntityNames[2]);
         }
     }
 }

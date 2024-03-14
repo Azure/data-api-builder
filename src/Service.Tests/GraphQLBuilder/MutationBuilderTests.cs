@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
 using Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers;
 using HotChocolate.Language;
@@ -94,7 +95,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode createField =
                 query.Fields.Where(f => f.Name.Value == $"createFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: createField.Directives.Count);
+                actual: createField.Directives.Where(x => x.Name.Value is GraphQLUtils.AUTHORIZE_DIRECTIVE).Count());
         }
 
         [TestMethod]
@@ -123,8 +124,8 @@ type Foo @model(name:""Foo"") {
                     ),
                 "The type Date is not a known GraphQL type, and cannot be used in this schema."
             );
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.GraphQLMapping, ex.SubStatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
         }
 
         [TestMethod]
@@ -719,7 +720,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode deleteField =
                 query.Fields.Where(f => f.Name.Value == $"deleteFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: deleteField.Directives.Count);
+                actual: deleteField.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -838,7 +839,7 @@ type Foo @model(name:""Foo"") {
             FieldDefinitionNode collectionField =
                 query.Fields.Where(f => f.Name.Value == $"updateFoo").First();
             Assert.AreEqual(expected: isAuthorizeDirectiveExpected ? 1 : 0,
-                actual: collectionField.Directives.Count);
+                actual: field.Directives.Where(x => x.Name.Value is "authorize").Count());
         }
 
         [TestMethod]
@@ -1071,8 +1072,24 @@ type Foo @model(name:""Foo"") {{
 
             // The permissions are setup for create, update and delete operations.
             // So create, update and delete mutations should get generated.
-            // A Check to validate that the count of mutations generated is 3.
-            Assert.AreEqual(4 * entityNames.Length, mutation.Fields.Count);
+            // A Check to validate that the count of mutations generated is 4 -
+            // 1. 2 Create mutations (point/many) when db supports nested created, else 1.
+            // 2. 1 Update mutation
+            // 3. 1 Delete mutation
+            int totalExpectedMutations = 0;
+            foreach ((_, DatabaseType dbType) in entityNameToDatabaseType)
+            {
+                if (GraphQLUtils.DoesRelationalDBSupportMultipleCreate(dbType))
+                {
+                    totalExpectedMutations += 4;
+                }
+                else
+                {
+                    totalExpectedMutations += 3;
+                }
+            }
+
+            Assert.AreEqual(totalExpectedMutations, mutation.Fields.Count);
 
             for (int i = 0; i < entityNames.Length; i++)
             {

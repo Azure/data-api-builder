@@ -4,7 +4,6 @@
 using System.Data;
 using System.Data.Common;
 using System.Net;
-using System.Security.Claims;
 using System.Text;
 using Azure.Core;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -208,17 +207,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // Dictionary containing all the claims belonging to the user, to be used as session parameters.
-            Dictionary<string, Claim> sessionParams = AuthorizationResolver.GetAllUserClaims(httpContext);
+            Dictionary<string, string> sessionParams = AuthorizationResolver.GetProcessedUserClaims(httpContext);
 
             // Counter to generate different param name for each of the sessionParam.
             IncrementingInteger counter = new();
             const string SESSION_PARAM_NAME = $"{BaseQueryStructure.PARAM_NAME_PREFIX}session_param";
             StringBuilder sessionMapQuery = new();
 
-            foreach ((string claimType, Claim claim) in sessionParams)
+            foreach ((string claimType, string claimValue) in sessionParams)
             {
                 string paramName = $"{SESSION_PARAM_NAME}{counter.Next()}";
-                parameters.Add(paramName, new(claim.Value));
+                parameters.Add(paramName, new(claimValue));
                 // Append statement to set read only param value - can be set only once for a connection.
                 string statementToSetReadOnlyParam = "EXEC sp_set_session_context " + $"'{claimType}', " + paramName + ", @read_only = 1;";
                 sessionMapQuery = sessionMapQuery.Append(statementToSetReadOnlyParam);

@@ -23,13 +23,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             StringBuilder queryStringBuilder = new();
             queryStringBuilder.Append($"SELECT {WrappedColumns(structure)}"
                 + $" FROM {_containerAlias}");
+            string predicateString = Build(structure.Predicates);
 
             if (structure.Joins != null && structure.Joins.Count > 0)
             {
                 queryStringBuilder.Append($" {Build(structure.Joins)}");
             }
-
-            string predicateString = Build(structure.Predicates);
 
             structure.DbPolicyPredicatesForOperations.TryGetValue(EntityActionOperation.Read, out string? policy);
 

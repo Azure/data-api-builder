@@ -124,15 +124,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (dynamic pathConfig in pathConfigMap[key])
                 {
                     string configPath = pathConfig.path;
-                    if (pathConfig.type is ListTypeNode listTypeNode)
+                    if (pathConfig.alias is not null)
                     {
-                        string tableAlias = queryStructure.GetTableAlias();
                         queryStructure.Joins ??= new Stack<CosmosJoinStructure>();
                         queryStructure.Joins.Push(new CosmosJoinStructure(
                                     DbObject: new DatabaseTable(schemaName: pathConfig.path, tableName: pathConfig.entityName),
-                                    TableAlias: tableAlias));
+                                    TableAlias: pathConfig.alias));
 
-                        configPath = tableAlias;
+                        configPath = pathConfig.alias;
                     }
                     else
                     {

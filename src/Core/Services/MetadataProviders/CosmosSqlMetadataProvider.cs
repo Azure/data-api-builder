@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                         EntityPaths.Add(objectType.Name.Value, new List<object> { new { path = currentPath, type = "" } });
 
-                        ProcessSchema(objectType.Fields, schemaDefinitions, currentPath, _runtimeConfig.Entities);
+                        ProcessSchema(objectType.Fields, schemaDefinitions, currentPath, null);
                     }
                 }
             }
@@ -120,25 +120,51 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
-            RuntimeEntities entities)
+            string? previouspath)
         {
+            int tableCounter = 0;
+
             // Traverse the fields and add them to the path
             foreach (FieldDefinitionNode field in fields)
             {
                 string entityType = field.Type.NamedType().Name.Value;
+                bool isArrayType = field.Type is ListTypeNode;
 
-                if (entities.Entities.ContainsKey(entityType))
+                string? alias = null;
+                if(isArrayType)
+                {
+                    alias = $"table{tableCounter++}";
+                }
+
+                if (_runtimeConfig.Entities.ContainsKey(entityType))
                 {
                     if (EntityPaths.ContainsKey(entityType))
                     {
-                        EntityPaths[entityType].Add(new { path = currentPath, entityName = field.Name.Value, type = field.Type });
+                        if (previouspath is not null)
+                        {
+                            EntityPaths[entityType].Add(new { path = previouspath, entityName = field.Name.Value, type = field.Type, alias = currentPath });
+                        }
+
+                        EntityPaths[entityType].Add(new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias = alias });
                     }
                     else
                     {
-                        EntityPaths.Add(entityType, new List<object> { new { path = currentPath, entityName = field.Name.Value, type = field.Type } });
+                        EntityPaths.Add(entityType, new List<object> { new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias =  alias} });
+                        if (previouspath is not null)
+                        {
+                            EntityPaths[entityType].Add(new { path = previouspath, entityName = field.Name.Value, type = field.Type, alias = currentPath });
+                        }
+
                     }
 
-                    ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{currentPath}.{field.Name.Value}", entities);
+                    if (isArrayType)
+                    {
+                        ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{alias}", currentPath);
+                    }
+                    else
+                    {
+                        ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{currentPath}.{field.Name.Value}", null);
+                    }
                 }
             }
         }

@@ -1,0 +1,22 @@
+type Character @model(name:"Character") {
+    id : ID,
+    name : String,
+    type: String,
+    homePlanet: Int,
+    primaryFunction: String,
+    star: Star
+}
+
+type Planet @model(name:"Planet"){
+    id : ID,
+    name : String,
+    character: Character,
+    age : Int,
+    dimension : String,
+    stars: [Star]
+}
+
+type Star @model(name:"StarAlias"){
+    id : ID,
+    name : String
+}

@@ -884,14 +884,30 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_Only_AuthorizedArrayItem()
         {
-            string gqlQuery = @"{
-                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : { character: {type: {eq: ""Mars""}}})
+             string gqlQuery = @"{
+                 planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : { character: {type: {eq: ""Mars""}}})
+                 {
+                     items {
+                         id
+                     }
+                 }
+             }";
+
+           /* string gqlQuery = @"{
+                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
+              @" : {
+                        and: [
+                            { additionalAttributes: {name: {eq: ""volcano1""}}}
+                            { moons: {moonAdditionalAttributes: {name: {eq: ""moonattr0""}}}}
+                            { earth: {type: {eq: ""earth0""}}}
+                        ]   
+                     })
                 {
                     items {
-                        id
+                        name
                     }
                 }
-            }";
+            }";*/
 
             // MoonAdditionalAttributes (array inside moon object which is an array in container): "@item.name eq 'moonattr0'"
             // Earth(object in object): "@item.type eq 'earth0'"
@@ -899,6 +915,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Now get the item with item level permission
             string clientRoleHeader = "item-level-permission-role";
+            // string clientRoleHeader = "authenticated";
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 queryName: _graphQLQueryName,
                 query: gqlQuery,

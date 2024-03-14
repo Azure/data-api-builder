@@ -10,6 +10,7 @@ using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using Microsoft.OData.Edm;
 
@@ -105,13 +106,13 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             {
                 if (typeDefinition is ObjectTypeDefinitionNode objectType)
                 {
-                    if (objectType.Directives.Any(a => a.Name.Value == "container"))
+                    if (objectType.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
                     {
                         string currentPath = "c";
 
                         EntityPaths.Add(objectType.Name.Value, new List<object> { new { path = currentPath, type = "" } });
 
-                        ProcessSchema(objectType.Fields, schemaDefinitions, currentPath, null);
+                        ProcessSchema(objectType.Fields, schemaDefinitions, currentPath, null, null);
                     }
                 }
             }
@@ -120,7 +121,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
-            string? previouspath)
+            string? previousPath,
+            FieldDefinitionNode? prevfield)
         {
             int tableCounter = 0;
 
@@ -140,30 +142,30 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     if (EntityPaths.ContainsKey(entityType))
                     {
-                        if (previouspath is not null)
+                        if (previousPath is not null)
                         {
-                            EntityPaths[entityType].Add(new { path = previouspath, entityName = field.Name.Value, type = field.Type, alias = currentPath });
+                            EntityPaths[entityType].Add(new { path = previousPath, entityName = prevfield?.Name.Value, type = field.Type, alias = currentPath , isfilterAvl = false});
                         }
 
-                        EntityPaths[entityType].Add(new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias = alias });
+                        EntityPaths[entityType].Add(new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias = alias, isfilterAvl = true });
                     }
                     else
                     {
-                        EntityPaths.Add(entityType, new List<object> { new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias =  alias} });
-                        if (previouspath is not null)
+                        EntityPaths.Add(entityType, new List<object> { new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias =  alias, isfilterAvl = true } });
+                        if (previousPath is not null)
                         {
-                            EntityPaths[entityType].Add(new { path = previouspath, entityName = field.Name.Value, type = field.Type, alias = currentPath });
+                            EntityPaths[entityType].Add(new { path = previousPath, entityName = prevfield?.Name.Value, type = field.Type, alias = currentPath, isfilterAvl = false });
                         }
 
                     }
 
                     if (isArrayType)
                     {
-                        ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{alias}", currentPath);
+                        ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{alias}", currentPath, field);
                     }
                     else
                     {
-                        ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{currentPath}.{field.Name.Value}", null);
+                        ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{currentPath}.{field.Name.Value}", null, null);
                     }
                 }
             }

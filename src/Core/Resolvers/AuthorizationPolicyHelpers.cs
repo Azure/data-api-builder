@@ -138,14 +138,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         configPath+= "." + pathConfig.entityName;
                     }
 
-                    if (filterString is null)
+                    if (pathConfig.isfilterAvl)
                     {
-                        filterString = filterClause.Expression.Accept(new ODataASTVisitorForCosmos(configPath));
+                        if (filterString is null)
+                        {
+                            filterString = filterClause.Expression.Accept(new ODataASTVisitorForCosmos(configPath));
+                        }
+                        else
+                        {
+                            filterString += " AND " + filterClause.Expression.Accept(new ODataASTVisitorForCosmos(configPath));
+                        }
                     }
-                    else
-                    {
-                        filterString += " AND " + filterClause.Expression.Accept(new ODataASTVisitorForCosmos(configPath));
-                    }
+                   
                 }
             }
 

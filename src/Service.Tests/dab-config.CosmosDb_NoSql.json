@@ -149,7 +149,7 @@
         }
       ]
     },
-    "StarAlias": {
+    "Star": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -200,7 +200,7 @@
         }
       ]
     },
-    "TagAlias": {
+    "Tag": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -522,7 +522,7 @@
             {
               "action": "read",
               "policy": {
-                "database": "@item.type eq 'volcano0'"
+                "database": "@item.name eq 'volcano0'"
               }
             }
           ]
@@ -565,7 +565,7 @@
         }
       ]
     },
-    "MoreAttrAlias": {
+    "MoreAttribute": {
       "source": {
         "object": "graphqldb.planet"
       },

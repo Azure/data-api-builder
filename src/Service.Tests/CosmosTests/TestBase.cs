@@ -42,7 +42,7 @@ type Character {
     star: Star
 }
 
-type Planet @model @container {
+type Planet @model {
     id : ID!,
     name : String,
     character: Character,

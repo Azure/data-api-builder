@@ -881,6 +881,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
+        /// <summary>
+        /// MoonAdditionalAttributes (array inside moon object which is an array in container): "@item.name eq 'moonattr0'"
+        /// Earth(object in object): "@item.type eq 'earth0'"
+        /// AdditionalAttribute (array in container): "@item.type eq 'volcano0'"
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_Only_AuthorizedArrayItem()
         {
@@ -893,26 +899,6 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                  }
              }";
 
-           /* string gqlQuery = @"{
-                planets(first: 10, " + QueryBuilder.FILTER_FIELD_NAME +
-              @" : {
-                        and: [
-                            { additionalAttributes: {name: {eq: ""volcano1""}}}
-                            { moons: {moonAdditionalAttributes: {name: {eq: ""moonattr0""}}}}
-                            { earth: {type: {eq: ""earth0""}}}
-                        ]   
-                     })
-                {
-                    items {
-                        name
-                    }
-                }
-            }";*/
-
-            // MoonAdditionalAttributes (array inside moon object which is an array in container): "@item.name eq 'moonattr0'"
-            // Earth(object in object): "@item.type eq 'earth0'"
-            // AdditionalAttribute (array in container): "@item.type eq 'volcano0'"
-
             // Now get the item with item level permission
             string clientRoleHeader = "item-level-permission-role";
             // string clientRoleHeader = "authenticated";
@@ -922,7 +908,15 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 
-            string dbQuery = $"SELECT top 1 c.id FROM c where c.earth.id = \"{_idList[0]}\"";
+            string dbQuery = $"SELECT top 1 c.id FROM c " +
+                $"JOIN table3 IN c.moons " +
+                $"JOIN table0 IN table3.moonAdditionalAttributes " +
+                $"JOIN table2 IN c.additionalAttributes " +
+                $"WHERE  c.character.type = 'Mars'  " + // From Graphql Query
+                $"AND (c.earth.type = 'earth0') " + // From DB Policy
+                $"AND (table2.name = 'volcano0') " + // From DB Policy
+                $"AND (table0.name = 'moonattr0')"; // From DB Policy
+
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             // Validate the result contains the GraphQL authorization error code.
             ValidateResults(actual.GetProperty("items"), expected.RootElement, false);
@@ -1065,7 +1059,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         /// <summary>
         /// Tests that the nested field level query filter fails authorization when nested object is
-        /// unauthorized. Here, Nested array type 'moreAttributes' is avaliable for 'Authenticated' role only and
+        /// unauthorized. Here, Nested array type 'moreAttributes' is available for 'Authenticated' role only and
         /// we are trying to access it with 'anonymous' role.
         /// </summary>
         [TestMethod]

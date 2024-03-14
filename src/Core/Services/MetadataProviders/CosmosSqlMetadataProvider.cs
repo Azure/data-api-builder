@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using HotChocolate.Language;
+using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
@@ -21,6 +22,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
+
+        public EdmModel EdmModel { get; set; } = new();
+        public Dictionary<string, List<object>> EntityPaths { get; set; } = new();
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -65,6 +69,78 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
+            GenerateEdmModel();
+            ExtractPathsFromSchema();
+        }
+
+        private void GenerateEdmModel()
+        {
+            String NAMESPACE = "DEFAULT_NAMESPACE";
+
+            EdmEntityContainer container = new(NAMESPACE, "DEFAULT_CONTAINER_NAME");
+
+            foreach (ObjectTypeDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
+            {
+                EdmEntityType edmEntity = new(NAMESPACE, typeDefinition.Name.Value);
+                foreach (FieldDefinitionNode field in typeDefinition.Fields)
+                {
+                    edmEntity.AddStructuralProperty(field.Name.Value, EdmPrimitiveTypeKind.String, false);
+                }
+
+                container.AddEntitySet(name: typeDefinition.Name.Value, edmEntity);
+            }
+
+            EdmModel.AddElement(container);
+        }
+
+        private void ExtractPathsFromSchema()
+        {
+            Dictionary<string, ObjectTypeDefinitionNode> schemaDefinitions = new();
+            foreach (ObjectTypeDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
+            {
+                schemaDefinitions.Add(typeDefinition.Name.Value, typeDefinition);
+            }
+
+            foreach (IDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
+            {
+                if (typeDefinition is ObjectTypeDefinitionNode objectType)
+                {
+                    if (objectType.Directives.Any(a => a.Name.Value == "container"))
+                    {
+                        string currentPath = "c";
+
+                        EntityPaths.Add(objectType.Name.Value, new List<object> { new { path = currentPath, type = "" } });
+
+                        ProcessSchema(objectType.Fields, schemaDefinitions, currentPath, _runtimeConfig.Entities);
+                    }
+                }
+            }
+        }
+
+        private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
+            Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
+            string currentPath,
+            RuntimeEntities entities)
+        {
+            // Traverse the fields and add them to the path
+            foreach (FieldDefinitionNode field in fields)
+            {
+                string entityType = field.Type.NamedType().Name.Value;
+
+                if (entities.Entities.ContainsKey(entityType))
+                {
+                    if (EntityPaths.ContainsKey(entityType))
+                    {
+                        EntityPaths[entityType].Add(new { path = currentPath, entityName = field.Name.Value, type = field.Type });
+                    }
+                    else
+                    {
+                        EntityPaths.Add(entityType, new List<object> { new { path = currentPath, entityName = field.Name.Value, type = field.Type } });
+                    }
+
+                    ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{currentPath}.{field.Name.Value}", entities);
+                }
+            }
         }
 
         /// <inheritdoc />

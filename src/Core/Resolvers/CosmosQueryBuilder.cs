@@ -3,6 +3,7 @@
 
 using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
@@ -22,16 +23,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             StringBuilder queryStringBuilder = new();
             queryStringBuilder.Append($"SELECT {WrappedColumns(structure)}"
                 + $" FROM {_containerAlias}");
-            string predicateString = Build(structure.Predicates);
 
             if (structure.Joins != null && structure.Joins.Count > 0)
             {
                 queryStringBuilder.Append($" {Build(structure.Joins)}");
             }
 
-            if (!string.IsNullOrEmpty(predicateString))
+            string predicateString = Build(structure.Predicates);
+
+            structure.DbPolicyPredicatesForOperations.TryGetValue(EntityActionOperation.Read, out string? policy);
+
+            if (!string.IsNullOrEmpty(predicateString) || !string.IsNullOrEmpty(policy))
             {
-                queryStringBuilder.Append($" WHERE {predicateString}");
+                queryStringBuilder.Append(" WHERE ");
+            }
+
+            if (!string.IsNullOrEmpty(predicateString))
+            {   
+                queryStringBuilder.Append($" {predicateString}");
+            }
+
+            if (!string.IsNullOrEmpty(predicateString) && !string.IsNullOrEmpty(policy))
+            {
+                queryStringBuilder.Append(" AND ");
+            }
+
+            if (!string.IsNullOrEmpty(policy))
+            {
+                queryStringBuilder.Append($"{policy}");
             }
 
             if (structure.OrderByColumns.Count > 0)

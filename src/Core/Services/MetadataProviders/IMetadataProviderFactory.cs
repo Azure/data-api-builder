@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
     /// <summary>
@@ -25,5 +27,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// Initializes the metadata providers.
         /// </summary>
         public Task InitializeAsync();
+
+        /// <summary>
+        /// Initializes the metadata providers with parameters
+        /// currently this is used by GraphQL workload
+        /// </summary>
+        public void InitializeAsync(Dictionary<string, Dictionary<string,DatabaseObject>> EntityToDatabaseObjectMap,
+            Dictionary<string, Dictionary<string,string>> graphQLStoredProcedureExposedNameToEntityNameMap);
     }
 }

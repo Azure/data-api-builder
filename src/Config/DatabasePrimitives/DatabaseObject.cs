@@ -33,6 +33,7 @@ public abstract class DatabaseObject
             return string.IsNullOrEmpty(SchemaName) ? Name : $"{SchemaName}.{Name}";
         }
     }
+
     public override bool Equals(object? other)
     {
         return Equals(other as DatabaseObject);

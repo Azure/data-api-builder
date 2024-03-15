@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters;
@@ -153,6 +154,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             Assert.IsTrue(foreignKeyDefinition.Equals(deserializedForeignKeyDefinition));
             VerifyRelationShipPair(pair, deserializedForeignKeyDefinition.Pair);
+        }
+
+        /// <summary>
+        /// Validates serialization and deserilization of SourceDefinition object with SourceEntityRelationShipMap property
+        /// SourceDefinition -> RelationShipMetadata -> ForeignKeyDefinition -> RelationshipPair -> DatabaseTable -> SourceDefinition this creates a cycle between the objects
+        /// to handle this we need serialization property : ReferenceHandler.Preserve
+        /// </summary>
+        [TestMethod]
+        public void TestSourceDefinitionCyclicObjectsSerializationAndDeserialization()
+        {
+            InitializeObjects();
+
+            RelationShipPair pair = GetRelationShipPair();
+
+            ForeignKeyDefinition foreignKeyDefinition = new()
+            {
+                Pair = pair,
+                ReferencedColumns = new List<string> { "Index" },
+                ReferencingColumns = new List<string> { "FirstName" }
+
+            };
+
+            RelationshipMetadata metadata = new();
+            metadata.TargetEntityToFkDefinitionMap.Add("customers", new List<ForeignKeyDefinition> { foreignKeyDefinition });
+
+            _sourceDefinition.SourceEntityRelationshipMap.Add("persons", metadata);
+
+            // In serialization options we need  ReferenceHandler = ReferenceHandler.Preserve, or else it doesnot seialize objects with cycle references
+            // SourceDefinition -> RelationShipMetadata -> ForeignKeyDefinition RelationshipPair ->DatabaseTable -> SourceDefinition
+            Assert.ThrowsException<JsonException>(() =>
+            {
+                JsonSerializer.Serialize(_sourceDefinition, _options);
+            });
+
+            // below code tests serialization and deserialization at different object levels inside the source definition cycle
+            _options = new()
+            {
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter(),
+                    new ObjectConverter(),
+                },
+                ReferenceHandler = ReferenceHandler.Preserve,
+            };
+
+            // Verify SourceDefinition except relationshipmetadata property
+            string serializedSourceDefinition = JsonSerializer.Serialize(_sourceDefinition, _options);
+            SourceDefinition deserializedSourceDefinition = JsonSerializer.Deserialize<SourceDefinition>(serializedSourceDefinition, _options);
+            VerifySourceDefinitionSerializationDeserialization(_sourceDefinition, deserializedSourceDefinition, "FirstName");
+
+            // verify ForeignKeyDefinition
+            ForeignKeyDefinition expectedForeignKeyDefinition = _sourceDefinition.SourceEntityRelationshipMap["persons"].TargetEntityToFkDefinitionMap["customers"][0];
+            ForeignKeyDefinition currentForeignKeyDefinition = deserializedSourceDefinition.SourceEntityRelationshipMap["persons"].TargetEntityToFkDefinitionMap["customers"][0];
+
+            // verify RelationShip Pair
+            Assert.IsTrue(expectedForeignKeyDefinition.Equals(currentForeignKeyDefinition));
+            VerifyRelationShipPair(expectedForeignKeyDefinition.Pair, currentForeignKeyDefinition.Pair);
         }
 
         [TestMethod]
@@ -334,7 +392,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             SourceDefinition source2 = GetSourceDefinition(false, false, new List<string>() { "Index" }, col2);
             DatabaseTable table2 = new()
             {
-                Name = "customers",
+                Name = "person",
                 SourceType = EntitySourceType.Table,
                 SchemaName = "model",
                 TableDefinition = source2,

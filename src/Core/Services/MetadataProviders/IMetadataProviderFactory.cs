@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// Initializes the metadata providers with parameters
         /// Note : this is used in GraphQL workload to call the parameterized initialize async method in providers
         /// </summary>
-        public void InitializeAsync(Dictionary<string, Dictionary<string,DatabaseObject>> EntityToDatabaseObjectMap,
-            Dictionary<string, Dictionary<string,string>> graphQLStoredProcedureExposedNameToEntityNameMap);
+        public void InitializeAsync(Dictionary<string, Dictionary<string, DatabaseObject>> EntityToDatabaseObjectMap,
+            Dictionary<string, Dictionary<string, string>> graphQLStoredProcedureExposedNameToEntityNameMap);
     }
 }

@@ -198,11 +198,6 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// <inheritdoc />
     public string GetDBPolicyForRequest(string entityName, string roleName, EntityActionOperation operation)
     {
-        if (!EntityPermissionsMap.ContainsKey(entityName))
-        {
-            return string.Empty;
-        }
-
         if (!EntityPermissionsMap[entityName].RoleToOperationMap.TryGetValue(roleName, out RoleMetadata? roleMetadata))
         {
             return string.Empty;

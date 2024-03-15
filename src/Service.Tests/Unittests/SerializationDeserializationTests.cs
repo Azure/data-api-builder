@@ -162,7 +162,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// to handle this we need serialization property : ReferenceHandler.Preserve
         /// </summary>
         [TestMethod]
-        public void TestSourceDefinitionCyclicObjectsSerializationAndDeserialization()
+        public void TestSourceDefinitionCyclicObjectsSerializationDeserialization()
         {
             InitializeObjects();
 

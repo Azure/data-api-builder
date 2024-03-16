@@ -65,8 +65,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// Use the file system (not mocked) to create a hot reload
         /// scenario of the REST runtime options and verify that we
         /// correctly hot reload those options.
+        /// NOTE: This test is ignored until we have the possibility of turning
+        /// on hot reload.
         /// </summary>
         [TestMethod]
+        [Ignore]
         public void HotReloadConfigRestRuntimeOptions()
         {
             // Arrange

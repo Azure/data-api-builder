@@ -93,7 +93,7 @@ public class RuntimeConfigProvider
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
-        if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
+        if (!IsLateConfigured && _runtimeConfig is not null && RuntimeConfig.IsHotReloadable())
         {
             try
             {

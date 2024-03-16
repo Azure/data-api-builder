@@ -440,4 +440,17 @@ public record RuntimeConfig
         CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
             (x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL);
     }
+
+    /// <summary>
+    /// Handles the logic for determining if we are in a scenario where hot reload is possible.
+    /// Hot reload is currently not available, and so this will always return false. When hot reload
+    /// becomes an available feature this logic will change to reflect the correct state based on
+    /// the state of the runtime config and any other relevant factors.
+    /// </summary>
+    /// <returns>True in a scenario that support hot reload, false otherwise.</returns>
+    public static bool IsHotReloadable()
+    {
+        // always return false while hot reload is not an available feature.
+        return false;
+    }
 }

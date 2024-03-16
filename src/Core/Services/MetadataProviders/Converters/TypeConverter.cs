@@ -7,8 +7,8 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 {
     /// <summary>
-    /// This is a converter to serialize and deserialize the a object of Type : System.Type
-    /// for example currently in ColumnDefiniton object, one of the property type is of System.Type property
+    /// This is a converter to serialize and deserialize an object of Type : System.Type
+    /// For example, the ColumnDefiniton object's default value property of type System.Type.
     /// </summary>
     public class TypeConverter : JsonConverter<Type>
     {
@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
         public override void Write(Utf8JsonWriter writer, Type value, JsonSerializerOptions options)
         {
-            writer.WriteStringValue(value.AssemblyQualifiedName);
+            writer.WriteStringValue(value.FullName);
         }
     }
 }

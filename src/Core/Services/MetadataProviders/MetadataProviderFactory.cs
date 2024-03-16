@@ -91,7 +91,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         }
 
         /// <inheritdoc />
-        public void InitializeAsync(Dictionary<string, Dictionary<string, DatabaseObject>> EntityToDatabaseObjectMap, Dictionary<string, Dictionary<string, string>> graphQLStoredProcedureExposedNameToEntityNameMap)
+        public void InitializeAsync(
+            Dictionary<string, Dictionary<string, DatabaseObject>> EntityToDatabaseObjectMap,
+            Dictionary<string, Dictionary<string, string>> graphQLStoredProcedureExposedNameToEntityNameMap)
         {
             foreach ((string dataSourceName, ISqlMetadataProvider provider) in _metadataProviders)
             {

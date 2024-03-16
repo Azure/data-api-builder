@@ -287,11 +287,11 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <inheritdoc />
         public void InitializeAsync(
-            Dictionary<string, DatabaseObject> entityDatabaseObject,
+            Dictionary<string, DatabaseObject> entityToDatabaseObject,
             Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap)
         {
             GenerateDatabaseObjectForEntities();
-            EntityToDatabaseObject = entityDatabaseObject ?? EntityToDatabaseObject;
+            EntityToDatabaseObject = entityToDatabaseObject ?? EntityToDatabaseObject;
             GraphQLStoredProcedureExposedNameToEntityNameMap = graphQLStoredProcedureExposedNameToEntityNameMap ?? GraphQLStoredProcedureExposedNameToEntityNameMap;
         }
 

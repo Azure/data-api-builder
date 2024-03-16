@@ -7,9 +7,10 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 {
     /// <summary>
-    /// This is a converter to serialize and deserialize object type
-    /// can object can be of different types int, long, string, datetime. this converter handles different basic object types supported by
-    /// Hotchocolate
+    /// This is a converter to serialize and deserialize default
+    /// can object can be of different types int, long, string, datetime.
+    /// The list of types supported is fetched from :  SchemaConverter.cs  -> CreateValueNodeFromDbObjectNode
+    /// https://github.com/Azure/data-api-builder/blob/main/src/Service.GraphQLBuilder/Sql/SchemaConverter.cs#L218
     /// </summary>
     public class ObjectConverter : JsonConverter<object>
     {

@@ -373,7 +373,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         }
 
         public void InitializeAsync(
-            Dictionary<string, DatabaseObject> dictionary,
+            Dictionary<string, DatabaseObject> entityToDatabaseObject,
             Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap)
         {
             throw new NotImplementedException();

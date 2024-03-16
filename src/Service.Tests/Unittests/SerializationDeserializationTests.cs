@@ -7,6 +7,7 @@ using System.Data;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters;
@@ -39,6 +40,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             InitializeObjects();
 
+            TestTypeNameChanges(_databaseTable, "DatabaseTable");
+
             // Test to catch if there is change in number of properties/fields
             // Note: On Addition of property make sure it is added in following object creation _databaseTable and include in serialization
             // and deserialization test.
@@ -68,6 +71,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             InitializeObjects();
 
+            TestTypeNameChanges(_databaseView, "DatabaseView");
+
             // Test to catch if there is change in number of properties/fields
             // Note: On Addition of property make sure it is added in following object creation _databaseView and include in serialization
             // and deserialization test.
@@ -95,6 +100,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         public void TestDatabaseStoredProcedureSerializationDeserialization()
         {
             InitializeObjects();
+
+            TestTypeNameChanges(_databaseStoredProcedure, "DatabaseStoredProcedure");
 
             // Test to catch if there is change in number of properties/fields
             // Note: On Addition of property make sure it is added in following object creation _databaseStoredProcedure and include in serialization
@@ -247,6 +254,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.IsFalse(_columnDefinition.Equals(col));
         }
 
+        /// <summary>
+        /// Validates serialization and deserilization of Dictionary containing DatabaseTable
+        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict
+        /// </summary>
+        [TestMethod]
+        public void TestDictionaryDatabaseObjectSerializationDeserialization()
+        {
+            InitializeObjects();
+
+            Dictionary<string, DatabaseObject> dict = new () { { "person", _databaseTable } };
+
+            string serializedDict = JsonSerializer.Serialize(dict, _options);
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serializedDict, _options)!;
+
+            DatabaseTable deserializedDatabaseTable = (DatabaseTable)deserializedDict["person"];
+
+            Assert.AreEqual(deserializedDatabaseTable.SourceType, _databaseTable.SourceType);
+            Assert.AreEqual(deserializedDatabaseTable.FullName, _databaseTable.FullName);
+            deserializedDatabaseTable.Equals(_databaseTable);
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.SourceDefinition, _databaseTable.SourceDefinition, "FirstName");
+            VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.TableDefinition, _databaseTable.TableDefinition, "FirstName");
+        }
+
+        /// <summary>
+        /// Test to check the impact of version change in TypeName
+        /// </summary>
+        [TestMethod]
+        public void TestTypeNameVersionChangeImpact()
+        {
+            InitializeObjects();
+
+            Dictionary<string, DatabaseObject> dict = new() { { "person", _databaseTable } };
+
+            string serializedDict = JsonSerializer.Serialize(dict, _options);
+            string pattern = @"(Version=)\d+\.\d+\.\d+\.\d+";
+
+            // Define the replacement version number
+            string replacement = "Version=2.0.0.0";
+
+            // Use Regex.Replace to replace the version number in the JSON string
+            string modifiedJsonString = Regex.Replace(serializedDict, pattern, replacement);
+
+            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(modifiedJsonString, _options);
+            DatabaseTable deserializedDatabaseTable = (DatabaseTable)deserializedDict["person"];
+            Assert.AreEqual(deserializedDatabaseTable.SourceType, _databaseTable.SourceType);
+
+            // Define the replacement version number
+            replacement = "Version=0.0.9";
+
+            // Use Regex.Replace to replace the version number in the JSON string
+            modifiedJsonString = Regex.Replace(serializedDict, pattern, replacement);
+
+            deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(modifiedJsonString, _options);
+            deserializedDatabaseTable = (DatabaseTable)deserializedDict["person"];
+            Assert.AreEqual(deserializedDatabaseTable.SourceType, _databaseTable.SourceType);
+        }
+
         private void InitializeObjects()
         {
             _options = new()
@@ -303,6 +367,45 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             };
             _databaseStoredProcedure.StoredProcedureDefinition.Columns.Add("FirstName", _columnDefinition);
             _databaseStoredProcedure.StoredProcedureDefinition.Parameters.Add("Id", _parameterDefinition);
+        }
+
+        /// <summary>
+        /// During serialization we add TypeName to the DatabaseObject based on its type.
+        /// If the code refactor then this change will catch that as GraphQL workload would be impacted.
+        /// We will have artifacts with TypeName with old project directory/ location of this class, hence during deserialization if object is not in
+        /// that location it will fail.
+        /// [Note] : is this test fails notify the graphql workload team.
+        /// </summary>
+        private void TestTypeNameChanges(DatabaseObject databaseobject, string objectName)
+        {
+            Dictionary<string, DatabaseObject> dict = new();
+            dict.Add("person", databaseobject);
+            string jsonString = JsonSerializer.Serialize(dict, _options);
+
+            // Find the start index of TypeName
+            int typeNameIndex = jsonString.IndexOf("\"TypeName\":\"", StringComparison.Ordinal);
+
+            if (typeNameIndex != -1)
+            {
+                // Find the end index of TypeName
+                int endIndex = jsonString.IndexOf("\",", typeNameIndex + 11, StringComparison.Ordinal);
+
+                if (endIndex != -1)
+                {
+                    // Extract TypeName
+                    string typeName = jsonString.Substring(typeNameIndex + 11, endIndex - typeNameIndex - 11).TrimStart('\"');
+
+                    // Split TypeName into two halves
+                    string[] halves = typeName.Split(',');
+
+                    string namespaceString = halves[0].Trim();
+                    Assert.IsTrue(namespaceString.Contains("Azure.DataApiBuilder.Config.DatabasePrimitives"));
+                    Assert.AreEqual(namespaceString, "Azure.DataApiBuilder.Config.DatabasePrimitives."+objectName);
+
+                    string projectNameString = halves[1].Trim();
+                    Assert.AreEqual(projectNameString, "Azure.DataApiBuilder.Config");
+                }
+            }
         }
 
         private static void VerifySourceDefinitionSerializationDeserialization(SourceDefinition expectedSourceDefinition, SourceDefinition deserializedSourceDefinition, string columnValue, bool isStoredProcedure = false)

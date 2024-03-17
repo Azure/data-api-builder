@@ -138,18 +138,10 @@
               "action": "delete"
             }
           ]
-        },
-        {
-          "role": "item-level-permission-role",
-          "actions": [
-            {
-              "action": "read"
-            }
-          ]
         }
       ]
     },
-    "Star": {
+    "StarAlias": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -200,7 +192,7 @@
         }
       ]
     },
-    "Tag": {
+    "TagAlias": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -301,12 +293,22 @@
       },
       "permissions": [
         {
+          "role": "field-mutation-with-read-permission",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
           "role": "anonymous",
           "actions": [
             {
               "action": "read",
               "fields": {
-                "exclude": [],
+                "exclude": [
+                  "*"
+                ],
                 "include": [
                   "*"
                 ]
@@ -473,7 +475,7 @@
         }
       ]
     },
-    "MoreAttribute": {
+    "MoreAttrAlias": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -482,78 +484,6 @@
         "type": {
           "singular": "MoreAttribute",
           "plural": "MoreAttributes"
-        }
-      },
-      "rest": {
-        "enabled": false
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "update",
-              "fields": {
-                "exclude": [
-                  "*"
-                ]
-              }
-            },
-            {
-              "action": "read",
-              "fields": {
-                "exclude": [
-                  "name"
-                ],
-                "include": [
-                  "id"
-                ]
-              }
-            },
-            {
-              "action": "create",
-              "fields": {
-                "exclude": [
-                  "name"
-                ],
-                "include": [
-                  "id"
-                ]
-              }
-            },
-            {
-              "action": "delete"
-            }
-          ]
-        },
-        {
-          "role": "authenticated",
-          "actions": [
-            {
-              "action": "create"
-            },
-            {
-              "action": "read"
-            },
-            {
-              "action": "update"
-            },
-            {
-              "action": "delete"
-            }
-          ]
-        }
-      ]
-    },
-    "InvalidAuthModel": {
-      "source": {
-        "object": "graphqldb.invalidAuthModel"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "invalidAuthModel",
-          "plural": "invalidAuthModels"
         }
       },
       "rest": {

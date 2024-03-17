@@ -18,6 +18,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
     public class CosmosSqlMetadataProvider : ISqlMetadataProvider
     {
+        private ODataParser _oDataParser = new();
+
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
@@ -70,28 +72,18 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
-            GenerateEdmModel();
             ExtractPathsFromSchema();
+
+            InitODataParser();
         }
 
-        private void GenerateEdmModel()
+        /// <summary>
+        /// Initialize OData parser by building OData model.
+        /// The parser will be used for parsing filter clause and order by clause.
+        /// </summary>
+        private void InitODataParser()
         {
-            String NAMESPACE = "DEFAULT_NAMESPACE";
-
-            EdmEntityContainer container = new(NAMESPACE, "DEFAULT_CONTAINER_NAME");
-
-            foreach (ObjectTypeDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
-            {
-                EdmEntityType edmEntity = new(NAMESPACE, typeDefinition.Name.Value);
-                foreach (FieldDefinitionNode field in typeDefinition.Fields)
-                {
-                    edmEntity.AddStructuralProperty(field.Name.Value, EdmPrimitiveTypeKind.String, false);
-                }
-
-                container.AddEntitySet(name: typeDefinition.Name.Value, edmEntity);
-            }
-
-            EdmModel.AddElement(container);
+            _oDataParser.BuildModel(GraphQLSchemaRoot);
         }
 
         private void ExtractPathsFromSchema()
@@ -350,7 +342,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public ODataParser GetODataParser()
         {
-            throw new NotImplementedException();
+            return _oDataParser;
         }
 
         public IQueryBuilder GetQueryBuilder()

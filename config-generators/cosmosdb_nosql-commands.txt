@@ -5,6 +5,7 @@ update Planet --config "dab-config.CosmosDb_NoSql.json" --permissions "authentic
 update Planet --config "dab-config.CosmosDb_NoSql.json" --permissions "limited-read-role:read"
 update Planet --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:read"
 add Character --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.planet" --permissions "anonymous:create,read,update,delete" --graphql "Character:Characters"
+update Character --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:read"
 add Star --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.planet" --permissions "anonymous:create,read,update,delete" --graphql "Star:Stars"
 update Star --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.planet" --permissions "authenticated:create,read,update,delete"
 add Tag --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.planet" --permissions "anonymous:create,read,update,delete" --graphql "Tag:Tags"

@@ -141,7 +141,7 @@
         }
       ]
     },
-    "StarAlias": {
+    "Star": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -192,7 +192,7 @@
         }
       ]
     },
-    "TagAlias": {
+    "Tag": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -475,7 +475,7 @@
         }
       ]
     },
-    "MoreAttrAlias": {
+    "MoreAttribute": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -695,6 +695,61 @@
         {
           "role": "only-delete-role",
           "actions": [
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
+    "InvalidAuthModel": {
+      "source": {
+        "object": "graphqldb.invalidAuthModelContainer"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "InvalidAuthModel",
+          "plural": "InvalidAuthModels"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id"
+                ]
+              }
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id"
+                ]
+              }
+            },
             {
               "action": "delete"
             }

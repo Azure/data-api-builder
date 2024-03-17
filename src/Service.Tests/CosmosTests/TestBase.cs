@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests;
 public class TestBase
 {
     internal const string DATABASE_NAME = "graphqldb";
-    // Intentionally removed name attibute from Planet model to test scenario where the 'name' attribute
+    // Intentionally removed name attribute from Planet model to test scenario where the 'name' attribute
     // is not explicitly added in the schema
     internal const string GRAPHQL_SCHEMA = @"
 type Character {
@@ -67,7 +67,7 @@ type Tag {
     name : String
 }
 
-type Moon @authorize(policy: ""Crater"") {
+type Moon {
     id : ID,
     name : String,
     details : String,
@@ -101,7 +101,19 @@ type MoreAttribute {
     id : ID,
     name : String,
     type: String @authorize(roles: [""authenticated""])
-}";
+}
+
+type InvalidAuthModel @model @authorize(policy: ""Crater"") {
+    id : ID!,
+    name : String
+}
+
+type PlanetAgain @model {
+    id : ID,
+    name : String,
+    type: String @authorize(roles: [""authenticated""])
+}
+";
 
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 

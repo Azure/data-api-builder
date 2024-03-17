@@ -150,7 +150,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(_context);
             if (httpContext is not null)
             {
-                AuthorizationPolicyHelpers.ProcessAuthorizationPoliciesForCosmos(
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
                     EntityActionOperation.Read,
                     this,
                     httpContext,

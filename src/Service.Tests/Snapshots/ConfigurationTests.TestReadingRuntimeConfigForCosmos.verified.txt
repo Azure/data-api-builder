@@ -90,6 +90,14 @@
                 Action: Read
               }
             ]
+          },
+          {
+            Role: item-level-permission-role,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
           }
         ]
       }
@@ -124,55 +132,12 @@
                 Action: Delete
               }
             ]
-          }
-        ]
-      }
-    },
-    {
-      StarAlias: {
-        Source: {
-          Object: graphqldb.planet
-        },
-        GraphQL: {
-          Singular: Star,
-          Plural: Stars,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: false
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: Create
-              },
-              {
-                Action: Read
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
-              }
-            ]
           },
           {
-            Role: authenticated,
+            Role: item-level-permission-role,
             Actions: [
               {
-                Action: Create
-              },
-              {
                 Action: Read
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
               }
             ]
           }
@@ -180,7 +145,7 @@
       }
     },
     {
-      TagAlias: {
+      Tag: {
         Source: {
           Object: graphqldb.planet
         },
@@ -282,28 +247,26 @@
             Role: field-mutation-with-read-permission,
             Actions: [
               {
-                Action: Update,
+                Action: Read
+              }
+            ]
+          },
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read,
                 Fields: {
                   Exclude: [
-                    name
+                    *
                   ],
                   Include: [
-                    id,
-                    type
+                    *
                   ]
                 }
               },
               {
-                Action: Delete,
-                Fields: {
-                  Exclude: [
-                    name
-                  ],
-                  Include: [
-                    id,
-                    type
-                  ]
-                }
+                Action: Create
               },
               {
                 Action: Create,

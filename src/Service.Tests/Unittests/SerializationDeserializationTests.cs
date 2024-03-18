@@ -263,7 +263,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             InitializeObjects();
 
-            Dictionary<string, DatabaseObject> dict = new () { { "person", _databaseTable } };
+            Dictionary<string, DatabaseObject> dict = new() { { "person", _databaseTable } };
 
             string serializedDict = JsonSerializer.Serialize(dict, _options);
             Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(serializedDict, _options)!;
@@ -400,7 +400,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
                     string namespaceString = halves[0].Trim();
                     Assert.IsTrue(namespaceString.Contains("Azure.DataApiBuilder.Config.DatabasePrimitives"));
-                    Assert.AreEqual(namespaceString, "Azure.DataApiBuilder.Config.DatabasePrimitives."+objectName);
+                    Assert.AreEqual(namespaceString, "Azure.DataApiBuilder.Config.DatabasePrimitives." + objectName);
 
                     string projectNameString = halves[1].Trim();
                     Assert.AreEqual(projectNameString, "Azure.DataApiBuilder.Config");

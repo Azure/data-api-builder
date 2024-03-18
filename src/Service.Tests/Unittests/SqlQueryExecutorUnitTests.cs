@@ -194,7 +194,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     sqltext: string.Empty,
                     parameters: new Dictionary<string, DbConnectionParam>(),
                     dataReaderHandler: null,
-                    dataSourceName:String.Empty,
+                    dataSourceName: String.Empty,
                     httpContext: null,
                     args: null);
             });

@@ -16,6 +16,7 @@ public class JsonConfigSchemaValidator
 {
     private ILogger<JsonConfigSchemaValidator> _logger;
     private IFileSystem _fileSystem;
+    private HttpClient _httpClient = new();
 
     /// <summary> 
     /// Sets the logger and file system for the JSON config schema validator. 
@@ -26,6 +27,19 @@ public class JsonConfigSchemaValidator
     {
         _logger = jsonSchemaValidatorLogger;
         _fileSystem = fileSystem;
+    }
+
+    /// <summary> 
+    /// Sets the logger, file system, and HttpClient for the JSON config schema validator. 
+    /// </summary> 
+    /// <param name="jsonSchemaValidatorLogger">The logger to use for the JSON schema validator.</param> 
+    /// <param name="fileSystem">The file system to use for the JSON schema validator.</param>
+    /// <param name="httpClient">The http client to use for the JSON schema validator.</param>
+    public JsonConfigSchemaValidator(ILogger<JsonConfigSchemaValidator> jsonSchemaValidatorLogger, IFileSystem fileSystem, HttpClient httpClient)
+    {
+        _logger = jsonSchemaValidatorLogger;
+        _fileSystem = fileSystem;
+        _httpClient = httpClient;
     }
 
     /// <summary> 
@@ -71,13 +85,10 @@ public class JsonConfigSchemaValidator
         {
             try
             {
-                using (HttpClient client = new())
-                {
-                    // Send a GET request to the URL specified in runtimeConfig.Schema to get the JSON schema.
-                    HttpResponseMessage response = await client.GetAsync(runtimeConfig.Schema);
-                    string jsonSchema = await response.Content.ReadAsStringAsync();
-                    return jsonSchema;
-                }
+                // Send a GET request to the URL specified in runtimeConfig.Schema to get the JSON schema.
+                HttpResponseMessage response = await _httpClient.GetAsync(runtimeConfig.Schema);
+                string jsonSchema = await response.Content.ReadAsStringAsync();
+                return jsonSchema;
             }
             catch (Exception e)
             {

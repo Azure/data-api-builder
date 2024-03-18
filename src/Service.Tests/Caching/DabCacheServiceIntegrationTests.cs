@@ -422,9 +422,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                         It.IsAny<string>(),
                         It.IsAny<IDictionary<string, DbConnectionParam>>(),
                         It.IsAny<Func<DbDataReader?, List<string>?, Task<JsonElement?>>>(),
+                        It.IsAny<string>(),
                         httpContext,
-                        args,
-                        It.IsAny<string>()).Result)
+                        args).Result)
                         .Returns((JsonElement?)null);
                     break;
                 case ExecutorReturnType.Exception:
@@ -432,9 +432,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                         It.IsAny<string>(),
                         It.IsAny<IDictionary<string, DbConnectionParam>>(),
                         It.IsAny<Func<DbDataReader?, List<string>?, Task<JsonElement?>>>(),
+                        It.IsAny<string>(),
                         httpContext,
-                        args,
-                        It.IsAny<string>()).Result)
+                        args).Result)
                         .Throws(new DataApiBuilderException(
                             message: "DB ERROR",
                             statusCode: HttpStatusCode.InternalServerError,
@@ -446,9 +446,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
                         It.IsAny<string>(),
                         It.IsAny<IDictionary<string, DbConnectionParam>>(),
                         It.IsAny<Func<DbDataReader?, List<string>?, Task<JsonElement?>>>(),
+                        It.IsAny<string>(),
                         httpContext,
-                        args,
-                        It.IsAny<string>()).Result)
+                        args).Result)
                         .Returns(executorJsonResponse.RootElement.Clone());
                     break;
             }

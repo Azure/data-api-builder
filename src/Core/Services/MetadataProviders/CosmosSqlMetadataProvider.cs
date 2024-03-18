@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <summary>
         /// This dictionary contains entity name as key (or its alias) and its path(s) in the graphQL schema as value which will be used in the generated conditions for the entity
         /// </summary>
-        public Dictionary<string, List<object>> EntityPathsForPrefix { get; set; } = new();
+        public Dictionary<string, List<EntityPrefix>> EntityPathsForPrefix { get; set; } = new();
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -93,6 +93,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             _oDataParser.BuildModel(GraphQLSchemaRoot);
         }
 
+        /// <summary>
+        /// Parse the schema to get the entity paths for prefixes.
+        /// It will collect all the paths for each entity and its field, starting from the container model.
+        /// </summary>
         private void ParseSchemaGraphQLFieldsForPrefixes()
         {
             Dictionary<string, ObjectTypeDefinitionNode> schemaDefinitions = new();
@@ -107,8 +111,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     if (node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
                     {
-                        string modelName =  GraphQLNaming.ObjectTypeToEntityName(node); ;
-                        EntityPathsForPrefix.Add(modelName, new List<object> { new { path = GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, type = "" } });
+                        string modelName =  GraphQLNaming.ObjectTypeToEntityName(node);
+
+                        EntityPathsForPrefix.Add(modelName, new List<EntityPrefix>() { new(Path: GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS) });
 
                         ProcessSchema(node.Fields, schemaDefinitions, GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, null, null);
                     }
@@ -116,11 +121,19 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
         }
 
+        /// <summary>
+        /// Once container is found, it will traverse the fields and inner fields to get the paths for each entity.
+        /// </summary>
+        /// <param name="fields"></param>
+        /// <param name="schemaDocument"></param>
+        /// <param name="currentPath"></param>
+        /// <param name="previousPath"></param>
+        /// <param name="prevField"></param>
         private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
             string? previousPath,
-            FieldDefinitionNode? prevfield)
+            FieldDefinitionNode? prevField)
         {
             int tableCounter = 0;
 
@@ -128,43 +141,45 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             foreach (FieldDefinitionNode field in fields)
             {
                 string entityType = field.Type.NamedType().Name.Value;
-                bool isArrayType = field.Type is ListTypeNode;
+                // If the entity is not in the runtime config, skip it
+                if (!_runtimeConfig.Entities.ContainsKey(entityType))
+                {
+                    continue;
+                }
 
+                // If the field is an array type, we need to add an alias to the table because we need to a JOIN to the same table
                 string? alias = null;
-                if(isArrayType)
+                bool isArrayType = field.Type is ListTypeNode;
+                if (isArrayType)
                 {
                     alias = $"table{tableCounter++}";
                 }
 
-                if (_runtimeConfig.Entities.ContainsKey(entityType))
+                if (EntityPathsForPrefix.ContainsKey(entityType))
                 {
-                    if (EntityPathsForPrefix.ContainsKey(entityType))
+                    if (previousPath is not null)
                     {
-                        if (previousPath is not null)
-                        {
-                            EntityPathsForPrefix[entityType].Add(new { path = previousPath, entityName = prevfield?.Name.Value, type = field.Type, alias = currentPath , isfilterAvl = false});
-                        }
-
-                        EntityPathsForPrefix[entityType].Add(new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias = alias, isfilterAvl = true });
-                    }
-                    else
-                    {
-                        EntityPathsForPrefix.Add(entityType, new List<object> { new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias =  alias, isfilterAvl = true } });
-                        if (previousPath is not null)
-                        {
-                            EntityPathsForPrefix[entityType].Add(new { path = previousPath, entityName = prevfield?.Name.Value, type = field.Type, alias = currentPath, isfilterAvl = false });
-                        }
-
+                        EntityPathsForPrefix[entityType].Add(new (Path: previousPath, EntityName: prevField?.Name.Value, Alias: currentPath , IsFilterAvailable: false));
                     }
 
-                    if (isArrayType)
+                    EntityPathsForPrefix[entityType].Add(new(Path: currentPath, EntityName: field.Name.Value, Alias: alias, IsFilterAvailable: true ));
+                }
+                else
+                {
+                    EntityPathsForPrefix.Add(entityType, new List<EntityPrefix>() { new(Path: currentPath, EntityName: field.Name.Value, Alias: alias, IsFilterAvailable: true) });
+                    if (previousPath is not null)
                     {
-                        ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{alias}", currentPath, field);
+                        EntityPathsForPrefix[entityType].Add(new (Path: previousPath, EntityName: prevField?.Name.Value, Alias: currentPath, IsFilterAvailable: false ));
                     }
-                    else
-                    {
-                        ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{currentPath}.{field.Name.Value}", null, null);
-                    }
+                }
+
+                if (isArrayType)
+                {
+                    ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{alias}", currentPath, field);
+                }
+                else
+                {
+                    ProcessSchema(schemaDocument[entityType].Fields, schemaDocument, $"{currentPath}.{field.Name.Value}", null, null);
                 }
             }
         }

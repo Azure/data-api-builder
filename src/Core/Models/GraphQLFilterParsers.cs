@@ -326,7 +326,7 @@ public class GQLFilterParser
 
         if (string.IsNullOrEmpty(tableAlias))
         {
-            tableAlias = $"table{_tableCounter?.Next()}";
+            tableAlias = $"table{queryStructure.GetTableAlias()}";
         }
 
         // Create new query structure for the subquery

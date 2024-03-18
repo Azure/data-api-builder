@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private readonly IMiddlewareContext _context;
         private readonly string _containerAlias = GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS;
-        private IncrementingInteger _tableCounter = new();
+        public IncrementingInteger TableCounter { get;} = new();
 
         public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
 
@@ -46,7 +46,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public string GetTableAlias()
         {
-            return $"table{_tableCounter.Next()}";
+            return $"table{TableCounter.Next()}";
         }
 
         public CosmosQueryStructure(

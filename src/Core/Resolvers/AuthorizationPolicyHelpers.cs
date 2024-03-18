@@ -71,9 +71,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else if (sqlMetadataProvider is CosmosSqlMetadataProvider cosmosSqlMetadataProvider &&
                 queryStructure is CosmosQueryStructure cosmosQueryStructure)
             {
-                Dictionary<string, List<object>> entityPaths = cosmosSqlMetadataProvider.EntityPathsForPrefix;
+                Dictionary<string, List<EntityPrefix>> entityPaths = cosmosSqlMetadataProvider.EntityPathsForPrefix;
 
-                foreach (KeyValuePair<string, List<object>> entity in entityPaths)
+                foreach (KeyValuePair<string, List<EntityPrefix>> entity in entityPaths)
                 {
                     ProcessFilter(
                         context: context,
@@ -90,24 +90,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 return;
                             }
 
-                            foreach (dynamic pathConfig in entity.Value)
+                            foreach (EntityPrefix pathConfig in entity.Value)
                             {
-                                string configPath = pathConfig.path;
-                                if (pathConfig.alias is not null)
+                                string configPath = pathConfig.Path;
+                                if (pathConfig.Alias is not null)
                                 {
+                                    if(pathConfig.EntityName is null)
+                                    {
+                                        continue;
+                                    }
+
+                                    //Increment Table counter with the new JOIN
+                                    cosmosQueryStructure.TableCounter.Next();
+
                                     cosmosQueryStructure.Joins ??= new();
                                     cosmosQueryStructure.Joins.Push(new CosmosJoinStructure(
-                                                DbObject: new DatabaseTable(schemaName: pathConfig.path, tableName: pathConfig.entityName),
-                                                TableAlias: pathConfig.alias));
+                                                DbObject: new DatabaseTable(schemaName: pathConfig.Path, tableName: pathConfig.EntityName),
+                                                TableAlias: pathConfig.Alias));
 
-                                    configPath = pathConfig.alias;
+                                    configPath = pathConfig.Alias;
                                 }
                                 else
                                 {
-                                    configPath += "." + pathConfig.entityName;
+                                    configPath += "." + pathConfig.EntityName;
                                 }
 
-                                if (pathConfig.isfilterAvl)
+                                if (pathConfig.IsFilterAvailable is not null && pathConfig.IsFilterAvailable.Value)
                                 {
                                     if (!cosmosQueryStructure.DbPolicyPredicatesForOperations.TryGetValue(operationType, out string? _))
                                     {

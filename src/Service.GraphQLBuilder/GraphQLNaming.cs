@@ -31,6 +31,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string LINKING_OBJECT_PREFIX = "linkingObject";
 
         /// <summary>
+        /// For any CosmosDB Query, the default alias for the container is 'c'
+        /// </summary>
+        public const string COSMOSDB_CONTAINER_DEFAULT_ALIAS = "c";
+
+        /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
         /// Completely removes invalid characters from the input parameter: name.
         /// Splits up the name into segments where *space* is the splitting token.

@@ -310,7 +310,7 @@ public class GQLFilterParser
 
         if (string.IsNullOrEmpty(tableAlias))
         {
-            tableAlias = $"table{queryStructure.GetTableAlias()}";
+            tableAlias = queryStructure.GetTableAlias();
         }
 
         // Create new query structure for the subquery
@@ -328,6 +328,7 @@ public class GQLFilterParser
         cosmosQueryStructure.DatabaseObject.Name = tableAlias;
         cosmosQueryStructure.SourceAlias = tableAlias;
         cosmosQueryStructure.EntityName = entityName;
+        cosmosQueryStructure.TableCounter = queryStructure.TableCounter;
 
         // Obtain the predicates and join for the subquery and copy them to main query
         PredicateOperand joinPredicate = new(

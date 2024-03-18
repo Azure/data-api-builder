@@ -6,16 +6,16 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     public record EntityPrefix
     {
         public string Path { get; }
-        public string? EntityName { get; }
+        public string? ColumnName { get; }
         public string? Alias { get; }
-        public bool? IsFilterAvailable { get; }
+        public string? EntityName { get; }
 
-        public EntityPrefix(string Path, string? EntityName = null, string? Alias = null, bool? IsFilterAvailable = null)
+        public EntityPrefix(string Path, string? EntityName, string? ColumnName = null, string? Alias = null)
         {
             this.Path = Path;
-            this.EntityName = EntityName;
+            this.ColumnName = ColumnName;
             this.Alias = Alias;
-            this.IsFilterAvailable = IsFilterAvailable;
+            this.EntityName = EntityName;
         }
     }
 }

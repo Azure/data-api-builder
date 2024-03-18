@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 string configPath = pathConfig.Path;
                                 if (pathConfig.Alias is not null)
                                 {
-                                    if(pathConfig.EntityName is null)
+                                    if(pathConfig.ColumnName is null)
                                     {
                                         continue;
                                     }
@@ -105,29 +105,29 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                                     cosmosQueryStructure.Joins ??= new();
                                     cosmosQueryStructure.Joins.Push(new CosmosJoinStructure(
-                                                DbObject: new DatabaseTable(schemaName: pathConfig.Path, tableName: pathConfig.EntityName),
+                                                DbObject: new DatabaseTable(schemaName: pathConfig.Path, tableName: pathConfig.ColumnName),
                                                 TableAlias: pathConfig.Alias));
 
                                     configPath = pathConfig.Alias;
                                 }
                                 else
                                 {
-                                    configPath += "." + pathConfig.EntityName;
+                                    configPath += "." + pathConfig.ColumnName;
                                 }
 
-                                if (pathConfig.IsFilterAvailable is not null && pathConfig.IsFilterAvailable.Value)
+                                if (pathConfig.EntityName == entity.Key)
                                 {
-                                    if (!cosmosQueryStructure.DbPolicyPredicatesForOperations.TryGetValue(operationType, out string? _))
-                                    {
-                                        cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
-                                                        = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
-                                    }
-                                    else
-                                    {
-                                        cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
-                                                        += " AND " + filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
-                                    }
+                                if (!cosmosQueryStructure.DbPolicyPredicatesForOperations.TryGetValue(operationType, out string? _))
+                                {
+                                    cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
+                                                    = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
                                 }
+                                else
+                                {
+                                    cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
+                                                    += " AND " + filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
+                                }
+                              }
                             }
                         });
                 }

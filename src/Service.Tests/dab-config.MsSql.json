@@ -3024,15 +3024,7 @@
             }
           ]
         }
-      ],
-      "relationships": {
-        "User_NonAutogenRelationshipColumn": {
-          "cardinality": "one",
-          "target.entity": "User_NonAutogenRelationshipColumn",
-          "source.fields": [ "username" ],
-          "target.fields": [ "username" ]
-        }
-      }
+      ]
     },
     "User_AutogenRelationshipColumn": {
       "source": {
@@ -3092,15 +3084,7 @@
             }
           ]
         }
-      ],
-      "relationships": {
-        "User_AutogenRelationshipColumn": {
-          "cardinality": "one",
-          "target.entity": "User_AutogenRelationshipColumn",
-          "source.fields": [ "profileid" ],
-          "target.fields": [ "userid" ]
-        }
-      }
+      ]
     },
     "User_AutogenToNonAutogenRelationshipColumn": {
       "source": {
@@ -3160,15 +3144,7 @@
             }
           ]
         }
-      ],
-      "relationships": {
-        "User_NonAutogenToAutogenRelationshipColumn": {
-          "cardinality": "one",
-          "target.entity": "User_AutogenToNonAutogenRelationshipColumn",
-          "source.fields": [ "userid", "username" ],
-          "target.fields": [ "userid", "username" ]
-        }
-      }
+      ]
     }
   }
 }

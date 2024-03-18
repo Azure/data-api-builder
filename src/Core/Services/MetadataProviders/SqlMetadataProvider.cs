@@ -1497,7 +1497,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
             PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(
-                queryForForeignKeyInfo, parameters, SummarizeFkMetadata, httpContext: null, args: null, _dataSourceName);
+                queryForForeignKeyInfo, parameters, SummarizeFkMetadata, _dataSourceName, httpContext: null, args: null);
 
             if (PairToFkDefinition is not null)
             {

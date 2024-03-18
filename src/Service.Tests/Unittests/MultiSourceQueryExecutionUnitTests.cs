@@ -12,8 +12,6 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
-using Azure.DataApiBuilder.Core.Services;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.Services;
@@ -121,11 +119,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Mock<RuntimeConfigLoader> mockLoader = new(null);
             mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>(), It.IsAny<string>())).Returns(true);
 
-            Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
-            Mock<ILogger<ISqlMetadataProvider>> logger = new();
             RuntimeConfigProvider provider = new(mockLoader.Object);
-
-            IMetadataProviderFactory metadataProviderFactory = new MetadataProviderFactory(provider, queryManagerFactory.Object, logger.Object, null);
 
             // Using a sample schema file to test multi-source query.
             // Schema file contains some sample entities that we can test against.

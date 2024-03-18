@@ -74,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             IReadOnlyList<object> actualExecuteQueryAsyncArguments = mockQueryExecutor.Invocations[0].Arguments;
             Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText " + ERROR_FAILED_ARG_PASSTHROUGH);
             Assert.AreEqual(expected: queryMetadata.QueryParameters, actual: actualExecuteQueryAsyncArguments[1], message: "Query parameters " + ERROR_FAILED_ARG_PASSTHROUGH);
-            Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[5], message: "Data source " + ERROR_FAILED_ARG_PASSTHROUGH);
+            Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[3], message: "Data source " + ERROR_FAILED_ARG_PASSTHROUGH);
         }
 
         /// <summary>
@@ -217,7 +217,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             IReadOnlyList<object> actualExecuteQueryAsyncArguments = mockQueryExecutor.Invocations[0].Arguments;
             Assert.AreEqual(expected: queryMetadata.QueryText, actual: actualExecuteQueryAsyncArguments[0], message: "QueryText " + ERROR_FAILED_ARG_PASSTHROUGH);
             Assert.AreEqual(expected: queryMetadata.QueryParameters, actual: actualExecuteQueryAsyncArguments[1], message: "Query parameters " + ERROR_FAILED_ARG_PASSTHROUGH);
-            Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[5], message: "Data source " + ERROR_FAILED_ARG_PASSTHROUGH);
+            Assert.AreEqual(expected: queryMetadata.DataSource, actual: actualExecuteQueryAsyncArguments[3], message: "Data source " + ERROR_FAILED_ARG_PASSTHROUGH);
 
             // Validate that the null value retrned by the factory method is propogated through to and returned by the cache service.
             Assert.AreEqual(expected: null, actual: result, message: "Expected factory to return a null result.");

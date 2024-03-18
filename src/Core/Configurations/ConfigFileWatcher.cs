@@ -38,6 +38,7 @@ public class ConfigFileWatcher
 
             if (!_configProvider.IsLateConfigured && _configProvider.GetConfig().IsDevelopmentMode())
             {
+                // pass along the original default data source name for consistency within runtime config's data structures
                 _configProvider.HotReloadConfig();
             }
         }

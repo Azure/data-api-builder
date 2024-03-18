@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Service.Services
     /// This helper class provides the various resolvers and middlewares used
     /// during query execution.
     /// </summary>
-    internal sealed class ExecutionHelper
+    public sealed class ExecutionHelper
     {
         internal readonly IQueryEngineFactory _queryEngineFactory;
         internal readonly IMutationEngineFactory _mutationEngineFactory;

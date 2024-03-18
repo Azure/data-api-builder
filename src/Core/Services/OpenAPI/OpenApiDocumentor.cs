@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             OpenApiPaths pathsCollection = new();
 
-            string defaultDataSourceName = _runtimeConfig.GetDefaultDataSourceName();
+            string defaultDataSourceName = _runtimeConfig.DefaultDataSourceName;
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
@@ -952,7 +952,7 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, OpenApiSchema> schemas = new();
 
             // for rest scenario we need the default datasource name.
-            string defaultDataSourceName = _runtimeConfig.GetDefaultDataSourceName();
+            string defaultDataSourceName = _runtimeConfig.DefaultDataSourceName;
             ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(defaultDataSourceName);
 
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)

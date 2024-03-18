@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<EntityActionOperation>? elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
 
             Dictionary<string, DatabaseObject> entitiesToProcess = new();
-            if(queryStructure is BaseSqlQueryStructure baseSqlQueryStructure)
+            if (queryStructure is BaseSqlQueryStructure baseSqlQueryStructure)
             {
                 ProcessFilter(
                     context: context,
@@ -85,7 +85,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         entityDBObject: null,
                         postProcessCallback: (filterClause, _) =>
                         {
-                            if(filterClause is null)
+                            if (filterClause is null)
                             {
                                 return;
                             }
@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 string configPath = pathConfig.Path;
                                 if (pathConfig.Alias is not null)
                                 {
-                                    if(pathConfig.ColumnName is null)
+                                    if (pathConfig.ColumnName is null)
                                     {
                                         continue;
                                     }
@@ -117,17 +117,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                                 if (pathConfig.EntityName == entity.Key)
                                 {
-                                if (!cosmosQueryStructure.DbPolicyPredicatesForOperations.TryGetValue(operationType, out string? _))
-                                {
-                                    cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
-                                                    = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
+                                    if (!cosmosQueryStructure.DbPolicyPredicatesForOperations.TryGetValue(operationType, out string? _))
+                                    {
+                                        cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
+                                                        = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
+                                    }
+                                    else
+                                    {
+                                        cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
+                                                        += " AND " + filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
+                                    }
                                 }
-                                else
-                                {
-                                    cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
-                                                    += " AND " + filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
-                                }
-                              }
                             }
                         });
                 }
@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DatabaseObject? entityDBObject,
             Action<FilterClause?, EntityActionOperation> postProcessCallback)
         {
-            List<FilterClause> filterClauses = new ();
+            List<FilterClause> filterClauses = new();
             foreach (EntityActionOperation elementalOperation in elementalOperations)
             {
                 string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
@@ -155,7 +155,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
                     dbQueryPolicy,
                     entityName: entityName,
-                    resourcePath: (entityDBObject is not null)? $"{entityName}.{entityDBObject.FullName}" : entityName,
+                    resourcePath: (entityDBObject is not null) ? $"{entityName}.{entityDBObject.FullName}" : entityName,
                     sqlMetadataProvider);
 
                 postProcessCallback(filterClause, elementalOperation);

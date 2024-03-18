@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             if (!string.IsNullOrEmpty(predicateString))
-            {   
+            {
                 queryStringBuilder.Append($" {predicateString}");
             }
 

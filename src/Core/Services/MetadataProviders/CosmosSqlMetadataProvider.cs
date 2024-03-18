@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     if (node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
                     {
-                        string modelName =  GraphQLNaming.ObjectTypeToEntityName(node);
+                        string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
 
                         EntityPathsForPrefix.Add(modelName, new List<EntityPrefix>() { new(Path: GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName) });
 

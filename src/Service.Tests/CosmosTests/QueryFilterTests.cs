@@ -890,14 +890,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_Only_AuthorizedArrayItem()
         {
-             string gqlQuery = @"{
+            string gqlQuery = @"{
                  planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : { character: {type: {eq: ""Mars""}}})
                  {
                      items {
                          id
                      }
                  }
-             }";
+            }";
 
             // Now get the item with item level permission
             string clientRoleHeader = "item-level-permission-role";

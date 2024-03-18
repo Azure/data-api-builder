@@ -104,7 +104,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string> inputArgumentKeys;
             if (mutationOperation != EntityActionOperation.Delete)
             {
-                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, parameters);
             }
             else
             {
@@ -165,7 +165,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
-            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[MutationBuilder.ITEM_INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new InvalidDataException("Partition Key field is mandatory");
             }
 
-            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[MutationBuilder.ITEM_INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation

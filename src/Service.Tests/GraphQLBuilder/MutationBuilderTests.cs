@@ -124,8 +124,8 @@ type Foo @model(name:""Foo"") {
                     ),
                 "The type Date is not a known GraphQL type, and cannot be used in this schema."
             );
-            Assert.AreEqual(HttpStatusCode.InternalServerError, ex.StatusCode);
-            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.GraphQLMapping, ex.SubStatusCode);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
         }
 
         [TestMethod]
@@ -910,46 +910,6 @@ type Bar @model(name:""Bar""){
 
         [TestMethod]
         [TestCategory("Mutation Builder - Create")]
-        public void CreateMutationWontCreateNestedModelsOnInput()
-        {
-            string gql =
-                @"
-type Foo @model(name:""Foo"") {
-    id: ID!
-    baz: Baz!
-}
-
-type Baz @model(name:""Baz"") {
-    id: ID!
-    x: String!
-}
-                ";
-
-            DocumentNode root = Utf8GraphQLParser.Parse(gql);
-
-            Dictionary<string, DatabaseType> entityNameToDatabaseType = new()
-            {
-                { "Foo", DatabaseType.MSSQL },
-                { "Baz", DatabaseType.MSSQL }
-            };
-            DocumentNode mutationRoot = MutationBuilder.Build(
-                root,
-                entityNameToDatabaseType,
-                new(new Dictionary<string, Entity> { { "Foo", GenerateEmptyEntity() }, { "Baz", GenerateEmptyEntity() } }),
-                entityPermissionsMap: _entityPermissions
-                );
-
-            ObjectTypeDefinitionNode query = GetMutationNode(mutationRoot);
-            FieldDefinitionNode field = query.Fields.First(f => f.Name.Value == $"createFoo");
-            Assert.AreEqual(1, field.Arguments.Count);
-
-            InputObjectTypeDefinitionNode argType = (InputObjectTypeDefinitionNode)mutationRoot.Definitions.First(d => d is INamedSyntaxNode node && node.Name == field.Arguments[0].Type.NamedType().Name);
-            Assert.AreEqual(1, argType.Fields.Count);
-            Assert.AreEqual("id", argType.Fields[0].Name.Value);
-        }
-
-        [TestMethod]
-        [TestCategory("Mutation Builder - Create")]
         public void CreateMutationWillCreateNestedModelsOnInputForCosmos()
         {
             string gql =
@@ -1112,8 +1072,24 @@ type Foo @model(name:""Foo"") {{
 
             // The permissions are setup for create, update and delete operations.
             // So create, update and delete mutations should get generated.
-            // A Check to validate that the count of mutations generated is 3.
-            Assert.AreEqual(3 * entityNames.Length, mutation.Fields.Count);
+            // A Check to validate that the count of mutations generated is 4 -
+            // 1. 2 Create mutations (point/many) when db supports nested created, else 1.
+            // 2. 1 Update mutation
+            // 3. 1 Delete mutation
+            int totalExpectedMutations = 0;
+            foreach ((_, DatabaseType dbType) in entityNameToDatabaseType)
+            {
+                if (GraphQLUtils.DoesRelationalDBSupportMultipleCreate(dbType))
+                {
+                    totalExpectedMutations += 4;
+                }
+                else
+                {
+                    totalExpectedMutations += 3;
+                }
+            }
+
+            Assert.AreEqual(totalExpectedMutations, mutation.Fields.Count);
 
             for (int i = 0; i < entityNames.Length; i++)
             {

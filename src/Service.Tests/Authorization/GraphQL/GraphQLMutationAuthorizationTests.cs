@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             Dictionary<string, object?> parameters = new()
             {
-                { MutationBuilder.INPUT_ARGUMENT_NAME, mutationInputRaw }
+                { MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, mutationInputRaw }
             };
 
             Dictionary<string, object?> middlewareContextData = new()

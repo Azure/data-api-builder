@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<JsonDocument?> ExecuteAsync(FindRequestContext context)
         {
             // for REST API scenarios, use the default datasource
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
 
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SqlQueryStructure structure = new(

@@ -1332,7 +1332,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public async Task GetJsonSchema_DownloadsSchemaFromUrl()
         {
             // Arrange
-            Mock<HttpMessageHandler> handlerMock = new (MockBehavior.Strict);
+            Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
             string jsonSchemaContent = "{\"type\": \"object\", \"properties\": {\"property1\": {\"type\": \"string\"}}}";
             handlerMock
             .Protected()
@@ -1348,14 +1348,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             })
             .Verifiable();
 
-            HttpClient mockHttpClient = new (handlerMock.Object);
+            HttpClient mockHttpClient = new(handlerMock.Object);
             Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
-            JsonConfigSchemaValidator jsonConfigSchemaValidator = new (schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
+            JsonConfigSchemaValidator jsonConfigSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
 
             string url = "http://example.com/schema.json";
-            RuntimeConfig runtimeConfig = new (
+            RuntimeConfig runtimeConfig = new(
                 Schema: url,
-                DataSource: new (DatabaseType.MSSQL, "connectionString", null),
+                DataSource: new(DatabaseType.MSSQL, "connectionString", null),
                 new RuntimeEntities(new Dictionary<string, Entity>())
             );
 

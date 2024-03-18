@@ -34,7 +34,7 @@
     }
   },
   "entities": {
-    "Planet": {
+    "PlanetAlias": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -144,6 +144,57 @@
           "actions": [
             {
               "action": "read"
+            }
+          ]
+        }
+      ]
+    },
+    "Star": {
+      "source": {
+        "object": "graphqldb.planet"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Star",
+          "plural": "Stars"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
             }
           ]
         }
@@ -296,6 +347,23 @@
             },
             {
               "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "limited-read-role",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id",
+                  "type"
+                ]
+              }
             }
           ]
         }

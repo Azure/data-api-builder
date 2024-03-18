@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else if (sqlMetadataProvider is CosmosSqlMetadataProvider cosmosSqlMetadataProvider &&
                 queryStructure is CosmosQueryStructure cosmosQueryStructure)
             {
-                Dictionary<string, List<object>> entityPaths = cosmosSqlMetadataProvider.EntityPaths;
+                Dictionary<string, List<object>> entityPaths = cosmosSqlMetadataProvider.EntityPathsForPrefix;
 
                 foreach (KeyValuePair<string, List<object>> entity in entityPaths)
                 {

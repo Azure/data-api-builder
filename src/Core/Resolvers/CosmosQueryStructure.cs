@@ -21,7 +21,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     {
         private readonly IMiddlewareContext _context;
         private readonly string _containerAlias = GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS;
-        public IncrementingInteger TableCounter { get;} = new();
+        public IncrementingInteger TableCounter { get; internal set;  } = new();
 
         public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
 

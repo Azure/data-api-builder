@@ -26,8 +26,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
 
+        /// <summary>
+        /// This contains each entity into EDM model convention which will be used to traverse DB Policy filter using ODataParser
+        /// </summary>
         public EdmModel EdmModel { get; set; } = new();
-        public Dictionary<string, List<object>> EntityPaths { get; set; } = new();
+
+        /// <summary>
+        /// This dictionary contains entity name as key (or its alias) and its path(s) in the graphQL schema as value which will be used in the generated conditions for the entity
+        /// </summary>
+        public Dictionary<string, List<object>> EntityPathsForPrefix { get; set; } = new();
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -72,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
-            ExtractPathsFromSchema();
+            ParseSchemaGraphQLFieldsForPrefixes();
 
             InitODataParser();
         }
@@ -86,7 +93,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             _oDataParser.BuildModel(GraphQLSchemaRoot);
         }
 
-        private void ExtractPathsFromSchema()
+        private void ParseSchemaGraphQLFieldsForPrefixes()
         {
             Dictionary<string, ObjectTypeDefinitionNode> schemaDefinitions = new();
             foreach (ObjectTypeDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
@@ -96,15 +103,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             foreach (IDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
             {
-                if (typeDefinition is ObjectTypeDefinitionNode objectType)
+                if (typeDefinition is ObjectTypeDefinitionNode node)
                 {
-                    if (objectType.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
+                    if (node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
                     {
-                        string currentPath = "c";
+                        string modelName =  GraphQLNaming.ObjectTypeToEntityName(node); ;
+                        EntityPathsForPrefix.Add(modelName, new List<object> { new { path = GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, type = "" } });
 
-                        EntityPaths.Add(objectType.Name.Value, new List<object> { new { path = currentPath, type = "" } });
-
-                        ProcessSchema(objectType.Fields, schemaDefinitions, currentPath, null, null);
+                        ProcessSchema(node.Fields, schemaDefinitions, GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, null, null);
                     }
                 }
             }
@@ -132,21 +138,21 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                 if (_runtimeConfig.Entities.ContainsKey(entityType))
                 {
-                    if (EntityPaths.ContainsKey(entityType))
+                    if (EntityPathsForPrefix.ContainsKey(entityType))
                     {
                         if (previousPath is not null)
                         {
-                            EntityPaths[entityType].Add(new { path = previousPath, entityName = prevfield?.Name.Value, type = field.Type, alias = currentPath , isfilterAvl = false});
+                            EntityPathsForPrefix[entityType].Add(new { path = previousPath, entityName = prevfield?.Name.Value, type = field.Type, alias = currentPath , isfilterAvl = false});
                         }
 
-                        EntityPaths[entityType].Add(new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias = alias, isfilterAvl = true });
+                        EntityPathsForPrefix[entityType].Add(new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias = alias, isfilterAvl = true });
                     }
                     else
                     {
-                        EntityPaths.Add(entityType, new List<object> { new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias =  alias, isfilterAvl = true } });
+                        EntityPathsForPrefix.Add(entityType, new List<object> { new { path = currentPath, entityName = field.Name.Value, type = field.Type, alias =  alias, isfilterAvl = true } });
                         if (previousPath is not null)
                         {
-                            EntityPaths[entityType].Add(new { path = previousPath, entityName = prevfield?.Name.Value, type = field.Type, alias = currentPath, isfilterAvl = false });
+                            EntityPathsForPrefix[entityType].Add(new { path = previousPath, entityName = prevfield?.Name.Value, type = field.Type, alias = currentPath, isfilterAvl = false });
                         }
 
                     }

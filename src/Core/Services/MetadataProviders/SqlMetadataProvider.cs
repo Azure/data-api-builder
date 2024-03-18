@@ -290,9 +290,9 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, DatabaseObject> entityToDatabaseObject,
             Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap)
         {
-            GenerateDatabaseObjectForEntities();
             EntityToDatabaseObject = entityToDatabaseObject ?? EntityToDatabaseObject;
             GraphQLStoredProcedureExposedNameToEntityNameMap = graphQLStoredProcedureExposedNameToEntityNameMap ?? GraphQLStoredProcedureExposedNameToEntityNameMap;
+            GenerateExposedToBackingColumnMapsForEntities();
         }
 
         /// <inheritdoc/>

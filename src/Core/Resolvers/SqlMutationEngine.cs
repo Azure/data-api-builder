@@ -277,6 +277,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             queryText,
                             executeQueryStructure.Parameters,
                             queryExecutor.GetJsonArrayAsync,
+                            dataSourceName,
                             GetHttpContext());
 
                     transactionScope.Complete();
@@ -840,9 +841,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         queryString,
                         queryParameters,
                         queryExecutor.ExtractResultSetFromDbDataReader,
+                        dataSourceName,
                         GetHttpContext(),
-                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey,
-                        dataSourceName);
+                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
@@ -991,9 +992,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                        queryString,
                        queryParameters,
                        queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       dataSourceName,
                        GetHttpContext(),
-                       new List<string> { prettyPrintPk, entityName },
-                       dataSourceName);
+                       new List<string> { prettyPrintPk, entityName });
         }
 
         private Dictionary<string, object?> PrepareParameters(RestRequestContext context)

@@ -65,9 +65,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
+            string dataSourceName,
             HttpContext? httpContext = null,
-            List<string>? args = null,
-            string dataSourceName = "")
+            List<string>? args = null)
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {

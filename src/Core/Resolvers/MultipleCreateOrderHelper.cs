@@ -33,17 +33,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="targetNodeValue">Input GraphQL value for target node (could be an object or array).</param>
         public static string GetReferencingEntityName(
             IMiddlewareContext context,
+            string relationshipName,
             string sourceEntityName,
             string targetEntityName,
             ISqlMetadataProvider metadataProvider,
             Dictionary<string, IValueNode?> columnDataInSourceBody,
-            IValueNode? targetNodeValue)
+            IValueNode? targetNodeValue,
+            int nestingLevel)
         {
             if (!metadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) ||
                 !metadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject? targetDbObject))
             {
                 // This should not be hit ideally.
-                throw new Exception("Could not determine definition for source/target entities");
+                throw new Exception($"Could not determine definition for source: {sourceEntityName} and target: {targetEntityName} entities " +
+                    $"for relationship: {relationshipName} at level: {nestingLevel}");
             }
 
             string referencingEntityNameBasedOnEntityMetadata = DetermineReferencingEntityBasedOnEntityRelationshipMetadata(
@@ -68,12 +71,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 metadataProvider: metadataProvider);
 
             return DetermineReferencingEntityBasedOnRequestBody(
+                relationshipName: relationshipName
                 sourceEntityName: sourceEntityName,
                 targetEntityName: targetEntityName,
                 sourceDbObject: sourceDbObject,
                 targetDbObject: targetDbObject,
                 columnDataInSourceBody: columnDataInSourceBody,
-                columnDataInTargetBody: columnDataInTargetBody);
+                columnDataInTargetBody: columnDataInTargetBody,
+                nestingLevel: nestingLevel);
         }
 
         /// <summary>
@@ -96,10 +101,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
             DatabaseTable targetDbTable = (DatabaseTable)targetDbObject;
             RelationShipPair sourceTargetPair = new(sourceDbTable, targetDbTable);
-            RelationShipPair targetSourcePair = new(targetDbTable, sourceDbTable);
             SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
-            string referencingEntityName = string.Empty;
             List<ForeignKeyDefinition> foreignKeys = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+            HashSet<string> referencingEntityNames = new();
             foreach (ForeignKeyDefinition foreignKey in foreignKeys)
             {
                 if (foreignKey.ReferencingColumns.Count == 0)
@@ -107,21 +111,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
-                if (foreignKey.Pair.Equals(targetSourcePair) && referencingEntityName.Equals(sourceEntityName) ||
-                    foreignKey.Pair.Equals(sourceTargetPair) && referencingEntityName.Equals(targetEntityName))
-                {
-                    // This indicates that we have 2 ForeignKeyDefinitions in which for one of them, the referencing entity is the source entity
-                    // and for the other, the referencing entity is the target entity. This is only possible when the relationship is defined only in the config
-                    // and the right cardinality for the relationship between (source, target) is 1. In such a case, we cannot determine which entity is going
-                    // to be considered as referencing entity based on the relationship metadata. Instead, we will have to rely on the input data for source/target entities.
-                    referencingEntityName = string.Empty;
-                    break;
-                }
-
-                referencingEntityName = foreignKey.Pair.Equals(sourceTargetPair) ? sourceEntityName : targetEntityName;
+                string referencingEntityName = foreignKey.Pair.Equals(sourceTargetPair) ? sourceEntityName : targetEntityName;
+                referencingEntityNames.Add(referencingEntityName);
             }
 
-            return referencingEntityName;
+            // If the count of referencing entity names > 1, it indicates we have entries for both source and target entities acting as the referencing table
+            // in the relationship. This can only happend for relationships which are not backed by an FK constraint. For such relationships, we rely on request body
+            // to help determine the referencing entity.
+            return referencingEntityNames.Count() > 1 ? referencingEntityNames.FirstOrDefault()! : string.Empty;
         }
 
         /// <summary>
@@ -139,12 +136,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// 1. Either the provided input data for source/target entities is insufficient.
         /// 2. A conflict occurred such that both entities need to be considered as referencing entity.</exception>
         private static string DetermineReferencingEntityBasedOnRequestBody(
+            string relationshipName,
             string sourceEntityName,
             string targetEntityName,
             DatabaseObject sourceDbObject,
             DatabaseObject targetDbObject,
             Dictionary<string, IValueNode?> columnDataInSourceBody,
-            Dictionary<string, IValueNode?> columnDataInTargetBody)
+            Dictionary<string, IValueNode?> columnDataInTargetBody,
+            int nestingLevel)
         {
             (List<string> relationshipFieldsInSource, List<string> relationshipFieldsInTarget) = GetRelationshipFieldsInSourceAndTarget(
                     sourceEntityName: sourceEntityName,
@@ -192,7 +191,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (doesSourceContainAnyAutogenRelationshipField && doesTargetContainAnyAutogenRelationshipField)
                 {
                     throw new DataApiBuilderException(
-                        message: $"Both source entity: {sourceEntityName} and target entity: {targetEntityName} contain autogenerated fields.",
+                        message: $"Both source entity: {sourceEntityName} and target entity: {targetEntityName} contain autogenerated fields for relationship: {relationshipName} at level: {nestingLevel}",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -203,7 +202,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (doesSourceBodyContainAnyRelationshipField && doesTargetContainAnyAutogenRelationshipField)
                 {
                     throw new DataApiBuilderException(
-                        message: $"The source entity: {sourceEntityName} cannot contain the field: {relationshipFieldInSource}.",
+                        message: $"Input for source entity: {sourceEntityName} for the relationship: {relationshipName} at level: {nestingLevel} cannot contain the field: {relationshipFieldInSource}.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -214,7 +213,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (doesTargetBodyContainAnyRelationshipField && doesSourceContainAnyAutogenRelationshipField)
                 {
                     throw new DataApiBuilderException(
-                        message: $"The target entity: {sourceEntityName} cannot contain the field: {relationshipFieldInTarget}.",
+                        message: $"Input for target entity: {targetEntityName} for the relationship: {relationshipName} at level: {nestingLevel} cannot contain the field: {relationshipFieldInSource}.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -234,7 +233,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (doesSourceBodyContainAnyRelationshipField && doesTargetBodyContainAnyRelationshipField)
                 {
                     throw new DataApiBuilderException(
-                        message: $"The relationship fields can be present in either source entity: {sourceEntityName} or target entity: {targetEntityName}.",
+                        message: $"The relationship fields can be specified either for the source entity: {sourceEntityName} or the target entity: {targetEntityName} " +
+                        $"for the relationship: {relationshipName} at level: {nestingLevel}.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -254,7 +254,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (!canSourceAssumeAllRelationshipFieldValues && !canTargetAssumeAllRelationshipFieldsValues)
                 {
                     throw new DataApiBuilderException(
-                        message: $"Insufficient data.",
+                        message: $"Neither source entity: {sourceEntityName} nor the target entity: {targetEntityName} for the relationship: {relationshipName} at level: {nestingLevel} " +
+                        $"provide sufficient data to perform a multiple-create (related insertion) on the entities.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

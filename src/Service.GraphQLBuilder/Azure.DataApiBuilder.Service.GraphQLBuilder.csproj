@@ -18,6 +18,11 @@
     <ProjectReference Include="..\Config\Azure.DataApiBuilder.Config.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <Deterministic>False</Deterministic>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="HotChocolate" />
     <PackageReference Include="HotChocolate.AspNetCore.Authorization" />

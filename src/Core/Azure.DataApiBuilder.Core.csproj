@@ -8,6 +8,11 @@
     <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <Deterministic>False</Deterministic>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="DotNetEnv" />

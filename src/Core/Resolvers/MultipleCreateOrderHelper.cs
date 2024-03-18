@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 metadataProvider: metadataProvider);
 
             return DetermineReferencingEntityBasedOnRequestBody(
-                relationshipName: relationshipName
+                relationshipName: relationshipName,
                 sourceEntityName: sourceEntityName,
                 targetEntityName: targetEntityName,
                 sourceDbObject: sourceDbObject,
@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If the count of referencing entity names > 1, it indicates we have entries for both source and target entities acting as the referencing table
             // in the relationship. This can only happend for relationships which are not backed by an FK constraint. For such relationships, we rely on request body
             // to help determine the referencing entity.
-            return referencingEntityNames.Count() > 1 ? referencingEntityNames.FirstOrDefault()! : string.Empty;
+            return referencingEntityNames.Count() > 1 ? string.Empty : referencingEntityNames.FirstOrDefault()!;
         }
 
         /// <summary>

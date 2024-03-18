@@ -48,6 +48,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -121,6 +122,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -163,6 +165,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -214,6 +217,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -248,6 +252,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -299,6 +304,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "field-mutation-with-read-permission",
@@ -383,6 +389,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -425,6 +432,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -461,6 +469,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -497,6 +506,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -569,6 +579,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "field-mutation-with-read-permission",
@@ -724,6 +735,7 @@
       "rest": {
         "enabled": false
       },
+      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -757,6 +769,23 @@
                   "id"
                 ]
               }
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
             },
             {
               "action": "delete"

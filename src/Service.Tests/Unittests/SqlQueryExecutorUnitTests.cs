@@ -175,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
-                provider.GetConfig().GetDefaultDataSourceName(),
+                provider.GetConfig().DefaultDataSourceName,
                 It.IsAny<List<string>>()))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT));
 
@@ -232,7 +232,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
                 It.IsAny<HttpContext>(),
-                provider.GetConfig().GetDefaultDataSourceName(),
+                provider.GetConfig().DefaultDataSourceName,
                 It.IsAny<List<string>>()))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
             .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))

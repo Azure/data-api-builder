@@ -265,12 +265,14 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 // Determine the referencing entity for the current relationship field input.
                 string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(
+                    relationshipName: relationshipName,
                     context: context,
                     sourceEntityName: entityName,
                     targetEntityName: targetEntityName,
                     metadataProvider: metadataProvider,
                     columnDataInSourceBody: backingColumnData,
-                    targetNodeValue: fieldValue);
+                    targetNodeValue: fieldValue,
+                    nestingLevel: nestingLevel);
 
                 // Determine the referenced entity.
                 string referencedEntityName = referencingEntityName.Equals(entityName) ? targetEntityName : entityName;
@@ -282,6 +284,13 @@ namespace Azure.DataApiBuilder.Core.Services
                     referencedEntityName: referencedEntityName,
                     referencingEntityName: referencingEntityName);
 
+                ValidateAbsenceOfRepeatedReferencingColumn(
+                        fkDefinition.ReferencingColumns,
+                        entityName,
+                        targetEntityName,
+                        relationshipName,
+                        nestingLevel,
+                        metadataProvider);
                 // The current entity is the referencing entity.
                 if (referencingEntityName.Equals(entityName))
                 {
@@ -362,6 +371,45 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
+        /// Helper method to validate that one column in a referencing entity is not allowed to reference multiple columns
+        /// in the referenced entity. Such an invalid use case leads to possibility of two conflicting sources of truth for
+        /// this column and leads to ambiguities.
+        /// </summary>
+        /// <param name="referencingColumns">Set of referencing columns.</param>
+        /// <param name="referencingEntityName">Name of the referencing entity.</param>
+        /// <param name="referencedEntityName">Name of the referenced entity.</param>
+        /// <param name="relationshipName">Name of the relationship.</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        /// <param name="sqlMetadataProvider">Metadata provider.</param>
+        private static void ValidateAbsenceOfRepeatedReferencingColumn(
+            List<string> referencingColumns,
+            string referencingEntityName,
+            string referencedEntityName,
+            string relationshipName,
+            int nestingLevel,
+            ISqlMetadataProvider sqlMetadataProvider)
+        {
+            HashSet<string> referencingFields = new();
+            foreach(string referencingColumn in referencingColumns)
+            {
+                if (referencingFields.Contains(referencingColumn))
+                {
+                    sqlMetadataProvider.TryGetExposedColumnName(referencedEntityName, referencingColumn, out string? exposedReferencingColumnName);
+                    // This indicates one column is holding reference to multiple referenced columns in the related entity,
+                    // which leads to possibility of two conflicting sources of truth for this column.
+                    // This is an invalid use case for multiple-create.
+                    throw new DataApiBuilderException(
+                        message: $"The field: {exposedReferencingColumnName} in the entity: {referencedEntityName} references multiple fields in the" +
+                        $"related entity: {referencingEntityName} for the relationship: {relationshipName} at level: {nestingLevel}.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                referencingFields.Add(referencingColumn);
+            }
+        }
+
+        /// <summary>
         /// Helper method to validate that we have non-null values for all the fields which are non-nullable or do not have a
         /// default value. With multiple-create, the fields which hold FK reference to other fields in same/other referenced table become optional,
         /// because the value for them may come from insertion in the aforementioned referenced table. However, providing data for
@@ -387,7 +435,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     metadataProvider.TryGetExposedColumnName(entityName, columnName, out string? exposedColumnName);
                     throw new DataApiBuilderException(
-                        message: $"No value found for non-null/non-default column: {exposedColumnName} for entity: {entityName} at level: {nestingLevel}.",
+                        message: $"Missing value for required column: {exposedColumnName} for entity: {entityName} at level: {nestingLevel}.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

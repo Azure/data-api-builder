@@ -31,25 +31,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             structure.DbPolicyPredicatesForOperations.TryGetValue(EntityActionOperation.Read, out string? policy);
-
+            // If there is a predicate or policy, add a WHERE clause
             if (!string.IsNullOrEmpty(predicateString) || !string.IsNullOrEmpty(policy))
             {
-                queryStringBuilder.Append(" WHERE ");
-            }
-
-            if (!string.IsNullOrEmpty(predicateString))
-            {
-                queryStringBuilder.Append($" {predicateString}");
-            }
-
-            if (!string.IsNullOrEmpty(predicateString) && !string.IsNullOrEmpty(policy))
-            {
-                queryStringBuilder.Append(" AND ");
-            }
-
-            if (!string.IsNullOrEmpty(policy))
-            {
-                queryStringBuilder.Append($"{policy}");
+                queryStringBuilder
+                    .Append(" WHERE ")
+                    .Append(string.IsNullOrEmpty(predicateString) || string.IsNullOrEmpty(policy)
+                                ? predicateString + policy
+                                : string.Join(" AND ", predicateString, policy));
             }
 
             if (structure.OrderByColumns.Count > 0)

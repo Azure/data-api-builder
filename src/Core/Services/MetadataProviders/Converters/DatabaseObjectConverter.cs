@@ -27,11 +27,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 
                 Type concreteType = GetTypeFromName(typeName);
 
-                if (concreteType == null)
-                {
-                    throw new JsonException($"Unknown type: {typeName}");
-                }
-
                 DatabaseObject objA = (DatabaseObject)JsonSerializer.Deserialize(document, concreteType, options)!;
 
                 return objA;

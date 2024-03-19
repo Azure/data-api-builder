@@ -308,7 +308,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedColumnName);
                             throw new DataApiBuilderException(
                                 message: $"Found conflicting sources of values for the field: {exposedColumnName} for entity: {entityName} at level: {nestingLevel}." +
-                                $"Source 1: Relationship: {relationshipName}, Source 2: {conflictingSource}",
+                                $"Source 1: {conflictingSource} ,Source 2: Relationship: {relationshipName}.",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                         }

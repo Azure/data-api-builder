@@ -322,11 +322,11 @@ namespace Azure.DataApiBuilder.Core.Services
                             // We optimistically assume that we will get the value of the referencing column
                             // from the insertion in the child entity.
                             columnsToBeDerivedFromThisEntity.Remove(referencingColumn);
-
-                            // Populate the set of fields for which the child entity for the current relationship needs to provide a value.
-                            columnsToBeDerivedFromRelationships.TryAdd(relationshipName, new());
-                            columnsToBeDerivedFromRelationships[relationshipName].Add(referencedColumn);
                         }
+
+                        // Populate the set of fields for which the child entity for the current relationship needs to provide a value.
+                        columnsToBeDerivedFromRelationships.TryAdd(relationshipName, new());
+                        columnsToBeDerivedFromRelationships[relationshipName].Add(referencedColumn);
 
                         // All the referencing columns in the current entity can get a value via insertion in the child entity (c).
                         derivableColumnsFromRequestBody.TryAdd(referencingColumn, relationshipName);

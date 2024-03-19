@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         public async Task ValidateAuthZCheckOnEntitiesForCreateOneMutations()
         {
             string createBookMutationName = "createbook";
-            string nestedCreateOneBook = @"mutation {
+            string createOneBookMutation = @"mutation {
                     createbook(item: { title: ""Book #1"", publishers: { name: ""Publisher #1""}}) {
                         id
                         title
@@ -41,9 +41,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // Hence the request will fail during authorization check.
             await ValidateRequestIsUnauthorized(
                 graphQLMutationName: createBookMutationName,
-                graphQLMutation: nestedCreateOneBook,
+                graphQLMutation: createOneBookMutation,
                 isAuthenticated: false,
                 clientRoleHeader: "anonymous"
+                );
+
+            // The authenticates role has create permissions on both the Book and Publisher entities.
+            // Hence the authorization checks will pass.
+            await ValidateRequestIsAuthorized(
+                graphQLMutationName: createBookMutationName,
+                graphQLMutation: createOneBookMutation,
+                isAuthenticated: true,
+                clientRoleHeader: "authenticated"
                 );
         }
 
@@ -72,6 +81,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 graphQLMutation: createMultipleBookMutation,
                 isAuthenticated: false,
                 clientRoleHeader: "anonymous");
+
+            // The authenticates role has create permissions on both the Book and Publisher entities.
+            // Hence the authorization checks will pass.
+            await ValidateRequestIsAuthorized(
+                graphQLMutationName: createMultipleBooksMutationName,
+                graphQLMutation: createMultipleBookMutation,
+                isAuthenticated: true,
+                clientRoleHeader: "authenticated",
+                expectedResult: "Expected item argument in mutation arguments."
+                );
         }
 
         /// <summary>
@@ -260,6 +279,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// </summary>
         /// <param name="graphQLMutationName">Name of the mutation.</param>
         /// <param name="graphQLMutation">Request body of the mutation.</param>
+        /// <param name="expectedResult">Expected result.</param>
         /// <param name="isAuthenticated">Boolean indicating whether the request should be treated as authenticated or not.</param>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE client role header.</param>
         private async Task ValidateRequestIsAuthorized(

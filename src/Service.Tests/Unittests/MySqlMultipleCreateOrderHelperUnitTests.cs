@@ -12,7 +12,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         [ClassInitialize]
         public static async Task Initialize(TestContext testContext)
         {
-            DatabaseEngine = TestCategory.MSSQL;
+            DatabaseEngine = TestCategory.MYSQL;
             await InitializeTestFixture();
         }
     }

@@ -284,6 +284,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     referencedEntityName: referencedEntityName,
                     referencingEntityName: referencingEntityName);
 
+                // Validate that one column in the referencing entity is not referencing multiple columns in the referenced entity
+                // to avoid conflicting sources of truth for the value of referencing column.
                 ValidateAbsenceOfRepeatedReferencingColumn(
                         fkDefinition.ReferencingColumns,
                         entityName,

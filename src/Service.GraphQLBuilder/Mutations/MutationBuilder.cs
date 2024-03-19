@@ -40,8 +40,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             Dictionary<string, DatabaseObject>? dbObjects = null,
             bool isMultipleCreateOperationEnabled = false)
         {
-            Console.WriteLine("Inside MutationBuilder.Build() : " + isMultipleCreateOperationEnabled);
-
             List<FieldDefinitionNode> mutationFields = new();
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();
 

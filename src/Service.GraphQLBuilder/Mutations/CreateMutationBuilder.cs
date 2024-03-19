@@ -88,8 +88,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // 2. Multiple mutation operations are enabled.
             if (isMultipleCreateOperationEnabled && DoesRelationalDBSupportMultipleCreate(databaseType))
             {
-                Console.WriteLine("Inside complex input field generation logic");
-
                 // 2. Complex input fields.
                 // Evaluate input objects for related entities.
                 IEnumerable<InputValueDefinitionNode> complexInputFields =

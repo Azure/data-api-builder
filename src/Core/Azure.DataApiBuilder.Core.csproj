@@ -8,9 +8,9 @@
     <NoWarn>NU1603</NoWarn>
   </PropertyGroup>
 
-  <PropertyGroup>
+  <!-- <PropertyGroup>
     <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
-  </PropertyGroup>
+  </PropertyGroup> -->
 
   <ItemGroup>
     <PackageReference Include="Azure.Identity" />

@@ -238,7 +238,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
             {
                 foreach (string query in customQueries)
                 {
-                    await _queryExecutor.ExecuteQueryAsync<object>(query, parameters: null, dataReaderHandler: null);
+                    await _queryExecutor.ExecuteQueryAsync<object>(query, dataSourceName: string.Empty, parameters: null, dataReaderHandler: null);
                 }
             }
         }
@@ -367,6 +367,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         {
             await _queryExecutor.ExecuteQueryAsync<object>(
                 File.ReadAllText($"DatabaseSchema-{DatabaseEngine}.sql"),
+                dataSourceName: string.Empty,
                 parameters: null,
                 dataReaderHandler: null);
         }
@@ -388,7 +389,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     await _queryExecutor.ExecuteQueryAsync(
                         queryText,
                         parameters: null,
-                        _queryExecutor.GetJsonResultAsync<JsonDocument>);
+                        _queryExecutor.GetJsonResultAsync<JsonDocument>,
+                        string.Empty);
 
                 result = sqlResult is not null ?
                     sqlResult.RootElement.ToString() :
@@ -400,7 +402,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
                     await _queryExecutor.ExecuteQueryAsync(
                         queryText,
                         parameters: null,
-                        _queryExecutor.GetJsonArrayAsync);
+                        _queryExecutor.GetJsonArrayAsync,
+                        string.Empty);
                 using JsonDocument sqlResult = resultArray is not null ? JsonDocument.Parse(resultArray.ToJsonString()) : null;
                 result = sqlResult is not null ? sqlResult.RootElement.ToString() : null;
             }

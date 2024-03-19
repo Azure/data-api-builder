@@ -392,6 +392,28 @@
           ]
         },
         {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "piecesAvailable"
+                ]
+              }
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
           "role": "test_role_with_policy_excluded_fields",
           "actions": [
             {
@@ -1378,6 +1400,23 @@
           "actions": [
             {
               "action": "create"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
             }
           ]
         }

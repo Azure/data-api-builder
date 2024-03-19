@@ -35,10 +35,6 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
-  <!-- <PropertyGroup>
-    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
-  </PropertyGroup> -->
-
   <ItemGroup>
     <PackageReference Include="CommandLineParser" />
     <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />

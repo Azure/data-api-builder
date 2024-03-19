@@ -12,10 +12,6 @@
     <PropertyGroup Condition="'$(TF_BUILD)' == 'true'">
       <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
     </PropertyGroup>
-
-    <!-- <PropertyGroup>
-        <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
-    </PropertyGroup> -->
     
     <ItemGroup>
         <InternalsVisibleTo Include="Azure.DataApiBuilder.Service.Tests" />

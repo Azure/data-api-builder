@@ -13,10 +13,6 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
-  <!-- <PropertyGroup>
-    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
-  </PropertyGroup> -->
-
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" />
     <PackageReference Include="Microsoft.AspNetCore.Http" />

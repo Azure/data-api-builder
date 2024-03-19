@@ -13,10 +13,6 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
 
-  <!-- <PropertyGroup>
-    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
-  </PropertyGroup> -->
-
   <ItemGroup>
       <PackageReference Include="Azure.Identity" />
       <PackageReference Include="Microsoft.AspNetCore.Authorization" />

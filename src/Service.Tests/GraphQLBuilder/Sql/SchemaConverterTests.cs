@@ -310,18 +310,27 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.IsTrue(field.Type.IsNonNullType());
         }
 
-        [TestMethod]
-        public void ForeignKeyGeneratesObjectAndColumnField()
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="isMultipleCreateOperationEnabled"></param>
+        /// <param name="expectedNoOfFields"></param>
+        [DataTestMethod]
+        [DataRow(true, 3, DisplayName = "Validate number of fields generated in object type - Multiple Create Operation is enabled.")]
+        [DataRow(false, 2, DisplayName = "Validate number of fields generated in object type - Multiple Create Operation is disabled.")]
+        public void ForeignKeyGeneratesObjectAndColumnField(bool isMultipleCreateOperationEnabled, int expectedNoOfFields)
         {
-            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many);
-            Assert.AreEqual(3, od.Fields.Count);
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many, isMultipleCreateOperationEnabled: isMultipleCreateOperationEnabled);
+            ;
+            Console.WriteLine(od.Fields.Count);
+            Assert.AreEqual(expectedNoOfFields, od.Fields.Count);
         }
 
         [TestMethod]
         public void ForeignKeyObjectFieldNameAndTypeMatchesReferenceTable()
         {
 
-            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One);
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One, isMultipleCreateOperationEnabled: true);
             FieldDefinitionNode field
                 = od.Fields.First(f => f.Name.Value != REF_COLNAME && f.Name.Value != COLUMN_NAME);
 
@@ -332,7 +341,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void ForeignKeyFieldWillHaveRelationshipDirective()
         {
-            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One);
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One, isMultipleCreateOperationEnabled: true);
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
 
             Assert.AreEqual(1, field.Directives.Count);
@@ -342,21 +351,27 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         [TestMethod]
         public void CardinalityOfManyWillBeConnectionRelationship()
         {
-            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many);
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many, isMultipleCreateOperationEnabled: true);
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
             Assert.IsTrue(QueryBuilder.IsPaginationType(field.Type.NamedType()));
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="isNullable"></param>
         [DataRow(true, DisplayName = "Test relationship field is nullable.")]
         [DataRow(false, DisplayName = "Test relationship field is not nullable.")]
         [TestMethod]
         public void ForeignKeyFieldHasCorrectNullability(bool isNullable)
         {
-            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many, isNullableRelationship: isNullable);
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.Many, isNullableRelationship: isNullable, isMultipleCreateOperationEnabled: true);
             FieldDefinitionNode field = od.Fields.First(f => f.Name.Value == FIELD_NAME_FOR_TARGET);
             Assert.AreEqual(expected: isNullable, actual: field.Type is INullableTypeNode);
         }
-
+        /// <summary>
+        /// 
+        /// </summary>
         [TestMethod]
         public void WhenForeignKeyDefinedButNoRelationship_GraphQLWontModelIt()
         {
@@ -374,8 +389,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                     configEntity,
                     new(new Dictionary<string, Entity>() { { TARGET_ENTITY, relationshipEntity } }),
                     rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                    rolesAllowedForFields: GetFieldToRolesMap()
-                    );
+                    rolesAllowedForFields: GetFieldToRolesMap(),
+                    isMultipleCreateOperationEnabled: true);
 
             Assert.AreEqual(2, od.Fields.Count);
         }
@@ -751,7 +766,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             );
         }
 
-        private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false)
+        private static ObjectTypeDefinitionNode GenerateObjectWithRelationship(Cardinality cardinality, bool isNullableRelationship = false, bool isMultipleCreateOperationEnabled = false)
         {
             SourceDefinition table = GenerateTableWithForeignKeyDefinition(isNullableRelationship);
 
@@ -781,7 +796,8 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
                 dbObject,
                 configEntity, new(new Dictionary<string, Entity>() { { TARGET_ENTITY, relationshipEntity } }),
                 rolesAllowedForEntity: GetRolesAllowedForEntity(),
-                rolesAllowedForFields: GetFieldToRolesMap()
+                rolesAllowedForFields: GetFieldToRolesMap(),
+                isMultipleCreateOperationEnabled
                 );
         }
 

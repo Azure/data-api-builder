@@ -1064,8 +1064,10 @@ type Foo @model(name:""Foo"") {{
                 root,
                 entityNameToDatabaseType,
                 new(entityNameToEntity),
-                entityPermissionsMap: entityPermissionsMap
+                entityPermissionsMap: entityPermissionsMap,
+                isMultipleCreateOperationEnabled: true
                 );
+            ;
 
             ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
             Assert.IsNotNull(mutation);

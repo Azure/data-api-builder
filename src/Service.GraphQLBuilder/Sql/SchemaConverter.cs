@@ -38,7 +38,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             [NotNull] Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            bool isMultipleCreateOperationEnabled = false)
         {
             ObjectTypeDefinitionNode objectDefinitionNode;
             switch (databaseObject.SourceType)
@@ -59,7 +60,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         configEntity: configEntity,
                         entities: entities,
                         rolesAllowedForEntity: rolesAllowedForEntity,
-                        rolesAllowedForFields: rolesAllowedForFields);
+                        rolesAllowedForFields: rolesAllowedForFields,
+                        isMultipleCreateOperationEnabled);
                     break;
                 default:
                     throw new DataApiBuilderException(
@@ -142,7 +144,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
+            bool isMultipleCreateOperationEnabled = false)
         {
             Dictionary<string, FieldDefinitionNode> fieldDefinitionNodes = new();
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
@@ -182,23 +185,27 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
-            // A linking entity is not exposed in the runtime config file but is used by DAB to support multiple mutations on entities with M:N relationship.
-            // Hence we don't need to process relationships for the linking entity itself.
-            if (!configEntity.IsLinkingEntity)
+            // add a check here based on feature flag value
+            if (isMultipleCreateOperationEnabled)
             {
-                // For an entity exposed in the config, process the relationships (if there are any)
-                // sequentially and generate fields for them - to be added to the entity's ObjectTypeDefinition at the end.
-                if (configEntity.Relationships is not null)
+                // A linking entity is not exposed in the runtime config file but is used by DAB to support multiple mutations on entities with M:N relationship.
+                // Hence we don't need to process relationships for the linking entity itself.
+                if (!configEntity.IsLinkingEntity)
                 {
-                    foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
+                    // For an entity exposed in the config, process the relationships (if there are any)
+                    // sequentially and generate fields for them - to be added to the entity's ObjectTypeDefinition at the end.
+                    if (configEntity.Relationships is not null)
                     {
-                        FieldDefinitionNode relationshipField = GenerateFieldForRelationship(
-                            entityName,
-                            databaseObject,
-                            entities,
-                            relationshipName,
-                            relationship);
-                        fieldDefinitionNodes.Add(relationshipField.Name.Value, relationshipField);
+                        foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
+                        {
+                            FieldDefinitionNode relationshipField = GenerateFieldForRelationship(
+                                entityName,
+                                databaseObject,
+                                entities,
+                                relationshipName,
+                                relationship);
+                            fieldDefinitionNodes.Add(relationshipField.Name.Value, relationshipField);
+                        }
                     }
                 }
             }

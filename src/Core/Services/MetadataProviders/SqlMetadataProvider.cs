@@ -755,16 +755,26 @@ namespace Azure.DataApiBuilder.Core.Services
                         referencedColumns: relationship.TargetFields,
                         relationshipData);
 
-                    // When a linking object is encountered for a database table, we will create a linking entity for the object.
-                    // Subsequently, we will also populate the Database object for the linking entity. This is used to infer
-                    // metadata about linking object needed to create GQL schema for multiple insertions.
-                    if (entity.Source.Type is EntitySourceType.Table)
+                    RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+
+                    // Populating metadata for linking object is only required when multiple create operation is enabled.
+                    if (runtimeConfig.Runtime is not null &&
+                        runtimeConfig.Runtime.GraphQL is not null &&
+                        runtimeConfig.Runtime.GraphQL.MultipleMutationOptions is not null &&
+                        runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null &&
+                        runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled is true)
                     {
-                        PopulateMetadataForLinkingObject(
-                            entityName: entityName,
-                            targetEntityName: targetEntityName,
-                            linkingObject: relationship.LinkingObject,
-                            sourceObjects: sourceObjects);
+                        // When a linking object is encountered for a database table, we will create a linking entity for the object.
+                        // Subsequently, we will also populate the Database object for the linking entity. This is used to infer
+                        // metadata about linking object needed to create GQL schema for multiple insertions.
+                        if (entity.Source.Type is EntitySourceType.Table)
+                        {
+                            PopulateMetadataForLinkingObject(
+                                entityName: entityName,
+                                targetEntityName: targetEntityName,
+                                linkingObject: relationship.LinkingObject,
+                                sourceObjects: sourceObjects);
+                        }
                     }
                 }
                 else if (relationship.Cardinality == Cardinality.One)

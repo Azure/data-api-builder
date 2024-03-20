@@ -1041,11 +1041,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// MySql does not a schema so it lacks
+        /// MySql does not have a schema so it lacks
         /// the '.' between schema and table, we
         /// return empty string here for this reason.
         /// </summary>
-        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
         public override string GetDefaultSchemaForEdmModel()
         {
             return string.Empty;
@@ -1054,6 +1054,19 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         public override string GetQuery(string key)
         {
             return _queryMap[key];
+        }
+
+        /// <summary>
+        /// MySql does not have a schema and so this test
+        /// which validates we de-conflict the same table
+        /// name in different schemas is not valid.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        [TestMethod]
+        [Ignore]
+        public override Task FindOnTableWithNamingCollision()
+        {
+            throw new NotImplementedException();
         }
 
         // Pending Stored Procedure Support

@@ -202,7 +202,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     return await DispatchMutation(context, sqlMetadataProvider.GetDatabaseType());
                 default:
                     throw new NotSupportedException("This operation is not yet supported.");
-            };
+            }
         }
 
         /// <summary>
@@ -212,7 +212,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
         {
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
-            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
 
             if (context is FindRequestContext findRequestContext)
             {
@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private Task<IActionResult?> DispatchMutation(RestRequestContext context, DatabaseType databaseType)
         {
             IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(databaseType);
-            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
             return context switch
             {
                 StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, defaultDataSourceName),
@@ -437,7 +437,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string routeAfterPathBase)
         {
 
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
@@ -486,7 +486,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             if (requirement is not RoleContextPermissionsRequirement && resource is null)
             {
-                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType}");
+                throw new ArgumentNullException(paramName: "resource", message: $"Resource can't be null for the requirement: {requirement.GetType()}");
             }
 
             AuthorizationResult authorizationResult = await _authorizationService.AuthorizeAsync(

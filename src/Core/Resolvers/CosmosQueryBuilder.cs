@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
-                joinBuilder.Append($" JOIN {structure.TableAlias} IN {structure.DbObject.SchemaName}.{structure.DbObject.Name}");
+                joinBuilder.Append($" JOIN {structure.TableAlias} IN {structure.DbObject.FullName}");
                 tableNames.Add(structure.DbObject);
             }
 

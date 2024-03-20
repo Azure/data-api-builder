@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -36,6 +35,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "FindEmptyResultSetWithQueryFilter",
                 $"SELECT * FROM { _integrationTableName } " +
                 $"WHERE 1 != 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindOnTableWithNamingCollision",
+                $"SELECT upc, comic_name, issue FROM { _collisionTable } " +
+                $"WHERE 1 = 1 FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
                 "FindOnTableWithUniqueCharacters",
@@ -339,7 +343,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"ORDER BY id asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
-
             {
                 "FindTestWithFirstTwoOrderByAndPagination",
                 $"SELECT TOP 2 * FROM { _integrationTableName } " +
@@ -564,7 +567,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"SELECT * FROM { _integrationBrokenMappingTable } " +
                 $"WHERE habitat = 'forestland' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
-            }
+            },
+            {
+                "FindManyStoredProcedureTest",
+                $"EXECUTE {_integrationProcedureFindMany_ProcName}"
+            },
+            {
+                "FindOneStoredProcedureTestUsingParameter",
+                $"EXECUTE {_integrationProcedureFindOne_ProcName} @id = 1"
+            },
         };
         #region Test Fixture Setup
 
@@ -616,48 +627,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             return _queryMap[key];
         }
 
-        // Pending Stored Procedure Support
-        [TestMethod]
-        [Ignore]
-        public override Task FindManyStoredProcedureTest()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindOneStoredProcedureTestUsingParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithNonEmptyPrimaryKeyRoute()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithMissingParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindStoredProcedureWithNonexistentParameter()
-        {
-            throw new NotImplementedException();
-        }
-
-        [TestMethod]
-        [Ignore]
-        public override Task FindApiTestForSPWithRequiredParamsInRequestBody()
-        {
-            throw new NotImplementedException();
-        }
         #endregion
     }
 }

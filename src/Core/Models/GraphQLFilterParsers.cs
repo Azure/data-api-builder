@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -30,6 +31,8 @@ public class GQLFilterParser
     private readonly RuntimeConfigProvider _configProvider;
     private readonly IMetadataProviderFactory _metadataProviderFactory;
 
+    private IncrementingInteger? _tableCounter;
+
     /// <summary>
     /// Constructor for GQLFilterParser
     /// </summary>
@@ -39,6 +42,7 @@ public class GQLFilterParser
     {
         _configProvider = runtimeConfigProvider;
         _metadataProviderFactory = metadataProviderFactory;
+        _tableCounter = new IncrementingInteger();
     }
 
     /// <summary>
@@ -66,12 +70,12 @@ public class GQLFilterParser
         string dataSourceName = _configProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
         ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
-        InputObjectType filterArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentSchema);
+        InputObjectType filterArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(filterArgumentSchema);
 
         List<PredicateOperand> predicates = new();
         foreach (ObjectFieldNode field in fields)
         {
-            object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field.Value,
                 argumentSchema: filterArgumentObject.Fields[field.Name.Value],
                 variables: ctx.Variables);
@@ -86,7 +90,7 @@ public class GQLFilterParser
             bool fieldIsAnd = string.Equals(name, $"{PredicateOperation.AND}", StringComparison.OrdinalIgnoreCase);
             bool fieldIsOr = string.Equals(name, $"{PredicateOperation.OR}", StringComparison.OrdinalIgnoreCase);
 
-            InputObjectType filterInputObjectType = ResolverMiddleware.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
+            InputObjectType filterInputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(filterArgumentObject.Fields[name]);
             if (fieldIsAnd || fieldIsOr)
             {
                 PredicateOperation op = fieldIsAnd ? PredicateOperation.AND : PredicateOperation.OR;
@@ -283,6 +287,23 @@ public class GQLFilterParser
     {
         string entityName = metadataProvider.GetEntityName(entityType);
 
+        HashSet<CosmosJoinStructure>? jstruct = queryStructure.Joins?.ToHashSet();
+
+        string? tableAlias = null;
+        foreach (CosmosJoinStructure join in jstruct ?? new HashSet<CosmosJoinStructure>())
+        {
+            if (join.DbObject.Name == columnName)
+            {
+                tableAlias = join.TableAlias;
+                break;
+            }
+        }
+
+        if (string.IsNullOrEmpty(tableAlias))
+        {
+            tableAlias = $"table{_tableCounter?.Next()}";
+        }
+
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
             entityIdentifier: entityName,
@@ -308,7 +329,8 @@ public class GQLFilterParser
                 counter: queryStructure.Counter);
 
         comosQueryStructure.DatabaseObject.SchemaName = queryStructure.SourceAlias;
-        comosQueryStructure.SourceAlias = entityName;
+        comosQueryStructure.DatabaseObject.Name = tableAlias;
+        comosQueryStructure.SourceAlias = tableAlias;
         comosQueryStructure.EntityName = entityName;
 
         PredicateOperand joinpredicate = new(
@@ -329,7 +351,7 @@ public class GQLFilterParser
             .Joins
             .Push(new CosmosJoinStructure(
                         DbObject: new DatabaseTable(schemaName: queryStructure.SourceAlias, tableName: columnName),
-                        TableAlias: entityName));
+                        TableAlias: tableAlias));
 
         // Add all parameters from the exists subquery to the main queryStructure.
         foreach ((string key, DbConnectionParam value) in comosQueryStructure.Parameters)
@@ -516,7 +538,7 @@ public class GQLFilterParser
         List<PredicateOperand> operands = new();
         foreach (IValueNode field in fields)
         {
-            object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field,
                 argumentSchema: argumentSchema,
                 ctx.Variables);
@@ -605,11 +627,11 @@ public static class FieldFilterParser
     {
         List<PredicateOperand> predicates = new();
 
-        InputObjectType argumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(argumentSchema);
+        InputObjectType argumentObject = ExecutionHelper.InputObjectTypeFromIInputField(argumentSchema);
         foreach (ObjectFieldNode field in fields)
         {
             string name = field.Name.ToString();
-            object? value = ResolverMiddleware.ExtractValueFromIValueNode(
+            object? value = ExecutionHelper.ExtractValueFromIValueNode(
                 value: field.Value,
                 argumentSchema: argumentObject.Fields[field.Name.Value],
                 variables: ctx.Variables);

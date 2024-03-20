@@ -180,7 +180,7 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
     {
         List<string> idList = new();
         CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
         for (int i = 0; i < numItems; i++)
         {
             string uid = Guid.NewGuid().ToString();
@@ -213,7 +213,7 @@ type MoreAttribute @model(name:""MoreAttrAlias"") {
             MaxItemCount = pageSize,
         };
         CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+        CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
         Container c = cosmosClient.GetContainer(DATABASE_NAME, containerName);
         QueryDefinition queryDef = new(query);
         FeedIterator<JObject> resultSetIterator = c.GetItemQueryIterator<JObject>(queryDef, continuationToken, options);

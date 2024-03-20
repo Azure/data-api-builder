@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public void CosmosClientDefaultUserAgent()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             // Validate results
             Assert.AreEqual(client.ClientOptions.ApplicationName, ProductInfo.DEFAULT_APP_NAME);
         }
@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             WebApplicationFactory<Startup> application = SetupTestApplicationFactory();
 
             CosmosClientProvider cosmosClientProvider = application.Services.GetService<CosmosClientProvider>();
-            CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             // Validate results
             Assert.AreEqual(client.ClientOptions.ApplicationName, appName);
         }

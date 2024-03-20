@@ -244,7 +244,9 @@ namespace Azure.DataApiBuilder.Service
                         }
 
                         return error;
-                    });
+                    })
+                    .UseRequest<BuildRequestStateMiddleware>()
+                    .UseDefaultPipeline();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -622,18 +624,23 @@ namespace Azure.DataApiBuilder.Service
                     runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProviderFactory!);
                 }
 
-                // Attempt to create OpenAPI document.
-                // Errors must not crash nor halt the intialization of the engine
-                // because OpenAPI document creation is not required for the engine to operate.
-                // Errors will be logged.
-                try
+                // OpenAPI document creation is only attempted for REST supporting database types.
+                // CosmosDB is not supported for OpenAPI document creation.
+                if (!runtimeConfig.CosmosDataSourceUsed)
                 {
-                    IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
-                    openApiDocumentor.CreateDocument();
-                }
-                catch (DataApiBuilderException dabException)
-                {
-                    _logger.LogError(exception: dabException, message: "OpenAPI Documentor initialization failed.");
+                    // Attempt to create OpenAPI document.
+                    // Errors must not crash nor halt the intialization of the engine
+                    // because OpenAPI document creation is not required for the engine to operate.
+                    // Errors will be logged.
+                    try
+                    {
+                        IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
+                        openApiDocumentor.CreateDocument();
+                    }
+                    catch (DataApiBuilderException dabException)
+                    {
+                        _logger.LogWarning(exception: dabException, message: "OpenAPI Documentor initialization failed. This will not affect dab startup.");
+                    }
                 }
 
                 _logger.LogInformation("Successfully completed runtime initialization.");

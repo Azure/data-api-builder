@@ -573,8 +573,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            //after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
-            //   $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":569,\"Direction\":0}}]");
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [

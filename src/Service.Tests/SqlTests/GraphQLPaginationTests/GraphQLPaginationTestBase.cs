@@ -573,8 +573,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
-                $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":569,\"Direction\":0}}]");
+            //after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
+            //   $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":569,\"Direction\":0}}]");
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
@@ -588,7 +588,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
               ],
               ""hasNextPage"": false,
-              ""endCursor"": """ + after + @"""
+              ""endCursor"": null
             }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -625,8 +625,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                   ""publisher_id"": 2345
                 }
               ],
-              ""endCursor"": """ +
-                SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":4,\"Direction\":0}}]") + @""",
+              ""endCursor"": null,
               ""hasNextPage"": false
             }";
 

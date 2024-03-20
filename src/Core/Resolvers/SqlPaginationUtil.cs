@@ -102,7 +102,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 // parse *Connection.endCursor if there are no elements
                 // if no after is added, but it has been requested HotChocolate will report it as null
-                if (returnedElemNo > 0)
+                // Need to validate we have an extra element, because otherwise there is no next page
+                // and endCursor should be left as null.
+                if (returnedElemNo > 0 && hasExtraElement)
                 {
                     JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
                     connection.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,

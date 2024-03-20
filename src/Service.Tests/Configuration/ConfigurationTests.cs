@@ -2031,7 +2031,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// 
+        /// Multiple mutation operations are disabled through the configuration properties.
+        ///
+        /// Executing the following multiple create mutation operations,
+        /// 1. Point multiple create operation
+        /// 2. Many type multiple create operation
+        /// should result in failure as both these operations are disabled.
         /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
@@ -2102,26 +2107,52 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (HttpClient client = server.CreateClient())
             {
 
-                string graphQLMutation = @"mutation createbook{
-                                                createbook(item: { title: ""Book #1"", publishers: { name: ""The First Publisher"" } }) {
-                                                    id
-                                                    title
-                                                }
-                                            }";
+                string pointMultipleCreateOperation = @"mutation createbook{
+                                                            createbook(item: { title: ""Book #1"", publishers: { name: ""The First Publisher"" } }) {
+                                                                id
+                                                                title
+                                                            }
+                                                        }";
 
                 JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
                                                                                 client,
                                                                                 server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                                                                query: graphQLMutation,
+                                                                                query: pointMultipleCreateOperation,
                                                                                 queryName: "createbook",
                                                                                 variables: null,
                                                                                 clientRoleHeader: null);
 
                 Assert.IsNotNull(mutationResponse);
+
                 SqlTestHelper.TestForErrorInGraphQLResponse(
                                 mutationResponse.ToString(),
                                 message: "The specified input object field `publishers` does not exist.",
                                 path: @"[""createbook""]");
+
+                string manyTypeMultipleCreateOperation = @"mutation {
+                                                              createbooks(
+                                                                items: [
+                                                                  { title: ""Book #1"", publishers: { name: ""Publisher #1"" } }
+                                                                  { title: ""Book #2"", publisher_id: 1234 }
+                                                                ]
+                                                              ) {
+                                                                items {
+                                                                  id
+                                                                  title
+                                                                }
+                                                              }
+                                                            }";
+
+                mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                        query: manyTypeMultipleCreateOperation,
+                                                                                        queryName: "createbook",
+                                                                                        variables: null,
+                                                                                        clientRoleHeader: null);
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.TestForErrorInGraphQLResponse(mutationResponse.ToString(),
+                                                            message: "The field `createbooks` does not exist on the type `Mutation`.");
             }
         }
 

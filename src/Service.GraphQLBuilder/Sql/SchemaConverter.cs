@@ -38,8 +38,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             [NotNull] Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            bool isMultipleCreateOperationEnabled = false)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
             ObjectTypeDefinitionNode objectDefinitionNode;
             switch (databaseObject.SourceType)
@@ -60,8 +59,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                         configEntity: configEntity,
                         entities: entities,
                         rolesAllowedForEntity: rolesAllowedForEntity,
-                        rolesAllowedForFields: rolesAllowedForFields,
-                        isMultipleCreateOperationEnabled);
+                        rolesAllowedForFields: rolesAllowedForFields);
                     break;
                 default:
                     throw new DataApiBuilderException(
@@ -144,8 +142,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
             Entity configEntity,
             RuntimeEntities entities,
             IEnumerable<string> rolesAllowedForEntity,
-            IDictionary<string, IEnumerable<string>> rolesAllowedForFields,
-            bool isMultipleCreateOperationEnabled = false)
+            IDictionary<string, IEnumerable<string>> rolesAllowedForFields)
         {
             Dictionary<string, FieldDefinitionNode> fieldDefinitionNodes = new();
             SourceDefinition sourceDefinition = databaseObject.SourceDefinition;
@@ -185,27 +182,23 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Sql
                 }
             }
 
-            // add a check here based on feature flag value
-            if (isMultipleCreateOperationEnabled)
+            // A linking entity is not exposed in the runtime config file but is used by DAB to support multiple mutations on entities with M:N relationship.
+            // Hence we don't need to process relationships for the linking entity itself.
+            if (!configEntity.IsLinkingEntity)
             {
-                // A linking entity is not exposed in the runtime config file but is used by DAB to support multiple mutations on entities with M:N relationship.
-                // Hence we don't need to process relationships for the linking entity itself.
-                if (!configEntity.IsLinkingEntity)
+                // For an entity exposed in the config, process the relationships (if there are any)
+                // sequentially and generate fields for them - to be added to the entity's ObjectTypeDefinition at the end.
+                if (configEntity.Relationships is not null)
                 {
-                    // For an entity exposed in the config, process the relationships (if there are any)
-                    // sequentially and generate fields for them - to be added to the entity's ObjectTypeDefinition at the end.
-                    if (configEntity.Relationships is not null)
+                    foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
                     {
-                        foreach ((string relationshipName, EntityRelationship relationship) in configEntity.Relationships)
-                        {
-                            FieldDefinitionNode relationshipField = GenerateFieldForRelationship(
-                                entityName,
-                                databaseObject,
-                                entities,
-                                relationshipName,
-                                relationship);
-                            fieldDefinitionNodes.Add(relationshipField.Name.Value, relationshipField);
-                        }
+                        FieldDefinitionNode relationshipField = GenerateFieldForRelationship(
+                            entityName,
+                            databaseObject,
+                            entities,
+                            relationshipName,
+                            relationship);
+                        fieldDefinitionNodes.Add(relationshipField.Name.Value, relationshipField);
                     }
                 }
             }

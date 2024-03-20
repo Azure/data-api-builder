@@ -2031,6 +2031,101 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateMultipleCreateMutationErrorsWhenMultipleCreateOperationIsDisabled()
+        {
+            // Multiple create operations are disabled.
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true, MultipleMutationOptions: new(new(enabled: false)));
+
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                               GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { readAction, createAction }) };
+
+            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One, TargetEntity: "Publisher", SourceFields: new string[] { }, TargetFields: new string[] { }, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null);
+
+            Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
+                              Rest: null,
+                              GraphQL: new(Singular: "book", Plural: "books"),
+                              Permissions: permissions,
+                              Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
+                              Mappings: null);
+
+            string bookEntityName = "Book";
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { bookEntityName, bookEntity }
+            };
+
+            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many, TargetEntity: "Book", SourceFields: new string[] { }, TargetFields: new string[] { }, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null);
+
+            Entity publisherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: permissions,
+                Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
+                Mappings: null);
+
+            entityMap.Add("Publisher", publisherEntity);
+
+            RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
+                                                DataSource: dataSource,
+                                                Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
+                                                Entities: new(entityMap));
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            File.WriteAllText(CUSTOM_CONFIG, runtimeConfig.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+
+                string graphQLMutation = @"mutation createbook{
+                                                createbook(item: { title: ""Book #1"", publishers: { name: ""The First Publisher"" } }) {
+                                                    id
+                                                    title
+                                                }
+                                            }";
+
+                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                                                                client,
+                                                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                query: graphQLMutation,
+                                                                                queryName: "createbook",
+                                                                                variables: null,
+                                                                                clientRoleHeader: null);
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.TestForErrorInGraphQLResponse(
+                                mutationResponse.ToString(),
+                                message: "The specified input object field `publishers` does not exist.",
+                                path: @"[""createbook""]");
+            }
+        }
+
+        /// <summary>
         /// For mutation operations, the respective mutation operation type(create/update/delete) + read permissions are needed to receive a valid response.
         /// For graphQL requests, if read permission is configured for Anonymous role, then it is inherited by other roles.
         /// In this test, Anonymous role has read permission configured. Authenticated role has only create permission configured.

@@ -228,9 +228,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             configEntity: entity,
                             entities: entities,
                             rolesAllowedForEntity: rolesAllowedForEntity,
-                            rolesAllowedForFields: rolesAllowedForFields,
-                            _isMultipleCreateOperationEnabled
-                            );
+                            rolesAllowedForFields: rolesAllowedForFields);
 
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {

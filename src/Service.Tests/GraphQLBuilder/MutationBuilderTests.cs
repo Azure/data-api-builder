@@ -1079,7 +1079,7 @@ type Foo @model(name:""Foo"") {{
                 entityPermissionsMap: entityPermissionsMap,
                 isMultipleCreateOperationEnabled: isMultipleCreateOperationEnabled
                 );
-            
+
             ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
             Assert.IsNotNull(mutation);
 

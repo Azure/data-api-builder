@@ -559,7 +559,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             // Multiple create node is created in the schema only when multiple create operation is enabled.
             if (isMultipleCreateOperationEnabled && IsRelationalDb(databaseType) && DoesRelationalDBSupportMultipleCreate(databaseType))
             {
-                Console.WriteLine("Inside multiple create node generation logic");
                 // Create multiple node.
                 FieldDefinitionNode createMultipleNode = new(
                     location: null,

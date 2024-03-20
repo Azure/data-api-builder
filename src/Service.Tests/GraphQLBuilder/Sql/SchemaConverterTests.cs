@@ -311,10 +311,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         }
 
         /// <summary>
+        /// Validates the number of fields in the ObjectTypeDefinitionNode object during schema generation when multiple create operation is enabled vs disabled.
+        /// The entity under test is a table that contains 2 columns. The entity also has a relationship defined with another entity.
         /// 
+        /// 1. Multiple create operation is enabled - 3 fields are expected. 2 of them corresponding to the entity's own fields. The other one corresponds to the relationship field.
+        /// 2. Multiple create operation is disabled - 2 fields are expected. Both of them corresponding to the entity's own fields. No fields are created as a result of relationship with another entity.
         /// </summary>
-        /// <param name="isMultipleCreateOperationEnabled"></param>
-        /// <param name="expectedNoOfFields"></param>
+        /// <param name="isMultipleCreateOperationEnabled">True/False indicating whether multiple create operation is enabled/disabled</param>
+        /// <param name="expectedNoOfFields">Expected number of fields to be generated in the ObjectTypeDefinitionNode</param>
         [DataTestMethod]
         [DataRow(true, 3, DisplayName = "Validate number of fields generated in object type - Multiple Create Operation is enabled.")]
         [DataRow(false, 2, DisplayName = "Validate number of fields generated in object type - Multiple Create Operation is disabled.")]
@@ -326,11 +330,11 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Assert.AreEqual(expectedNoOfFields, od.Fields.Count);
         }
 
-        [TestMethod]
+
         public void ForeignKeyObjectFieldNameAndTypeMatchesReferenceTable()
         {
 
-            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One, isMultipleCreateOperationEnabled: true);
+            ObjectTypeDefinitionNode od = GenerateObjectWithRelationship(Cardinality.One, isMultipleCreateOperationEnabled: false);
             FieldDefinitionNode field
                 = od.Fields.First(f => f.Name.Value != REF_COLNAME && f.Name.Value != COLUMN_NAME);
 

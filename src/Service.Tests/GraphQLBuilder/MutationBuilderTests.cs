@@ -1020,26 +1020,38 @@ type Foo @model(name:""Foo"") {{
         /// <param name="pluralName">Plural name provided by the user</param>
         /// <param name="expectedName"> Expected name of the entity in the mutation. Used to construct the exact expected mutation names.</param>
         [DataTestMethod]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, null, null, new string[] { "People" },
-            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" },
-            DisplayName = "Mutation name and description validation for plural entity name with singular plural defined")]
-        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "" }, new string[] { "Person" },
-            DisplayName = "Mutation name and description validation for plural entity name with singular defined")]
-        [DataRow(GraphQLTestHelpers.PERSON_GQL, new string[] { "Person" }, null, null, new string[] { "Person" },
-            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined")]
-        [DataRow(GraphQLTestHelpers.PERSON_GQL, new string[] { "Person" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" },
-            DisplayName = "Mutation name and description validation for singular entity name with singular plural defined")]
-        [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, new string[] { "Person", "Book" }, new string[] { "People", "Books" }, new string[] { "Person", "Book" },
-            DisplayName = "Mutation name and description validation for multiple entities with singular, plural")]
-        [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, null, null, new string[] { "Person", "Book" },
-            DisplayName = "Mutation name and description validation for multiple entities with singular plural not defined")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, null, null, new string[] { "People" }, new string[] { "Peoples" }, true,
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, null, null, new string[] { "People" }, null, false,
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined - Multiple Create Operation disabled")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, true,
+            DisplayName = "Mutation name and description validation for plural entity name with singular plural defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" }, null, false,
+            DisplayName = "Mutation name and description validation for plural entity name with singular plural defined - Multiple Create Operation disabled")]
+        [DataRow(GraphQLTestHelpers.PEOPLE_GQL, new string[] { "People" }, new string[] { "Person" }, new string[] { "" }, new string[] { "Person" }, new string[] { "People" }, true,
+            DisplayName = "Mutation name and description validation for plural entity name with singular defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL, new string[] { "Person" }, null, null, new string[] { "Person" }, null, false,
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural not defined - Multiple Create Operation disabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL, new string[] { "Person" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" }, new string[] { "People" }, true,
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL, new string[] { "Person" }, new string[] { "Person" }, new string[] { "People" }, new string[] { "Person" }, null, false,
+            DisplayName = "Mutation name and description validation for singular entity name with singular plural defined - Multiple Create Operation disabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, new string[] { "Person", "Book" }, new string[] { "People", "Books" }, new string[] { "Person", "Book" }, new string[] { "People", "Books" }, true,
+            DisplayName = "Mutation name and description validation for multiple entities with singular, plural - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, new string[] { "Person", "Book" }, new string[] { "People", "Books" }, new string[] { "Person", "Book" }, null, false,
+            DisplayName = "Mutation name and description validation for multiple entities with singular, plural - Multiple Create Operation disabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, null, null, new string[] { "Person", "Book" }, new string[] { "People", "Books" }, true,
+            DisplayName = "Mutation name and description validation for multiple entities with singular plural not defined - Multiple Create Operation enabled")]
+        [DataRow(GraphQLTestHelpers.PERSON_GQL + GraphQLTestHelpers.BOOK_GQL, new string[] { "Person", "Book" }, null, null, new string[] { "Person", "Book" }, null, false,
+            DisplayName = "Mutation name and description validation for multiple entities with singular plural not defined - Multiple Create Operation disabled")]
         public void ValidateMutationsAreCreatedWithRightName(
             string gql,
             string[] entityNames,
             string[] singularNames,
             string[] pluralNames,
-            string[] expectedNames
+            string[] expectedNames,
+            string[] expectedCreateMultipleMutationNames,
+            bool isMultipleCreateOperationEnabled
             )
         {
             Dictionary<string, Entity> entityNameToEntity = new();
@@ -1065,10 +1077,9 @@ type Foo @model(name:""Foo"") {{
                 entityNameToDatabaseType,
                 new(entityNameToEntity),
                 entityPermissionsMap: entityPermissionsMap,
-                isMultipleCreateOperationEnabled: true
+                isMultipleCreateOperationEnabled: isMultipleCreateOperationEnabled
                 );
-            ;
-
+            
             ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
             Assert.IsNotNull(mutation);
 
@@ -1081,7 +1092,7 @@ type Foo @model(name:""Foo"") {{
             int totalExpectedMutations = 0;
             foreach ((_, DatabaseType dbType) in entityNameToDatabaseType)
             {
-                if (GraphQLUtils.DoesRelationalDBSupportMultipleCreate(dbType))
+                if (isMultipleCreateOperationEnabled && GraphQLUtils.DoesRelationalDBSupportMultipleCreate(dbType))
                 {
                     totalExpectedMutations += 4;
                 }
@@ -1101,6 +1112,15 @@ type Foo @model(name:""Foo"") {{
                 Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedCreateMutationName));
                 FieldDefinitionNode createMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMutationName);
                 Assert.AreEqual(expectedCreateMutationDescription, createMutation.Description.Value);
+
+                if (isMultipleCreateOperationEnabled && GraphQLUtils.DoesRelationalDBSupportMultipleCreate(entityNameToDatabaseType[entityNames[i]]))
+                {
+                    string expectedCreateMultipleMutationName = $"create{expectedCreateMultipleMutationNames[i]}";
+                    string expectedCreateMultipleMutationDescription = $"Creates multiple new {expectedCreateMultipleMutationNames[i]}";
+                    Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedCreateMultipleMutationName));
+                    FieldDefinitionNode createMultipleMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMultipleMutationName);
+                    Assert.AreEqual(expectedCreateMultipleMutationDescription, createMultipleMutation.Description.Value);
+                }
 
                 // Name and Description validations for Update mutation
                 string expectedUpdateMutationName = $"update{expectedNames[i]}";

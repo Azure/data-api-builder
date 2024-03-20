@@ -15,5 +15,12 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             databaseEngine = TestCategory.MSSQL;
             await InitializeAsync();
         }
+
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+
     }
 }

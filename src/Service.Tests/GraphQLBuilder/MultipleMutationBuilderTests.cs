@@ -333,8 +333,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             RuntimeConfigProvider runtimeConfigProvider = GetRuntimeConfigProvider();
             _runtimeConfig = runtimeConfigProvider.GetConfig();
 
-            System.Console.WriteLine("Test if multiple mutation enabled :" + _runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
-
             // Collect object definitions for entities.
             GraphQLSchemaCreator schemaCreator = await GetGQLSchemaCreator(runtimeConfigProvider);
             (DocumentNode objectsNode, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = schemaCreator.GenerateGraphQLObjects();

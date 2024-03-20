@@ -258,7 +258,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             bool isAuthenticated = false,
             string clientRoleHeader = "anonymous")
         {
-            
+
             JsonElement actual = await ExecuteGraphQLRequestAsync(
                 query: graphQLMutation,
                 queryName: graphQLMutationName,

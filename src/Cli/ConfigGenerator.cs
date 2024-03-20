@@ -113,25 +113,25 @@ namespace Cli
                 return false;
             }
 
-            bool isNestedCreateEnabledForGraphQL;
+            bool isMultipleCreateEnabledForGraphQL;
 
-            // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-create.enabled is specified for other database types,
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
             // a warning is logged.
-            // When nested mutation operations are extended for other database types, this option should be honored.
+            // When multiple mutation operations are extended for other database types, this option should be honored.
             // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
-            if (dbType is not DatabaseType.MSSQL && options.NestedCreateOperationEnabled is not CliBool.None)
+            if (dbType is not DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
             {
-                _logger.LogWarning($"The option --graphql.nested-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
+                _logger.LogWarning($"The option --graphql.multiple-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
             }
 
-            NestedMutationOptions? nestedMutationOptions = null;
+            MultipleMutationOptions? multipleMutationOptions = null;
 
-            // Nested mutation operations are applicable only for MSSQL database. When the option --graphql.nested-create.enabled is specified for other database types,
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
             // it is not honored.
-            if (dbType is DatabaseType.MSSQL && options.NestedCreateOperationEnabled is not CliBool.None)
+            if (dbType is DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
             {
-                isNestedCreateEnabledForGraphQL = IsNestedCreateOperationEnabled(options.NestedCreateOperationEnabled);
-                nestedMutationOptions = new(nestedCreateOptions: new NestedCreateOptions(enabled: isNestedCreateEnabledForGraphQL));
+                isMultipleCreateEnabledForGraphQL = IsMultipleCreateOperationEnabled(options.MultipleCreateOperationEnabled);
+                multipleMutationOptions = new(multipleCreateOptions: new MultipleCreateOptions(enabled: isMultipleCreateEnabledForGraphQL));
             }
 
             switch (dbType)
@@ -253,7 +253,7 @@ namespace Cli
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
-                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, NestedMutationOptions: nestedMutationOptions),
+                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -307,13 +307,13 @@ namespace Cli
         }
 
         /// <summary>
-        /// Helper method to determine if the nested create operation is enabled or not based on the inputs from dab init command.
+        /// Helper method to determine if the multiple create operation is enabled or not based on the inputs from dab init command.
         /// </summary>
-        /// <param name="nestedCreateEnabledOptionValue">Input value for --graphql.nested-create.enabled option of the init command</param>
+        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-create.enabled option of the init command</param>
         /// <returns>True/False</returns>
-        private static bool IsNestedCreateOperationEnabled(CliBool nestedCreateEnabledOptionValue)
+        private static bool IsMultipleCreateOperationEnabled(CliBool multipleCreateEnabledOptionValue)
         {
-            return nestedCreateEnabledOptionValue is CliBool.True;
+            return multipleCreateEnabledOptionValue is CliBool.True;
         }
 
         /// <summary>

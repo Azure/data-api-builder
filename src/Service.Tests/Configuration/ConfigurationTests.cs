@@ -1661,49 +1661,49 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Validates that deserialization of config file is successful for the following scenarios:
-        /// 1. Nested Mutations section is null
+        /// 1. Multiple Mutations section is null
         /// {
-        ///     "nested-mutations": null
+        ///     "multiple-mutations": null
         /// }
         /// 
-        /// 2. Nested Mutations section is empty.
+        /// 2. Multiple Mutations section is empty.
         /// {
-        ///     "nested-mutations": {}
+        ///     "multiple-mutations": {}
         /// }
         ///
-        /// 3. Create field within Nested Mutation section is null.
+        /// 3. Create field within Multiple Mutation section is null.
         /// {
-        ///     "nested-mutations": {
+        ///     "multiple-mutations": {
         ///         "create": null
         ///     }
         /// }
         ///
-        /// 4. Create field within Nested Mutation section is empty.
+        /// 4. Create field within Multiple Mutation section is empty.
         /// {
-        ///     "nested-mutations": {
+        ///     "multiple-mutations": {
         ///         "create": {}
         ///     }
         /// }
         /// 
-        /// For all the above mentioned scenarios, the expected value for NestedMutationOptions field is null.
+        /// For all the above mentioned scenarios, the expected value for MultipleMutationOptions field is null.
         /// </summary>
         /// <param name="baseConfig">Base Config Json string.</param>
         [DataTestMethod]
-        [DataRow(TestHelper.BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD, DisplayName = "NestedMutationOptions field deserialized as null when nested mutation section is null")]
-        [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_MUTATIONS_FIELD, DisplayName = "NestedMutationOptions field deserialized as null when nested mutation section is empty")]
-        [DataRow(TestHelper.BASE_CONFIG_NULL_NESTED_CREATE_FIELD, DisplayName = "NestedMutationOptions field deserialized as null when create field within nested mutation section is null")]
-        [DataRow(TestHelper.BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD, DisplayName = "NestedMutationOptions field deserialized as null when create field within nested mutation section is empty")]
-        public void ValidateDeserializationOfConfigWithNullOrEmptyInvalidNestedMutationSection(string baseConfig)
+        [DataRow(TestHelper.BASE_CONFIG_NULL_MULTIPLE_MUTATIONS_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when multiple mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_MULTIPLE_MUTATIONS_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when multiple mutation section is empty")]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_MULTIPLE_CREATE_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when create field within multiple mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_MULTIPLE_CREATE_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when create field within multiple mutation section is empty")]
+        public void ValidateDeserializationOfConfigWithNullOrEmptyInvalidMultipleMutationSection(string baseConfig)
         {
             string configJson = TestHelper.AddPropertiesToJson(baseConfig, BOOK_ENTITY_JSON);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
             Assert.IsNotNull(deserializedConfig.Runtime);
             Assert.IsNotNull(deserializedConfig.Runtime.GraphQL);
-            Assert.IsNull(deserializedConfig.Runtime.GraphQL.NestedMutationOptions);
+            Assert.IsNull(deserializedConfig.Runtime.GraphQL.MultipleMutationOptions);
         }
 
         /// <summary>
-        /// Sanity check to validate that DAB engine starts successfully when used with a config file without the nested 
+        /// Sanity check to validate that DAB engine starts successfully when used with a config file without the multiple 
         /// mutations feature flag section.
         /// The runtime graphql section of the config file used looks like this: 
         ///
@@ -1712,14 +1712,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         ///    "allow-introspection": true
         ///  }
         /// 
-        /// Without the nested mutations feature flag section, DAB engine should be able to 
-        ///  1. Successfully deserialize the config file without nested mutation section.
+        /// Without the multiple mutations feature flag section, DAB engine should be able to 
+        ///  1. Successfully deserialize the config file without multiple mutation section.
         ///  2. Process REST and GraphQL API requests.
         /// 
         /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task SanityTestForRestAndGQLRequestsWithoutNestedMutationFeatureFlagSection()
+        public async Task SanityTestForRestAndGQLRequestsWithoutMultipleMutationFeatureFlagSection()
         {
             // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the            
             // configuration file (instead of using CLI).

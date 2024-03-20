@@ -17,7 +17,7 @@
       "enabled": true,
       "path": "/graphql",
       "allow-introspection": true,
-      "nested-mutations": {
+      "multiple-mutations": {
         "create": {
           "enabled": true
         }

@@ -237,47 +237,47 @@ namespace Azure.DataApiBuilder.Service.Tests
             "}";
 
         /// <summary>
-        /// A minimal valid config json with nested mutations section as null.
+        /// A minimal valid config json with multiple mutations section as null.
         /// </summary>
-        public const string BASE_CONFIG_NULL_NESTED_MUTATIONS_FIELD =
+        public const string BASE_CONFIG_NULL_MULTIPLE_MUTATIONS_FIELD =
             RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
               @"
-                ""nested-mutations"": null   
+                ""multiple-mutations"": null   
               }," +
             HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
 
         /// <summary>
-        /// A minimal valid config json with an empty nested mutations section.
+        /// A minimal valid config json with an empty multiple mutations section.
         /// </summary>
-        public const string BASE_CONFIG_EMPTY_NESTED_MUTATIONS_FIELD =
+        public const string BASE_CONFIG_EMPTY_MULTIPLE_MUTATIONS_FIELD =
 
             RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
               @"
-                ""nested-mutations"": {}
+                ""multiple-mutations"": {}
               }," +
             HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
 
         /// <summary>
-        /// A minimal valid config json with the create field within nested mutation as null.
+        /// A minimal valid config json with the create field within multiple mutation as null.
         /// </summary>
-        public const string BASE_CONFIG_NULL_NESTED_CREATE_FIELD =
+        public const string BASE_CONFIG_NULL_MULTIPLE_CREATE_FIELD =
 
             RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
               @"
-                ""nested-mutations"": {
+                ""multiple-mutations"": {
                       ""create"": null
                  }
               }," +
             HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
 
         /// <summary>
-        /// A minimal valid config json with an empty create field within nested mutation.
+        /// A minimal valid config json with an empty create field within multiple mutation.
         /// </summary>
-        public const string BASE_CONFIG_EMPTY_NESTED_CREATE_FIELD =
+        public const string BASE_CONFIG_EMPTY_MULTIPLE_CREATE_FIELD =
 
             RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
             @"
-                ""nested-mutations"": {
+                ""multiple-mutations"": {
                       ""create"": {}
                 }
             }," +

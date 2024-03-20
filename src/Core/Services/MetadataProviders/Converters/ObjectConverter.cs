@@ -32,7 +32,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         {
             Type type = value.GetType();
             
-            // Full Name is a shorter version of the assembly qualified names, full name works for serialization and 
+            // Full Name is a shorter version of the assembly qualified name, full name works for serialization and 
             // deserialization of .Net types
             string typeName = type.FullName!;
 

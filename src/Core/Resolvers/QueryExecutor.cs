@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
-        public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
+        public virtual async Task<TResult> ExecuteQueryAgainstDbAsync<TResult>(
             TConnection conn,
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
@@ -182,7 +182,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
                 else
                 {
-                    return default(TResult);
+                    throw new DataApiBuilderException("bad op", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 }
             }
             catch (DbException e)

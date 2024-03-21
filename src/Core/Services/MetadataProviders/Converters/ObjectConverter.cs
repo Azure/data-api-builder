@@ -31,8 +31,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         public override void Write(Utf8JsonWriter writer, object value, JsonSerializerOptions options)
         {
             Type type = value.GetType();
-            
-            // Full Name is a shorter version of the assembly qualified name, full name works for serialization and 
+
+            // Full Name is a shorter version of the assembly qualified name, full name works for serialization and
             // deserialization of .Net types
             string typeName = type.FullName!;
 

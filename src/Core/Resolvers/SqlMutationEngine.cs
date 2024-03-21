@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutation(inputArgumentName, context, parameters, entityName, mutationOperation);
 
-            if (parameters.TryGetValue(inputArgumentName, out object? param))
+            if (parameters.TryGetValue(inputArgumentName, out object? param) && mutationOperation is EntityActionOperation.Create)
             {
                 IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
                 MultipleMutationInputValidator.ValidateGraphQLValueNode(

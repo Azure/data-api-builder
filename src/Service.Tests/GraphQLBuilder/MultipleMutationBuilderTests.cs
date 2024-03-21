@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
-using System.IO.Abstractions.TestingHelpers;
+
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
@@ -367,7 +367,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                                                                 Cache: runtimeConfig.Runtime.Cache)
             };
 
-            MockFileSystem fileSystem = new();
+            System.IO.Abstractions.TestingHelpers.MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider runtimeConfigProvider = new(loader);

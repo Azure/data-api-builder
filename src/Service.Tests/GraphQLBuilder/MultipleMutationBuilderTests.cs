@@ -417,5 +417,13 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 authorizationResolver: authorizationResolver);
         }
         #endregion
+
+        #region Clean up
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
+        }
+        #endregion
     }
 }

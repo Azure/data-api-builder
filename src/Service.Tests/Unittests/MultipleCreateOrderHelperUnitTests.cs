@@ -1,15 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using Azure.DataApiBuilder.Core.Resolvers;
-using HotChocolate.Resolvers;
-using Moq;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate.Execution;
 using HotChocolate.Language;
-using System.Collections.Generic;
-using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Resolvers;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             IMiddlewareContext context = SetupMiddlewareContext();
             string sourceEntityName = "User_NonAutogenRelationshipColumn";
-            string targetEntityName = "UserProfile_NonAutogenRelationshipColumn";
+            string targetEntityName = "UserProfile";
 
             // Setup column input in source entity.
             Dictionary<string, IValueNode> columnDataInSourceBody = new()
@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Test 1: The value for relationship field 'username' is present in the input for the source entity.
             IMiddlewareContext context = SetupMiddlewareContext();
             string sourceEntityName = "User_NonAutogenRelationshipColumn";
-            string targetEntityName = "UserProfile_NonAutogenRelationshipColumn";
+            string targetEntityName = "UserProfile";
 
             // Setup column input in source entity.
             Dictionary<string, IValueNode> columnDataInSourceBody = new()
@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             IMiddlewareContext context = SetupMiddlewareContext();
             string sourceEntityName = "User_AutogenRelationshipColumn";
-            string targetEntityName = "UserProfile_AutogenRelationshipColumn";
+            string targetEntityName = "UserProfile";
 
             // Setup column input for source entity.
             Dictionary<string, IValueNode> columnDataInSourceBody = new()
@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Test 1
             IMiddlewareContext context = SetupMiddlewareContext();
             string sourceEntityName = "User_AutogenToNonAutogenRelationshipColumn";
-            string targetEntityName = "UserProfile_NonAutogenToAutogenRelationshipColumn";
+            string targetEntityName = "UserProfile";
 
             // Setup column input in source entity.
             Dictionary<string, IValueNode> columnDataInSourceBody = new()
@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Test 1
             IMiddlewareContext context = SetupMiddlewareContext();
             string sourceEntityName = "User_AutogenToNonAutogenRelationshipColumn";
-            string targetEntityName = "UserProfile_NonAutogenToAutogenRelationshipColumn";
+            string targetEntityName = "UserProfile";
 
             // Setup column input in source entity.
             Dictionary<string, IValueNode> columnDataInSourceBody = new()
@@ -282,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 targetNodeValue: targetNodeValue,
                 nestingLevel: 1);
 
-            Assert.AreEqual("UserProfile_NonAutogenToAutogenRelationshipColumn", referencingEntityName);
+            Assert.AreEqual(targetEntityName, referencingEntityName);
         }
 
         private static IMiddlewareContext SetupMiddlewareContext()
@@ -309,7 +309,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             ValidateReferencingEntityForRelationship(
                 sourceEntityName: "Review",
                 targetEntityName: "Book",
-                expectedReferencingEntityName: "Review" );
+                expectedReferencingEntityName: "Review");
 
             // Book is the source entity.
             ValidateReferencingEntityForRelationship(

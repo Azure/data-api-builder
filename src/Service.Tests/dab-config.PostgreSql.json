@@ -1550,7 +1550,7 @@
       "relationships": {
         "UserProfile_NonAutogenRelationshipColumn": {
           "cardinality": "one",
-          "target.entity": "UserProfile_NonAutogenRelationshipColumn",
+          "target.entity": "UserProfile",
           "source.fields": [
             "username"
           ],
@@ -1562,7 +1562,7 @@
         }
       }
     },
-    "UserProfile_NonAutogenRelationshipColumn": {
+    "UserProfile": {
       "source": {
         "object": "user_profiles",
         "type": "table"
@@ -1570,8 +1570,8 @@
       "graphql": {
         "enabled": true,
         "type": {
-          "singular": "UserProfile_NonAutogenRelationshipColumn",
-          "plural": "UserProfile_NonAutogenRelationshipColumns"
+          "singular": "UserProfile",
+          "plural": "UserProfiles"
         }
       },
       "rest": {
@@ -1616,7 +1616,7 @@
       "relationships": {
         "UserProfile_AutogenRelationshipColumn": {
           "cardinality": "one",
-          "target.entity": "UserProfile_AutogenRelationshipColumn",
+          "target.entity": "UserProfile",
           "source.fields": [
             "userid"
           ],
@@ -1627,32 +1627,6 @@
           "linking.target.fields": []
         }
       }
-    },
-    "UserProfile_AutogenRelationshipColumn": {
-      "source": {
-        "object": "user_profiles",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "UserProfile_AutogenRelationshipColumn",
-          "plural": "UserProfile_AutogenRelationshipColumns"
-        }
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ]
     },
     "User_AutogenToNonAutogenRelationshipColumn": {
       "source": {
@@ -1682,7 +1656,7 @@
       "relationships": {
         "UserProfile_AutogenToNonAutogenRelationshipColumn": {
           "cardinality": "one",
-          "target.entity": "UserProfile_NonAutogenToAutogenRelationshipColumn",
+          "target.entity": "UserProfile",
           "source.fields": [
             "userid",
             "username"
@@ -1695,32 +1669,6 @@
           "linking.target.fields": []
         }
       }
-    },
-    "UserProfile_NonAutogenToAutogenRelationshipColumn": {
-      "source": {
-        "object": "user_profiles",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "UserProfile_NonAutogenToAutogenRelationshipColumn",
-          "plural": "UserProfile_NonAutogenToAutogenRelationshipColumns"
-        }
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ]
     },
     "books_view_all": {
       "source": {

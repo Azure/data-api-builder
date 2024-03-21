@@ -62,26 +62,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 root = document.RootElement.Clone();
             }
 
+            // If the request includes either hasNextPage or endCursor then to correctly return those
+            // values we need to determine the correct pagination logic
+            bool paginationScenario = paginationMetadata.RequestedHasNextPage || paginationMetadata.RequestedEndCursor;
+
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
-
+            int returnedElemNo = rootEnumerated.Count();
             bool hasExtraElement = false;
-            if (paginationMetadata.RequestedHasNextPage)
+
+            if (paginationScenario)
             {
-                // check if the number of elements requested is successfully returned
-                // structure.Limit() is first + 1 for paginated queries where hasNextPage is requested
-                hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure!.Limit();
-
-                // add hasNextPage to connection elements
-                connection.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement);
-
+                // structure.Limit() is first + 1 for paginated queries where hasNextPage or endCursor is requested
+                hasExtraElement = returnedElemNo == paginationMetadata.Structure!.Limit();
                 if (hasExtraElement)
                 {
-                    // remove the last element
+                    // In a pagination scenario where we have an extra element, this element
+                    // must be removed since it was only used to determine if there are additional
+                    // records after those requested.
                     rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
                 }
             }
 
-            int returnedElemNo = rootEnumerated.Count();
+            if (paginationMetadata.RequestedHasNextPage)
+            {
+                // add hasNextPage to connection elements
+                connection.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement);
+            }
 
             if (paginationMetadata.RequestedItems)
             {

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
@@ -349,9 +350,28 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
         private static RuntimeConfigProvider GetRuntimeConfigProvider()
         {
             TestHelper.SetupDatabaseEnvironment(databaseEngine);
-            // Get the base config file from disk
             FileSystemRuntimeConfigLoader configPath = TestHelper.GetRuntimeConfigLoader();
-            return new(configPath);
+            RuntimeConfigProvider provider = new(configPath);
+
+            RuntimeConfig runtimeConfig = provider.GetConfig();
+
+            // Enabling multiple create operation because all the validations in this test file are specific
+            // to multiple create operation.
+            runtimeConfig = runtimeConfig with
+            {
+                Runtime = new RuntimeOptions(Rest: runtimeConfig.Runtime.Rest,
+                                                                GraphQL: new GraphQLRuntimeOptions(MultipleMutationOptions: new MultipleMutationOptions(new MultipleCreateOptions(enabled: true))),
+                                                                Host: runtimeConfig.Runtime.Host,
+                                                                BaseRoute: runtimeConfig.Runtime.BaseRoute,
+                                                                Telemetry: runtimeConfig.Runtime.Telemetry,
+                                                                Cache: runtimeConfig.Runtime.Cache)
+            };
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider runtimeConfigProvider = new(loader);
+            return runtimeConfigProvider;
         }
 
         /// <summary>

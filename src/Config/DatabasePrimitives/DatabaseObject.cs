@@ -202,6 +202,16 @@ public class SourceDefinition
 
         return null;
     }
+
+    public virtual SqlDbType? GetSqlDbTypeForParam(string paramName)
+    {
+        if (Columns.TryGetValue(paramName, out ColumnDefinition? columnDefinition))
+        {
+            return columnDefinition.SqlDbType;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>

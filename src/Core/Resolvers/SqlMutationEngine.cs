@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -1268,7 +1269,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
-                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
                     fieldNodes: listOfObjectFieldNode);
@@ -1289,7 +1290,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
-                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
                     fieldNodes: objectValueNode.Fields);

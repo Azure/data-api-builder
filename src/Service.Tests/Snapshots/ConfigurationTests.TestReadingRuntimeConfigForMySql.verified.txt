@@ -2134,9 +2134,6 @@
                   Exclude: [
                     current_date,
                     next_date
-                  ],
-                  Include: [
-                    *
                   ]
                 }
               },

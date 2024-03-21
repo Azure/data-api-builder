@@ -1887,7 +1887,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             return new();
-        } 
+        }
     }
 }
 

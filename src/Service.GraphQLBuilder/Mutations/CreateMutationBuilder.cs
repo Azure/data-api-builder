@@ -164,6 +164,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="inputs">Reference table of all known input types.</param>
         /// <param name="objectTypeDefinitionNode">GraphQL object to generate the input type for.</param>
         /// <param name="name">Name of the GraphQL object type.</param>
+        /// <param name="baseEntityName">In case when we are creating input type for linking object, baseEntityName is equal to the targetEntityName,
+        /// else baseEntityName is equal to the name parameter.</param>
         /// <param name="definitions">All named GraphQL items in the schema (objects, enums, scalars, etc.)</param>
         /// <param name="databaseType">Database type of the non-relational database to generate input type for.</param>
         /// <param name="entities">Runtime config information.</param>
@@ -497,7 +499,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             IEnumerable<string>? rolesAllowedForMutation = null,
             bool isMultipleCreateOperationEnabled = false)
         {
-
             List<FieldDefinitionNode> createMutationNodes = new();
             Entity entity = entities[dbEntityName];
             InputObjectTypeDefinitionNode input;

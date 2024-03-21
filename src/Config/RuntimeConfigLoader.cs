@@ -33,8 +33,9 @@ public abstract class RuntimeConfigLoader
     /// <param name="config">The loaded <c>RuntimeConfig</c>, or null if none was loaded.</param>
     /// <param name="replaceEnvVar">Whether to replace environment variable with its
     /// value or not while deserializing.</param>
+    /// <param name="dataSourceName">The data source name to be used in the loaded config.</param>
     /// <returns>True if the config was loaded, otherwise false.</returns>
-    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false);
+    public abstract bool TryLoadKnownConfig([NotNullWhen(true)] out RuntimeConfig? config, bool replaceEnvVar = false, string dataSourceName = "");
 
     /// <summary>
     /// Returns the link to the published draft schema.
@@ -80,7 +81,7 @@ public abstract class RuntimeConfigLoader
             // set dataSourceName to default if not provided
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = config.GetDefaultDataSourceName();
+                dataSourceName = config.DefaultDataSourceName;
             }
 
             if (!string.IsNullOrEmpty(connectionString))
@@ -113,7 +114,7 @@ public abstract class RuntimeConfigLoader
                 ds = ds with { ConnectionString = updatedConnection };
                 config.UpdateDataSourceNameToDataSource(dataSourceName, ds);
 
-                if (string.Equals(dataSourceKey, config.GetDefaultDataSourceName(), StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(dataSourceKey, config.DefaultDataSourceName, StringComparison.OrdinalIgnoreCase))
                 {
                     config = config with { DataSource = ds };
                 }

@@ -333,18 +333,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             RuntimeConfigProvider runtimeConfigProvider = GetRuntimeConfigProvider();
             _runtimeConfig = runtimeConfigProvider.GetConfig();
 
-            // Enabling multiple create operation because all the validations in this test file are specific
-            // to multiple create operation.
-            _runtimeConfig = _runtimeConfig with
-            {
-                Runtime = new RuntimeOptions(Rest: _runtimeConfig.Runtime.Rest,
-                                                                GraphQL: new GraphQLRuntimeOptions(MultipleMutationOptions: new MultipleMutationOptions(new MultipleCreateOptions(enabled: true))),
-                                                                Host: _runtimeConfig.Runtime.Host,
-                                                                BaseRoute: _runtimeConfig.Runtime.BaseRoute,
-                                                                Telemetry: _runtimeConfig.Runtime.Telemetry,
-                                                                Cache: _runtimeConfig.Runtime.Cache)
-            };
-
             // Collect object definitions for entities.
             GraphQLSchemaCreator schemaCreator = await GetGQLSchemaCreator(runtimeConfigProvider);
             (DocumentNode objectsNode, Dictionary<string, InputObjectTypeDefinitionNode> inputTypes) = schemaCreator.GenerateGraphQLObjects();
@@ -376,8 +364,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
             Mock<ILogger<IQueryExecutor>> executorLogger = new();
             Mock<ILogger<ISqlMetadataProvider>> metadatProviderLogger = new();
             Mock<ILogger<IQueryEngine>> queryEngineLogger = new();
-            Mock<RuntimeConfigProvider> runtimeConfigProviderMock = new();
-            runtimeConfigProviderMock.Setup(m => m.GetConfig()).Returns(_runtimeConfig);
 
             // Setup mock cache and cache service.
             Mock<IFusionCache> cache = new();
@@ -429,6 +415,14 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                 mutationEngineFactory: mutationEngineFactory.Object,
                 metadataProviderFactory: metadataProviderFactory,
                 authorizationResolver: authorizationResolver);
+        }
+        #endregion
+
+        #region Clean up
+        [TestCleanup]
+        public void CleanupAfterEachTest()
+        {
+            TestHelper.UnsetAllDABEnvironmentVariables();
         }
         #endregion
     }

@@ -1249,7 +1249,8 @@ namespace Azure.DataApiBuilder.Core.Services
             List<string>? readOnlyFields = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: queryToGetReadOnlyColumns,
                 parameters: parameters,
-                dataReaderHandler: SummarizeReadOnlyFieldsMetadata);
+                dataReaderHandler: SummarizeReadOnlyFieldsMetadata,
+                dataSourceName: _dataSourceName);
 
             if (readOnlyFields is not null && readOnlyFields.Count > 0)
             {
@@ -1562,7 +1563,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // Gather all the referencing and referenced columns for each pair
             // of referencing and referenced tables.
             PairToFkDefinition = await QueryExecutor.ExecuteQueryAsync(
-                queryForForeignKeyInfo, parameters, SummarizeFkMetadata, httpContext: null, args: null, _dataSourceName);
+                queryForForeignKeyInfo, parameters, SummarizeFkMetadata, _dataSourceName, httpContext: null, args: null);
 
             if (PairToFkDefinition is not null)
             {

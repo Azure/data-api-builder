@@ -7,11 +7,8 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
-using DotNetEnv;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using Humanizer;
-using System;
 using System.Net;
 
 namespace Azure.DataApiBuilder.Core.Services

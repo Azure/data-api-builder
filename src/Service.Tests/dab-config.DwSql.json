@@ -2227,6 +2227,44 @@
         }
       ]
     },
+    "GetBook": {
+      "source": {
+        "object": "get_book_by_id",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": false,
+        "operation": "mutation",
+        "type": {
+          "singular": "GetBook",
+          "plural": "GetBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
     "GetPublisher": {
       "source": {
         "object": "get_publisher_by_id",

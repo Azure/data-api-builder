@@ -71,6 +71,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const int RETRY_WAIT_SECONDS = 1;
 
         /// <summary>
+        /// 
+        /// </summary>
+        public const string BOOK_ENTITY_JSON = @"
+            {
+              ""entities"": {
+                    ""Book"": {
+                    ""source"": {
+                        ""object"": ""books"",
+                        ""type"": ""table""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""type"": {
+                        ""singular"": ""book"",
+                        ""plural"": ""books""
+                        }
+                    },
+                    ""rest"":{
+                        ""enabled"": true
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                                {
+                                    ""action"": ""read""
+                                }
+                            ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
+                    }
+                }
+            }";
+
+        /// <summary>
         /// A valid REST API request body with correct parameter types for all the fields.
         /// </summary>
         public const string REQUEST_BODY_WITH_CORRECT_PARAM_TYPES = @"
@@ -1062,6 +1099,47 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             configValidator.ValidateConfigProperties();
         }
 
+        /// <summary>
+        /// This method tests that config file is validated correctly and no exceptions are thrown.
+        /// This tests gets the json from the integration test config file and then uses that
+        /// to validate the complete config file.
+        /// </summary>
+        [TestMethod("Validates the complete config."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestConfigIsValid()
+        {
+            // Fetch the MS_SQL integration test config file.
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystemRuntimeConfigLoader testConfigPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfig configuration = TestHelper.GetRuntimeConfigProvider(testConfigPath).GetConfig();
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            MockFileSystem fileSystem = new();
+
+            // write it to the custom-config file and add it to the filesystem.
+            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(configuration.ToJson()));
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    fileSystem,
+                    configValidatorLogger.Object,
+                    true);
+
+            try
+            {
+                // Run the validate on the custom config json file.
+                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+            }
+            catch (Exception e)
+            {
+                Assert.Fail(e.Message);
+            }
+        }
+
         /// <summary> 
         /// This test method checks a valid config's entities against 
         /// the database and ensures they are valid. 
@@ -1155,7 +1233,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.AreEqual(2, configValidator.ConfigValidationExceptions.Count);
             List<Exception> exceptionsList = configValidator.ConfigValidationExceptions;
             Assert.AreEqual("Cannot obtain Schema for entity Book with underlying database "
-                + "object source: dbo.bokos due to: Invalid object name 'master.dbo.bokos'.", exceptionsList[0].Message);
+                + "object source: dbo.bokos due to: Invalid object name 'dbo.bokos'.", exceptionsList[0].Message);
             Assert.AreEqual("No stored procedure definition found for the given database object publishers", exceptionsList[1].Message);
         }
 
@@ -1578,6 +1656,119 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpRequestMessage request = new(httpMethod, requestPath);
                 HttpResponseMessage response = await client.SendAsync(request);
                 Assert.AreEqual(expectedResponseStatusCode, response.StatusCode);
+            }
+        }
+
+        /// <summary>
+        /// Validates that deserialization of config file is successful for the following scenarios:
+        /// 1. Multiple Mutations section is null
+        /// {
+        ///     "multiple-mutations": null
+        /// }
+        /// 
+        /// 2. Multiple Mutations section is empty.
+        /// {
+        ///     "multiple-mutations": {}
+        /// }
+        ///
+        /// 3. Create field within Multiple Mutation section is null.
+        /// {
+        ///     "multiple-mutations": {
+        ///         "create": null
+        ///     }
+        /// }
+        ///
+        /// 4. Create field within Multiple Mutation section is empty.
+        /// {
+        ///     "multiple-mutations": {
+        ///         "create": {}
+        ///     }
+        /// }
+        /// 
+        /// For all the above mentioned scenarios, the expected value for MultipleMutationOptions field is null.
+        /// </summary>
+        /// <param name="baseConfig">Base Config Json string.</param>
+        [DataTestMethod]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_MULTIPLE_MUTATIONS_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when multiple mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_MULTIPLE_MUTATIONS_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when multiple mutation section is empty")]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_MULTIPLE_CREATE_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when create field within multiple mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_MULTIPLE_CREATE_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when create field within multiple mutation section is empty")]
+        public void ValidateDeserializationOfConfigWithNullOrEmptyInvalidMultipleMutationSection(string baseConfig)
+        {
+            string configJson = TestHelper.AddPropertiesToJson(baseConfig, BOOK_ENTITY_JSON);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
+            Assert.IsNotNull(deserializedConfig.Runtime);
+            Assert.IsNotNull(deserializedConfig.Runtime.GraphQL);
+            Assert.IsNull(deserializedConfig.Runtime.GraphQL.MultipleMutationOptions);
+        }
+
+        /// <summary>
+        /// Sanity check to validate that DAB engine starts successfully when used with a config file without the multiple 
+        /// mutations feature flag section.
+        /// The runtime graphql section of the config file used looks like this: 
+        ///
+        /// "graphql": {
+        ///    "path": "/graphql",
+        ///    "allow-introspection": true
+        ///  }
+        /// 
+        /// Without the multiple mutations feature flag section, DAB engine should be able to 
+        ///  1. Successfully deserialize the config file without multiple mutation section.
+        ///  2. Process REST and GraphQL API requests.
+        /// 
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task SanityTestForRestAndGQLRequestsWithoutMultipleMutationFeatureFlagSection()
+        {
+            // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the            
+            // configuration file (instead of using CLI).
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+            string configFileName = "custom-config.json";
+            File.WriteAllText(configFileName, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try
+                {
+
+                    // Perform a REST GET API request to validate that REST GET API requests are executed correctly.
+                    HttpRequestMessage restRequest = new(HttpMethod.Get, "api/Book");
+                    HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                    Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+
+                    // Perform a GraphQL API request to validate that DAB engine executes GraphQL requests successfully. 
+                    string query = @"{
+                        book_by_pk(id: 1) {
+                           id,
+                           title,
+                           publisher_id
+                        }
+                    }";
+
+                    object payload = new { query };
+
+                    HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                    {
+                        Content = JsonContent.Create(payload)
+                    };
+
+                    HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                    Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                    Assert.IsNotNull(graphQLResponse.Content);
+                    string body = await graphQLResponse.Content.ReadAsStringAsync();
+                    Assert.IsFalse(body.Contains("errors"));
+                }
+                catch (Exception ex)
+                {
+                    Assert.Fail($"Unexpected exception : {ex}");
+                }
             }
         }
 
@@ -3143,7 +3334,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             GraphQLRuntimeOptions graphqlOptions,
             RestRuntimeOptions restOptions,
             Entity entity = null,
-            string entityName = null)
+            string entityName = null,
+            EntityCacheOptions cacheOptions = null
+            )
         {
             entity ??= new(
                 Source: new("books", EntitySourceType.Table, null, null),
@@ -3176,7 +3369,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Schema: "IntegrationTestMinimalSchema",
                 DataSource: dataSource,
                 Runtime: new(restOptions, graphqlOptions,
-                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development)),
+                    Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: cacheOptions),
                 Entities: new(entityMap)
             );
         }

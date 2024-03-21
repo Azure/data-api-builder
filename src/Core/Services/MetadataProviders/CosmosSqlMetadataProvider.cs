@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -141,12 +140,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             // There's a lot of unimplemented methods here, maybe need to rethink the current interface implementation
             throw new NotSupportedException("Cosmos backends (probably) don't support direct stored procedure definitions, either.");
-        }
-
-        public SqlDbType? GetSqlDbTypeForColumnNameInAnEntity(string entityName, string columnName)
-        {
-            // CosmosDb doesn't require SqlDbType
-            return null;
         }
 
         public Task InitializeAsync()

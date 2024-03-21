@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using System.Net;
 using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -34,11 +33,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Adds database specific quotes to string identifier
         /// </summary>
         public abstract string QuoteIdentifier(string ident);
-
-        /// <summary>
-        /// Removes database specific quotes from quoted string identifier
-        /// </summary>
-        public abstract string UnquoteIdentifier(string quotedIdentifier);
 
         /// <inheritdoc />
         public virtual string Build(BaseSqlQueryStructure structure)

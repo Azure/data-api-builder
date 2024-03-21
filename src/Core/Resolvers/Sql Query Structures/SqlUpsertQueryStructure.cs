@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -129,7 +128,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // since we have already validated mutationParams we know backing column exists
                     MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-                    SqlDbType? columnSqlDbType = sourceDefinition.Columns[backingColumn!].SqlDbType;
 
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
@@ -146,7 +144,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     // Create a predicate for UPDATE Operation.
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: backingColumn!, columnSqlDbType)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, columnName: backingColumn!)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"{paramIdentifier}")
                     );

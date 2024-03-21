@@ -83,10 +83,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Adds database specific quotes to string identifier
         /// </summary>
         public string QuoteIdentifier(string identifier);
-
-        /// <summary>
-        /// Removes database specific quotes from quoted string identifier
-        /// </summary>
-        public string UnquoteIdentifier(string quotedIdentifier);
     }
 }

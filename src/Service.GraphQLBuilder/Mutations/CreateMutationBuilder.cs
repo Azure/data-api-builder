@@ -30,6 +30,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="definitions">All named GraphQL items in the schema (objects, enums, scalars, etc.)</param>
         /// <param name="databaseType">Database type of the relational database to generate input type for.</param>
         /// <param name="entities">Runtime config information.</param>
+        /// <param name="isMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
         /// <returns>A GraphQL input type with all expected fields mapped as GraphQL inputs.</returns>
         private static InputObjectTypeDefinitionNode GenerateCreateInputTypeForRelationalDb(
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs,
@@ -269,6 +270,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="name">Name of the field.</param>
         /// <param name="fieldDefinition">Field definition.</param>
         /// <param name="databaseType">Database type</param>
+        /// <param name="isMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
         private static InputValueDefinitionNode GenerateScalarInputType(NameNode name, FieldDefinitionNode fieldDefinition, DatabaseType databaseType, bool isMultipleCreateOperationEnabled = false)
         {
             IValueNode? defaultValue = null;
@@ -486,6 +488,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="dbEntityName">Entity name specified in the runtime config.</param>
         /// <param name="returnEntityName">Name of type to be returned by the mutation.</param>
         /// <param name="rolesAllowedForMutation">Collection of role names allowed for action, to be added to authorize directive.</param>
+        /// <param name="isMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
         /// <returns>A GraphQL field definition named <c>create*EntityName*</c> to be attached to the Mutations type in the GraphQL schema.</returns>
         public static IEnumerable<FieldDefinitionNode> Build(
             NameNode name,
@@ -522,7 +525,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     definitions: root.Definitions.Where(d => d is HotChocolate.Language.IHasName).Cast<HotChocolate.Language.IHasName>(),
                     databaseType: databaseType,
                     entities: entities,
-                    isMultipleCreateOperationEnabled);
+                    isMultipleCreateOperationEnabled: isMultipleCreateOperationEnabled);
             }
 
             List<DirectiveNode> fieldDefinitionNodeDirectives = new() { new(ModelDirectiveType.DirectiveName, new ArgumentNode(ModelDirectiveType.ModelNameArgument, dbEntityName)) };

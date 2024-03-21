@@ -367,6 +367,9 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder
                                                                 Cache: runtimeConfig.Runtime.Cache)
             };
 
+            // For testing different aspects of schema generation for multiple create operation, we need to create a RuntimeConfigProvider object which contains a RuntimeConfig object
+            // with the multiple create operation enabled.
+            // So, another RuntimeConfigProvider object is created with the modified runtimeConfig and returned.
             System.IO.Abstractions.TestingHelpers.MockFileSystem fileSystem = new();
             fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, runtimeConfig.ToJson());
             FileSystemRuntimeConfigLoader loader = new(fileSystem);

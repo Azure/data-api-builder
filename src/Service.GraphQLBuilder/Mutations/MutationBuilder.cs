@@ -31,6 +31,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
         /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
         /// <param name="dbObjects">Database object metadata</param>
+        /// <param name="isMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
         /// <returns>Mutations DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
@@ -109,6 +110,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType"></param>
         /// <param name="entities"></param>
         /// <param name="mutationFields"></param>
+        /// <param name="isMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         private static void AddMutations(
             string dbEntityName,
@@ -132,7 +134,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 {
                     case EntityActionOperation.Create:
                         // Get the create one/many fields for the create mutation.
-                        IEnumerable<FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, returnEntityName, rolesAllowedForMutation, isMultipleCreateOperationEnabled);
+                        IEnumerable<FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name,
+                                                                                                           inputs,
+                                                                                                           objectTypeDefinitionNode,
+                                                                                                           root,
+                                                                                                           databaseType,
+                                                                                                           entities,
+                                                                                                           dbEntityName,
+                                                                                                           returnEntityName,
+                                                                                                           rolesAllowedForMutation,
+                                                                                                           isMultipleCreateOperationEnabled);
                         mutationFields.AddRange(createMutationNodes);
                         break;
                     case EntityActionOperation.Update:

@@ -758,11 +758,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
                     // Populating metadata for linking object is only required when multiple create operation is enabled.
-                    if (runtimeConfig.Runtime is not null &&
-                        runtimeConfig.Runtime.GraphQL is not null &&
-                        runtimeConfig.Runtime.GraphQL.MultipleMutationOptions is not null &&
-                        runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null &&
-                        runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled is true)
+                    if (runtimeConfig.IsMultipleCreateOptionEnabled())
                     {
                         // When a linking object is encountered for a database table, we will create a linking entity for the object.
                         // Subsequently, we will also populate the Database object for the linking entity. This is used to infer

@@ -2032,13 +2032,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Multiple mutation operations are disabled through the configuration properties.
+        /// 
+        /// Test to validate that when multiple-create is disabled:
+        /// 1. Including a relationship field in the input for create mutation for an entity returns an exception as when multiple mutations are disabled,
+        /// we don't add fields for relationships in the input type schema and hence users should not be able to do insertion in the related entities.
         ///
-        /// 1. Executing the following multiple create mutation operations,
-        ///     a. Point multiple create operation
-        ///     b. Many type multiple create operation
-        ///    should result in failure as both these operations are disabled.
-        ///
-        /// 2. Executing a create mutation operation should succeed.
+        /// 2. Excluding all the relationship fields i.e. performing insertion in just the top-level entity executes successfully.
         /// 
         /// </summary>
         [TestMethod]
@@ -2050,8 +2049,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
 
-            DataSource dataSource = new(DatabaseType.MSSQL,
-                               GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
 
             EntityAction createAction = new(
                 Action: EntityActionOperation.Create,
@@ -2065,7 +2063,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
             EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { readAction, createAction }) };
 
-            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One, TargetEntity: "Publisher", SourceFields: new string[] { }, TargetFields: new string[] { }, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null);
+            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
+                                                      TargetEntity: "Publisher",
+                                                      SourceFields: new string[] { },
+                                                      TargetFields: new string[] { },
+                                                      LinkingObject: null,
+                                                      LinkingSourceFields: null,
+                                                      LinkingTargetFields: null);
 
             Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
                               Rest: null,
@@ -2081,7 +2085,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 { bookEntityName, bookEntity }
             };
 
-            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many, TargetEntity: "Book", SourceFields: new string[] { }, TargetFields: new string[] { }, LinkingObject: null, LinkingSourceFields: null, LinkingTargetFields: null);
+            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many,
+                                                           TargetEntity: "Book",
+                                                           SourceFields: new string[] { },
+                                                           TargetFields: new string[] { },
+                                                           LinkingObject: null,
+                                                           LinkingSourceFields: null,
+                                                           LinkingTargetFields: null);
 
             Entity publisherEntity = new(
                 Source: new("publishers", EntitySourceType.Table, null, null),

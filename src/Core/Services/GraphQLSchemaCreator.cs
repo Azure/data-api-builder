@@ -61,18 +61,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
-            if (runtimeConfig.Runtime is not null &&
-               runtimeConfig.Runtime.GraphQL is not null &&
-               runtimeConfig.Runtime.GraphQL.MultipleMutationOptions is not null &&
-               runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null)
-            {
-                _isMultipleCreateOperationEnabled = runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled;
-            }
-            else
-            {
-                _isMultipleCreateOperationEnabled = false;
-            }
-
+            _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOptionEnabled();
             _entities = runtimeConfig.Entities;
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
@@ -266,7 +255,6 @@ namespace Azure.DataApiBuilder.Core.Services
             // enabled.
             if (_isMultipleCreateOperationEnabled)
             {
-
                 Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities();
                 GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes);
             }

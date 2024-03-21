@@ -453,4 +453,17 @@ public record RuntimeConfig
         // always return false while hot reload is not an available feature.
         return false;
     }
+
+    /// <summary>
+    /// Helper function to check if multiple create option is enabled.
+    /// </summary>
+    public bool IsMultipleCreateOptionEnabled()
+    {
+        return Runtime is not null &&
+               Runtime.GraphQL is not null &&
+               Runtime.GraphQL.MultipleMutationOptions is not null &&
+               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null &&
+               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled;
+    }
+
 }

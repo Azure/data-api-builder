@@ -2047,7 +2047,7 @@
         ],
         Relationships: {
           UserProfile_NonAutogenRelationshipColumn: {
-            TargetEntity: UserProfile_NonAutogenRelationshipColumn,
+            TargetEntity: UserProfile,
             SourceFields: [
               username
             ],
@@ -2059,14 +2059,14 @@
       }
     },
     {
-      UserProfile_NonAutogenRelationshipColumn: {
+      UserProfile: {
         Source: {
           Object: user_profiles,
           Type: Table
         },
         GraphQL: {
-          Singular: UserProfile_NonAutogenRelationshipColumn,
-          Plural: UserProfile_NonAutogenRelationshipColumns,
+          Singular: UserProfile,
+          Plural: UserProfiles,
           Enabled: true
         },
         Rest: {
@@ -2110,7 +2110,7 @@
         ],
         Relationships: {
           UserProfile_AutogenRelationshipColumn: {
-            TargetEntity: UserProfile_AutogenRelationshipColumn,
+            TargetEntity: UserProfile,
             SourceFields: [
               userid
             ],
@@ -2119,32 +2119,6 @@
             ]
           }
         }
-      }
-    },
-    {
-      UserProfile_AutogenRelationshipColumn: {
-        Source: {
-          Object: user_profiles,
-          Type: Table
-        },
-        GraphQL: {
-          Singular: UserProfile_AutogenRelationshipColumn,
-          Plural: UserProfile_AutogenRelationshipColumns,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: true
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: *
-              }
-            ]
-          }
-        ]
       }
     },
     {
@@ -2173,7 +2147,7 @@
         ],
         Relationships: {
           UserProfile_AutogenToNonAutogenRelationshipColumn: {
-            TargetEntity: UserProfile_NonAutogenToAutogenRelationshipColumn,
+            TargetEntity: UserProfile,
             SourceFields: [
               userid,
               username
@@ -2184,32 +2158,6 @@
             ]
           }
         }
-      }
-    },
-    {
-      UserProfile_NonAutogenToAutogenRelationshipColumn: {
-        Source: {
-          Object: user_profiles,
-          Type: Table
-        },
-        GraphQL: {
-          Singular: UserProfile_NonAutogenToAutogenRelationshipColumn,
-          Plural: UserProfile_NonAutogenToAutogenRelationshipColumns,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: true
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: *
-              }
-            ]
-          }
-        ]
       }
     },
     {

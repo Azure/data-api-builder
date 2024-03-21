@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="args">List of string arguments to the DbDataReader handler.</param>
         /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
-        public virtual async Task<TResult> ExecuteQueryAgainstDbAsync<TResult>(
+        public virtual async Task<TResult?> ExecuteQueryAgainstDbAsync<TResult>(
             TConnection conn,
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
@@ -153,6 +153,48 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null)
         {
             await conn.OpenAsync();
+            DbCommand cmd = PrepareCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+
+            try
+            {
+                using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                if (dataReaderHandler is not null && dbDataReader is not null)
+                {
+                    return await dataReaderHandler(dbDataReader, args);
+                }
+                else
+                {
+                    return default(TResult);
+                }
+            }
+            catch (DbException e)
+            {
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                QueryExecutorLogger.LogError(
+                    exception: e,
+                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                    correlationId,
+                    e.Message);
+                throw DbExceptionParser.Parse(e);
+            }
+        }
+
+        /// <summary>
+        /// Prepares a database command for execution.
+        /// </summary>
+        /// <param name="conn">Connection object used to connect to database.</param>
+        /// <param name="sqltext">Sql text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="dataSourceName">The name of the data source.</param>
+        /// <returns>A DbCommand object ready for execution.</returns>
+        public virtual DbCommand PrepareCommand(
+            TConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            HttpContext? httpContext,
+            string dataSourceName)
+        {
             DbCommand cmd = conn.CreateCommand();
             cmd.CommandType = CommandType.Text;
 
@@ -173,28 +215,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            try
-            {
-                using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-                if (dataReaderHandler is not null && dbDataReader is not null)
-                {
-                    return await dataReaderHandler(dbDataReader, args);
-                }
-                else
-                {
-                    throw new DataApiBuilderException("bad op", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                }
-            }
-            catch (DbException e)
-            {
-                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                QueryExecutorLogger.LogError(
-                    exception: e,
-                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                    correlationId,
-                    e.Message);
-                throw DbExceptionParser.Parse(e);
-            }
+            return cmd;
         }
 
         /// <inheritdoc />

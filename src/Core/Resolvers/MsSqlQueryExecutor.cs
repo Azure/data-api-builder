@@ -305,28 +305,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return dbResultSet;
         }
 
-        /// <summary>
-        /// Method to execute sql query against the database.
-        /// </summary>
-        /// <param name="conn">Connection object used to connect to database.</param>
-        /// <param name="sqltext">Sql text to be executed.</param>
-        /// <param name="parameters">The parameters used to execute the SQL text.</param>
-        /// <param name="dataReaderHandler">The function to invoke to handle the results
-        /// in the DbDataReader obtained after executing the query.</param>
-        /// <param name="httpContext">Current user httpContext.</param>
-        /// <param name="args">List of string arguments to the DbDataReader handler.</param>
-        /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
-        public override async Task<TResult> ExecuteQueryAgainstDbAsync<TResult>(
+        /// <inheritdoc />
+        public override SqlCommand PrepareCommand(
             SqlConnection conn,
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
-            Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             HttpContext? httpContext,
-            string dataSourceName,
-            List<string>? args = null)
+            string dataSourceName)
         {
-            await conn.OpenAsync();
-            // DbCommand cmd = conn.CreateCommand();
             SqlCommand cmd = conn.CreateCommand();
             cmd.CommandType = CommandType.Text;
 
@@ -339,7 +325,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
                 {
-                    // DbParameter parameter = cmd.CreateParameter();
                     SqlParameter parameter = cmd.CreateParameter();
                     parameter.ParameterName = parameterEntry.Key;
                     parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
@@ -348,38 +333,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            try
-            {
-                using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
-                if (dataReaderHandler is not null && dbDataReader is not null)
-                {
-                    return await dataReaderHandler(dbDataReader, args);
-                }
-                else
-                {
-                    throw new DataApiBuilderException("bad op", HttpStatusCode.InternalServerError, DataApiBuilderException.SubStatusCodes.UnexpectedError);
-                }
-            }
-            catch (DbException e)
-            {
-                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
-                QueryExecutorLogger.LogError(
-                    exception: e,
-                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
-                    correlationId,
-                    e.Message);
-                throw DbExceptionParser.Parse(e);
-            }
+            return cmd;
         }
 
         /// <inheritdoc/>
         public static void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, SqlParameter parameter)
         {
-            if (parameterEntry.Value is not null && parameterEntry.Value.DbType is not null && parameterEntry.Value.SqlDbType is not null)
+            if (parameterEntry.Value is not null)
             {
-                parameter.DbType = (DbType)parameterEntry.Value.DbType;
-                parameter.SqlDbType = (SqlDbType)parameterEntry.Value.SqlDbType;
-            }
+                if (parameterEntry.Value.DbType is not null)
+                {
+                    parameter.DbType = (DbType)parameterEntry.Value.DbType;
+                }
+
+                if (parameterEntry.Value.SqlDbType is not null)
+                {
+                    parameter.SqlDbType = (SqlDbType)parameterEntry.Value.SqlDbType;
+                }
+            }            
         }
     }
 }

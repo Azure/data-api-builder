@@ -55,7 +55,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// Test to validate that a 'create one' point mutation will fail the AuthZ checks if the user does not have create permission
         /// on one more columns belonging to the entity in the mutation.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task ValidateAuthZCheckOnColumnsForCreateOnePointMutations()
         {
@@ -116,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 clientRoleHeader: "anonymous"
                 );
 
-            // The authenticates role has create permissions on both the Book and Publisher entities.
+            // The authenticated role has create permissions on both the Book and Publisher entities.
             // Hence the authorization checks will pass.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createBookMutationName,
@@ -135,7 +134,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         {
             string createMultipleBooksMutationName = "createbooks";
             string createMultipleBookMutation = @"mutation {
-                    createbooks(items: [{ title: ""Book #1"", publishers: { name: ""Publisher #1""}},
+                    createbooks(items: [{ title: ""Book #1"", publisher_id: 1234 },
                                         { title: ""Book #2"", publishers: { name: ""Publisher #2""}}]) {
                         items{
                             id
@@ -154,7 +153,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 isAuthenticated: false,
                 clientRoleHeader: "anonymous");
 
-            // The authenticates role has create permissions on both the Book and Publisher entities.
+            // The authenticated role has create permissions on both the Book and Publisher entities.
             // Hence the authorization checks will pass.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createMultipleBooksMutationName,
@@ -209,7 +208,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             // As soon as we remove the 'piecesAvailable' column from the request body,
             // the authorization check will pass.
-            string nestedCreateOneStockWithoutPiecesAvailable = @"mutation {
+            string createOneStockWithoutPiecesAvailable = @"mutation {
                                             createStock(
                                                 item:
                                                   {
@@ -229,11 +228,79 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                                              }
                                           }";
 
-            // The 'test_role_with_excluded_fields_on_create' role does not have create permissions on
-            // stocks.piecesAvailable field and hence the authorization check should fail.
+            // Since the field stocks.piecesAvailable is not included in the mutation,
+            // the authorization check should pass.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createOneStockMutationName,
-                graphQLMutation: nestedCreateOneStockWithoutPiecesAvailable,
+                graphQLMutation: createOneStockWithoutPiecesAvailable,
+                isAuthenticated: true,
+                clientRoleHeader: "test_role_with_excluded_fields_on_create",
+                expectedResult: "");
+
+            // Executing a similar mutation request but with stocks_price as top-level entity.
+            // This validates that the recursive logic to do authorization on fields belonging to related entities
+            // work as expected.
+
+            string createOneStockPriceMutationName = "createstocks_price";
+            string createOneStocksPriceWithPiecesAvailable = @"mutation {
+                                            createstocks_price(
+                                                item:
+                                                  {
+                                                    is_wholesale_price: true,
+                                                    instant: ""1996-01-24"",
+                                                    price: 49.6,
+                                                    Stock:
+                                                      {
+                                                        categoryid: 1,
+                                                        pieceid: 2,
+                                                        categoryName: ""xyz""
+                                                        piecesAvailable: 0,
+                                                      }
+                                                  }
+                                             )
+                                             {
+                                                categoryid
+                                                pieceid
+                                             }
+                                          }";
+
+            // The 'test_role_with_excluded_fields_on_create' role does not have create permissions on
+            // stocks.piecesAvailable field and hence the authorization check should fail.
+            await ValidateRequestIsUnauthorized(
+                graphQLMutationName: createOneStockPriceMutationName,
+                graphQLMutation: createOneStocksPriceWithPiecesAvailable,
+                expectedExceptionMessage: "Unauthorized due to one or more fields in this mutation.",
+                expectedExceptionStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                isAuthenticated: true,
+                clientRoleHeader: "test_role_with_excluded_fields_on_create");
+
+
+            string createOneStocksPriceWithoutPiecesAvailable = @"mutation {
+                                            createstocks_price(
+                                                item:
+                                                  {
+                                                    is_wholesale_price: true,
+                                                    instant: ""1996-01-24"",
+                                                    price: 49.6,
+                                                    Stock:
+                                                      {
+                                                        categoryid: 1,
+                                                        pieceid: 2,
+                                                        categoryName: ""xyz""
+                                                      }
+                                                  }
+                                             )
+                                             {
+                                                categoryid
+                                                pieceid
+                                             }
+                                          }";
+
+            // Since the field stocks.piecesAvailable is not included in the mutation,
+            // the authorization check should pass.
+            await ValidateRequestIsAuthorized(
+                graphQLMutationName: createOneStockMutationName,
+                graphQLMutation: createOneStocksPriceWithoutPiecesAvailable,
                 isAuthenticated: true,
                 clientRoleHeader: "test_role_with_excluded_fields_on_create",
                 expectedResult: "");
@@ -310,8 +377,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                                              }
                                           }";
 
-            // The 'test_role_with_excluded_fields_on_create' role does not have create permissions on
-            // stocks.piecesAvailable field and hence the authorization check should fail.
+            // Since the field stocks.piecesAvailable is not included in the mutation,
+            // the authorization check should pass.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createMultipleStockMutationName,
                 graphQLMutation: createMultipleStocksWithoutPiecesAvailable,

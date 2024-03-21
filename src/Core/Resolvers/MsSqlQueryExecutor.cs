@@ -350,7 +350,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     parameter.SqlDbType = (SqlDbType)parameterEntry.Value.SqlDbType;
                 }
-            }            
+            }
         }
     }
 }

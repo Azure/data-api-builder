@@ -26,6 +26,7 @@ add Notebook --config "dab-config.DwSql.json" --source "notebooks" --permissions
 add Journal --config "dab-config.DwSql.json" --source "journals" --rest true --graphql true --permissions "policy_tester_noupdate:create,delete" --source.key-fields "id"
 add ArtOfWar --config "dab-config.DwSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*" --source.key-fields "NoteNum"
 add stocks_view_selected --config "dab-config.DwSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
+add GetBook --config "dab-config.DwSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false
 add GetBooks --config "dab-config.DwSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
 add GetPublisher --config "dab-config.DwSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "query"
 add GetAuthorsHistoryByFirstName --config "dab-config.DwSql.json" --source "get_authors_history_by_first_name" --source.type "stored-procedure" --source.params "firstName:Aaron" --permissions "anonymous:execute" --rest true --graphql SearchAuthorByFirstName
@@ -150,7 +151,8 @@ update DeleteLastInsertedBook --config "dab-config.DwSql.json" --permissions "au
 update UpdateBookTitle --config "dab-config.DwSql.json" --permissions "authenticated:execute"
 update InsertAndDisplayAllBooksUnderGivenPublisher --config "dab-config.DwSql.json" --permissions "authenticated:execute"
 update GetPublisher --config "dab-config.DwSql.json" --permissions "authenticated:execute"
-update GetBooks --config "dab-config.DwSql.json" --permissions "authenticated:execute" --graphql.operation "Query"
+update GetBooks --config "dab-config.DwSql.json" --permissions "authenticated:execute" --graphql.operation "Query" --rest.methods "Get"
+update GetBook --config "dab-config.DwSql.json" --permissions "authenticated:execute" --rest.methods "Get"
 update CountBooks --config "dab-config.DwSql.json" --permissions "authenticated:execute"
 update Sales --config "dab-config.DwSql.json" --permissions "authenticated:*"
 update GetAuthorsHistoryByFirstName --config "dab-config.DwSql.json" --permissions "authenticated:execute"

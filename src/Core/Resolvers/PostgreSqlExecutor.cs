@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);

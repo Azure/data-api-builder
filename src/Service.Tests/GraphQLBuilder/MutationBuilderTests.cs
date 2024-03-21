@@ -1012,7 +1012,10 @@ type Foo @model(name:""Foo"") {{
         /// When singular and plural names are specified by the user, these names will be used for generating the
         /// queries and mutations in the schema.
         /// When singular and plural names are not provided, the queries and mutations will be generated with the entity's name.
-        /// This test validates that this naming convention is followed for the mutations when the schema is generated.
+        /// 
+        /// This test validates the a) Number of mutation fields generated b) Mutation field names c) Mutation field descriptions
+        /// when multiple create operations are enabled/disabled.
+        /// 
         /// </summary>
         /// <param name="gql">Type definition for the entity</param>
         /// <param name="entityName">Name of the entity</param>

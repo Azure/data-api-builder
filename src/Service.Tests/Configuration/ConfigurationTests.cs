@@ -2033,14 +2033,17 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <summary>
         /// Multiple mutation operations are disabled through the configuration properties.
         ///
-        /// Executing the following multiple create mutation operations,
-        /// 1. Point multiple create operation
-        /// 2. Many type multiple create operation
-        /// should result in failure as both these operations are disabled.
+        /// 1. Executing the following multiple create mutation operations,
+        ///     a. Point multiple create operation
+        ///     b. Many type multiple create operation
+        ///    should result in failure as both these operations are disabled.
+        ///
+        /// 2. Executing a create mutation operation should succeed.
+        /// 
         /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task ValidateMultipleCreateMutationErrorsWhenMultipleCreateOperationIsDisabled()
+        public async Task ValidateMultipleCreateAndCreateMutationWhenMultipleCreateOperationIsDisabled()
         {
             // Multiple create operations are disabled.
             GraphQLRuntimeOptions graphqlOptions = new(Enabled: true, MultipleMutationOptions: new(new(enabled: false)));
@@ -2153,6 +2156,26 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsNotNull(mutationResponse);
                 SqlTestHelper.TestForErrorInGraphQLResponse(mutationResponse.ToString(),
                                                             message: "The field `createbooks` does not exist on the type `Mutation`.");
+
+                string pointCreateOperation = @"mutation createbook{
+                                                            createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {
+                                                                title
+                                                                publisher_id
+                                                            }
+                                                        }";
+
+                mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
+                                                                                client,
+                                                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                query: pointCreateOperation,
+                                                                                queryName: "createbook",
+                                                                                variables: null,
+                                                                                clientRoleHeader: null);
+
+                string expectedResponse = @"{ ""title"":""Book #1"",""publisher_id"":1234}";
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, mutationResponse.ToString());
             }
         }
 

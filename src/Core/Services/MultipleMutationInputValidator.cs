@@ -249,6 +249,12 @@ namespace Azure.DataApiBuilder.Core.Services
             // the relationships for which the current entity is the referencing entity.
             Dictionary<string, HashSet<string>> columnsToBeDerivedFromRelationships = new();
 
+            // When the source of a referencing field in current entity is a relationship, the relationship's name is added to the value in
+            // the KV pair of (referencing column, source) in derivableColumnsFromRequestBody with a prefix '$' so that if the relationship name
+            // conflicts with the current entity's name or the parent entity's name, we are able to distinguish
+            // with the help of this identifier. It should be noted that the identifier is not allowed in the names
+            // of entities exposed in DAB.
+            string relationshipSourceIdentifier = "$";
             // Loop over all the relationship fields input provided for the current entity.
             foreach (ObjectFieldNode fieldNode in objectFieldNodes)
             {
@@ -324,8 +330,18 @@ namespace Azure.DataApiBuilder.Core.Services
                         // as it's value will be derived from the insertion in the referenced (target) entity.
                         if (derivableColumnsFromRequestBody.TryGetValue(referencingColumn, out string? referencingColumnSource))
                         {
-                            string conflictingSource = referencingColumnSource.Equals(parentEntityName) ?
-                                $"Parent entity: {referencingColumnSource}" : $"entity: {entityName}";
+                            string conflictingSource;
+                            if (referencingColumnSource.StartsWith(relationshipSourceIdentifier))
+                            {
+                                // If the source name starts with "$", this indicates the source for the referencing column
+                                // was another relationship.
+                                conflictingSource = "Relationship: " + referencingColumnSource.Substring(relationshipSourceIdentifier.Length);
+                            }
+                            else
+                            {
+                                conflictingSource = referencingColumnSource.Equals(parentEntityName) ? $"Parent entity: {referencingColumnSource}" : $"entity: {entityName}";
+                            }
+
                             metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedColumnName);
                             throw new DataApiBuilderException(
                                 message: $"Found conflicting sources of values for the field: {exposedColumnName} for entity: {entityName} at level: {nestingLevel}." +
@@ -350,7 +366,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         columnsToBeDerivedFromRelationships[relationshipName].Add(referencedColumn);
 
                         // All the referencing columns in the current entity can get a value via insertion in the target entity (c).
-                        derivableColumnsFromRequestBody.TryAdd(referencingColumn, relationshipName);
+                        derivableColumnsFromRequestBody.TryAdd(referencingColumn, relationshipSourceIdentifier + relationshipName);
                     }
                 }
                 else

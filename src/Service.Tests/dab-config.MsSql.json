@@ -2299,7 +2299,7 @@
         }
       }
     },
-    "User_RepeatedReferencingColumn": {
+    "User_RepeatedReferencingColumnToOneEntity": {
       "source": {
         "object": "users",
         "type": "table"
@@ -2307,8 +2307,8 @@
       "graphql": {
         "enabled": true,
         "type": {
-          "singular": "User_RepeatedReferencingColumn",
-          "plural": "User_RepeatedReferencingColumns"
+          "singular": "User_RepeatedReferencingColumnToOneEntity",
+          "plural": "User_RepeatedReferencingColumnToOneEntities"
         }
       },
       "rest": {
@@ -2335,6 +2335,58 @@
           "target.fields": [
             "profilepictureurl",
             "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile_RepeatedReferencingColumnToTwoEntities": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile_RepeatedReferencingColumnToTwoEntities",
+          "plural": "UserProfile_RepeatedReferencingColumnToTwoEntities"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "book": {
+          "cardinality": "one",
+          "target.entity": "Book",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "publisher": {
+          "cardinality": "one",
+          "target.entity": "Publisher",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "id"
           ],
           "linking.source.fields": [],
           "linking.target.fields": []

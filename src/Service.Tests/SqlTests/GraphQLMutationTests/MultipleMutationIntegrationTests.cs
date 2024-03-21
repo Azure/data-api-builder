@@ -329,19 +329,19 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// leads to amibugites as to what value to assign to the referencing column.
         /// </summary>
         [TestMethod]
-        public async Task InvalidateRepeatedReferencingColumnToReferencedEntityInReferencingEntity()
+        public async Task InvalidateRepeatedReferencingColumnToOneReferencedEntityInReferencingEntity()
         {
-            // For a relationship between User_RepeatedReferencingColumn(username,username) - UserProfile (username, profilepictureurl),
-            // when the User_RepeatedReferencingColumn entity acts as the referencing entity, there are two sources
-            // of truth for the value of User_RepeatedReferencingColumn.username:
+            // For a relationship between User_RepeatedReferencingColumnToOneEntity(username,username) - UserProfile (username, profilepictureurl),
+            // when the User_RepeatedReferencingColumnToOneEntity entity acts as the referencing entity, there are two sources
+            // of truth for the value of User_RepeatedReferencingColumnToOneEntity.username:
             // 1. UserProfile.username
             // 2. UserProfile.profilepictureurl
-            // which causes ambiguity as to what value should be assigned to the User_RepeatedReferencingColumn.username
+            // which causes ambiguity as to what value should be assigned to the User_RepeatedReferencingColumnToOneEntity.username
             // field after performing insertion in the referenced UserProfile entity.
-            string createUserRepeatedRelationshipColumn = "createUser_RepeatedReferencingColumn";
+            string createUserRepeatedRelationshipColumn = "createUser_RepeatedReferencingColumnToOneEntity";
             string createUserRepeatedRelationshipColumnMutation =
                 @"mutation {
-                    createUser_RepeatedReferencingColumn(
+                    createUser_RepeatedReferencingColumnToOneEntity(
                         item:{
                             email: ""ss""
                             UserProfile: {
@@ -367,8 +367,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // 'username' can be derived from both of the referenced columns in the referenced entity.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "The fields: {username} in the entity: User_RepeatedReferencingColumn references multiple fields in the " +
-                    "related entity: UserProfile for the relationship: UserProfile at level: 1.",
+                    message: "The fields: {username} in the entity: User_RepeatedReferencingColumnToOneEntity references multiple fields in" +
+                    " the related entity: UserProfile for the relationship: UserProfile at level: 1.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
@@ -391,7 +391,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             string createUserRepeatedRelationshipColumn = "createUserProfile_RepeatedReferencingColumnToTwoEntities";
             string createUserRepeatedRelationshipColumnMutation =
                 @"mutation {
-                    createUserProfile_RepeatedRelationshipColumnToTwoEntities(
+                    createUserProfile_RepeatedReferencingColumnToTwoEntities(
                         item: {
                                 profilepictureurl: ""abc"",
                                 username: ""abc"",

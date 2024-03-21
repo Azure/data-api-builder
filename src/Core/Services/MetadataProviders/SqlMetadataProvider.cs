@@ -1712,7 +1712,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // Being here indicates that we inferred an FK constraint for the current FK.
                     // The count of referencing and referenced columns being > 0 indicates that source.fields and target.fields 
-                    // have been specified in the config file. In this scenario, higher precedence is given to the fields configured through the config file. So, the existing FK definition is retained as is.   
+                    // have been specified in the config file.
+                    // In this scenario, higher precedence is given to the fields configured through the config file. So, the existing FK definition is retained as is.
                     if (fKDefinitionToTarget.ReferencingColumns.Count > 0 && fKDefinitionToTarget.ReferencedColumns.Count > 0)
                     {
                         validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);

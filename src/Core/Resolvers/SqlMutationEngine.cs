@@ -19,6 +19,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -83,7 +84,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             dataSourceName = GetValidatedDataSourceName(dataSourceName);
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            (bool isPointMutation, string entityName) = GetMutationCategoryAndEntityName(context);
+            string entityName = GraphQLUtils.GetEntityNameFromContext(context);
+            bool isPointMutation = IsPointMutation(context);
 
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
@@ -235,22 +237,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to determine:
-        /// 1. Whether a mutation is a mutate one or mutate many operation (eg. createBook/createBooks)
-        /// 2. Name of the top-level entity backing the mutation.
+        /// Helper method to determine whether a mutation is a mutate one or mutate many operation (eg. createBook/createBooks).
         /// </summary>
         /// <param name="context">GraphQL request context.</param>
-        /// <returns>a tuple of the above mentioned metadata.</returns>
-        private static Tuple<bool, string> GetMutationCategoryAndEntityName(IMiddlewareContext context)
+        private static bool IsPointMutation(IMiddlewareContext context)
         {
             IOutputType outputType = context.Selection.Field.Type;
-            string entityName = string.Empty;
+            if (outputType.TypeName().Value.Equals(GraphQLUtils.DB_OPERATION_RESULT_TYPE))
+            {
+                // Hit when the database type is DwSql. We don't support multiple mutation for DwSql yet.
+                return true;
+            }
+
             ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
             bool isPointMutation;
-            if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
+            if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? _))
             {
                 isPointMutation = true;
-                entityName = modelName;
             }
             else
             {
@@ -258,20 +261,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Thus, absence of model directive here indicates that we are dealing with a 'mutate many'
                 // mutation like createBooks.
                 isPointMutation = false;
-
-                // For a mutation like createBooks which inserts multiple records into the Book entity,
-                // the underlying field type is a paginated response type like 'BookConnection'.
-                // To determine the underlying entity name, we have to look at the type of the `items` field
-                // which stores a list of items of the underlying entity's type - here, Book type.
-                IOutputType entityOutputType = underlyingFieldType.Fields[MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME].Type;
-                ObjectType underlyingEntityFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(entityOutputType);
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingEntityFieldType.Directives, out modelName))
-                {
-                    entityName = modelName;
-                }
             }
 
-            return new(isPointMutation, entityName);
+            return isPointMutation;
         }
 
         /// <summary>
@@ -333,6 +325,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             queryText,
                             executeQueryStructure.Parameters,
                             queryExecutor.GetJsonArrayAsync,
+                            dataSourceName,
                             GetHttpContext());
 
                     transactionScope.Complete();
@@ -429,7 +422,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
         {
             // for REST API scenarios, use the default datasource
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
 
             Dictionary<string, object?> parameters = PrepareParameters(context);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
@@ -896,9 +889,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         queryString,
                         queryParameters,
                         queryExecutor.ExtractResultSetFromDbDataReader,
+                        dataSourceName,
                         GetHttpContext(),
-                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey,
-                        dataSourceName);
+                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
@@ -1047,9 +1040,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                        queryString,
                        queryParameters,
                        queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       dataSourceName,
                        GetHttpContext(),
-                       new List<string> { prettyPrintPk, entityName },
-                       dataSourceName);
+                       new List<string> { prettyPrintPk, entityName });
         }
 
         private Dictionary<string, object?> PrepareParameters(RestRequestContext context)
@@ -1283,7 +1276,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
-                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
                     fieldNodes: listOfObjectFieldNode);
@@ -1304,7 +1297,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
-                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
                     fieldNodes: objectValueNode.Fields);
@@ -1444,7 +1437,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private string GetValidatedDataSourceName(string dataSourceName)
         {
             // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
-            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
+            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().DefaultDataSourceName : dataSourceName;
         }
 
         /// <summary>

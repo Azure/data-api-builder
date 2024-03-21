@@ -1,15 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Azure.DataApiBuilder.Service.Tests.SqlTests;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
 using Azure.DataApiBuilder.Core.Resolvers;
-using HotChocolate.Resolvers;
-using Moq;
+using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Tests.SqlTests;
 using HotChocolate.Execution;
 using HotChocolate.Language;
-using System.Collections.Generic;
-using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Resolvers;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
@@ -309,7 +309,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             ValidateReferencingEntityForRelationship(
                 sourceEntityName: "Review",
                 targetEntityName: "Book",
-                expectedReferencingEntityName: "Review" );
+                expectedReferencingEntityName: "Review");
 
             // Book is the source entity.
             ValidateReferencingEntityForRelationship(

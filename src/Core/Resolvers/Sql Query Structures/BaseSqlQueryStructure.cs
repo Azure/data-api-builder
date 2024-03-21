@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -186,8 +187,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         // Case where fk in parent entity references the nested entity.
                         // Verify this is a valid fk definition before adding the join predicate.
-                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
-                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        if (foreignKeyDefinition.ReferencingColumns.Count > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count > 0)
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 SourceAlias,
@@ -199,8 +200,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(relatedEntityDbObject))
                     {
                         // Case where fk in nested entity references the parent entity.
-                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
-                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        if (foreignKeyDefinition.ReferencingColumns.Count > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count > 0)
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 relatedSourceAlias,
@@ -431,18 +432,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 IObjectField fieldSchema = context.Selection.Field;
                 IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
-                InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
+                InputObjectType itemsArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
 
-                Dictionary<string, object?> mutationInput;
                 // An inline argument was set
                 // TODO: This assumes the input was NOT nullable.
                 if (item is List<ObjectFieldNode> mutationInputRaw)
                 {
-                    mutationInput = new Dictionary<string, object?>();
+                    Dictionary<string, object?> mutationInput = new();
                     foreach (ObjectFieldNode node in mutationInputRaw)
                     {
                         string nodeName = node.Name.Value;
-                        mutationInput.Add(nodeName, ResolverMiddleware.ExtractValueFromIValueNode(
+                        mutationInput.Add(nodeName, ExecutionHelper.ExtractValueFromIValueNode(
                             value: node.Value,
                             argumentSchema: itemsArgumentObject.Fields[nodeName],
                             variables: context.Variables));

@@ -67,7 +67,8 @@ namespace Azure.DataApiBuilder.Core.Services
             JsonArray? resultArray = await QueryExecutor.ExecuteQueryAsync(
                 sqltext: enumerateEnabledTriggers,
                 parameters: parameters,
-                dataReaderHandler: QueryExecutor.GetJsonArrayAsync);
+                dataReaderHandler: QueryExecutor.GetJsonArrayAsync,
+                dataSourceName: _dataSourceName);
             using JsonDocument sqlResult = JsonDocument.Parse(resultArray!.ToJsonString());
 
             foreach (JsonElement element in sqlResult.RootElement.EnumerateArray())

@@ -1836,6 +1836,197 @@
       }
     },
     {
+      User_NonAutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_NonAutogenRelationshipColumn,
+          Plural: User_NonAutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_NonAutogenRelationshipColumn: {
+            TargetEntity: UserProfile_NonAutogenRelationshipColumn,
+            SourceFields: [
+              username
+            ],
+            TargetFields: [
+              username
+            ]
+          }
+        }
+      }
+    },
+    {
+      UserProfile_NonAutogenRelationshipColumn: {
+        Source: {
+          Object: user_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: UserProfile_NonAutogenRelationshipColumn,
+          Plural: UserProfile_NonAutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      User_AutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_AutogenRelationshipColumn,
+          Plural: User_AutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_AutogenRelationshipColumn: {
+            TargetEntity: UserProfile_AutogenRelationshipColumn,
+            SourceFields: [
+              userid
+            ],
+            TargetFields: [
+              profileid
+            ]
+          }
+        }
+      }
+    },
+    {
+      UserProfile_AutogenRelationshipColumn: {
+        Source: {
+          Object: user_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: UserProfile_AutogenRelationshipColumn,
+          Plural: UserProfile_AutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      User_AutogenToNonAutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_AutogenToNonAutogenRelationshipColumn,
+          Plural: User_AutogenToNonAutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_AutogenToNonAutogenRelationshipColumn: {
+            TargetEntity: UserProfile_NonAutogenToAutogenRelationshipColumn,
+            SourceFields: [
+              userid,
+              username
+            ],
+            TargetFields: [
+              userid,
+              username
+            ]
+          }
+        }
+      }
+    },
+    {
+      UserProfile_NonAutogenToAutogenRelationshipColumn: {
+        Source: {
+          Object: user_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: UserProfile_NonAutogenToAutogenRelationshipColumn,
+          Plural: UserProfile_NonAutogenToAutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       GQLmappings: {
         Source: {
           Object: GQLmappings,

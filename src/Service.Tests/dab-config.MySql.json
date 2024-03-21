@@ -1922,6 +1922,206 @@
         }
       ]
     },
+    "User_NonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_NonAutogenRelationshipColumn",
+          "plural": "User_NonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_NonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile_NonAutogenRelationshipColumn",
+          "source.fields": [
+            "username"
+          ],
+          "target.fields": [
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile_NonAutogenRelationshipColumn": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile_NonAutogenRelationshipColumn",
+          "plural": "UserProfile_NonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "User_AutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenRelationshipColumn",
+          "plural": "User_AutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile_AutogenRelationshipColumn",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "profileid"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile_AutogenRelationshipColumn": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile_AutogenRelationshipColumn",
+          "plural": "UserProfile_AutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "User_AutogenToNonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenToNonAutogenRelationshipColumn",
+          "plural": "User_AutogenToNonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenToNonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile_NonAutogenToAutogenRelationshipColumn",
+          "source.fields": [
+            "userid",
+            "username"
+          ],
+          "target.fields": [
+            "userid",
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile_NonAutogenToAutogenRelationshipColumn": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile_NonAutogenToAutogenRelationshipColumn",
+          "plural": "UserProfile_NonAutogenToAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
     "GQLmappings": {
       "source": {
         "object": "GQLmappings",
@@ -2076,13 +2276,13 @@
             {
               "action": "create",
               "fields": {
-                  "include": [
-                      "*"
-                  ],
-                  "exclude": [
-                      "current_date",
-                      "next_date"
-                  ]
+                "include": [
+                  "*"
+                ],
+                "exclude": [
+                  "current_date",
+                  "next_date"
+                ]
               }
             },
             "read",

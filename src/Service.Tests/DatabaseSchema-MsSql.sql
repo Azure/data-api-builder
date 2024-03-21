@@ -272,19 +272,6 @@ CREATE TABLE mappedbookmarks
 	bkname nvarchar(50) NOT NULL
 )
 
-CREATE TABLE users (
-    userid INT PRIMARY KEY IDENTITY,
-    username NVARCHAR(50) UNIQUE,
-    email NVARCHAR(100)
-);
-
-CREATE TABLE user_profiles (
-    profileid INT PRIMARY KEY IDENTITY,
-    username NVARCHAR(50) UNIQUE,
-    profilepictureurl NVARCHAR(255),
-	userid INT
-);
-
 create Table fte_data(
 id int IDENTITY(5001,1),
 u_id int DEFAULT 2,
@@ -325,6 +312,19 @@ CREATE TABLE default_with_function_table
     default_integer INT DEFAULT 100,
     default_date_string DATETIME DEFAULT '1999-01-08 10:23:54'
 )
+
+CREATE TABLE users (
+    userid INT PRIMARY KEY IDENTITY,
+    username NVARCHAR(50) UNIQUE,
+    email NVARCHAR(100)
+);
+
+CREATE TABLE user_profiles (
+    profileid INT PRIMARY KEY IDENTITY,
+    username NVARCHAR(50) UNIQUE,
+    profilepictureurl NVARCHAR(255),
+	userid INT
+);
 
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
@@ -543,7 +543,6 @@ INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 
 INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GETDATE());
 
 INSERT INTO users (username, email) VALUES ('john_doe', 'john.doe@example.com'), ('jane_smith', 'jane.smith@example.com');
-
 INSERT INTO user_profiles (username, profilepictureurl, userid) VALUES ('john_doe', 'https://example.com/profiles/john_doe.jpg', 1), ('jane_smith', 'https://example.com/profiles/jane_smith.jpg', 2);
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');

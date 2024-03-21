@@ -25,12 +25,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// <summary>
         /// Test to validate that for 'create one' mutations, we throw an appropriate exception when the user request provides
         /// no source of value for a non-nullable and non-default referencing column.
-        /// There are 3 sources of values for a referencing column:
-        /// 1. Explicit value assignment to the referencing column,
-        /// 2. Value derived from the parent referenced entity,
-        /// 3. Providing value for inserting record in the referenced target entity, in which case value for referencing column
-        /// is derived from the value of corresponding referenced column after insertion in the referenced entity.
-        /// When the user provides none of the above, we throw an exception.
+        /// The referencing column can get its value from 3 possible sources:
+        /// 1. Value assigned to the referencing column,
+        /// 2. Value derived from insertion in the parent referenced entity,
+        /// 3. Value derived from insertion in the target referenced entity.
         /// </summary>
         [TestMethod]
         public async Task AbsenceOfSourceOfTruthForReferencingColumnForCreateOneMutations()
@@ -149,7 +147,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
-            // For a relationship between Review (Referencing) - Book (Referenced) defined as reviews.book_id -> books.id,
+            // For a relationship between Book (Referenced) - Review (Referencing) - defined as books.id <- reviews.book_id,
             // consider the request input for Review:
             // 1. An explicit value is provided for referencing field book_id.
             // 2. Book is the parent referenced entity - so it passes on a value for book_id to the referencing entity Review.
@@ -177,7 +175,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             string createOnePublisherName = "createPublisher";
 
-            // For a relationship between Book (Referencing) - Publisher (Referenced) defined as books.publisher_id -> publisher.id,
+            // For a relationship between Publisher (Referenced) - Book (Referencing) defined as publisher.id <- books.publisher_id,
             // consider the request input for Book:
             // 1. Publisher is the parent referenced entity - so it passes on a value for publisher_id to the referencing entity Book.
             // 2. A value is assigned for the target (referenced entity) via relationship field ('publisher'), which will give back
@@ -256,7 +254,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
-            // For a relationship between Review (Referencing) - Book (Referenced) defined as reviews.book_id -> books.id,
+            // For a relationship between Book (Referenced) - Review (Referencing) -  defined as books.id <- reviews.book_id,
             // consider the request input for Review:
             // 1. An explicit value is provided for referencing field book_id.
             // 2. Book is the parent referenced entity - so it passes on a value for book_id to the referencing entity Review.
@@ -286,7 +284,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             string createMultiplePublisherName = "createPublishers";
 
-            // For a relationship between Book (Referencing) - Publisher (Referenced) defined as books.publisher_id -> publisher.id,
+            // For a relationship between Publisher (Referenced) - Book (Referencing) defined as publisher.id <- books.publisher_id,
             // consider the request input for Book:
             // 1. Publisher is the parent referenced entity - so it passes on a value for publisher_id to the referencing entity Book.
             // 2. A value is assigned for the target (referenced entity) via relationship field ('publisher'), which will give back

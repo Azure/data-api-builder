@@ -99,17 +99,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (parameters.TryGetValue(inputArgumentName, out object? param))
             {
                 IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
-                GraphQLRequestValidator.ValidateGraphQLValueNode(
-                    schemaForArgument,
-                    entityName,
-                    context,
-                    param,
-                    _runtimeConfigProvider.GetConfig(),
-                    new(),
-                    new(),
-                    0,
-                    string.Empty,
-                    _sqlMetadataProviderFactory);
+                MultipleMutationInputValidator.ValidateGraphQLValueNode(
+                    schema: schemaForArgument,
+                    entityName: entityName,
+                    context: context,
+                    parameters: param,
+                    runtimeConfig: _runtimeConfigProvider.GetConfig(),
+                    columnsDerivedFromParentEntity: new(),
+                    columnsToBeDerivedFromEntity: new(),
+                    nestingLevel: 0,
+                    parentEntityName: string.Empty,
+                    sqlMetadataProviderFactory: _sqlMetadataProviderFactory);
             }
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,

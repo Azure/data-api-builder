@@ -198,6 +198,27 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         public bool IsDevelopmentMode();
 
-        public ForeignKeyDefinition GetFKDefinition(string sourceEntityName, string targetEntityName, string referencedEntityName, string referencingEntityName) => throw new NotImplementedException();
+        /// <summary>
+        /// Helper method to get the Foreign Key definition in the object definition of the source entity which relates it
+        /// with the target entity. In the Foreign key definition, the referencing entity acts as the referencing table and the
+        /// referenced entity acts as the referenced table.
+        /// </summary>
+        /// <param name="sourceEntityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="referencedEntityName">Referenced entity name.</param>
+        /// <param name="referencingEntityName">Referencing entity name.</param>
+        /// <returns></returns>
+        /// <example>
+        /// For a 1:N relationship between Publisher: Book entity defined in Publisher entity's config:
+        /// sourceEntityName: Publisher (The entity in whose config the relationship is defined)
+        /// targetEntityName: Book (The target.entity in the relationship config)
+        /// referencingEntityName: Book (Entity holding foreign key reference)
+        /// referencedEntityName: Publisher (Entity being referenced by foreign key).
+        /// </example>
+        public ForeignKeyDefinition GetFKDefinition(
+            string sourceEntityName,
+            string targetEntityName,
+            string referencedEntityName,
+            string referencingEntityName) => throw new NotImplementedException();
     }
 }

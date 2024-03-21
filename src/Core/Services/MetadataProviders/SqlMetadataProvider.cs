@@ -1855,7 +1855,12 @@ namespace Azure.DataApiBuilder.Core.Services
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
         }
 
-        public ForeignKeyDefinition GetFKDefinition(string sourceEntityName, string targetEntityName, string referencedEntityName, string referencingEntityName)
+        /// <inheritdoc/>
+        public ForeignKeyDefinition GetFKDefinition(
+            string sourceEntityName,
+            string targetEntityName,
+            string referencingEntityName,
+            string referencedEntityName)
         {
             if (GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) &&
                 GetEntityNamesAndDbObjects().TryGetValue(referencingEntityName, out DatabaseObject? referencingDbObject) &&
@@ -1866,6 +1871,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
                 RelationShipPair referencingReferencedPair = new(referencingDbTable, referencedDbTable);
                 List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+
+                // At this point, we are sure that a valid foreign key definition would exist from the referencing entity
+                // to the referenced entity because we validate it during the startup that the Foreign key information
+                // has been inferred for all the relationships.
                 return fKDefinitions.FirstOrDefault(
                     fk => fk.Pair.Equals(referencingReferencedPair) &&
                     fk.ReferencingColumns.Count > 0

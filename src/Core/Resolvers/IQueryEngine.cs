@@ -53,11 +53,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Resolves a jsonElement representing an inner object based on the field's schema and metadata
         /// </summary>
-        public JsonDocument? ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
+        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
 
         /// <summary>
         /// Resolves a jsonElement representing a list type based on the field's schema and metadata
         /// </summary>
-        public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata);
+        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata? metadata);
     }
 }

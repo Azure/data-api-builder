@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -348,6 +349,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             queryText,
                             executeQueryStructure.Parameters,
                             queryExecutor.GetJsonArrayAsync,
+                            dataSourceName,
                             GetHttpContext());
 
                     transactionScope.Complete();
@@ -444,7 +446,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
         {
             // for REST API scenarios, use the default datasource
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
 
             Dictionary<string, object?> parameters = PrepareParameters(context);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
@@ -916,9 +918,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         queryString,
                         queryParameters,
                         queryExecutor.ExtractResultSetFromDbDataReaderAsync,
+                        dataSourceName,
                         GetHttpContext(),
-                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey,
-                        dataSourceName);
+                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
 
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
@@ -1430,7 +1432,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 IObjectField fieldSchema = context.Selection.Field;
                 IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
-                InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
+                InputObjectType itemsArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
                 return GQLNestedInsertArgumentToDictParamsHelper(context, itemsArgumentObject, inputParameters);
             }
             else
@@ -1492,7 +1494,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        object? value = ResolverMiddleware.ExtractValueFromIValueNode(value: node.Value,
+                        object? value = ExecutionHelper.ExtractValueFromIValueNode(value: node.Value,
                                                                                       argumentSchema: itemsArgumentObject.Fields[name],
                                                                                       variables: context.Variables);
 
@@ -1517,7 +1519,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (fields.TryGetField(fieldName, out IInputField? field))
             {
-                return ResolverMiddleware.InputObjectTypeFromIInputField(field);
+                return ExecutionHelper.InputObjectTypeFromIInputField(field);
             }
 
             throw new DataApiBuilderException(message: $"Field {fieldName} not found.",
@@ -1536,7 +1538,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 IObjectField fieldSchema = context.Selection.Field;
                 IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
-                InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
+                InputObjectType itemsArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
 
                 Dictionary<string, object?> mutationInput;
                 // An inline argument was set
@@ -1549,7 +1551,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         string nodeName = node.Name.Value;
                         Console.WriteLine(node.Value.ToString());
 
-                        mutationInput.Add(nodeName, ResolverMiddleware.ExtractValueFromIValueNode(
+                        mutationInput.Add(nodeName, ExecutionHelper.ExtractValueFromIValueNode(
                             value: node.Value,
                             argumentSchema: itemsArgumentObject.Fields[nodeName],
                             variables: context.Variables));
@@ -1673,9 +1675,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                        queryString,
                        queryParameters,
                        queryExecutor.GetMultipleResultSetsIfAnyAsync,
+                       dataSourceName,
                        GetHttpContext(),
-                       new List<string> { prettyPrintPk, entityName },
-                       dataSourceName);
+                       new List<string> { prettyPrintPk, entityName });
         }
 
         private Dictionary<string, object?> PrepareParameters(RestRequestContext context)
@@ -1909,7 +1911,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
-                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
                     fieldNodes: listOfObjectFieldNode);
@@ -1930,7 +1932,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
-                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
                     fieldNodes: objectValueNode.Fields);
@@ -2070,7 +2072,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private string GetValidatedDataSourceName(string dataSourceName)
         {
             // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
-            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
+            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().DefaultDataSourceName : dataSourceName;
         }
 
         /// <summary>

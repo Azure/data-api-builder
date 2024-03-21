@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services;
@@ -38,19 +37,6 @@ namespace Azure.DataApiBuilder.Core.Parsers
             // In order traversal but add parens to maintain order of logical operations
             string left = nodeIn.Left.Accept(this);
             string right = nodeIn.Right.Accept(this);
-
-            if (nodeIn.Left.Kind.Equals(QueryNodeKind.SingleValuePropertyAccess))
-            {
-                string backingColumnName = _metadataProvider.GetQueryBuilder().UnquoteIdentifier(left);
-                SqlDbType? columnSqlDbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName].SqlDbType;
-
-                // We are currently only setting SqlDbType for MSSQL, so for other databases SqlDbType will be null
-                // below casting won't be applied.
-                if (columnSqlDbType == SqlDbType.VarChar && !right.Equals("NULL", StringComparison.OrdinalIgnoreCase))
-                {
-                    right = $"CAST({right} AS VARCHAR(MAX))";
-                }
-            }
 
             if (IsSimpleBinaryExpression(nodeIn))
             {
@@ -291,6 +277,7 @@ namespace Azure.DataApiBuilder.Core.Parsers
             string? paramName = BaseQueryStructure.GetEncodedParamName(_struct.Counter.Current() - 1);
             _metadataProvider.TryGetBackingColumn(_struct.EntityName, propertyNode.Property.Name, out string? backingColumnName);
             _struct.Parameters[paramName].DbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].DbType;
+            _struct.Parameters[paramName].SqlDbType = _struct.GetUnderlyingSourceDefinition().Columns[backingColumnName!].SqlDbType;
         }
 
         /// <summary>

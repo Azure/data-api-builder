@@ -110,9 +110,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 else
                 {
-                    SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, leftoverColumn);
                     Predicate predicate = new(
-                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn, columnSqlDbType)),
+                        new PredicateOperand(new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, leftoverColumn)),
                         PredicateOperation.Equal,
                         new PredicateOperand($"{MakeDbConnectionParam(value: null, leftoverColumn)}")
                     );
@@ -125,7 +124,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Get column type from table underlying the query structure
         /// </summary>
-        /// <param name="columnName">underlying column name</param>
+        /// <param name="columnName">backing column name</param>
         public Type GetColumnSystemType(string columnName)
         {
             if (GetUnderlyingSourceDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
@@ -331,13 +330,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
-                SqlDbType? columnSqlDbType = MetadataProvider.GetSqlDbTypeForColumnNameInAnEntity(EntityName, columnName);
-
                 outputColumns.Add(new(
                     tableSchema: DatabaseObject.SchemaName,
                     tableName: DatabaseObject.Name,
                     columnName: columnName,
-                    columnSqlDbType: columnSqlDbType,
                     label: exposedName!,
                     tableAlias: SourceAlias));
             }

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Data;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
@@ -30,17 +29,11 @@ public class Column
     /// </summary>
     public string ColumnName { get; set; }
 
-    /// <summary>
-    /// SqlDbType of the column
-    /// </summary>
-    public SqlDbType? ColumnSqlDbType { get; set; }
-
-    public Column(string tableSchema, string tableName, string columnName, SqlDbType? columnSqlDbType = null, string? tableAlias = null)
+    public Column(string tableSchema, string tableName, string columnName, string? tableAlias = null)
     {
         TableSchema = tableSchema;
         TableName = tableName;
         ColumnName = columnName;
-        ColumnSqlDbType = columnSqlDbType;
         TableAlias = tableAlias;
     }
 }
@@ -51,8 +44,8 @@ public class Column
 public class OrderByColumn : Column
 {
     public OrderBy Direction { get; }
-    public OrderByColumn(string tableSchema, string tableName, string columnName, SqlDbType? columnSqlDbType = null, string? tableAlias = null, OrderBy direction = OrderBy.ASC)
-        : base(tableSchema, tableName, columnName, columnSqlDbType, tableAlias)
+    public OrderByColumn(string tableSchema, string tableName, string columnName, string? tableAlias = null, OrderBy direction = OrderBy.ASC)
+        : base(tableSchema, tableName, columnName, tableAlias)
     {
         Direction = direction;
     }
@@ -70,11 +63,10 @@ public class PaginationColumn : OrderByColumn
                             string tableName,
                             string columnName,
                             object? value,
-                            SqlDbType? columnSqlDbType = null,
                             string? tableAlias = null,
                             OrderBy direction = OrderBy.ASC,
                             string? paramName = null)
-        : base(tableSchema, tableName, columnName, columnSqlDbType, tableAlias, direction)
+        : base(tableSchema, tableName, columnName, tableAlias, direction)
     {
         Value = value;
         ParamName = paramName;
@@ -91,8 +83,8 @@ public class LabelledColumn : Column
     /// </summary>
     public string Label { get; }
 
-    public LabelledColumn(string tableSchema, string tableName, string columnName, string label, SqlDbType? columnSqlDbType = null, string? tableAlias = null)
-        : base(tableSchema, tableName, columnName, columnSqlDbType, tableAlias)
+    public LabelledColumn(string tableSchema, string tableName, string columnName, string label, string? tableAlias = null)
+        : base(tableSchema, tableName, columnName, tableAlias)
     {
         Label = label;
     }

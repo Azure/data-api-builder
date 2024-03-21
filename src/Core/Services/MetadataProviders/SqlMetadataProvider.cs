@@ -217,26 +217,6 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <inheritdoc />
-        public SqlDbType? GetSqlDbTypeForColumnNameInAnEntity(string entityName, string columnName)
-        {
-            if (!EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? databaseObject))
-            {
-                throw new DataApiBuilderException(message: $"Source Definition for {entityName} has not been inferred.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
-            }
-
-            if (!databaseObject.SourceDefinition.Columns.TryGetValue(columnName, out ColumnDefinition? columnDefinition))
-            {
-                throw new DataApiBuilderException(message: $"column Definition for column Name: {columnName} has not been inferred.",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ItemNotFound);
-            }
-
-            return columnDefinition.SqlDbType;
-        }
-
-        /// <inheritdoc />
         public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
         {
             return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);

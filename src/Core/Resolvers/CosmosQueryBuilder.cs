@@ -64,12 +64,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             throw new System.NotImplementedException();
         }
 
-        /// <inheritdoc />
-        public override string UnquoteIdentifier(string quotedIdentifier)
-        {
-            throw new System.NotImplementedException();
-        }
-
         /// <summary>
         /// Build columns and wrap columns
         /// </summary>

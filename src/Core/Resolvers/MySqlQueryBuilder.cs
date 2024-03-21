@@ -27,12 +27,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public override string UnquoteIdentifier(string quotedIdentifier)
-        {
-            return _builder.UnquoteIdentifier(quotedIdentifier);
-        }
-
-        /// <inheritdoc />
         public string Build(SqlQueryStructure structure)
         {
             string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.Name)} AS {QuoteIdentifier(structure.SourceAlias)}{Build(structure.Joins)}";

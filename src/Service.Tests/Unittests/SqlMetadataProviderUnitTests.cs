@@ -114,7 +114,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            string dataSourceName = runtimeConfig.GetDefaultDataSourceName();
+            string dataSourceName = runtimeConfig.DefaultDataSourceName;
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             Mock<IQueryExecutor> queryExecutor = new();
@@ -194,7 +194,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+                string dataSourceName = runtimeConfigProvider.GetConfig().DefaultDataSourceName;
                 // Setup Mock query manager Factory
                 Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);

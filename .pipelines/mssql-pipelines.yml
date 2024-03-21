@@ -18,6 +18,7 @@ trigger:
 
 jobs:
 - job: linux
+  condition: false # Disable until we resolve flakey pipeline issue. https://github.com/Azure/data-api-builder/issues/2010
   pool:
     vmImage: 'ubuntu-latest'
   variables:

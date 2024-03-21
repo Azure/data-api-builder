@@ -88,7 +88,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             dataSourceName = GetValidatedDataSourceName(dataSourceName);
             string graphqlMutationName = context.Selection.Field.Name.Value;
-            (bool isPointMutation, string entityName) = GetMutationCategoryAndEntityName(context);
+            string entityName = GraphQLUtils.GetEntityNameFromContext(context);
+            bool isPointMutation = IsPointMutation(context);
 
             dataSourceName = GetValidatedDataSourceName(dataSourceName);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
@@ -251,22 +252,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to determine:
-        /// 1. Whether a mutation is a mutate one or mutate many operation (eg. createBook/createBooks)
-        /// 2. Name of the top-level entity backing the mutation.
+        /// Helper method to determine whether a mutation is a mutate one or mutate many operation (eg. createBook/createBooks).
         /// </summary>
         /// <param name="context">GraphQL request context.</param>
-        /// <returns>a tuple of the above mentioned metadata.</returns>
-        private static Tuple<bool, string> GetMutationCategoryAndEntityName(IMiddlewareContext context)
+        private static bool IsPointMutation(IMiddlewareContext context)
         {
             IOutputType outputType = context.Selection.Field.Type;
-            string entityName = string.Empty;
+            if (outputType.TypeName().Value.Equals(GraphQLUtils.DB_OPERATION_RESULT_TYPE))
+            {
+                // Hit when the database type is DwSql. We don't support multiple mutation for DwSql yet.
+                return true;
+            }
+
             ObjectType underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
             bool isPointMutation;
-            if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
+            if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? _))
             {
                 isPointMutation = true;
-                entityName = modelName;
             }
             else
             {
@@ -274,20 +276,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Thus, absence of model directive here indicates that we are dealing with a 'mutate many'
                 // mutation like createBooks.
                 isPointMutation = false;
-
-                // For a mutation like createBooks which inserts multiple records into the Book entity,
-                // the underlying field type is a paginated response type like 'BookConnection'.
-                // To determine the underlying entity name, we have to look at the type of the `items` field
-                // which stores a list of items of the underlying entity's type - here, Book type.
-                IOutputType entityOutputType = underlyingFieldType.Fields[MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME].Type;
-                ObjectType underlyingEntityFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(entityOutputType);
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingEntityFieldType.Directives, out modelName))
-                {
-                    entityName = modelName;
-                }
             }
 
-            return new(isPointMutation, entityName);
+            return isPointMutation;
         }
 
         /// <summary>

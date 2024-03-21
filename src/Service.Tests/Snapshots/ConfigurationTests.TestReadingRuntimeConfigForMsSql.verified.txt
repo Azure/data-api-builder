@@ -302,6 +302,28 @@
             ]
           },
           {
+            Role: test_role_with_excluded_fields_on_create,
+            Actions: [
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    piecesAvailable
+                  ]
+                }
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
             Role: TestNestedFilterFieldIsNull_ColumnForbidden,
             Actions: [
               {
@@ -1303,8 +1325,30 @@
                 Action: Create
               }
             ]
+          },
+          {
+            Role: test_role_with_excluded_fields_on_create,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
           }
-        ]
+        ],
+        Relationships: {
+          Stock: {
+            TargetEntity: Stock
+          }
+        }
       }
     },
     {

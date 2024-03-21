@@ -500,7 +500,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     parameterName = MakeDbConnectionParam(
                         GetParamAsSystemType(value.ToString()!, backingColumn, GetColumnSystemType(backingColumn)), backingColumn);
-
                     Predicates.Add(new Predicate(
                         new PredicateOperand(new Column(DatabaseObject.SchemaName, DatabaseObject.Name, backingColumn, SourceAlias)),
                         op,
@@ -790,7 +789,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Adds a labelled column to this query's columns.
         /// <param name="columnName">The backing column name.</param>
         /// <param name="labelName">The exposed name.</param>
-        /// <param name="columnSqlDbType">The SqlDbType of the column.</param>
         /// </summary>
         protected void AddColumn(string columnName, string labelName)
         {

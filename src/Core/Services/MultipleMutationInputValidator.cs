@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 
@@ -81,7 +82,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
                 ValidateObjectFieldNodes(
-                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
                     objectFieldNodes: listOfObjectFieldNode,
@@ -113,7 +114,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // For the example createbook mutation written above, the node for publisher field is interpreted as an ObjectValueNode.
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
                 ValidateObjectFieldNodes(
-                    schemaObject: ResolverMiddleware.InputObjectTypeFromIInputField(schema),
+                    schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
                     objectFieldNodes: objectValueNode.Fields,

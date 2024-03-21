@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
                     message: "Found conflicting sources of values for the field: publisher_id for entity: Book at level: 1." +
-                    "Source 1: entity: Book ,Source 2: Relationship: publishers.",
+                    "Source 1: entity: Book, Source 2: Relationship: publishers.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
@@ -206,7 +206,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
                     message: "Found conflicting sources of values for the field: publisher_id for entity: Book at level: 2." +
-                    "Source 1: Parent entity: Publisher ,Source 2: Relationship: publishers.",
+                    "Source 1: Parent entity: Publisher, Source 2: Relationship: publishers.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
@@ -250,7 +250,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
                     message: "Found conflicting sources of values for the field: publisher_id for entity: Book at level: 1." +
-                    "Source 1: entity: Book ,Source 2: Relationship: publishers.",
+                    "Source 1: entity: Book, Source 2: Relationship: publishers.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
@@ -317,7 +317,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
                     message: "Found conflicting sources of values for the field: publisher_id for entity: Book at level: 2." +
-                    "Source 1: Parent entity: Publisher ,Source 2: Relationship: publishers.",
+                    "Source 1: Parent entity: Publisher, Source 2: Relationship: publishers.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }

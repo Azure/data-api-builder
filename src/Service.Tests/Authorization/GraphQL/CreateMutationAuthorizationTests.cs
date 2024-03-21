@@ -10,7 +10,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 {
     [TestClass, TestCategory(TestCategory.MSSQL)]
-    public class MultipleCreateAuthorizationUnitTests : SqlTestBase
+    public class CreateMutationAuthorizationTests : SqlTestBase
     {
         /// <summary>
         /// Set the database engine for the tests
@@ -22,12 +22,80 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             await InitializeTestFixture();
         }
 
+        #region Point create mutation tests
+
+        /// <summary>
+        /// Test to validate that a 'create one' point mutation request will fail if the user does not have create permission on the
+        /// top-level (the only) entity involved in the mutation.
+        /// </summary>
+        [TestMethod]
+        public async Task ValidateAuthZCheckOnEntitiesForCreateOnePointMutations()
+        {
+            string createPublisherMutationName = "createPublisher";
+            string createOnePublisherMutation = @"mutation{
+                                         createPublisher(item: {name: ""Publisher #1""})
+                                                 {
+                                                     id
+                                                     name
+                                                 }
+                                         }";
+
+            // The anonymous role does not have create permissions on the Publisher entity.
+            // Hence the request will fail during authorization check.
+            await ValidateRequestIsUnauthorized(
+                graphQLMutationName: createPublisherMutationName,
+                graphQLMutation: createOnePublisherMutation,
+                expectedExceptionMessage: "The current user is not authorized to access this resource.",
+                isAuthenticated: false,
+                clientRoleHeader: "anonymous"
+                );
+        }
+
+        /// <summary>
+        /// Test to validate that a 'create one' point mutation will fail the AuthZ checks if the user does not have create permission
+        /// on one more columns belonging to the entity in the mutation.
+        /// </summary>
+        /// <returns></returns>
+        [TestMethod]
+        public async Task ValidateAuthZCheckOnColumnsForCreateOnePointMutations()
+        {
+            string createOneStockMutationName = "createStock";
+            string createOneStockWithPiecesAvailable = @"mutation {
+                                     createStock(
+                                         item:
+                                           {
+                                             categoryid: 1,
+                                             pieceid: 2,
+                                             categoryName: ""xyz""
+                                             piecesAvailable: 0
+                                           }
+                                      )
+                                      {
+                                         categoryid
+                                         pieceid
+                                      }
+                                   }";
+
+            // The 'test_role_with_excluded_fields_on_create' role does not have create permissions on
+            // stocks.piecesAvailable field and hence the authorization check should fail.
+            await ValidateRequestIsUnauthorized(
+                graphQLMutationName: createOneStockMutationName,
+                graphQLMutation: createOneStockWithPiecesAvailable,
+                expectedExceptionMessage: "Unauthorized due to one or more fields in this mutation.",
+                expectedExceptionStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
+                isAuthenticated: true,
+                clientRoleHeader: "test_role_with_excluded_fields_on_create");
+        }
+
+        #endregion
+
+        #region Multiple create mutation tests
         /// <summary>
         /// Test to validate that a 'create one' mutation request can only execute successfully when the user, has create permission
         /// for all the entities involved in the mutation.
         /// </summary>
         [TestMethod]
-        public async Task ValidateAuthZCheckOnEntitiesForCreateOneMutations()
+        public async Task ValidateAuthZCheckOnEntitiesForCreateOneMultipleMutations()
         {
             string createBookMutationName = "createbook";
             string createOneBookMutation = @"mutation {
@@ -42,6 +110,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             await ValidateRequestIsUnauthorized(
                 graphQLMutationName: createBookMutationName,
                 graphQLMutation: createOneBookMutation,
+                expectedExceptionMessage: "Unauthorized due to one or more fields in this mutation.",
+                expectedExceptionStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                 isAuthenticated: false,
                 clientRoleHeader: "anonymous"
                 );
@@ -79,6 +149,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             await ValidateRequestIsUnauthorized(
                 graphQLMutationName: createMultipleBooksMutationName,
                 graphQLMutation: createMultipleBookMutation,
+                expectedExceptionMessage: "Unauthorized due to one or more fields in this mutation.",
+                expectedExceptionStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                 isAuthenticated: false,
                 clientRoleHeader: "anonymous");
 
@@ -101,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// multiple-create mutation, the request will fail during authorization check.
         /// </summary>
         [TestMethod]
-        public async Task ValidateAuthZCheckOnColumnsForCreateOneMutations()
+        public async Task ValidateAuthZCheckOnColumnsForCreateOneMultipleMutations()
         {
             string createOneStockMutationName = "createStock";
             string createOneStockWithPiecesAvailable = @"mutation {
@@ -130,6 +202,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             await ValidateRequestIsUnauthorized(
                 graphQLMutationName: createOneStockMutationName,
                 graphQLMutation: createOneStockWithPiecesAvailable,
+                expectedExceptionMessage: "Unauthorized due to one or more fields in this mutation.",
+                expectedExceptionStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                 isAuthenticated: true,
                 clientRoleHeader: "test_role_with_excluded_fields_on_create");
 
@@ -205,6 +279,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             await ValidateRequestIsUnauthorized(
                 graphQLMutationName: createMultipleStockMutationName,
                 graphQLMutation: createMultipleStocksWithPiecesAvailable,
+                expectedExceptionMessage: "Unauthorized due to one or more fields in this mutation.",
+                expectedExceptionStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString(),
                 isAuthenticated: true,
                 clientRoleHeader: "test_role_with_excluded_fields_on_create");
 
@@ -244,17 +320,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 expectedResult: "");
         }
 
+        #endregion
+
+        #region Test helpers
         /// <summary>
         /// Helper method to execute and validate response for negative GraphQL requests which expect an authorization failure
         /// as a result of their execution.
         /// </summary>
         /// <param name="graphQLMutationName">Name of the mutation.</param>
         /// <param name="graphQLMutation">Request body of the mutation.</param>
+        /// <param name="expectedExceptionMessage">Expected exception message.</param>
         /// <param name="isAuthenticated">Boolean indicating whether the request should be treated as authenticated or not.</param>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE client role header.</param>
         private async Task ValidateRequestIsUnauthorized(
             string graphQLMutationName,
             string graphQLMutation,
+            string expectedExceptionMessage,
+            string expectedExceptionStatusCode = null,
             bool isAuthenticated = false,
             string clientRoleHeader = "anonymous")
         {
@@ -268,8 +350,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "Unauthorized due to one or more fields in this mutation.",
-                    statusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed.ToString()
+                    message: expectedExceptionMessage,
+                    statusCode: expectedExceptionStatusCode
                 );
         }
 
@@ -302,5 +384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                     message: expectedResult
                 );
         }
+
+        #endregion
     }
 }

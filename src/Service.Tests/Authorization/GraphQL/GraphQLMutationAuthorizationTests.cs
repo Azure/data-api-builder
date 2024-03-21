@@ -44,13 +44,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// If authorization fails, an exception is thrown and this test validates that scenario.
         /// If authorization succeeds, no exceptions are thrown for authorization, and function resolves silently.
         /// </summary>
-        /// <param name="isAuthorized"></param>
-        /// <param name="columnsAllowed"></param>
-        /// <param name="columnsRequested"></param>
-        /// <param name="operation"></param>
         [DataTestMethod]
-        [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Create, DisplayName = "Create Mutation Field Authorization - Success, Columns Allowed")]
-        [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Create, DisplayName = "Create Mutation Field Authorization - Failure, Columns Forbidden")]
         [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Success, Columns Allowed")]
         [DataRow(false, new string[] { "col1", "col2", "col3" }, new string[] { "col4" }, EntityActionOperation.UpdateGraphQL, DisplayName = "Update Mutation Field Authorization - Failure, Columns Forbidden")]
         [DataRow(true, new string[] { "col1", "col2", "col3" }, new string[] { "col1" }, EntityActionOperation.Delete, DisplayName = "Delete Mutation Field Authorization - Success, since authorization to perform the" +
@@ -106,7 +100,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// Sets up test fixture for class, only to be run once per test run, as defined by
         /// MSTest decorator.
         /// </summary>
-        /// <param name="context"></param>
         private static SqlMutationEngine SetupTestFixture(bool isAuthorized)
         {
             Mock<IQueryEngine> _queryEngine = new();

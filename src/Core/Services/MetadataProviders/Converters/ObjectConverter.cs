@@ -7,11 +7,12 @@ using System.Text.Json.Serialization;
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
 {
     /// <summary>
-    /// This is a converter to serialize and deserialize default
-    /// can object can be of different types int, long, string, datetime.
+    /// This is a converter to serialize and deserialize property/object or type object.
+    /// Example DefaultValue property in ColumnDefinition
+    /// object can be of different types int, long, string, datetime etc
     /// sample list of types :  SchemaConverter.cs  -> CreateValueNodeFromDbObjectNode
     /// https://github.com/Azure/data-api-builder/blob/main/src/Service.GraphQLBuilder/Sql/SchemaConverter.cs#L218
-    /// This converter adds a property Type to the object during serialization which stores the type of object and stores the actual value in property Value
+    /// This converter adds a property Type to the object during serialization which stores the type of object and the actual value in property Value
     /// which then gets used during deserialization.
     /// </summary>
     public class ObjectConverter : JsonConverter<object>

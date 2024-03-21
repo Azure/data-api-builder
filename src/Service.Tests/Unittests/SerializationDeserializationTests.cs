@@ -7,7 +7,6 @@ using System.Data;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters;
@@ -277,40 +276,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.TableDefinition, _databaseTable.TableDefinition, "FirstName");
         }
 
-        /// <summary>
-        /// Test to check the impact of version change in TypeName
-        /// </summary>
-        [TestMethod]
-        public void TestTypeNameVersionChangeImpact()
-        {
-            InitializeObjects();
-
-            Dictionary<string, DatabaseObject> dict = new() { { "person", _databaseTable } };
-
-            string serializedDict = JsonSerializer.Serialize(dict, _options);
-            string pattern = @"(Version=)\d+\.\d+\.\d+\.\d+";
-
-            // Define the replacement version number
-            string replacement = "Version=2.0.0.0";
-
-            // Use Regex.Replace to replace the version number in the JSON string
-            string modifiedJsonString = Regex.Replace(serializedDict, pattern, replacement);
-
-            Dictionary<string, DatabaseObject> deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(modifiedJsonString, _options);
-            DatabaseTable deserializedDatabaseTable = (DatabaseTable)deserializedDict["person"];
-            Assert.AreEqual(deserializedDatabaseTable.SourceType, _databaseTable.SourceType);
-
-            // Define the replacement version number
-            replacement = "Version=0.0.9";
-
-            // Use Regex.Replace to replace the version number in the JSON string
-            modifiedJsonString = Regex.Replace(serializedDict, pattern, replacement);
-
-            deserializedDict = JsonSerializer.Deserialize<Dictionary<string, DatabaseObject>>(modifiedJsonString, _options);
-            deserializedDatabaseTable = (DatabaseTable)deserializedDict["person"];
-            Assert.AreEqual(deserializedDatabaseTable.SourceType, _databaseTable.SourceType);
-        }
-
         private void InitializeObjects()
         {
             _options = new()
@@ -370,41 +335,56 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         }
 
         /// <summary>
-        /// During serialization we add TypeName to the DatabaseObject based on its type.
-        /// If the code refactor then this change will catch that as GraphQL workload would be impacted.
-        /// We will have artifacts with TypeName with old project directory/ location of this class, hence during deserialization if object is not in
-        /// that location it will fail.
-        /// [Note] : is this test fails notify the graphql workload team.
+        /// During serialization we add TypeName to the DatabaseObject based on its type. TypeName is the AssemblyQualifiedName for the type.
+        /// Example : "TypeName": "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        /// If there is a code refactor which changes the path of this object, the deserialization with old value will fail, as it wont be able to find the object in the location
+        /// previously defined.
+        /// Note : Currently this is being used by GraphQL workload, failure of this test case needs to be
+        /// handled by opening a GitHub issue and tag as "GraphQLWorkloadBreakingChange" by external contributors. For internal contributors
+        /// reach out to the GraphQL workload team.
         /// </summary>
         private void TestTypeNameChanges(DatabaseObject databaseobject, string objectName)
         {
+            // This test checks the current code path of the object : DatabaseTable, DatabaseView or DatabaseStoredProcedure
+            // It fetches the TypeName property from the serialized object and check if the TypeName contains the following project path
             Dictionary<string, DatabaseObject> dict = new();
             dict.Add("person", databaseobject);
             string jsonString = JsonSerializer.Serialize(dict, _options);
 
             // Find the start index of TypeName
             int typeNameIndex = jsonString.IndexOf("\"TypeName\":\"", StringComparison.Ordinal);
+            int typeNameKeywordLength = 11;
 
             if (typeNameIndex != -1)
             {
                 // Find the end index of TypeName
-                int endIndex = jsonString.IndexOf("\",", typeNameIndex + 11, StringComparison.Ordinal);
+                int endIndex = jsonString.IndexOf("\",", typeNameIndex + typeNameKeywordLength, StringComparison.Ordinal);
 
                 if (endIndex != -1)
                 {
                     // Extract TypeName
-                    string typeName = jsonString.Substring(typeNameIndex + 11, endIndex - typeNameIndex - 11).TrimStart('\"');
+                    string typeName = jsonString.Substring(typeNameIndex + typeNameKeywordLength, endIndex - typeNameIndex - typeNameKeywordLength).TrimStart('\"');
 
-                    // Split TypeName into two halves
-                    string[] halves = typeName.Split(',');
+                    // Split TypeName into different parts
+                    // following splits different sections of :
+                    // "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+                    string[] typeNameSplitParts = typeName.Split(',');
 
-                    string namespaceString = halves[0].Trim();
+                    string namespaceString = typeNameSplitParts[0].Trim();
                     Assert.IsTrue(namespaceString.Contains("Azure.DataApiBuilder.Config.DatabasePrimitives"));
                     Assert.AreEqual(namespaceString, "Azure.DataApiBuilder.Config.DatabasePrimitives." + objectName);
 
-                    string projectNameString = halves[1].Trim();
+                    string projectNameString = typeNameSplitParts[1].Trim();
                     Assert.AreEqual(projectNameString, "Azure.DataApiBuilder.Config");
                 }
+                else
+                {
+                    Assert.Fail("Error in Serialization");
+                }
+            }
+            else
+            {
+                Assert.Fail("Error in Serialization : TypeName substring not found");
             }
         }
 
@@ -433,6 +413,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // test number of properties/fields defined in Column Definition
             int fields = typeof(ColumnDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
             Assert.AreEqual(fields, 7);
+
             // test values
             expectedColumnDefinition.Equals(deserializedColumnDefinition);
         }

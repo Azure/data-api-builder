@@ -28,6 +28,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <seealso cref="https://spec.graphql.org/October2021/#sec-Names.Reserved-Names"/>
         public const string INTROSPECTION_FIELD_PREFIX = "__";
 
+        public const string LINKING_OBJECT_PREFIX = "linkingObject";
+
         /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
         /// Completely removes invalid characters from the input parameter: name.
@@ -92,7 +94,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         /// <summary>
         /// Attempts to deserialize and get the SingularPlural GraphQL naming config
-        /// of an Entity from the Runtime Configuration.
+        /// of an Entity from the Runtime Configuration and return the singular name of the entity.
         /// </summary>
         public static string GetDefinedSingularName(string entityName, Entity configEntity)
         {
@@ -102,6 +104,20 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             return configEntity.GraphQL.Singular;
+        }
+
+        /// <summary>
+        /// Attempts to deserialize and get the SingularPlural GraphQL naming config
+        /// of an Entity from the Runtime Configuration and return the plural name of the entity.
+        /// </summary>
+        public static string GetDefinedPluralName(string entityName, Entity configEntity)
+        {
+            if (string.IsNullOrEmpty(configEntity.GraphQL.Plural))
+            {
+                throw new ArgumentException($"The entity '{entityName}' does not have a plural name defined in config, nor has one been extrapolated from the entity name.");
+            }
+
+            return configEntity.GraphQL.Plural;
         }
 
         /// <summary>
@@ -184,6 +200,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         {
             string preformattedField = $"execute{GetDefinedSingularName(entityName, entity)}";
             return FormatNameForField(preformattedField);
+        }
+
+        /// <summary>
+        /// Helper method to generate the linking node name from source to target entities having a relationship
+        /// with cardinality M:N between them.
+        /// </summary>
+        public static string GenerateLinkingNodeName(string sourceNodeName, string targetNodeName)
+        {
+            return LINKING_OBJECT_PREFIX + sourceNodeName + targetNodeName;
         }
     }
 }

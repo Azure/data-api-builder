@@ -26,6 +26,16 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
         public const string DB_OPERATION_RESULT_FIELD_NAME = "result";
 
+        // String used as a prefix for the name of a linking entity.
+        private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
+        // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
+        private const string ENTITY_NAME_DELIMITER = "$";
+
+        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE = new() { DatabaseType.MSSQL };
+
+        public static HashSet<DatabaseType> RELATIONAL_DBS = new() { DatabaseType.MSSQL, DatabaseType.MySQL,
+            DatabaseType.DWSQL, DatabaseType.PostgreSQL, DatabaseType.CosmosDB_PostgreSQL };
+
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
             string modelDirectiveName = ModelDirectiveType.DirectiveName;
@@ -59,6 +69,22 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             };
             string name = typeNode.NamedType().Name.Value;
             return builtInTypes.Contains(name);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether DAB supports multiple create for a particular database type.
+        /// </summary>
+        public static bool DoesRelationalDBSupportMultipleCreate(DatabaseType databaseType)
+        {
+            return RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE.Contains(databaseType);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether database type represents a NoSQL database.
+        /// </summary>
+        public static bool IsRelationalDb(DatabaseType databaseType)
+        {
+            return RELATIONAL_DBS.Contains(databaseType);
         }
 
         /// <summary>
@@ -305,6 +331,40 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         private static string GenerateDataSourceNameKeyFromPath(IPureResolverContext context)
         {
             return $"{context.Path.ToList()[0]}";
+        }
+
+        /// <summary>
+        /// Helper method to generate the linking entity name using the source and target entity names.
+        /// </summary>
+        /// <param name="source">Source entity name.</param>
+        /// <param name="target">Target entity name.</param>
+        /// <returns>Name of the linking entity 'LinkingEntity$SourceEntityName$TargetEntityName'.</returns>
+        public static string GenerateLinkingEntityName(string source, string target)
+        {
+            return LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER + source + ENTITY_NAME_DELIMITER + target;
+        }
+
+        /// <summary>
+        ///  Helper method to decode the names of source and target entities from the name of a linking entity.
+        /// </summary>
+        /// <param name="linkingEntityName">linking entity name of the format 'LinkingEntity$SourceEntityName$TargetEntityName'.</param>
+        /// <returns>tuple of source, target entities name of the format (SourceEntityName, TargetEntityName).</returns>
+        /// <exception cref="ArgumentException">Thrown when the linking entity name is not of the expected format.</exception>
+        public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
+        {
+            if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER))
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            string[] sourceTargetEntityNames = linkingEntityName.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
+
+            if (sourceTargetEntityNames.Length != 3)
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            return new(sourceTargetEntityNames[1], sourceTargetEntityNames[2]);
         }
     }
 }

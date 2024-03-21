@@ -1068,7 +1068,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string> inputArgumentKeys;
             if (mutationOperation != EntityActionOperation.Delete)
             {
-                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, parameters);
             }
             else
             {

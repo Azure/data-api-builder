@@ -321,5 +321,56 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
         }
+
+        /// <summary>
+        /// Test to validate that when one referencing column references multiple referenced columns in the referenced entity,
+        /// we fail the request during request validation because then we have conflicting sources of truth for values for
+        /// the referencing column. In such cases, the referencing column can assume the value of any referenced column which
+        /// leads to amibugites as to what value to assign to the referencing column.
+        /// </summary>
+        [TestMethod]
+        public async Task InvalidateRepeatedReferencingColumnsInReferencingEntity()
+        {
+            // For a relationship between User_RepeatedReferencingColumn(username,username) - UserProfile (username, profilepictureurl),
+            // when the User_RepeatedReferencingColumn entity acts as the referencing entity, there are two sources
+            // of truth for the value of User_RepeatedReferencingColumn.username:
+            // 1. UserProfile.username
+            // 2. UserProfile.profilepictureurl
+            // which causes ambiguity as to what value should be assigned to the User_RepeatedReferencingColumn.username
+            // field after performing insertion in the referenced UserProfile entity.
+            string createUserRepeatedRelationshipColumn = "createUser_RepeatedReferencingColumn";
+            string createUserRepeatedRelationshipColumnMutation =
+                @"mutation {
+                    createUser_RepeatedReferencingColumn(
+                        item:{
+                            email: ""ss""
+                            UserProfile: {
+                                username: ""s""
+                                profilepictureurl: ""ss""
+                                }
+                             }
+                    )
+                    {
+                        userid
+                        username
+                    }
+                }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                query: createUserRepeatedRelationshipColumnMutation,
+                queryName: createUserRepeatedRelationshipColumn,
+                isAuthenticated: false,
+                variables: null,
+                clientRoleHeader: "anonymous");
+
+            // Validate that an appropriate exception is thrown because the value for the referencing field
+            // publisher_id cannot be derived from any of the two possible sources mentioned above.
+            SqlTestHelper.TestForErrorInGraphQLResponse(
+                    actual.ToString(),
+                    message: "The fields: {username} in the entity: User_RepeatedReferencingColumn references multiple fields in the " +
+                    "related entity: UserProfile for the relationship: UserProfile at level: 1.",
+                    statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
+                );
+        }
     }
 }

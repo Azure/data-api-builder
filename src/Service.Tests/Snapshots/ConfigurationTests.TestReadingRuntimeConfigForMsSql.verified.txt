@@ -2161,6 +2161,45 @@
       }
     },
     {
+      User_RepeatedReferencingColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_RepeatedReferencingColumn,
+          Plural: User_RepeatedReferencingColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              username,
+              username
+            ],
+            TargetFields: [
+              profilepictureurl,
+              username
+            ]
+          }
+        }
+      }
+    },
+    {
       GetBooks: {
         Source: {
           Object: get_books,

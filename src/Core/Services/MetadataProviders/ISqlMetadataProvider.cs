@@ -218,7 +218,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public ForeignKeyDefinition GetFKDefinition(
             string sourceEntityName,
             string targetEntityName,
-            string referencedEntityName,
-            string referencingEntityName) => throw new NotImplementedException();
+            string referencingEntityName,
+            string referencedEntityName) => throw new NotImplementedException();
     }
 }

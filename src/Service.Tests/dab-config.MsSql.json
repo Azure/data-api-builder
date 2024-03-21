@@ -2255,6 +2255,48 @@
         }
       }
     },
+    "User_RepeatedReferencingColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_RepeatedReferencingColumn",
+          "plural": "User_RepeatedReferencingColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "username",
+            "username"
+          ],
+          "target.fields": [
+            "profilepictureurl",
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
     "GetBooks": {
       "source": {
         "object": "get_books",

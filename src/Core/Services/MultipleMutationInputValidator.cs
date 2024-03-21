@@ -297,8 +297,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Validate that one column in the referencing entity is not referencing multiple columns in the referenced entity
                 // to avoid conflicting sources of truth for the value of referencing column.
                 IEnumerable<string> listOfRepeatedReferencingFields = GetListOfRepeatedExposedReferencingColumns(
-                        referencingColumns: fkDefinition.ReferencingColumns,
                         referencingEntityName: referencingEntityName,
+                        referencingColumns: fkDefinition.ReferencingColumns,
                         metadataProvider: metadataProvider);
 
                 if (listOfRepeatedReferencingFields.Count() > 0)
@@ -308,7 +308,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // which leads to possibility of two conflicting sources of truth for this column.
                     // This is an invalid use case for multiple-create.
                     throw new DataApiBuilderException(
-                        message: $"The fields: {repeatedReferencingFields} in the entity: {referencingEntityName} references multiple fields in the" +
+                        message: $"The fields: {repeatedReferencingFields} in the entity: {referencingEntityName} references multiple fields in the " +
                         $"related entity: {referencedEntityName} for the relationship: {relationshipName} at level: {nestingLevel}.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
@@ -395,15 +395,16 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Helper method get list of columns in a referencing entity which hold multiple references to a referenced entity.
-        /// This is not a supported use case as it leads to possibility of two conflicting sources of truth for
-        /// the columns holding multiple references to referenced entity columns and leads to ambiguities.
+        /// We don't support multiple-create for such use cases because then we have conflicting sources of truth for values for
+        /// the columns holding multiple references to referenced entity. In such cases, the referencing column can assume the
+        /// value of any referenced column which leads to amibugites as to what value to assign to the referencing column.
         /// </summary>
-        /// <param name="referencingColumns">Set of referencing columns.</param>
         /// <param name="referencingEntityName">Name of the referencing entity.</param>
+        /// <param name="referencingColumns">Set of referencing columns.</param>
         /// <param name="metadataProvider">Metadata provider.</param>
         private static IEnumerable<string> GetListOfRepeatedExposedReferencingColumns(
-            List<string> referencingColumns,
             string referencingEntityName,
+            List<string> referencingColumns,
             ISqlMetadataProvider metadataProvider)
         {
             HashSet<string> referencingFields = new();

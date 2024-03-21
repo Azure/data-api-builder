@@ -80,6 +80,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // must be removed since it was only used to determine if there are additional
                     // records after those requested.
                     rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+                    --returnedElemNo;
                 }
             }
 

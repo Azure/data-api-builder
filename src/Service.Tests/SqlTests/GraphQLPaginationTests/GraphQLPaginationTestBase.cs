@@ -350,7 +350,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                           ""title"": ""US history in a nutshell""
                         }
                       ],
-                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":4,\"Direction\":0}}]") + @""",
+                      ""endCursor"": null,
                       ""hasNextPage"": false
                     }
                   }

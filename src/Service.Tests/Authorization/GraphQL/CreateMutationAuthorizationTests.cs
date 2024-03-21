@@ -274,7 +274,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 isAuthenticated: true,
                 clientRoleHeader: "test_role_with_excluded_fields_on_create");
 
-
             string createOneStocksPriceWithoutPiecesAvailable = @"mutation {
                                             createstocks_price(
                                                 item:

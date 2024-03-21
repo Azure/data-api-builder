@@ -325,6 +325,28 @@
           ]
         },
         {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "piecesAvailable"
+                ]
+              }
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
           "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
           "actions": [
             {
@@ -1424,8 +1446,35 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
-      ]
+      ],
+      "relationships": {
+        "Stock": {
+          "cardinality": "one",
+          "target.entity": "Stock",
+          "source.fields": [],
+          "target.fields": [],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
     },
     "Tree": {
       "source": {

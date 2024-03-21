@@ -113,6 +113,27 @@ namespace Cli
                 return false;
             }
 
+            bool isMultipleCreateEnabledForGraphQL;
+
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // a warning is logged.
+            // When multiple mutation operations are extended for other database types, this option should be honored.
+            // Tracked by issue #2001: https://github.com/Azure/data-api-builder/issues/2001.
+            if (dbType is not DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
+            {
+                _logger.LogWarning($"The option --graphql.multiple-create.enabled is not supported for the {dbType.ToString()} database type and will not be honored.");
+            }
+
+            MultipleMutationOptions? multipleMutationOptions = null;
+
+            // Multiple mutation operations are applicable only for MSSQL database. When the option --graphql.multiple-create.enabled is specified for other database types,
+            // it is not honored.
+            if (dbType is DatabaseType.MSSQL && options.MultipleCreateOperationEnabled is not CliBool.None)
+            {
+                isMultipleCreateEnabledForGraphQL = IsMultipleCreateOperationEnabled(options.MultipleCreateOperationEnabled);
+                multipleMutationOptions = new(multipleCreateOptions: new MultipleCreateOptions(enabled: isMultipleCreateEnabledForGraphQL));
+            }
+
             switch (dbType)
             {
                 case DatabaseType.CosmosDB_NoSQL:
@@ -232,7 +253,7 @@ namespace Cli
                 DataSource: dataSource,
                 Runtime: new(
                     Rest: new(restEnabled, restPath ?? RestRuntimeOptions.DEFAULT_PATH, options.RestRequestBodyStrict is CliBool.False ? false : true),
-                    GraphQL: new(graphQLEnabled, graphQLPath),
+                    GraphQL: new(Enabled: graphQLEnabled, Path: graphQLPath, MultipleMutationOptions: multipleMutationOptions),
                     Host: new(
                         Cors: new(options.CorsOrigin?.ToArray() ?? Array.Empty<string>()),
                         Authentication: new(
@@ -283,6 +304,16 @@ namespace Cli
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// Helper method to determine if the multiple create operation is enabled or not based on the inputs from dab init command.
+        /// </summary>
+        /// <param name="multipleCreateEnabledOptionValue">Input value for --graphql.multiple-create.enabled option of the init command</param>
+        /// <returns>True/False</returns>
+        private static bool IsMultipleCreateOperationEnabled(CliBool multipleCreateEnabledOptionValue)
+        {
+            return multipleCreateEnabledOptionValue is CliBool.True;
         }
 
         /// <summary>
@@ -1091,24 +1122,14 @@ namespace Cli
                 return false;
             }
 
-            // Validates that config file has data and it is properly deserialized
-            // Replaces all the environment variables while deserializing when starting DAB.
-            if (!loader.TryLoadKnownConfig(out RuntimeConfig? deserializedRuntimeConfig, replaceEnvVar: true))
-            {
-                _logger.LogError("Failed to parse the config file: {runtimeConfigFile}.", runtimeConfigFile);
-                return false;
-            }
-            else
-            {
-                _logger.LogInformation("Loaded config file: {runtimeConfigFile}", runtimeConfigFile);
-            }
+            _logger.LogInformation("Validating config file: {runtimeConfigFile}", runtimeConfigFile);
 
             RuntimeConfigProvider runtimeConfigProvider = new(loader);
 
             ILogger<RuntimeConfigValidator> runtimeConfigValidatorLogger = LoggerFactoryForCli.CreateLogger<RuntimeConfigValidator>();
             RuntimeConfigValidator runtimeConfigValidator = new(runtimeConfigProvider, fileSystem, runtimeConfigValidatorLogger, true);
 
-            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, deserializedRuntimeConfig, LoggerFactoryForCli).Result;
+            return runtimeConfigValidator.TryValidateConfig(runtimeConfigFile, LoggerFactoryForCli).Result;
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Auth;
@@ -11,6 +12,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -137,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<JsonDocument?> ExecuteAsync(FindRequestContext context)
         {
             // for REST API scenarios, use the default datasource
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
 
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SqlQueryStructure structure = new(
@@ -170,9 +172,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonDocument? ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
             PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
+            if (parentMetadata.Subqueries.TryGetValue(QueryBuilder.PAGINATION_FIELD_NAME, out PaginationMetadata? paginationObjectMetadata))
+            {
+                parentMetadata = paginationObjectMetadata;
+            }
+
             PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
             metadata = currentMetadata;
 
@@ -180,22 +187,68 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return SqlPaginationUtil.CreatePaginationConnectionFromJsonElement(element, currentMetadata);
             }
-            else
+
+            // In certain cirumstances (e.g. when processing a DW result), the JsonElement will be JsonValueKind.String instead
+            // of JsonValueKind.Object. In this case, we need to parse the JSON. This snippet can be removed when DW result is consistent
+            // with MSSQL result.
+            if (element.ValueKind is JsonValueKind.String)
             {
-                //TODO: Try to avoid additional deserialization/serialization here.
-                return ResolverMiddleware.RepresentsNullValue(element) ? null : JsonDocument.Parse(element.ToString());
+                return JsonDocument.Parse(element.ToString()).RootElement.Clone();
             }
+
+            return element;
         }
 
-        /// <inheritdoc />
-        public object? ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        /// <summary>
+        /// Resolves the JsonElement, an array, into a list of jsonelements where each element represents
+        /// an entry in the original array.
+        /// </summary>
+        /// <param name="array">JsonElement representing a JSON array. The possible representations:
+        /// JsonValueKind.Array -> ["item1","itemN"]
+        /// JsonValueKind.String -> "[ { "field1": "field1Value" }, { "field2": "field2Value" }, { ... } ]"
+        /// - Input JsonElement is JsonValueKind.String because the array and enclosed objects haven't been deserialized yet.
+        /// - This method deserializes the JSON string (representing a JSON array) and collects each element (Json object) within the
+        /// list of json elements returned by this method.</param>
+        /// <param name="fieldSchema">Definition of field being resolved. For lists: [/]items:[entity!]!]</param>
+        /// <param name="metadata">PaginationMetadata of the parent field of the currently processed field in HC middlewarecontext.</param>
+        /// <returns>List of JsonElements parsed from the provided JSON array.</returns>
+        /// <remarks>Return type is 'object' instead of a 'List of JsonElements' because when this function returns JsonElement,
+        /// the HC12 engine doesn't know how to handle the JsonElement and results in requests failing at runtime.</remarks>
+        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata? metadata)
         {
-            PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
-            PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
-            metadata = currentMetadata;
+            if (metadata is not null)
+            {
+                PaginationMetadata parentMetadata = (PaginationMetadata)metadata;
+                PaginationMetadata currentMetadata = parentMetadata.Subqueries[fieldSchema.Name.Value];
+                metadata = currentMetadata;
+            }
 
-            //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonSerializer.Deserialize<List<JsonElement>>(element.ToString());
+            List<JsonElement> resolvedList = new();
+
+            if (array.ValueKind is JsonValueKind.Array)
+            {
+                foreach (JsonElement element in array.EnumerateArray())
+                {
+                    resolvedList.Add(element);
+                }
+            }
+            else if (array.ValueKind is JsonValueKind.String)
+            {
+                using ArrayPoolWriter buffer = new();
+
+                string text = array.GetString()!;
+                int neededCapacity = Encoding.UTF8.GetMaxByteCount(text.Length);
+                int written = Encoding.UTF8.GetBytes(text, buffer.GetSpan(neededCapacity));
+                buffer.Advance(written);
+
+                Utf8JsonReader reader = new(buffer.GetWrittenSpan());
+                foreach (JsonElement element in JsonElement.ParseValue(ref reader).EnumerateArray())
+                {
+                    resolvedList.Add(element);
+                }
+            }
+
+            return resolvedList;
         }
 
         // <summary>

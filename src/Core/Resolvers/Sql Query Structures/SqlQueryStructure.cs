@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -635,7 +636,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
-                    IDictionary<string, object?> subqueryParams = ResolverMiddleware.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
+                    IDictionary<string, object?> subqueryParams = ExecutionHelper.GetParametersFromSchemaAndQueryFields(subschemaField, field, _ctx.Variables);
                     SqlQueryStructure subquery = new(
                         _ctx,
                         subqueryParams,
@@ -720,10 +721,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             HashSet<string> remainingPkCols = new(PrimaryKey());
 
-            InputObjectType orderByArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(orderByArgumentSchema);
+            InputObjectType orderByArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(orderByArgumentSchema);
             foreach (ObjectFieldNode field in orderByFields)
             {
-                object? fieldValue = ResolverMiddleware.ExtractValueFromIValueNode(
+                object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
                     value: field.Value,
                     argumentSchema: orderByArgumentObject.Fields[field.Name.Value],
                     variables: _ctx.Variables);

@@ -194,6 +194,95 @@ namespace Azure.DataApiBuilder.Service.Tests
             ""entities"": {}" +
           "}";
 
+        /// <summary>
+        /// An empty entities section of the config file. This is used in constructing config json strings utilized for testing.
+        /// </summary>
+        public const string EMPTY_ENTITIES_CONFIG_JSON =
+            @"
+                ""entities"": {}
+            ";
+
+        /// <summary>
+        /// A json string with Runtime Rest and GraphQL options. This is used in constructing config json strings utilized for testing. 
+        /// </summary>
+        public const string RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON =
+             "{" +
+             SAMPLE_SCHEMA_DATA_SOURCE + "," +
+             @"
+            ""runtime"": {
+              ""rest"": {
+                ""path"": ""/api""
+              },
+              ""graphql"": {
+                ""path"": ""/graphql"",
+                ""allow-introspection"": true,";
+
+        /// <summary>
+        /// A json string with host and empty entity options. This is used in constructing config json strings utilized for testing.
+        /// </summary>
+        public const string HOST_AND_ENTITY_OPTIONS_CONFIG_JSON =
+            @"
+            ""host"": {
+                ""mode"": ""development"",
+                ""cors"": {
+                  ""origins"": [""http://localhost:5000""],
+                  ""allow-credentials"": false
+                },
+                ""authentication"": {
+                  ""provider"": ""StaticWebApps""
+                }
+              }
+            }" + "," +
+            EMPTY_ENTITIES_CONFIG_JSON +
+            "}";
+
+        /// <summary>
+        /// A minimal valid config json with multiple mutations section as null.
+        /// </summary>
+        public const string BASE_CONFIG_NULL_MULTIPLE_MUTATIONS_FIELD =
+            RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
+              @"
+                ""multiple-mutations"": null   
+              }," +
+            HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
+
+        /// <summary>
+        /// A minimal valid config json with an empty multiple mutations section.
+        /// </summary>
+        public const string BASE_CONFIG_EMPTY_MULTIPLE_MUTATIONS_FIELD =
+
+            RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
+              @"
+                ""multiple-mutations"": {}
+              }," +
+            HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
+
+        /// <summary>
+        /// A minimal valid config json with the create field within multiple mutation as null.
+        /// </summary>
+        public const string BASE_CONFIG_NULL_MULTIPLE_CREATE_FIELD =
+
+            RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
+              @"
+                ""multiple-mutations"": {
+                      ""create"": null
+                 }
+              }," +
+            HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
+
+        /// <summary>
+        /// A minimal valid config json with an empty create field within multiple mutation.
+        /// </summary>
+        public const string BASE_CONFIG_EMPTY_MULTIPLE_CREATE_FIELD =
+
+            RUNTIME_REST_GRAPHQL_OPTIONS_CONFIG_JSON +
+            @"
+                ""multiple-mutations"": {
+                      ""create"": {}
+                }
+            }," +
+            HOST_AND_ENTITY_OPTIONS_CONFIG_JSON;
+
         public static RuntimeConfigProvider GenerateInMemoryRuntimeConfigProvider(RuntimeConfig runtimeConfig)
         {
             MockFileSystem fileSystem = new();

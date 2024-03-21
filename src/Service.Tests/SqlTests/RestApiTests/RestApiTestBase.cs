@@ -24,6 +24,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests
         protected const int STARTING_ID_FOR_TEST_INSERTS = 5001;
         protected static readonly string _integration_NonAutoGenPK_EntityName = "magazine";
         protected static readonly string _integration_NonAutoGenPK_TableName = "magazines";
+        protected static readonly string _collisionEntity = "bar_magazine";
+        protected static readonly string _collisionTable = "bar.magazines";
         protected static readonly string _integration_AutoGenNonPK_EntityName = "Comic";
         protected static readonly string _integration_AutoGenNonPK_TableName = "comics";
         protected static readonly string _Composite_NonAutoGenPK_TableName = "stocks";

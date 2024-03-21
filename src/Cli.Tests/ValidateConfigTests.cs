@@ -60,4 +60,26 @@ public class ValidateConfigTests
         bool isConfigValid = ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
         Assert.IsFalse(isConfigValid);
     }
+
+    /// <summary>
+    /// This method validates that the IsConfigValid method returns false when the config is empty.
+    /// This is to validate that no exceptions are thrown with validate for failures during config deserialization.
+    /// </summary>
+    [TestMethod]
+    public void TestValidateWithEmptyConfig()
+    {
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, string.Empty);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
 }

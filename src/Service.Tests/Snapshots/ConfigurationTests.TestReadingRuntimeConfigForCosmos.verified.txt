@@ -82,6 +82,14 @@
                 Action: Delete
               }
             ]
+          },
+          {
+            Role: limited-read-role,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
           }
         ]
       }
@@ -89,7 +97,7 @@
     {
       Character: {
         Source: {
-          Object: graphqldb.character
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Character,
@@ -123,7 +131,7 @@
     {
       StarAlias: {
         Source: {
-          Object: graphqldb.star
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Star,
@@ -174,7 +182,7 @@
     {
       TagAlias: {
         Source: {
-          Object: graphqldb.tag
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Tag,
@@ -208,7 +216,7 @@
     {
       Moon: {
         Source: {
-          Object: graphqldb.moon
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Moon,
@@ -259,7 +267,7 @@
     {
       Earth: {
         Source: {
-          Object: graphqldb.earth
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Earth,
@@ -414,7 +422,7 @@
     {
       Sun: {
         Source: {
-          Object: graphqldb.sun
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: Sun,
@@ -456,7 +464,7 @@
     {
       AdditionalAttribute: {
         Source: {
-          Object: graphqldb.additionalAttribute
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: AdditionalAttribute,
@@ -481,7 +489,7 @@
     {
       MoonAdditionalAttribute: {
         Source: {
-          Object: graphqldb.moonAdditionalAttributes
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: MoonAdditionalAttribute,
@@ -506,7 +514,7 @@
     {
       MoreAttrAlias: {
         Source: {
-          Object: graphqldb.moreAttribute
+          Object: graphqldb.planet
         },
         GraphQL: {
           Singular: MoreAttribute,

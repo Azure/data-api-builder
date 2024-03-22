@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
         /// <inheritdoc />
         [DataTestMethod]
-        [DataRow("typeid", 1, 4, "", "", false,
+        [DataRow("typeid", 1, 3, "", "", false,
             DisplayName = "Test after token for primary key with mapped name.")]
         [DataRow("typeid", 4, 6, "", "", true,
             DisplayName = "Test after token for primary key with mapped name for last page.")]

@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
         /// <inheritdoc />
         [DataTestMethod]
-        [DataRow("typeid", 1, 4, "", "", false,
+        [DataRow("typeid", 1, 3, "", "", false,
             DisplayName = "Test after token for primary key with mapped name.")]
         [DataRow("typeid", 4, 6, "", "", true,
             DisplayName = "Test after token for primary key with mapped name for last page.")]
@@ -41,11 +41,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for long values.")]
         [DataRow("long_types", 1, "", 1, "", true,
             DisplayName = "Test after token for long values for last page.")]
-        [DataRow("string_types", "\"\"", "\"null\"", 1, 3, false,
+        [DataRow("string_types", "\"\"", "\"lksa;jdflasdf;alsdflksdfkldj\"", 1, 2, false,
             DisplayName = "Test after token for string values.")]
         [DataRow("string_types", "null", "", 3, "", true,
             DisplayName = "Test after token for string values for last page.")]
-        [DataRow("single_types", -3.39E38, .33000001, 3, 1, false,
+        [DataRow("single_types", -3.39E38, .33000001311302185, 3, 1, false,
             DisplayName = "Test after token for single values.")]
         [DataRow("single_types", .33, "", 1, "", true,
             DisplayName = "Test after token for single values for last page.")]

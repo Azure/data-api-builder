@@ -39,7 +39,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             DisplayName = "Test after token for long values.")]
         [DataRow("long_types", 1, "", 1, "", true,
             DisplayName = "Test after token for long values for last page.")]
-        [DataRow("string_types", "\"\"", "\"lksa;jdflasdf;alsdflksdfkldj\"", 1, 3, false,
+        [DataRow("string_types", "\"\"", "\"lksa;jdflasdf;alsdflksdfkldj\"", 1, 2, false,
             DisplayName = "Test after token for string values.")]
         [DataRow("string_types", "null", "", 3, "", true,
             DisplayName = "Test after token for string values for last page.")]

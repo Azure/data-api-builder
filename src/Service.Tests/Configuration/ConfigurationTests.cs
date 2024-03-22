@@ -1275,7 +1275,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
             catch
             {
-                Assert.Fail("The validation should not throw an exception.");
+                Assert.Fail("Execution of dab validate should not result in unhandled exceptions.");
             }
 
             Assert.IsTrue(configValidator.ConfigValidationExceptions.Any());

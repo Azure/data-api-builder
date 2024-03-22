@@ -841,7 +841,8 @@ public class RuntimeConfigValidator : IConfigValidator
                 {
                     sourceObject = null;
                     HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Could not infer database object for entity: {entityName} in relationship: {relationshipName}.",
+                        message: $"Could not infer database object for source entity: {entityName} in relationship: {relationshipName}." +
+                            $"Check if the entity: {entityName} is correctly defined in the config.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
@@ -850,7 +851,8 @@ public class RuntimeConfigValidator : IConfigValidator
                 {
                     targetObject = null;
                     HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Could not infer database object for target entity: {relationship.TargetEntity} in relationship: {relationshipName}.",
+                        message: $"Could not infer database object for target entity: {relationship.TargetEntity} in relationship: {relationshipName}." +
+                            $"Check if the entity: {relationship.TargetEntity} is correctly defined in the config.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }

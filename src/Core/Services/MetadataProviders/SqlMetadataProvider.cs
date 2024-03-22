@@ -624,7 +624,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         {
                             throw new DataApiBuilderException(
                                 message: $"The entity {entityName} does not have a valid source object.",
-                                statusCode: HttpStatusCode.NotAcceptable,
+                                statusCode: HttpStatusCode.InternalServerError,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                         }
 
@@ -743,7 +743,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     throw new DataApiBuilderException(
                                 message: $"Target entity {entityName} does not have a valid source object.",
-                                statusCode: HttpStatusCode.NotAcceptable,
+                                statusCode: HttpStatusCode.InternalServerError,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }
 
@@ -988,8 +988,6 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 HandleOrRecordException(e);
             }
-
-            // await PopulateForeignKeyDefinitionAsync();
         }
 
         /// <summary>

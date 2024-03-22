@@ -10,6 +10,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class CosmosExistsQueryStructure : CosmosQueryStructure
     {
+        /// <summary>
+        /// Constructor for Exists query.
+        /// </summary>
         public CosmosExistsQueryStructure(IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             ISqlMetadataProvider metadataProvider,

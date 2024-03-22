@@ -4,23 +4,23 @@
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
     /// <summary>
-    /// It contains the path to the entity with entity name.
-    /// It is used to build the query from OdataParser as it would use path to an entity as prefix in the condition.
+    /// It contains Entity information along with Pre-Generated JOIN statements for all the entities.
+    /// So that, it can be used for generating CosmosDB SQL queries.
     /// </summary>
     public record EntityDbPolicyCosmosModel
     {
         /// <summary>
-        /// Path to the given entity with "." delimiter
+        /// Path to the given entity with "." delimiter, it will be used as prefix while generating conditions for CosmosDB SQL queries.
         /// </summary>
         public string Path { get; }
 
         /// <summary>
-        /// Column name of the entity
+        /// Column name representation of the entity
         /// </summary>
         public string? ColumnName { get; }
 
         /// <summary>
-        /// If entity is of array type then we would store alias of the entity
+        /// If entity is of array type then we would have a generated alias of the entity
         /// </summary>
         public string? Alias { get; }
 
@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         public string? EntityName { get; }
 
         /// <summary>
-        /// Contains pre-generated JOIN statement for the entity
+        /// Pre-generated JOIN statement for the entity
         /// </summary>
         public string? JoinStatement { get; set; }
 

@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// The DatabaseObject associated with the entity, represents the
-        /// databse object to be queried.
+        /// database object to be queried.
         /// </summary>
         public DatabaseObject DatabaseObject { get; protected set; } = null!;
 
@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public List<Predicate> Predicates { get; }
 
         /// <summary>
-        /// Used for parsing graphql filter arguments.
+        /// Used for parsing GraphQl filter arguments.
         /// </summary>
         public GQLFilterParser GraphQLFilterParser { get; protected set; }
 
@@ -101,14 +101,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (!string.IsNullOrEmpty(entityName))
             {
                 EntityName = entityName;
-                if (MetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject))
-                {
-                    DatabaseObject = dbObject;
-                }
-                else
-                {
-                    DatabaseObject = new DatabaseTable(schemaName: string.Empty, tableName: string.Empty);
-                }
+                DatabaseObject = MetadataProvider.EntityToDatabaseObject[entityName];
             }
             else
             {

@@ -66,6 +66,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
+
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
             CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);

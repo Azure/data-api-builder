@@ -271,12 +271,12 @@ public class GQLFilterParser
     }
 
     /// <summary>
-    /// For CosmosDB, a nested filter represents a join between
-    /// the parent entity being filtered and the related entity representing the
-    /// non-scalar filter input. This function:
-    /// 1. Recursively parses any more(possibly nested) filters.
-    /// 2. Adds join predicates between the related entities.
-    /// 3. Adds the subquery to the existing list of predicates.
+    /// For CosmosDB, a nested filter represents an EXISTS clause with a subquery.
+    /// This function:
+    /// 1. Defines the Exists Query structure
+    /// 2. Recursively parses any more(possibly nested) filters on the Exists sub query.
+    /// 3. Adds join predicates between the related entities to the Exists sub query.
+    /// 4. Adds the Exists subquery to the existing list of predicates.
     /// </summary>
     /// <param name="ctx">The middleware context.</param>
     /// <param name="filterField">The nested filter field.</param>

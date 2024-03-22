@@ -5,7 +5,7 @@ using Microsoft.OData.UriParser;
 
 /// <summary>
 /// This class is a visitor for an AST generated when parsing a $filter query string
-/// with the OData Uri Parser for Cosmos
+/// with the OData Uri Parser for Cosmos DB Db Policies
 /// </summary>
 namespace Azure.DataApiBuilder.Core.Parsers
 {

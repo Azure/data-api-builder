@@ -115,8 +115,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 Parameters.Add(encodedParamName,
                     new(value,
-                        GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName),
-                        GetUnderlyingSourceDefinition().GetSqlDbTypeForParam(paramName)));
+                        dbType: GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName),
+                        sqlDbType: GetUnderlyingSourceDefinition().GetSqlDbTypeForParam(paramName)));
             }
             else
             {

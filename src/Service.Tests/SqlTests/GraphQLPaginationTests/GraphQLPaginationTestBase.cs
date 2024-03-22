@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                   ""title"": ""Before Sunset""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":14,\"Direction\":0}}]") + @""",
+              ""endCursor"": null,
               ""hasNextPage"": false
             }";
 

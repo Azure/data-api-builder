@@ -16,7 +16,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using static Azure.DataApiBuilder.Core.Authorization.AuthorizationResolver;
-using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Models;
 
@@ -280,11 +279,9 @@ public class GQLFilterParser
         CosmosQueryStructure queryStructure,
         ISqlMetadataProvider metadataProvider)
     {
-        string entityName = metadataProvider.GetEntityName(entityType);
-
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
-            entityIdentifier: entityName,
+            entityIdentifier: entityType,
             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
             operation: EntityActionOperation.Read);
 
@@ -296,66 +293,39 @@ public class GQLFilterParser
                 subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
         }
 
-        //Either generate table alias or use the existing one if available
-        HashSet<CosmosJoinStructure>? existingJoins = queryStructure.Joins?.ToHashSet();
-        string? tableAlias = null;
-        foreach (CosmosJoinStructure join in existingJoins ?? new HashSet<CosmosJoinStructure>())
-        {
-            if (join.DbObject.Name == columnName)
-            {
-                tableAlias = join.TableAlias;
-                break;
-            }
-        }
+        List<Predicate> predicatesForExistsQuery = new();
+        CosmosExistsQueryStructure existsQuery = new(
+            ctx,
+            new Dictionary<string, object?>(),
+            metadataProvider,
+            queryStructure.AuthorizationResolver,
+            this,
+            queryStructure.Counter,
+            predicatesForExistsQuery);
 
-        if (string.IsNullOrEmpty(tableAlias))
-        {
-            tableAlias = queryStructure.GetTableAlias();
-        }
+        existsQuery.DatabaseObject.SchemaName = $"{queryStructure.SourceAlias}.{columnName}";
+        existsQuery.DatabaseObject.Name = existsQuery.SourceAlias;
+        existsQuery.EntityName = metadataProvider.GetEntityName(entityType);
 
-        // Create new query structure for the subquery
-        IDictionary<string, object?> subParameters = new Dictionary<string, object?>();
-        CosmosQueryStructure cosmosQueryStructure =
-            new(
-                context: ctx,
-                parameters: subParameters,
-                metadataProvider: metadataProvider,
-                authorizationResolver: queryStructure.AuthorizationResolver,
-                gQLFilterParser: this,
-                counter: queryStructure.Counter);
+        // Recursively parse and obtain the predicates for the Exists clause subquery
+        Predicate existsQueryFilterPredicate = Parse(ctx,
+                filterField,
+                subfields,
+                existsQuery);
 
-        cosmosQueryStructure.DatabaseObject.SchemaName = queryStructure.SourceAlias;
-        cosmosQueryStructure.DatabaseObject.Name = tableAlias;
-        cosmosQueryStructure.SourceAlias = tableAlias;
-        cosmosQueryStructure.EntityName = entityName;
-        cosmosQueryStructure.TableCounter = queryStructure.TableCounter;
+        predicatesForExistsQuery.Push(existsQueryFilterPredicate);
 
-        // Obtain the predicates and join for the subquery and copy them to main query
-        PredicateOperand joinPredicate = new(
-            Parse(
-                ctx: ctx,
-                filterArgumentSchema: filterField,
-                fields: subfields,
-                queryStructure: cosmosQueryStructure));
-        predicates.Push(joinPredicate);
+        // The right operand is the SqlExistsQueryStructure.
+        PredicateOperand right = new(existsQuery);
 
-        queryStructure.Joins ??= new Stack<CosmosJoinStructure>();
-        if (cosmosQueryStructure.Joins is not null and { Count: > 0 })
-        {
-            queryStructure.Joins = cosmosQueryStructure.Joins;
-        }
+        // Create a new unary Exists Predicate
+        Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
 
-        if (!queryStructure.Joins.ToList().Any(j => j.DbObject.Name == columnName))
-        {
-            queryStructure
-            .Joins
-            .Push(new CosmosJoinStructure(
-                        DbObject: new DatabaseTable(schemaName: queryStructure.SourceAlias, tableName: columnName),
-                        TableAlias: tableAlias));
-        }
+        // Add it to the rest of the existing predicates.
+        predicates.Push(new PredicateOperand(existsPredicate));
 
         // Add all parameters from the exists subquery to the main queryStructure.
-        foreach ((string key, DbConnectionParam value) in cosmosQueryStructure.Parameters)
+        foreach ((string key, DbConnectionParam value) in existsQuery.Parameters)
         {
             queryStructure.Parameters.Add(key, value);
         }

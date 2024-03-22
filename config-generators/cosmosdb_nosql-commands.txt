@@ -16,6 +16,7 @@ update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "anonymous:
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "anonymous:read" --fields.include "*" --fields.exclude "*"
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "authenticated:create,read,update,delete"
 update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "limited-read-role:read" --fields.include "id,type" --fields.exclude "name"
+update Earth --config "dab-config.CosmosDb_NoSql.json" --permissions "item-level-permission-role:read"  --policy-database "@item.type eq 'earth0'"
 add Sun --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.planet" --permissions "anonymous:create,update,delete" --graphql true
 update Sun --config "dab-config.CosmosDb_NoSql.json" --permissions "anonymous:read" --fields.include "*" --fields.exclude "name"
 add AdditionalAttribute --config "dab-config.CosmosDb_NoSql.json" --source "graphqldb.planet" --permissions "anonymous:*" --graphql "AdditionalAttribute:AdditionalAttributes"

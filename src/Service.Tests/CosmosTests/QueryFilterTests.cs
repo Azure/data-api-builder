@@ -7,9 +7,11 @@ using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Humanizer;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Newtonsoft.Json.Linq;
 using QueryBuilder = Azure.DataApiBuilder.Service.GraphQLBuilder.Queries.QueryBuilder;
 
@@ -99,10 +101,17 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQueryWithJoin = "SELECT c.name FROM c " +
-                "JOIN a IN c.additionalAttributes " +
-                "JOIN b IN c.moons " +
-                "WHERE a.name = \"volcano1\" and b.name = \"1 moon\" and b.details LIKE \"%11%\"";
+            string dbQueryWithJoin = "SELECT c.name " +
+                                     "FROM c " +
+                                     "WHERE (EXISTS (SELECT 1 " +
+                                                    "FROM table0 IN c.additionalAttributes " +
+                                                    "WHERE table0.name = \"volcano1\" ) AND " +
+                                            "EXISTS (SELECT 1 " +
+                                                    "FROM table2 IN c.moons " +
+                                                    "WHERE table2.name = \"1 moon\" ) AND " +
+                                            "EXISTS (SELECT 1 " +
+                                                    "FROM table4 IN c.moons " +
+                                                    "WHERE table4.details LIKE \"%11%\" )  )";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -147,9 +156,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQueryWithJoin = "SELECT c.name FROM c " +
-                "JOIN a IN c.moons " +
-                "JOIN b IN a.moonAdditionalAttributes " +
-                "WHERE b.name = \"moonattr0\"";
+                                     "WHERE EXISTS (SELECT 1 " +
+                                                   "FROM table0 IN c.moons " +
+                                                   "WHERE EXISTS (SELECT 1 " +
+                                                                 "FROM table1 IN table0.moonAdditionalAttributes " +
+                                                                 "WHERE table1.name = \"moonattr0\" ))";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -171,10 +182,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQueryWithJoin = "SELECT c.name FROM c " +
-                "JOIN a IN c.moons " +
-                "JOIN b IN a.moonAdditionalAttributes " +
-                "JOIN d IN b.moreAttributes " +
-                "WHERE d.name = \"moonattr0\"";
+                                     "WHERE EXISTS(SELECT 1 " +
+                                                  "FROM table0 IN c.moons " +
+                                                  "WHERE EXISTS(SELECT 1 " +
+                                                               "FROM table1 IN table0.moonAdditionalAttributes " +
+                                                               "WHERE EXISTS(SELECT 1 " +
+                                                                            "FROM table2 IN table1.moreAttributes " +
+                                                                            "WHERE table2.name = \"moonattr0\")))";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -254,10 +268,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQueryWithJoin = "SELECT c.name FROM c " +
-                "JOIN a IN c.additionalAttributes " +
-                "JOIN b IN c.moons " +
-                "WHERE a.name = \"volcano1\" OR b.name = \"1 moon\"";
+            string dbQueryWithJoin = "SELECT c.name " +
+                                     "FROM c " +
+                                     "WHERE (EXISTS (SELECT 1 " +
+                                                    "FROM table0 IN c.additionalAttributes " +
+                                                    "WHERE table0.name = \"volcano1\" ) OR " +
+                                            "EXISTS (SELECT 1 " +
+                                                    "FROM table2 IN c.moons " +
+                                                    "WHERE table2.name = \"1 moon\" ) )";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -908,14 +926,19 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
                 clientRoleHeader: clientRoleHeader);
 
-            string dbQuery = $"SELECT top 1 c.id FROM c " +
-                $"JOIN table3 IN c.moons " +
-                $"JOIN table0 IN table3.moonAdditionalAttributes " +
-                $"JOIN table2 IN c.additionalAttributes " +
-                $"WHERE  c.character.type = 'Mars'  " + // From Graphql Query
-                $"AND (c.earth.type = 'earth0') " + // From DB Policy
-                $"AND (table2.name = 'volcano0') " + // From DB Policy
-                $"AND (table0.name = 'moonattr0')"; // From DB Policy
+            string dbQuery = $"SELECT c.id " +
+                $"FROM c " +
+                $"WHERE c.character.type = 'Mars' " +
+                $"AND EXISTS (SELECT VALUE 1 " +
+                            $"FROM c.earth " +
+                            $"WHERE (c.earth.type = 'earth0')) " + // From DB Policy
+                $"AND EXISTS (SELECT VALUE 1 " +
+                            $"FROM  table1 IN c.additionalAttributes " +
+                            $"WHERE (table1.name = 'volcano0')) " + // From DB Policy
+                $"AND EXISTS (SELECT VALUE 1 " +
+                            $"FROM  table2 IN c.moons " +
+                            $"JOIN  table3 IN table2.moonAdditionalAttributes " +
+                            $"WHERE (table3.name = 'moonattr0'))"; // From DB Policy
 
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             // Validate the result contains the GraphQL authorization error code.

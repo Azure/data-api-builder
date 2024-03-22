@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public override string QuoteIdentifier(string ident)
         {
-            throw new System.NotImplementedException();
+            return ident;
         }
 
         /// <summary>
@@ -115,6 +115,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return "";
                 case PredicateOperation.IS_NOT:
                     return "NOT";
+                case PredicateOperation.EXISTS:
+                    return "EXISTS";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -132,13 +134,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string predicateString;
-            if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
+            if (predicate.Left is not null)
             {
-                predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
+                // For Binary predicates:
+                if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
+                {
+                    predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
+                }
+                else
+                {
+                    predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)} ";
+                }
             }
             else
             {
-                predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)} ";
+                // For Unary predicates, there is always a parenthesis around the operand.
+                predicateString = $"{Build(predicate.Op)} ({ResolveOperand(predicate.Right)})";
             }
 
             if (predicate.AddParenthesis)
@@ -149,6 +160,59 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return predicateString;
             }
+        }
+
+        /// <summary>
+        /// Resolves the operand either as a column, another predicate,
+        /// a SqlQueryStructure or returns it directly as string
+        /// </summary>
+        protected new string ResolveOperand(PredicateOperand? operand)
+        {
+            if (operand == null)
+            {
+                throw new ArgumentNullException(nameof(operand));
+            }
+
+            Column? c;
+            string? s;
+            Predicate? p;
+            BaseQueryStructure? sqlQueryStructure;
+            if ((c = operand.AsColumn()) != null)
+            {
+                return Build(c);
+            }
+            else if ((s = operand.AsString()) != null)
+            {
+                return s;
+            }
+            else if ((p = operand.AsPredicate()) != null)
+            {
+                return Build(p);
+            }
+            else if ((sqlQueryStructure = operand.AsCosmosQueryStructure()) is not null
+                        && sqlQueryStructure is CosmosExistsQueryStructure cosmosExistsQueryStructure)
+            {
+                return Build(cosmosExistsQueryStructure);
+            }
+            else if ((sqlQueryStructure = operand.AsCosmosQueryStructure()) is not null
+                        && sqlQueryStructure is CosmosQueryStructure cosmosQueryStructure)
+            {
+                return Build(cosmosQueryStructure);
+            }
+            else
+            {
+                throw new ArgumentException("Cannot get a value from PredicateOperand to build.");
+            }
+        }
+
+        /// <inheritdoc />
+        public virtual string Build(CosmosExistsQueryStructure structure)
+        {
+            string query = $"SELECT 1 " +
+                   $"FROM {QuoteIdentifier(structure.SourceAlias)} IN {QuoteIdentifier(structure.DatabaseObject.SchemaName)} " +
+                   $"WHERE {Build(structure.Predicates)}";
+
+            return query;
         }
 
         /// <summary>

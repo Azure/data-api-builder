@@ -285,6 +285,16 @@ namespace Azure.DataApiBuilder.Core.Services
             _logger.LogTrace($"Done inferring Sql database schema in {timer.ElapsedMilliseconds}ms.");
         }
 
+        /// <inheritdoc />
+        public void InitializeAsync(
+            Dictionary<string, DatabaseObject> entityToDatabaseObject,
+            Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap)
+        {
+            EntityToDatabaseObject = entityToDatabaseObject ?? EntityToDatabaseObject;
+            GraphQLStoredProcedureExposedNameToEntityNameMap = graphQLStoredProcedureExposedNameToEntityNameMap ?? GraphQLStoredProcedureExposedNameToEntityNameMap;
+            GenerateExposedToBackingColumnMapsForEntities();
+        }
+
         /// <inheritdoc/>
         public bool TryGetExposedFieldToBackingFieldMap(string entityName, [NotNullWhen(true)] out IReadOnlyDictionary<string, string>? mappings)
         {

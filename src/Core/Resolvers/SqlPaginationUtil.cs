@@ -64,23 +64,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // If the request includes either hasNextPage or endCursor then to correctly return those
             // values we need to determine the correct pagination logic
-            bool paginationScenario = paginationMetadata.RequestedHasNextPage || paginationMetadata.RequestedEndCursor;
+            bool isPaginationRequested = paginationMetadata.RequestedHasNextPage || paginationMetadata.RequestedEndCursor;
 
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
-            int returnedElemNo = rootEnumerated.Count();
+            int returnedElementCount = rootEnumerated.Count();
             bool hasExtraElement = false;
 
-            if (paginationScenario)
+            if (isPaginationRequested)
             {
                 // structure.Limit() is first + 1 for paginated queries where hasNextPage or endCursor is requested
-                hasExtraElement = returnedElemNo == paginationMetadata.Structure!.Limit();
+                hasExtraElement = returnedElementCount == paginationMetadata.Structure!.Limit();
                 if (hasExtraElement)
                 {
                     // In a pagination scenario where we have an extra element, this element
                     // must be removed since it was only used to determine if there are additional
                     // records after those requested.
                     rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
-                    --returnedElemNo;
+                    --returnedElementCount;
                 }
             }
 
@@ -107,13 +107,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (paginationMetadata.RequestedEndCursor)
             {
-                // parse *Connection.endCursor if there are no elements
-                // if no after is added, but it has been requested HotChocolate will report it as null
+                // Note: if we do not add endCursor to the connection but it was in the request, its value will
+                // automatically be populated as null.
                 // Need to validate we have an extra element, because otherwise there is no next page
                 // and endCursor should be left as null.
-                if (returnedElemNo > 0 && hasExtraElement)
+                if (returnedElementCount > 0 && hasExtraElement)
                 {
-                    JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
+                    JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElementCount - 1);
                     connection.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
                         MakeCursorFromJsonElement(
                             lastElemInRoot,

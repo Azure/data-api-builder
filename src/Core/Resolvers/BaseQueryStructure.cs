@@ -101,7 +101,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (!string.IsNullOrEmpty(entityName))
             {
                 EntityName = entityName;
-                DatabaseObject = MetadataProvider.EntityToDatabaseObject[entityName];
+                if (MetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out DatabaseObject? dbObject))
+                {
+                    DatabaseObject = dbObject;
+                }
+                else
+                {
+                    DatabaseObject = new DatabaseTable(schemaName: string.Empty, tableName: string.Empty);
+                }
             }
             else
             {

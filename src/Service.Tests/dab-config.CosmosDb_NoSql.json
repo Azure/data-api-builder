@@ -48,7 +48,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -122,7 +121,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -165,7 +163,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -217,7 +214,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -252,7 +248,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -304,7 +299,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "field-mutation-with-read-permission",
@@ -372,6 +366,17 @@
               }
             }
           ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.type eq 'earth0'"
+              }
+            }
+          ]
         }
       ]
     },
@@ -389,7 +394,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -432,7 +436,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -469,7 +472,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -506,7 +508,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",
@@ -579,7 +580,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "field-mutation-with-read-permission",
@@ -735,7 +735,6 @@
       "rest": {
         "enabled": false
       },
-      "paths": [],
       "permissions": [
         {
           "role": "anonymous",

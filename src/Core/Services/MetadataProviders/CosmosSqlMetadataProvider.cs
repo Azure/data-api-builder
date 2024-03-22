@@ -6,6 +6,7 @@ using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -34,7 +35,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <summary>
         /// This dictionary contains entity name as key (or its alias) and its path(s) in the graphQL schema as value which will be used in the generated conditions for the entity
         /// </summary>
-        public Dictionary<string, List<EntityPrefix>> EntityPathsForPrefix { get; set; } = new();
+        public Dictionary<string, List<EntityDbPolicyCosmosModel>> EntityWithJoins { get; set; } = new();
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -79,7 +80,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
-            ParseSchemaGraphQLFieldsForPrefixes();
+            ParseSchemaGraphQLFieldsForJoins();
 
             InitODataParser();
         }
@@ -97,8 +98,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// Parse the schema to get the entity paths for prefixes.
         /// It will collect all the paths for each entity and its field, starting from the container model.
         /// </summary>
-        private void ParseSchemaGraphQLFieldsForPrefixes()
+        private void ParseSchemaGraphQLFieldsForJoins()
         {
+            IncrementingInteger tableCounter = new();
+
             Dictionary<string, ObjectTypeDefinitionNode> schemaDefinitions = new();
             foreach (ObjectTypeDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
             {
@@ -113,9 +116,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     {
                         string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
 
-                        EntityPathsForPrefix.Add(modelName, new List<EntityPrefix>() { new(Path: GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName) });
+                        EntityWithJoins.Add(
+                            modelName,
+                            new List<EntityDbPolicyCosmosModel>
+                            {
+                                new (Path: GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
+                            });
 
-                        ProcessSchema(node.Fields, schemaDefinitions, GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, null, null);
+                        ProcessSchema(node.Fields, schemaDefinitions, GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
                     }
                 }
             }
@@ -123,21 +131,23 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         /// <summary>
         /// Once container is found, it will traverse the fields and inner fields to get the paths for each entity.
+        /// Following steps are implemented here:
+        /// 1. If the entity is not in the runtime config, skip it.
+        /// 2. If the field is an array type, we need to add an alias to the table because we need to a JOIN to the same table.
+        /// 3. Create a new EntityDbPolicyCosmosModel object and add it to the EntityWithJoins dictionary.
+        /// 4. Check if we get previous entity with join information, if yes append it to the current entity also
+        /// 5. Recursively call this function, to process the schema
         /// </summary>
         /// <param name="fields"></param>
         /// <param name="schemaDocument"></param>
         /// <param name="currentPath"></param>
-        /// <param name="previousPath"></param>
-        /// <param name="prevField"></param>
+        /// <param name="previousEntity"></param>
         private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
-            string? previousPath = null,
-            string? prevEntityName = null,
-            string? prevColumnName = null)
+            IncrementingInteger tableCounter,
+            EntityDbPolicyCosmosModel? previousEntity = null)
         {
-            int tableCounter = 0;
-
             // Traverse the fields and add them to the path
             foreach (FieldDefinitionNode field in fields)
             {
@@ -148,55 +158,51 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     continue;
                 }
 
-                // If the field is an array type, we need to add an alias to the table because we need to a JOIN to the same table
                 string? alias = null;
                 bool isArrayType = field.Type is ListTypeNode;
                 if (isArrayType)
                 {
                     // Since, we don't have query structure here.
                     // we are going to generate alias and use this counter to generate unique alias for each table at later stage.
-                    alias = $"table{tableCounter++}";
+                    alias = $"table{tableCounter.Next()}";
                 }
 
-                EntityPrefix prefixInfo = new(Path: currentPath,
+                EntityDbPolicyCosmosModel currentEntity = new(Path: currentPath,
                             EntityName: entityType,
                             ColumnName: field.Name.Value,
                             Alias: alias);
 
-                if (EntityPathsForPrefix.ContainsKey(entityType))
+                if (EntityWithJoins.ContainsKey(entityType))
                 {
-                    EntityPathsForPrefix[entityType].Add(prefixInfo);
+                    EntityWithJoins[entityType].Add(currentEntity);
                 }
                 else
                 {
-                    EntityPathsForPrefix.Add(entityType, new List<EntityPrefix>() { prefixInfo });
+                    EntityWithJoins.Add(
+                        entityType,
+                        new List<EntityDbPolicyCosmosModel>() {
+                            currentEntity
+                        });
                 }
 
-                if (previousPath is not null)
+                if (previousEntity is not null)
                 {
-                    EntityPathsForPrefix[entityType].Add(
-                        new(Path: previousPath,
-                             EntityName: prevEntityName,
-                             ColumnName: prevColumnName,
-                             Alias: currentPath));
+                    if (string.IsNullOrEmpty(currentEntity.JoinStatement))
+                    {
+                        currentEntity.JoinStatement = previousEntity.JoinStatement;
+                    }
+                    else
+                    {
+                        currentEntity.JoinStatement = previousEntity.JoinStatement + " JOIN " + currentEntity.JoinStatement;
+                    }
                 }
 
                 // If the field is an array type, we need to add an alias to the table because we need to a JOIN to the same table
-                if (isArrayType)
-                {
-                    ProcessSchema(fields: schemaDocument[entityType].Fields,
-                                  schemaDocument: schemaDocument,
-                                  currentPath: $"{alias}",
-                                  previousPath: currentPath,
-                                  prevEntityName: entityType,
-                                  prevColumnName: field.Name.Value);
-                }
-                else
-                {
-                    ProcessSchema(fields: schemaDocument[entityType].Fields,
-                                  schemaDocument: schemaDocument,
-                                  currentPath: $"{currentPath}.{field.Name.Value}");
-                }
+                ProcessSchema(fields: schemaDocument[entityType].Fields,
+                                schemaDocument: schemaDocument,
+                                currentPath: isArrayType? $"{alias}": $"{currentPath}.{field.Name.Value}",
+                                tableCounter: tableCounter,
+                                previousEntity: isArrayType? currentEntity: null);
             }
         }
 

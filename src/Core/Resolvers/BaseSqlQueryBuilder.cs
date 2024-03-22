@@ -220,7 +220,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Column? c;
             string? s;
             Predicate? p;
-            BaseSqlQueryStructure? sqlQueryStructure;
+            BaseQueryStructure? sqlQueryStructure;
             if ((c = operand.AsColumn()) != null)
             {
                 return Build(c);
@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else if ((sqlQueryStructure = operand.AsSqlQueryStructure()) is not null)
             {
-                return Build(sqlQueryStructure);
+                return Build((BaseSqlQueryStructure)sqlQueryStructure);
             }
             else
             {

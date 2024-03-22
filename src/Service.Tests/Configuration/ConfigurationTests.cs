@@ -1374,6 +1374,48 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// This test checks that even when the schema download fails, the GetJsonSchema method
+        /// fetches the schema from the package succesfully.
+        /// </summary>
+        [TestMethod]
+        public async Task GetJsonSchema_DownloadsSchemaFromUrlFailure()
+        {
+            // Arrange
+            Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
+            string jsonSchemaContent = null;
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.InternalServerError,    // Simulate a failure
+                Content = new StringContent(jsonSchemaContent, Encoding.UTF8, "application/json"),
+            })
+            .Verifiable();
+
+            HttpClient mockHttpClient = new(handlerMock.Object);
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+            JsonConfigSchemaValidator jsonConfigSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
+
+            string url = "http://example.com/schema.json";
+            RuntimeConfig runtimeConfig = new(
+                Schema: url,
+                DataSource: new(DatabaseType.MSSQL, "connectionString", null),
+                new RuntimeEntities(new Dictionary<string, Entity>())
+            );
+
+            // Act
+            string recievedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+
+            // Assert
+            Assert.IsFalse(string.IsNullOrEmpty(recievedJsonSchema));
+        }
+
+        /// <summary>
         /// Set the connection string to an invalid value and expect the service to be unavailable
         /// since without this env var, it would be available - guaranteeing this env variable
         /// has highest precedence irrespective of what the connection string is in the config file.

@@ -19,27 +19,16 @@ public class JsonConfigSchemaValidator
     private HttpClient _httpClient = new();
 
     /// <summary> 
-    /// Sets the logger and file system for the JSON config schema validator. 
+    /// Sets the logger, file system and httpClient for the JSON config schema validator. 
     /// </summary> 
     /// <param name="jsonSchemaValidatorLogger">The logger to use for the JSON schema validator.</param> 
     /// <param name="fileSystem">The file system to use for the JSON schema validator.</param>
-    public JsonConfigSchemaValidator(ILogger<JsonConfigSchemaValidator> jsonSchemaValidatorLogger, IFileSystem fileSystem)
+    /// <param name="httpClient">The http client to use for the JSON schema validator. If not provided, a new HttpClient will be used.</param>
+    public JsonConfigSchemaValidator(ILogger<JsonConfigSchemaValidator> jsonSchemaValidatorLogger, IFileSystem fileSystem, HttpClient? httpClient = null)
     {
         _logger = jsonSchemaValidatorLogger;
         _fileSystem = fileSystem;
-    }
-
-    /// <summary> 
-    /// Sets the logger, file system, and HttpClient for the JSON config schema validator. 
-    /// </summary> 
-    /// <param name="jsonSchemaValidatorLogger">The logger to use for the JSON schema validator.</param> 
-    /// <param name="fileSystem">The file system to use for the JSON schema validator.</param>
-    /// <param name="httpClient">The http client to use for the JSON schema validator.</param>
-    public JsonConfigSchemaValidator(ILogger<JsonConfigSchemaValidator> jsonSchemaValidatorLogger, IFileSystem fileSystem, HttpClient httpClient)
-    {
-        _logger = jsonSchemaValidatorLogger;
-        _fileSystem = fileSystem;
-        _httpClient = httpClient;
+        _httpClient = httpClient ?? new HttpClient();
     }
 
     /// <summary> 
@@ -87,8 +76,15 @@ public class JsonConfigSchemaValidator
             {
                 // Send a GET request to the URL specified in runtimeConfig.Schema to get the JSON schema.
                 HttpResponseMessage response = await _httpClient.GetAsync(runtimeConfig.Schema);
-                string jsonSchema = await response.Content.ReadAsStringAsync();
-                return jsonSchema;
+                if (response.IsSuccessStatusCode)
+                {
+                    string jsonSchema = await response.Content.ReadAsStringAsync();
+                    return jsonSchema;
+                }
+                else
+                {
+                    _logger!.LogError($"Failed to get schema from url: {runtimeConfig.Schema}");
+                }
             }
             catch (Exception e)
             {

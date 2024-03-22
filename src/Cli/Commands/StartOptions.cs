@@ -16,6 +16,8 @@ namespace Cli.Commands
     [Verb("start", isDefault: false, HelpText = "Start Data Api Builder Engine", Hidden = false)]
     public class StartOptions : Options
     {
+        private const string LOGLEVEL_HELPTEXT = "Specifies logging level as provided value. For possible values, see: https://go.microsoft.com/fwlink/?linkid=2263106";
+
         public StartOptions(bool verbose, LogLevel? logLevel, bool isHttpsRedirectionDisabled, string config)
             : base(config)
         {
@@ -26,10 +28,10 @@ namespace Cli.Commands
 
         // SetName defines mutually exclusive sets, ie: can not have
         // both verbose and LogLevel.
-        [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specify logging level as informational.")]
+        [Option("verbose", SetName = "verbose", Required = false, HelpText = "Specifies logging level as informational.")]
         public bool Verbose { get; }
-        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = "Specify logging level as provided value, " +
-            "see: https://learn.microsoft.com/en-us/dotnet/api/microsoft.extensions.logging.loglevel?view=dotnet-plat-ext-7.0")]
+
+        [Option("LogLevel", SetName = "LogLevel", Required = false, HelpText = LOGLEVEL_HELPTEXT)]
         public LogLevel? LogLevel { get; }
 
         [Option("no-https-redirect", Required = false, HelpText = "Disables automatic https redirects.")]

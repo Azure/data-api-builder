@@ -373,7 +373,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<IActionResult?> ExecuteAsync(RestRequestContext context)
         {
             // for REST API scenarios, use the default datasource
-            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
 
             Dictionary<string, object?> parameters = PrepareParameters(context);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
@@ -1194,7 +1194,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private string GetValidatedDataSourceName(string dataSourceName)
         {
             // For rest scenarios - no multiple db support. Hence to maintain backward compatibility, we will use the default db.
-            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().GetDefaultDataSourceName() : dataSourceName;
+            return string.IsNullOrEmpty(dataSourceName) ? _runtimeConfigProvider.GetConfig().DefaultDataSourceName : dataSourceName;
         }
 
         /// <summary>

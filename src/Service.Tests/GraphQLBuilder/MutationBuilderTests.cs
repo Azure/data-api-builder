@@ -1013,7 +1013,7 @@ type Foo @model(name:""Foo"") {{
         /// queries and mutations in the schema.
         /// When singular and plural names are not provided, the queries and mutations will be generated with the entity's name.
         /// 
-        /// This test validates the a) Number of mutation fields generated b) Mutation field names c) Mutation field descriptions
+        /// This test validates a) Number of mutation fields generated b) Mutation field names c) Mutation field descriptions
         /// when multiple create operations are enabled/disabled.
         /// 
         /// </summary>

@@ -2072,11 +2072,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                                                       LinkingTargetFields: null);
 
             Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
-                              Rest: null,
-                              GraphQL: new(Singular: "book", Plural: "books"),
-                              Permissions: permissions,
-                              Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
-                              Mappings: null);
+                                    Rest: null,
+                                    GraphQL: new(Singular: "book", Plural: "books"),
+                                    Permissions: permissions,
+                                    Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
+                                    Mappings: null);
 
             string bookEntityName = "Book";
 

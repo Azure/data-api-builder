@@ -235,7 +235,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            // ReferencingFieldDirective is added to eventually mark the referencing fields in the input object types as optional. When multiple create oeprations are disabled
+            // ReferencingFieldDirective is added to eventually mark the referencing fields in the input object types as optional. When multiple create operations are disabled
             // the referencing fields should be required fields. Hence, ReferencingFieldDirective is added only when the multiple create operations are enabled.
             if (_isMultipleCreateOperationEnabled)
             {

@@ -224,6 +224,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            queryExecutor.Setup(x => x.PrepareDbCommand(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<HttpContext>(),
+                It.IsAny<string>())).CallBase();
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(

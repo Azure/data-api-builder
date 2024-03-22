@@ -306,7 +306,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public override SqlCommand PrepareCommand(
+        public override SqlCommand PrepareDbCommand(
             SqlConnection conn,
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,

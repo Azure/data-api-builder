@@ -153,7 +153,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null)
         {
             await conn.OpenAsync();
-            DbCommand cmd = PrepareCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+            DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
             try
             {
@@ -188,7 +188,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="httpContext">Current user httpContext.</param>
         /// <param name="dataSourceName">The name of the data source.</param>
         /// <returns>A DbCommand object ready for execution.</returns>
-        public virtual DbCommand PrepareCommand(
+        public virtual DbCommand PrepareDbCommand(
             TConnection conn,
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,

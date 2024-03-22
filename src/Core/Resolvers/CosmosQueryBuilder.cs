@@ -25,11 +25,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 + $" FROM {_containerAlias}");
             string predicateString = Build(structure.Predicates);
 
-            if (structure.Joins != null && structure.Joins.Count > 0)
-            {
-                queryStringBuilder.Append($" {Build(structure.Joins)}");
-            }
-
             structure.DbPolicyPredicatesForOperations.TryGetValue(EntityActionOperation.Read, out string? policy);
             // If there is a predicate or policy, add a WHERE clause
             if (!string.IsNullOrEmpty(predicateString) || !string.IsNullOrEmpty(policy))
@@ -222,31 +217,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return query;
         }
-
-        /// <summary>
-        /// Build JOIN statements which will be used in the query.
-        /// It makes sure that the same table is not joined multiple times by maintaining a set of table names.
-        /// </summary>
-        /// <param name="joinstructure"></param>
-        /// <returns></returns>
-        private static string Build(Stack<CosmosJoinStructure> joinstructure)
-        {
-            StringBuilder joinBuilder = new();
-
-            HashSet<DatabaseObject> tableNames = new();
-            foreach (CosmosJoinStructure structure in joinstructure)
-            {
-                if (tableNames.Contains(structure.DbObject))
-                {
-                    continue;
-                }
-
-                joinBuilder.Append($" JOIN {structure.TableAlias} IN {structure.DbObject.FullName}");
-                tableNames.Add(structure.DbObject);
-            }
-
-            return joinBuilder.ToString();
-        }
-
     }
 }

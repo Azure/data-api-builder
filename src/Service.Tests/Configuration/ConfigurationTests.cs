@@ -1382,7 +1382,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         {
             // Arrange
             Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
-            string jsonSchemaContent = null;
             handlerMock
             .Protected()
             .Setup<Task<HttpResponseMessage>>(
@@ -1393,7 +1392,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             .ReturnsAsync(new HttpResponseMessage()
             {
                 StatusCode = HttpStatusCode.InternalServerError,    // Simulate a failure
-                Content = new StringContent(jsonSchemaContent, Encoding.UTF8, "application/json"),
+                Content = new StringContent("", Encoding.UTF8, "application/json"),
             })
             .Verifiable();
 

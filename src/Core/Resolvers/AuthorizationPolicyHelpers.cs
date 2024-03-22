@@ -134,6 +134,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <summary>
+        /// Generate Cosmos DB Query for the given fromClause and predicates.
+        /// </summary>
+        /// <param name="fromClause"></param>
+        /// <param name="predicates"></param>
+        /// <returns></returns>
         private static string GetExistQueryForCosmos(string? fromClause, string? predicates)
         {
             string? existQuery = $"EXISTS " +
@@ -151,6 +157,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return existQuery;
         }
 
+        /// <summary>
+        /// It process the filter clauses for the given elemental operation.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="authorizationResolver"></param>
+        /// <param name="sqlMetadataProvider"></param>
+        /// <param name="clientRoleHeader"></param>
+        /// <param name="elementalOperations"></param>
+        /// <param name="entityName"></param>
+        /// <param name="entityDBObject"></param>
+        /// <param name="postProcessCallback"></param>
+        /// <returns></returns>
         private static List<FilterClause> ProcessFilter(HttpContext context,
             IAuthorizationResolver authorizationResolver,
             ISqlMetadataProvider sqlMetadataProvider,

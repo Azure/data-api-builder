@@ -499,7 +499,7 @@ public class GQLFilterParser
         BaseQueryStructure baseQuery,
         PredicateOperation op)
     {
-        if (fields.Count == 0 && (baseQuery is CosmosQueryStructure cosmosQueryStructure && cosmosQueryStructure.Joins?.Count == 0))
+        if (fields.Count == 0 && (baseQuery is CosmosQueryStructure cosmosQueryStructure))
         {
             return Predicate.MakeFalsePredicate();
         }

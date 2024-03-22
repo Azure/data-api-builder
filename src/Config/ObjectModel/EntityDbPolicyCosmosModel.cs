@@ -46,7 +46,6 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
             {
                 this.JoinStatement = $" {Alias} IN {Path}.{ColumnName}";
             }
-            
         }
     }
 }

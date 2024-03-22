@@ -16,7 +16,7 @@ public class JsonConfigSchemaValidator
 {
     private ILogger<JsonConfigSchemaValidator> _logger;
     private IFileSystem _fileSystem;
-    private HttpClient _httpClient = new();
+    private HttpClient _httpClient;
 
     /// <summary> 
     /// Sets the logger, file system and httpClient for the JSON config schema validator. 
@@ -28,7 +28,7 @@ public class JsonConfigSchemaValidator
     {
         _logger = jsonSchemaValidatorLogger;
         _fileSystem = fileSystem;
-        _httpClient = httpClient ?? new HttpClient();
+        _httpClient = httpClient ?? new ();
     }
 
     /// <summary> 

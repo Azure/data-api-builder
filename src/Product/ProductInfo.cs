@@ -16,22 +16,31 @@ public static class ProductInfo
     /// Returns the Product version in Major.Minor.Patch format without a commit hash.
     /// FileVersionInfo.ProductBuildPart is used to represent the Patch version.
     /// FileVersionInfo is used to retrieve the version information from the executing assembly
-    /// set by the Version property in Directory.Build.props
+    /// set by the Version property in Directory.Build.props.
+    /// FileVersionInfo.ProductVersion includes the commit hash.
     /// </summary>
     /// <param name="includeCommitHash">If true, returns the version string with the commit hash</param>
-    /// <returns>Version string "Major.Minor.Patch"</returns>
+    /// <returns>Version string without commit hash: Major.Minor.Patch
+    /// Version string with commit hash: Major.Minor.Patch+COMMIT_ID"</returns>
     public static string GetProductVersion(bool includeCommitHash = false)
     {
         Assembly assembly = Assembly.GetExecutingAssembly();
-        FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
+        FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(fileName: assembly.Location);
 
-        if (includeCommitHash)
+        string versionString;
+
+        // fileVersionInfo's ProductVersion is nullable, while PoductMajorPart, ProductMinorPart, and ProductBuildPart are not.
+        // if ProductVersion is null, the other properties will be 0 since they do not return null. 
+        if (includeCommitHash && fileVersionInfo.ProductVersion is not null)
         {
-            return fileVersionInfo.ProductVersion ?? "DAB_UNVERSIONED";
+            versionString = fileVersionInfo.ProductVersion;
+        }
+        else
+        {
+            versionString = fileVersionInfo.ProductMajorPart + "." + fileVersionInfo.ProductMinorPart + "." + fileVersionInfo.ProductBuildPart;
         }
 
-        string version = fileVersionInfo.ProductMajorPart + "." + fileVersionInfo.ProductMinorPart + "." + fileVersionInfo.ProductBuildPart;
-        return version;
+        return versionString;
     }
 
     /// <summary>

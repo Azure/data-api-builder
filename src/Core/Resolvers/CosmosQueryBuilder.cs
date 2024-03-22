@@ -68,7 +68,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public override string QuoteIdentifier(string ident)
         {
-            throw new System.NotImplementedException();
+            return ident;
         }
 
         /// <summary>
@@ -115,6 +115,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return "";
                 case PredicateOperation.IS_NOT:
                     return "NOT";
+                case PredicateOperation.EXISTS:
+                    return "EXISTS";
                 case PredicateOperation.ARRAY_CONTAINS:
                     return "ARRAY_CONTAINS";
                 case PredicateOperation.NOT_ARRAY_CONTAINS:
@@ -136,17 +138,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string predicateString;
-            if (predicate.Op == PredicateOperation.ARRAY_CONTAINS || predicate.Op == PredicateOperation.NOT_ARRAY_CONTAINS)
+            if (predicate.Left is not null)
             {
-                predicateString = $" {Build(predicate.Op)} ( {ResolveOperand(predicate.Left)}, {ResolveOperand(predicate.Right)})";
-            }
-            else if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
-            {
-                predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
+                if (predicate.Op == PredicateOperation.ARRAY_CONTAINS || predicate.Op == PredicateOperation.NOT_ARRAY_CONTAINS)
+                {
+                    predicateString = $" {Build(predicate.Op)} ( {ResolveOperand(predicate.Left)}, {ResolveOperand(predicate.Right)})";
+                }
+                else if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
+                {
+                    // For Binary predicates:
+                    predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
+                }
+                else
+                {
+                    predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)} ";
+                }
             }
             else
             {
-                predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)} ";
+                // For Unary predicates, there is always a parenthesis around the operand.
+                predicateString = $"{Build(predicate.Op)} ({ResolveOperand(predicate.Right)})";
             }
 
             if (predicate.AddParenthesis)
@@ -157,6 +168,59 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return predicateString;
             }
+        }
+
+        /// <summary>
+        /// Resolves the operand either as a column, another predicate,
+        /// a SqlQueryStructure or returns it directly as string
+        /// </summary>
+        protected new string ResolveOperand(PredicateOperand? operand)
+        {
+            if (operand == null)
+            {
+                throw new ArgumentNullException(nameof(operand));
+            }
+
+            Column? c;
+            string? s;
+            Predicate? p;
+            BaseQueryStructure? sqlQueryStructure;
+            if ((c = operand.AsColumn()) != null)
+            {
+                return Build(c);
+            }
+            else if ((s = operand.AsString()) != null)
+            {
+                return s;
+            }
+            else if ((p = operand.AsPredicate()) != null)
+            {
+                return Build(p);
+            }
+            else if ((sqlQueryStructure = operand.AsCosmosQueryStructure()) is not null
+                        && sqlQueryStructure is CosmosExistsQueryStructure cosmosExistsQueryStructure)
+            {
+                return Build(cosmosExistsQueryStructure);
+            }
+            else if ((sqlQueryStructure = operand.AsCosmosQueryStructure()) is not null
+                        && sqlQueryStructure is CosmosQueryStructure cosmosQueryStructure)
+            {
+                return Build(cosmosQueryStructure);
+            }
+            else
+            {
+                throw new ArgumentException("Cannot get a value from PredicateOperand to build.");
+            }
+        }
+
+        /// <inheritdoc />
+        public virtual string Build(CosmosExistsQueryStructure structure)
+        {
+            string query = $"SELECT 1 " +
+                   $"FROM {QuoteIdentifier(structure.SourceAlias)} IN {QuoteIdentifier(structure.DatabaseObject.SchemaName)} " +
+                   $"WHERE {Build(structure.Predicates)}";
+
+            return query;
         }
 
         /// <summary>

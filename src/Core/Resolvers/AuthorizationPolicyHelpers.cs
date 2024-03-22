@@ -12,7 +12,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Microsoft.OData.UriParser;
-using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -71,14 +70,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else if (sqlMetadataProvider is CosmosSqlMetadataProvider cosmosSqlMetadataProvider &&
                 queryStructure is CosmosQueryStructure cosmosQueryStructure)
             {
-                Dictionary<string, List<EntityPrefix>> entityPaths = cosmosSqlMetadataProvider.EntityPathsForPrefix;
+                Dictionary<string, List<EntityDbPolicyCosmosModel>> entityPaths = cosmosSqlMetadataProvider.EntityWithJoins;
 
-                foreach (KeyValuePair<string, List<EntityPrefix>> entity in entityPaths)
+                foreach (KeyValuePair<string, List<EntityDbPolicyCosmosModel>> entity in entityPaths)
                 {
                     ProcessFilter(
                         context: context,
                         authorizationResolver: authorizationResolver,
-                        sqlMetadataProvider: sqlMetadataProvider,
+                        sqlMetadataProvider: cosmosSqlMetadataProvider,
                         clientRoleHeader: clientRoleHeader,
                         elementalOperations: elementalOperations,
                         entityName: entity.Key,
@@ -90,48 +89,66 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 return;
                             }
 
-                            foreach (EntityPrefix pathConfig in entity.Value)
+                            foreach (EntityDbPolicyCosmosModel pathConfig in entity.Value)
                             {
-                                string configPath = pathConfig.Path;
+                                string? existQuery = null;
+                                string? fromClause = string.Empty;
+                                string? predicates = string.Empty;
+
                                 if (pathConfig.Alias is not null)
                                 {
-                                    if (pathConfig.ColumnName is null)
+                                    if (pathConfig.ColumnName is null || pathConfig.EntityName is null)
                                     {
                                         continue;
                                     }
-
-                                    //Increment Table counter with the new JOIN
+                                    //Increment Table counter with the new JOIN so that we can have unique alias for each join
                                     cosmosQueryStructure.TableCounter.Next();
 
-                                    cosmosQueryStructure.Joins ??= new();
-                                    cosmosQueryStructure.Joins.Push(new CosmosJoinStructure(
-                                                DbObject: new DatabaseTable(schemaName: pathConfig.Path, tableName: pathConfig.ColumnName),
-                                                TableAlias: pathConfig.Alias));
-
-                                    configPath = pathConfig.Alias;
+                                    fromClause = pathConfig.JoinStatement;
+                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(pathConfig.Alias));
                                 }
                                 else
                                 {
-                                    configPath += "." + pathConfig.ColumnName;
+                                    fromClause = $"{pathConfig.Path}.{pathConfig.ColumnName}";
+                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor($"{pathConfig.Path}.{pathConfig.ColumnName}"));
                                 }
+
+                                existQuery = GetExistQueryForCosmos(fromClause, predicates);
 
                                 if (pathConfig.EntityName == entity.Key)
                                 {
                                     if (!cosmosQueryStructure.DbPolicyPredicatesForOperations.TryGetValue(operationType, out string? _))
                                     {
                                         cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
-                                                        = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
+                                                        = existQuery;
                                     }
                                     else
                                     {
                                         cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
-                                                        += " AND " + filterClause?.Expression.Accept(new ODataASTCosmosVisitor(configPath));
+                                                        += $" AND {existQuery}";
                                     }
                                 }
                             }
                         });
                 }
             }
+        }
+
+        private static string GetExistQueryForCosmos(string? fromClause, string? predicates)
+        {
+            string? existQuery = $"EXISTS " +
+                                $"(SELECT VALUE 1 " +
+                                    $"FROM {fromClause} ";
+            if (predicates is not null)
+            {
+                existQuery += $"WHERE {predicates})";
+            }
+            else
+            {
+                existQuery += ")";
+            }
+
+            return existQuery;
         }
 
         private static List<FilterClause> ProcessFilter(HttpContext context,

@@ -360,7 +360,18 @@
                 }
               }
             ]
-          }
+          },
+          {
+             Role: item-level-permission-role,
+             Actions: [
+               {
+                 Action: Read,
+                 Policy: {
+                   Database: @item.type eq 'earth0'
+                 }
+               }
+             ]
+           }
         ]
       }
     },

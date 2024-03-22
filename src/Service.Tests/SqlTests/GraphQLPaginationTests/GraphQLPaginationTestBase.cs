@@ -196,7 +196,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             object afterValue,
             object endCursorValue,
             object afterIdValue,
-            object endCursorIdValue)
+            object endCursorIdValue,
+            bool isLastPage)
         {
             string graphQLQueryName = "supportedTypes";
             string after;
@@ -212,14 +213,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             }
 
             string graphQLQuery = @"{
-                supportedTypes(first: 3," + $"after: \"{after}\" " +
+                supportedTypes(first: 2," + $"after: \"{after}\" " +
                  $"orderBy: {{ {exposedFieldName} : ASC }} )" + @"{
                     endCursor
                 }
             }";
 
             JsonElement root = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string actual = SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
+            string actual = root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString();
+            // Decode if not null
+            actual = string.IsNullOrEmpty(actual) ? "null" : SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
             string expected;
             if ("typeid".Equals(exposedFieldName))
             {
@@ -229,6 +232,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             {
                 expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"{exposedFieldName}\",\"FieldValue\":{endCursorValue},\"Direction\":0}}," +
                     $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"FieldValue\":{endCursorIdValue},\"Direction\":0}}]";
+            }
+
+            if (isLastPage)
+            {
+                expected = "null";
             }
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());

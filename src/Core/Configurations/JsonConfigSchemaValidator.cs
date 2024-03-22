@@ -28,7 +28,7 @@ public class JsonConfigSchemaValidator
     {
         _logger = jsonSchemaValidatorLogger;
         _fileSystem = fileSystem;
-        _httpClient = httpClient ?? new ();
+        _httpClient = httpClient ?? new();
     }
 
     /// <summary> 

@@ -517,7 +517,7 @@ public class GQLFilterParser
         BaseQueryStructure baseQuery,
         PredicateOperation op)
     {
-        if (fields.Count == 0 && (baseQuery is CosmosQueryStructure cosmosQueryStructure))
+        if (fields.Count == 0)
         {
             return Predicate.MakeFalsePredicate();
         }

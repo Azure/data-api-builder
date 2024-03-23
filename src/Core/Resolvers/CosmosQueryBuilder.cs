@@ -2,10 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Text;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
-using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {

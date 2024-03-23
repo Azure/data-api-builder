@@ -2038,7 +2038,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// we don't add fields for relationships in the input type schema and hence users should not be able to do insertion in the related entities.
         ///
         /// 2. Excluding all the relationship fields i.e. performing insertion in just the top-level entity executes successfully.
-        /// 
+        ///
+        /// 3. Relationship fields are marked as optional fields in the schema when multiple create operation is enabled. However, when multiple create operations
+        /// are disabled, the relationship fields should continue to be marked as required fields.
+        /// With multiple create operation disabled, executing a create mutation operation without a relationship field ("publisher_id" in createbook mutation operation) should be caught by
+        /// HotChocolate since it is a required field.
         /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
@@ -2104,9 +2108,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             entityMap.Add("Publisher", publisherEntity);
 
             RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
-                                                DataSource: dataSource,
-                                                Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
-                                                Entities: new(entityMap));
+                                              DataSource: dataSource,
+                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
+                                              Entities: new(entityMap));
 
             const string CUSTOM_CONFIG = "custom-config.json";
 
@@ -2119,7 +2123,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
-
+                // When multiple create operation is disabled, fields belonging to related entities are not generated for the input type objects of create operation.
+                // Executing a create mutation with fields belonging to related entities should be caught by Hotchocolate as unrecognized fields.
                 string pointMultipleCreateOperation = @"mutation createbook{
                                                             createbook(item: { title: ""Book #1"", publishers: { name: ""The First Publisher"" } }) {
                                                                 id
@@ -2127,21 +2132,22 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                                                             }
                                                         }";
 
-                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                                                                client,
-                                                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                                                                query: pointMultipleCreateOperation,
-                                                                                queryName: "createbook",
-                                                                                variables: null,
-                                                                                clientRoleHeader: null);
+                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                                    query: pointMultipleCreateOperation,
+                                                                                                    queryName: "createbook",
+                                                                                                    variables: null,
+                                                                                                    clientRoleHeader: null);
 
                 Assert.IsNotNull(mutationResponse);
 
-                SqlTestHelper.TestForErrorInGraphQLResponse(
-                                mutationResponse.ToString(),
-                                message: "The specified input object field `publishers` does not exist.",
-                                path: @"[""createbook""]");
+                SqlTestHelper.TestForErrorInGraphQLResponse(mutationResponse.ToString(),
+                                                            message: "The specified input object field `publishers` does not exist.",
+                                                            path: @"[""createbook""]");
 
+                // When multiple create operation is enabled, two types of create mutation operations are generated 1) Point create mutation operation 2) Many type create mutation operation.
+                // When multiple create operation is disabled, only point create mutation operation is generated.
+                // With multiple create operation disabled, executing a many type multiple create operation should be caught by HotChocolate as the many type mutation operation should not exist in the schema.
                 string manyTypeMultipleCreateOperation = @"mutation {
                                                               createbooks(
                                                                 items: [
@@ -2167,6 +2173,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 SqlTestHelper.TestForErrorInGraphQLResponse(mutationResponse.ToString(),
                                                             message: "The field `createbooks` does not exist on the type `Mutation`.");
 
+                // Sanity test to validate that executing a point create mutation with multiple create operation disabled,
+                // a) Creates the new item successfully.
+                // b) Returns the expected response.
                 string pointCreateOperation = @"mutation createbook{
                                                             createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {
                                                                 title
@@ -2174,18 +2183,147 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                                                             }
                                                         }";
 
-                mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(
-                                                                                client,
-                                                                                server.Services.GetRequiredService<RuntimeConfigProvider>(),
-                                                                                query: pointCreateOperation,
-                                                                                queryName: "createbook",
-                                                                                variables: null,
-                                                                                clientRoleHeader: null);
+                mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                        query: pointCreateOperation,
+                                                                                        queryName: "createbook",
+                                                                                        variables: null,
+                                                                                        clientRoleHeader: null);
 
                 string expectedResponse = @"{ ""title"":""Book #1"",""publisher_id"":1234}";
 
                 Assert.IsNotNull(mutationResponse);
                 SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, mutationResponse.ToString());
+
+                // When  a create multiple operation is enabled, the "publisher_id" field will generated as an optional field in the schema. But, when multiple create operation is disabled,
+                // "publisher_id" should be a required field.
+                // With multiple create operation disabled, executing a createbook mutation operation without the "publisher_id" field is expected to be caught by HotChocolate
+                // as the schema should be generated with "publisher_id" as a required field.
+                string pointCreateOperationWithMissingFields = @"mutation createbook{
+                                                                    createbook(item: { title: ""Book #1""}) {
+                                                                        title
+                                                                        publisher_id
+                                                                    }
+                                                                }";
+
+                mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                        query: pointCreateOperationWithMissingFields,
+                                                                                        queryName: "createbook",
+                                                                                        variables: null,
+                                                                                        clientRoleHeader: null);
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
+                                                            message: "`publisher_id` is a required field and cannot be null.");
+            }
+        }
+
+        /// <summary>
+        /// When multiple create operation is enabled, the relationship fields are generated as optional fields in the schema.
+        /// However, when not providing the relationship field as well the related object in the create mutation request should result in an error from the database layer.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateCreateMutationWithMissingFieldsFailWithMultipleCreateEnabled()
+        {
+            // Multiple create operations are enabled.
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true, MultipleMutationOptions: new(new(enabled: true)));
+
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { readAction, createAction }) };
+
+            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
+                                                      TargetEntity: "Publisher",
+                                                      SourceFields: new string[] { },
+                                                      TargetFields: new string[] { },
+                                                      LinkingObject: null,
+                                                      LinkingSourceFields: null,
+                                                      LinkingTargetFields: null);
+
+            Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
+                                    Rest: null,
+                                    GraphQL: new(Singular: "book", Plural: "books"),
+                                    Permissions: permissions,
+                                    Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
+                                    Mappings: null);
+
+            string bookEntityName = "Book";
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { bookEntityName, bookEntity }
+            };
+
+            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many,
+                                                           TargetEntity: "Book",
+                                                           SourceFields: new string[] { },
+                                                           TargetFields: new string[] { },
+                                                           LinkingObject: null,
+                                                           LinkingSourceFields: null,
+                                                           LinkingTargetFields: null);
+
+            Entity publisherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: permissions,
+                Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
+                Mappings: null);
+
+            entityMap.Add("Publisher", publisherEntity);
+
+            RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
+                                              DataSource: dataSource,
+                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
+                                              Entities: new(entityMap));
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            File.WriteAllText(CUSTOM_CONFIG, runtimeConfig.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+
+                // When  a create multiple operation is enabled, the "publisher_id" field will generated as an optional field in the schema. But, when multiple create operation is disabled,
+                // "publisher_id" should be a required field.
+                // With multiple create operation disabled, executing a createbook mutation operation without the "publisher_id" field is expected to be caught by HotChocolate
+                // as the schema should be generated with "publisher_id" as a required field.
+                string pointCreateOperationWithMissingFields = @"mutation createbook{
+                                                                    createbook(item: { title: ""Book #1""}) {
+                                                                        title
+                                                                        publisher_id
+                                                                    }
+                                                                }";
+
+                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                                    query: pointCreateOperationWithMissingFields,
+                                                                                                    queryName: "createbook",
+                                                                                                    variables: null,
+                                                                                                    clientRoleHeader: null);
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
+                                                            message: "Cannot insert the value NULL into column 'publisher_id', table 'master.dbo.books'; column does not allow nulls. INSERT fails.");
             }
         }
 

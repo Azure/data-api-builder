@@ -29,6 +29,8 @@ namespace Azure.DataApiBuilder.Core.Services
     public class MsSqlMetadataProvider :
         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>
     {
+        private RuntimeConfigProvider _runtimeConfigProvider;
+
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
@@ -37,6 +39,7 @@ namespace Azure.DataApiBuilder.Core.Services
             bool isValidateOnly = false)
             : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         public override string GetDefaultSchemaName()
@@ -219,7 +222,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string linkingObject,
             Dictionary<string, DatabaseObject> sourceObjects)
         {
-            if (!GraphQLUtils.DoesRelationalDBSupportMultipleCreate(GetDatabaseType()))
+            if (!_runtimeConfigProvider.GetConfig().IsMultipleCreateOperationSupportedAndEnabled())
             {
                 // Currently we have this same class instantiated for both MsSql and DwSql.
                 // This is a refactor we need to take care of in future.

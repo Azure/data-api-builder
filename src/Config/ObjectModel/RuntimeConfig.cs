@@ -30,6 +30,10 @@ public record RuntimeConfig
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     public bool SqlDataSourceUsed { get; private set; }
 
+    // HashSet of database types that support multiple create operation.
+    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE = new() { DatabaseType.MSSQL };
+
     /// <summary>
     /// Retrieves the value of runtime.CacheEnabled property if present, default is false.
     /// Caching is enabled only when explicitly set to true.
@@ -455,15 +459,20 @@ public record RuntimeConfig
     }
 
     /// <summary>
-    /// Helper function to check if multiple create option is enabled.
+    /// Helper method to check if multiple create option is supported and enabled.
+    /// 
+    /// Returns true when
+    /// 1. Multiple create operation is supported by the database type and
+    /// 2. Multiple create operation is enabled in the runtime config.
+    /// 
     /// </summary>
-    public bool IsMultipleCreateOptionEnabled()
+    public bool IsMultipleCreateOperationSupportedAndEnabled()
     {
-        return Runtime is not null &&
+        return (RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE.Contains(DataSource.DatabaseType)) &&
+               (Runtime is not null &&
                Runtime.GraphQL is not null &&
                Runtime.GraphQL.MultipleMutationOptions is not null &&
                Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null &&
-               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled;
+               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
     }
-
 }

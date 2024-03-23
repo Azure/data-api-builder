@@ -2048,69 +2048,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         [TestCategory(TestCategory.MSSQL)]
         public async Task ValidateMultipleCreateAndCreateMutationWhenMultipleCreateOperationIsDisabled()
         {
-            // Multiple create operations are disabled.
-            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true, MultipleMutationOptions: new(new(enabled: false)));
-
-            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
-
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-            EntityAction createAction = new(
-                Action: EntityActionOperation.Create,
-                Fields: null,
-                Policy: new());
-
-            EntityAction readAction = new(
-                Action: EntityActionOperation.Read,
-                Fields: null,
-                Policy: new());
-
-            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { readAction, createAction }) };
-
-            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
-                                                      TargetEntity: "Publisher",
-                                                      SourceFields: new string[] { },
-                                                      TargetFields: new string[] { },
-                                                      LinkingObject: null,
-                                                      LinkingSourceFields: null,
-                                                      LinkingTargetFields: null);
-
-            Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
-                                    Rest: null,
-                                    GraphQL: new(Singular: "book", Plural: "books"),
-                                    Permissions: permissions,
-                                    Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
-                                    Mappings: null);
-
-            string bookEntityName = "Book";
-
-            Dictionary<string, Entity> entityMap = new()
-            {
-                { bookEntityName, bookEntity }
-            };
-
-            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many,
-                                                           TargetEntity: "Book",
-                                                           SourceFields: new string[] { },
-                                                           TargetFields: new string[] { },
-                                                           LinkingObject: null,
-                                                           LinkingSourceFields: null,
-                                                           LinkingTargetFields: null);
-
-            Entity publisherEntity = new(
-                Source: new("publishers", EntitySourceType.Table, null, null),
-                Rest: null,
-                GraphQL: new(Singular: "publisher", Plural: "publishers"),
-                Permissions: permissions,
-                Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
-                Mappings: null);
-
-            entityMap.Add("Publisher", publisherEntity);
-
-            RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
-                                              DataSource: dataSource,
-                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
-                                              Entities: new(entityMap));
+            // Generate a custom config file with multiple create operation disabled.
+            RuntimeConfig runtimeConfig = InitialzieRuntimeConfigForMultipleCreateTests(isMultipleCreateOperationEnabled: false);
 
             const string CUSTOM_CONFIG = "custom-config.json";
 
@@ -2228,68 +2167,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         public async Task ValidateCreateMutationWithMissingFieldsFailWithMultipleCreateEnabled()
         {
             // Multiple create operations are enabled.
-            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true, MultipleMutationOptions: new(new(enabled: true)));
-
-            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
-
-            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
-
-            EntityAction createAction = new(
-                Action: EntityActionOperation.Create,
-                Fields: null,
-                Policy: new());
-
-            EntityAction readAction = new(
-                Action: EntityActionOperation.Read,
-                Fields: null,
-                Policy: new());
-
-            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { readAction, createAction }) };
-
-            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
-                                                      TargetEntity: "Publisher",
-                                                      SourceFields: new string[] { },
-                                                      TargetFields: new string[] { },
-                                                      LinkingObject: null,
-                                                      LinkingSourceFields: null,
-                                                      LinkingTargetFields: null);
-
-            Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
-                                    Rest: null,
-                                    GraphQL: new(Singular: "book", Plural: "books"),
-                                    Permissions: permissions,
-                                    Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
-                                    Mappings: null);
-
-            string bookEntityName = "Book";
-
-            Dictionary<string, Entity> entityMap = new()
-            {
-                { bookEntityName, bookEntity }
-            };
-
-            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many,
-                                                           TargetEntity: "Book",
-                                                           SourceFields: new string[] { },
-                                                           TargetFields: new string[] { },
-                                                           LinkingObject: null,
-                                                           LinkingSourceFields: null,
-                                                           LinkingTargetFields: null);
-
-            Entity publisherEntity = new(
-                Source: new("publishers", EntitySourceType.Table, null, null),
-                Rest: null,
-                GraphQL: new(Singular: "publisher", Plural: "publishers"),
-                Permissions: permissions,
-                Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
-                Mappings: null);
-
-            entityMap.Add("Publisher", publisherEntity);
-
-            RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
-                                              DataSource: dataSource,
-                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
-                                              Entities: new(entityMap));
+            RuntimeConfig runtimeConfig = InitialzieRuntimeConfigForMultipleCreateTests(isMultipleCreateOperationEnabled: true);
 
             const string CUSTOM_CONFIG = "custom-config.json";
 
@@ -3619,6 +3497,78 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             return responseCode;
+        }
+
+        /// <summary>
+        /// Helper  method to instantiate RuntimeConfig object needed for multiple create tests.
+        /// </summary>
+        /// <returns></returns>
+        public static RuntimeConfig InitialzieRuntimeConfigForMultipleCreateTests(bool isMultipleCreateOperationEnabled)
+        {
+            // Multiple create operations are enabled.
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true, MultipleMutationOptions: new(new(enabled: isMultipleCreateOperationEnabled)));
+
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { readAction, createAction }) };
+
+            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
+                                                      TargetEntity: "Publisher",
+                                                      SourceFields: new string[] { },
+                                                      TargetFields: new string[] { },
+                                                      LinkingObject: null,
+                                                      LinkingSourceFields: null,
+                                                      LinkingTargetFields: null);
+
+            Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
+                                    Rest: null,
+                                    GraphQL: new(Singular: "book", Plural: "books"),
+                                    Permissions: permissions,
+                                    Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
+                                    Mappings: null);
+
+            string bookEntityName = "Book";
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { bookEntityName, bookEntity }
+            };
+
+            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many,
+                                                           TargetEntity: "Book",
+                                                           SourceFields: new string[] { },
+                                                           TargetFields: new string[] { },
+                                                           LinkingObject: null,
+                                                           LinkingSourceFields: null,
+                                                           LinkingTargetFields: null);
+
+            Entity publisherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: permissions,
+                Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
+                Mappings: null);
+
+            entityMap.Add("Publisher", publisherEntity);
+
+            RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
+                                              DataSource: dataSource,
+                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
+                                              Entities: new(entityMap));
+            return runtimeConfig;
         }
 
         /// <summary>

@@ -1360,10 +1360,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             );
 
             // Act
-            string recievedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+            string receivedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
 
             // Assert
-            Assert.AreEqual(jsonSchemaContent, recievedJsonSchema);
+            Assert.AreEqual(jsonSchemaContent, receivedJsonSchema);
             handlerMock.Protected().Verify(
             "SendAsync",
             Times.Exactly(1),
@@ -1408,10 +1408,15 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             );
 
             // Act
-            string recievedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+            string receivedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
 
             // Assert
-            Assert.IsFalse(string.IsNullOrEmpty(recievedJsonSchema));
+            Assert.IsFalse(string.IsNullOrEmpty(receivedJsonSchema));
+
+            // Sanity check to ensure the schema is valid
+            Assert.IsTrue(receivedJsonSchema.Contains("$schema"));
+            Assert.IsTrue(receivedJsonSchema.Contains("data-source"));
+            Assert.IsTrue(receivedJsonSchema.Contains("entities"));
         }
 
         /// <summary>

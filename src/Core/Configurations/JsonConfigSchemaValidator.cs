@@ -83,12 +83,12 @@ public class JsonConfigSchemaValidator
                 }
                 else
                 {
-                    _logger!.LogError($"Failed to get schema from url: {runtimeConfig.Schema}");
+                    _logger!.LogWarning($"Received response: ({response.StatusCode}) while fetching schema from url: {runtimeConfig.Schema}");
                 }
             }
             catch (Exception e)
             {
-                _logger!.LogError($"Failed to get schema from url: {runtimeConfig.Schema}\n{e}");
+                _logger!.LogWarning($"Failed to send GET request to fetch schema from url: {runtimeConfig.Schema}\n{e}");
             }
         }
 

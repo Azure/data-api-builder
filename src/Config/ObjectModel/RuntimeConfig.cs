@@ -464,7 +464,7 @@ public record RuntimeConfig
     /// </summary>
     public bool IsMultipleCreateOperationEnabled()
     {
-        return Enum.GetNames(typeof(MultipleCreateSupportingDatabaseType)).Any(x => x.Equals(DatabaseType.MSSQL.ToString(), StringComparison.OrdinalIgnoreCase)) &&
+        return Enum.GetNames(typeof(MultipleCreateSupportingDatabaseType)).Any(x => x.Equals(DataSource.DatabaseType.ToString(), StringComparison.OrdinalIgnoreCase)) &&
                (Runtime is not null &&
                Runtime.GraphQL is not null &&
                Runtime.GraphQL.MultipleMutationOptions is not null &&

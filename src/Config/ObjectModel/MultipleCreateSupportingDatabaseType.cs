@@ -7,5 +7,4 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     {
         MSSQL
     }
-
 }

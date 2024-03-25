@@ -42,6 +42,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Moq.Protected;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
@@ -1321,6 +1322,101 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
             }
+        }
+
+        /// <summary>
+        /// This test checks that the GetJsonSchema method of the JsonConfigSchemaValidator class
+        /// correctly downloads a JSON schema from a given URL, and that the downloaded schema matches the expected schema.
+        /// </summary>
+        [TestMethod]
+        public async Task GetJsonSchema_DownloadsSchemaFromUrl()
+        {
+            // Arrange
+            Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
+            string jsonSchemaContent = "{\"type\": \"object\", \"properties\": {\"property1\": {\"type\": \"string\"}}}";
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(jsonSchemaContent, Encoding.UTF8, "application/json"),
+            })
+            .Verifiable();
+
+            HttpClient mockHttpClient = new(handlerMock.Object);
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+            JsonConfigSchemaValidator jsonConfigSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
+
+            string url = "http://example.com/schema.json";
+            RuntimeConfig runtimeConfig = new(
+                Schema: url,
+                DataSource: new(DatabaseType.MSSQL, "connectionString", null),
+                new RuntimeEntities(new Dictionary<string, Entity>())
+            );
+
+            // Act
+            string receivedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+
+            // Assert
+            Assert.AreEqual(jsonSchemaContent, receivedJsonSchema);
+            handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Exactly(1),
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Get
+                && req.RequestUri == new Uri(url)),
+            ItExpr.IsAny<CancellationToken>());
+        }
+
+        /// <summary>
+        /// This test checks that even when the schema download fails, the GetJsonSchema method
+        /// fetches the schema from the package succesfully.
+        /// </summary>
+        [TestMethod]
+        public async Task GetJsonSchema_DownloadsSchemaFromUrlFailure()
+        {
+            // Arrange
+            Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.InternalServerError,    // Simulate a failure
+                Content = new StringContent("", Encoding.UTF8, "application/json"),
+            })
+            .Verifiable();
+
+            HttpClient mockHttpClient = new(handlerMock.Object);
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+            JsonConfigSchemaValidator jsonConfigSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
+
+            string url = "http://example.com/schema.json";
+            RuntimeConfig runtimeConfig = new(
+                Schema: url,
+                DataSource: new(DatabaseType.MSSQL, "connectionString", null),
+                new RuntimeEntities(new Dictionary<string, Entity>())
+            );
+
+            // Act
+            string receivedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+
+            // Assert
+            Assert.IsFalse(string.IsNullOrEmpty(receivedJsonSchema));
+
+            // Sanity check to ensure the schema is valid
+            Assert.IsTrue(receivedJsonSchema.Contains("$schema"));
+            Assert.IsTrue(receivedJsonSchema.Contains("data-source"));
+            Assert.IsTrue(receivedJsonSchema.Contains("entities"));
         }
 
         /// <summary>

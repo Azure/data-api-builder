@@ -163,6 +163,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else if (mutationOperation is EntityActionOperation.Create)
                     {
+                        bool isPointMutation = IsPointMutation(context);
+
                         List<IDictionary<string, object?>> resultPKs = PerformMultipleCreateOperation(
                                     entityName,
                                     parameters,
@@ -184,7 +186,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                         resultPKs,
                                         dataSourceName);
                         }
-
                     }
                     else
                     {

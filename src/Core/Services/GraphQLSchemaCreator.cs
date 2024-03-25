@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
-        private bool _isMultipleCreateOperationSupportedAndEnabled;
+        private bool _isMultipleCreateOperationEnabled;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
-            _isMultipleCreateOperationSupportedAndEnabled = runtimeConfig.IsMultipleCreateOperationSupportedAndEnabled();
+            _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
             _entities = runtimeConfig.Entities;
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Services
             DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);
 
             // Generate the GraphQL mutations from the provided objects
-            DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isMultipleCreateOperationSupportedAndEnabled);
+            DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isMultipleCreateOperationEnabled);
 
             return (queryNode, mutationNode);
         }
@@ -237,7 +237,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // ReferencingFieldDirective is added to eventually mark the referencing fields in the input object types as optional. When multiple create operations are disabled
             // the referencing fields should be required fields. Hence, ReferencingFieldDirective is added only when the multiple create operations are enabled.
-            if (_isMultipleCreateOperationSupportedAndEnabled)
+            if (_isMultipleCreateOperationEnabled)
             {
                 // For all the fields in the object which hold a foreign key reference to any referenced entity, add a foreign key directive.
                 AddReferencingFieldDirective(entities, objectTypes);
@@ -253,7 +253,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // but are used to generate the object definitions of directional linking entities for (source, target) and (target, source) entities.
             // However, ObjectTypeDefinitionNode for linking entities are need only for multiple create operation. So, creating these only when multiple create operations are
             // enabled.
-            if (_isMultipleCreateOperationSupportedAndEnabled)
+            if (_isMultipleCreateOperationEnabled)
             {
                 Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities();
                 GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes);

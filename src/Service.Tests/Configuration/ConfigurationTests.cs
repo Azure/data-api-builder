@@ -2134,7 +2134,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Assert.IsNotNull(mutationResponse);
                 SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, mutationResponse.ToString());
 
-                // When  a create multiple operation is enabled, the "publisher_id" field will generated as an optional field in the schema. But, when multiple create operation is disabled,
+                // When  a create multiple operation is enabled, the "publisher_id" field will be generated as an optional field in the schema. But, when multiple create operation is disabled,
                 // "publisher_id" should be a required field.
                 // With multiple create operation disabled, executing a createbook mutation operation without the "publisher_id" field is expected to be caught by HotChocolate
                 // as the schema should be generated with "publisher_id" as a required field.

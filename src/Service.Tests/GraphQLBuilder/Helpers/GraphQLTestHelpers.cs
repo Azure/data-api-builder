@@ -43,8 +43,6 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
                     }
                     ";
 
-        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE = new() { DatabaseType.MSSQL };
-
         /// <summary>
         /// Mock the entityPermissionsMap which resolves which roles need to be included
         /// in an authorize directive used on a GraphQL object type definition.
@@ -184,14 +182,5 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Helpers
             // Ensure expected roles are present in the authorize directive.
             Assert.IsTrue(Enumerable.SequenceEqual(first: rolesDefinedInPermissions, second: rolesInRoleArgumentNode));
         }
-
-        /// <summary>
-        /// Helper method to evaluate whether DAB supports multiple create for a particular database type.
-        /// </summary>
-        public static bool DoesRelationalDBSupportMultipleCreate(DatabaseType databaseType)
-        {
-            return RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE.Contains(databaseType);
-        }
-
     }
 }

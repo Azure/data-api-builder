@@ -1007,7 +1007,6 @@ type Foo @model(name:""Foo"") {{
         }
 
         /// <summary>
-        /// 
         /// We assume that the user will provide a singular name for the entity. Users have the option of providing singular and
         /// plural names for an entity in the config to have more control over the graphql schema generation.
         /// When singular and plural names are specified by the user, these names will be used for generating the
@@ -1069,7 +1068,7 @@ type Foo @model(name:""Foo"") {{
                 entityNameToDatabaseType,
                 new(entityNameToEntity),
                 entityPermissionsMap: entityPermissionsMap,
-                IsMultipleCreateOperationSupportedAndEnabled: false
+                IsMultipleCreateOperationEnabled: false
                 );
 
             ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
@@ -1169,7 +1168,7 @@ type Foo @model(name:""Foo"") {{
                 entityNameToDatabaseType,
                 new(entityNameToEntity),
                 entityPermissionsMap: entityPermissionsMap,
-                IsMultipleCreateOperationSupportedAndEnabled: true);
+                IsMultipleCreateOperationEnabled: true);
 
             ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
             Assert.IsNotNull(mutation);
@@ -1192,14 +1191,12 @@ type Foo @model(name:""Foo"") {{
                 FieldDefinitionNode createMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMutationName);
                 Assert.AreEqual(expectedCreateMutationDescription, createMutation.Description.Value);
 
-                if (GraphQLTestHelpers.DoesRelationalDBSupportMultipleCreate(entityNameToDatabaseType[entityNames[i]]))
-                {
-                    string expectedCreateMultipleMutationName = $"create{expectedCreateMultipleMutationNames[i]}";
-                    string expectedCreateMultipleMutationDescription = $"Creates multiple new {expectedCreateMultipleMutationNames[i]}";
-                    Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedCreateMultipleMutationName));
-                    FieldDefinitionNode createMultipleMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMultipleMutationName);
-                    Assert.AreEqual(expectedCreateMultipleMutationDescription, createMultipleMutation.Description.Value);
-                }
+                // Name and Description validations for CreateMultiple mutation
+                string expectedCreateMultipleMutationName = $"create{expectedCreateMultipleMutationNames[i]}";
+                string expectedCreateMultipleMutationDescription = $"Creates multiple new {expectedCreateMultipleMutationNames[i]}";
+                Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedCreateMultipleMutationName));
+                FieldDefinitionNode createMultipleMutation = mutation.Fields.First(f => f.Name.Value == expectedCreateMultipleMutationName);
+                Assert.AreEqual(expectedCreateMultipleMutationDescription, createMultipleMutation.Description.Value);
 
                 // Name and Description validations for Update mutation
                 string expectedUpdateMutationName = $"update{expectedNames[i]}";

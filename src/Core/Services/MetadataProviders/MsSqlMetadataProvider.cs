@@ -222,7 +222,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string linkingObject,
             Dictionary<string, DatabaseObject> sourceObjects)
         {
-            if (!_runtimeConfigProvider.GetConfig().IsMultipleCreateOperationSupportedAndEnabled())
+            if (!_runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled())
             {
                 // Currently we have this same class instantiated for both MsSql and DwSql.
                 // This is a refactor we need to take care of in future.

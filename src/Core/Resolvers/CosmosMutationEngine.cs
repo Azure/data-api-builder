@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
             string entityName = metadataProvider.GetEntityName(graphQLType);
-            AuthorizeMutation(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, context, queryArgs, entityName, resolver.OperationType);
+            AuthorizeMutation(context, queryArgs, entityName, resolver.OperationType);
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
@@ -93,7 +93,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <inheritdoc/>
         public void AuthorizeMutation(
-            string inputArgumentName,
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
@@ -103,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string> inputArgumentKeys;
             if (mutationOperation != EntityActionOperation.Delete)
             {
-                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(inputArgumentName, parameters);
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, parameters);
             }
             else
             {

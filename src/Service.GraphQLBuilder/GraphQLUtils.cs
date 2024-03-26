@@ -32,8 +32,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
         private const string ENTITY_NAME_DELIMITER = "$";
 
-        public static HashSet<DatabaseType> RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE = new() { DatabaseType.MSSQL };
-
         public static HashSet<DatabaseType> RELATIONAL_DBS = new() { DatabaseType.MSSQL, DatabaseType.MySQL,
             DatabaseType.DWSQL, DatabaseType.PostgreSQL, DatabaseType.CosmosDB_PostgreSQL };
 
@@ -70,14 +68,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             };
             string name = typeNode.NamedType().Name.Value;
             return builtInTypes.Contains(name);
-        }
-
-        /// <summary>
-        /// Helper method to evaluate whether DAB supports multiple create for a particular database type.
-        /// </summary>
-        public static bool DoesRelationalDBSupportMultipleCreate(DatabaseType databaseType)
-        {
-            return RELATIONAL_DBS_SUPPORTING_MULTIPLE_CREATE.Contains(databaseType);
         }
 
         /// <summary>

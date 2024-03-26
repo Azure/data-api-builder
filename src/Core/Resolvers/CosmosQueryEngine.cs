@@ -376,11 +376,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (partitionKeyPath == string.Empty
                     && string.Equals(item.Name.Value, "eq", StringComparison.OrdinalIgnoreCase))
                 {
-                        return ExecutionHelper.ExtractValueFromIValueNode (
-                            item.Value,
-                            context.Selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
-                            context.Variables)?
-                            .ToString();
+                    return ExecutionHelper.ExtractValueFromIValueNode(
+                        item.Value,
+                        context.Selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
+                        context.Variables)?.ToString();
                 }
 
                 if (partitionKeyPath != string.Empty
@@ -412,7 +411,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         IList<ObjectFieldNode>? idValueObj = (IList<ObjectFieldNode>?)item.Value.Value;
 
                         ObjectFieldNode? itemToResolve = idValueObj?.FirstOrDefault(x => x.Name.Value == "eq");
-                        if(itemToResolve is null)
+                        if (itemToResolve is null)
                         {
                             return null;
                         }

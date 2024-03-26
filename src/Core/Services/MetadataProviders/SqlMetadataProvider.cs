@@ -641,6 +641,14 @@ namespace Azure.DataApiBuilder.Core.Services
                 EntitySourceType sourceType = GetEntitySourceType(entityName, entity);
                 if (!EntityToDatabaseObject.ContainsKey(entityName))
                 {
+                    if (entity.Source.Object is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"The entity {entityName} does not have a valid source object.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                    }
+
                     // Reuse the same Database object for multiple entities if they share the same source.
                     if (!sourceObjects.TryGetValue(entity.Source.Object, out DatabaseObject? sourceObject))
                     {

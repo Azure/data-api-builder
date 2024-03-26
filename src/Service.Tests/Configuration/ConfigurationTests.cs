@@ -42,6 +42,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Moq.Protected;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
@@ -1238,6 +1239,94 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// This Test validates that when the entities in the runtime config have source object as null,
+        /// the validation exception handler collects the message and exits gracefully.
+        /// </summary>
+        [TestMethod("Validate Exception handling for Entities with Source object as null."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestSqlMetadataValidationForEntitiesWithInvalidSource()
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+
+            // creating an entity with invalid table name
+            Entity entityWithInvalidSource = new(
+                Source: new(null, EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "book", Plural: "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+                );
+
+            // creating an entity with invalid source object and adding relationship with an entity with invalid source
+            Entity entityWithInvalidSourceAndRelationship = new(
+                Source: new(null, EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: new Dictionary<string, EntityRelationship>() { {"books", new (
+                    Cardinality: Cardinality.Many,
+                    TargetEntity: "Book",
+                    SourceFields: null,
+                    TargetFields: null,
+                    LinkingObject: null,
+                    LinkingSourceFields: null,
+                    LinkingTargetFields: null
+                    )}},
+                Mappings: null
+                );
+
+            configuration = configuration with
+            {
+                Entities = new RuntimeEntities(new Dictionary<string, Entity>()
+                    {
+                        { "Book", entityWithInvalidSource },
+                        { "Publisher", entityWithInvalidSourceAndRelationship}
+                    })
+            };
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object,
+                    isValidateOnly: true);
+
+            ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
+
+            try
+            {
+                await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+            }
+            catch
+            {
+                Assert.Fail("Execution of dab validate should not result in unhandled exceptions.");
+            }
+
+            Assert.IsTrue(configValidator.ConfigValidationExceptions.Any());
+            List<string> exceptionMessagesList = configValidator.ConfigValidationExceptions.Select(x => x.Message).ToList();
+            Assert.IsTrue(exceptionMessagesList.Contains("The entity Book does not have a valid source object."));
+            Assert.IsTrue(exceptionMessagesList.Contains("The entity Publisher does not have a valid source object."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Table Definition for Book has not been inferred."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Table Definition for Publisher has not been inferred."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Could not infer database object for source entity: Publisher in relationship: books. Check if the entity: Publisher is correctly defined in the config."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Could not infer database object for target entity: Book in relationship: books. Check if the entity: Book is correctly defined in the config."));
+        }
+
+        /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures. 
         /// It also verifies that the expected log message is logged.
@@ -1358,6 +1447,101 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
             }
+        }
+
+        /// <summary>
+        /// This test checks that the GetJsonSchema method of the JsonConfigSchemaValidator class
+        /// correctly downloads a JSON schema from a given URL, and that the downloaded schema matches the expected schema.
+        /// </summary>
+        [TestMethod]
+        public async Task GetJsonSchema_DownloadsSchemaFromUrl()
+        {
+            // Arrange
+            Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
+            string jsonSchemaContent = "{\"type\": \"object\", \"properties\": {\"property1\": {\"type\": \"string\"}}}";
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(jsonSchemaContent, Encoding.UTF8, "application/json"),
+            })
+            .Verifiable();
+
+            HttpClient mockHttpClient = new(handlerMock.Object);
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+            JsonConfigSchemaValidator jsonConfigSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
+
+            string url = "http://example.com/schema.json";
+            RuntimeConfig runtimeConfig = new(
+                Schema: url,
+                DataSource: new(DatabaseType.MSSQL, "connectionString", null),
+                new RuntimeEntities(new Dictionary<string, Entity>())
+            );
+
+            // Act
+            string receivedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+
+            // Assert
+            Assert.AreEqual(jsonSchemaContent, receivedJsonSchema);
+            handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Exactly(1),
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Get
+                && req.RequestUri == new Uri(url)),
+            ItExpr.IsAny<CancellationToken>());
+        }
+
+        /// <summary>
+        /// This test checks that even when the schema download fails, the GetJsonSchema method
+        /// fetches the schema from the package succesfully.
+        /// </summary>
+        [TestMethod]
+        public async Task GetJsonSchema_DownloadsSchemaFromUrlFailure()
+        {
+            // Arrange
+            Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.InternalServerError,    // Simulate a failure
+                Content = new StringContent("", Encoding.UTF8, "application/json"),
+            })
+            .Verifiable();
+
+            HttpClient mockHttpClient = new(handlerMock.Object);
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+            JsonConfigSchemaValidator jsonConfigSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
+
+            string url = "http://example.com/schema.json";
+            RuntimeConfig runtimeConfig = new(
+                Schema: url,
+                DataSource: new(DatabaseType.MSSQL, "connectionString", null),
+                new RuntimeEntities(new Dictionary<string, Entity>())
+            );
+
+            // Act
+            string receivedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+
+            // Assert
+            Assert.IsFalse(string.IsNullOrEmpty(receivedJsonSchema));
+
+            // Sanity check to ensure the schema is valid
+            Assert.IsTrue(receivedJsonSchema.Contains("$schema"));
+            Assert.IsTrue(receivedJsonSchema.Contains("data-source"));
+            Assert.IsTrue(receivedJsonSchema.Contains("entities"));
         }
 
         /// <summary>

@@ -835,6 +835,40 @@ public class RuntimeConfigValidator : IConfigValidator
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
+                if (relationship.SourceFields is null && relationship.TargetFields is not null)
+                {
+                    // record exception
+                }
+
+                if (relationship.TargetFields is null && relationship.SourceFields is not null)
+                {
+                    // record exception
+                }
+
+                if (relationship.SourceFields is not null && relationship.TargetFields is not null)
+                {
+                    if (relationship.SourceFields.Length != relationship.TargetFields.Length)
+                    {
+                        // record exception
+                    }
+
+                    foreach (string sourceField in relationship.SourceFields)
+                    {
+                        if (!sqlMetadataProvider.TryGetBackingColumn(entityName, sourceField, out _))
+                        {
+                            // record exception
+                        }
+                    }
+
+                    foreach (string targetField in relationship.TargetFields)
+                    {
+                        if (!sqlMetadataProvider.TryGetBackingColumn(entityName, targetField, out _))
+                        {
+                            // record exception
+                        }
+                    } 
+                }
+
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.
                 DatabaseObject? sourceObject, targetObject;
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out sourceObject))

@@ -176,14 +176,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Dictionary<DatabaseObject, string> associativeTableAndAliases = new();
                 // For One-One and One-Many, not all fk definitions would be valid
                 // but at least 1 will be.
-                // Identify the side of the relationship first, then check if its valid
+                // Identify the side of the relationship first, then check if it's valid
                 // by ensuring the referencing and referenced column count > 0
                 // before adding the predicates.
                 foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
                 {
                     // First identify which side of the relationship, this fk definition
                     // is looking at.
-                    if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(DatabaseObject))
+                    if (EntityName == targetEntityName)
+                    {
+                        // Self-referencing (self-join) case.
+                        if (foreignKeyDefinition.ReferencingColumns.Count > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                relatedSourceAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                SourceAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(DatabaseObject))
                     {
                         // Case where fk in parent entity references the nested entity.
                         // Verify this is a valid fk definition before adding the join predicate.

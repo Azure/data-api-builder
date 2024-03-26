@@ -749,15 +749,15 @@ namespace Azure.DataApiBuilder.Core.Services
                     // For Many-One OR One-One Relationships, optimistically
                     // add foreign keys from either sides in the hopes of finding their metadata
                     // at a later stage when we query the database about foreign keys.
-                    // Both or either of these may be present if its a One-One relationship,
-                    // The second fk would not be present if its a Many-One relationship.
+                    // Any of these may be present when it's a One-One relationship,
+                    // The second fk isn't present when it's a Many-One relationship.
                     // When the configuration file doesn't specify how to relate these entities,
-                    // at least 1 of the following foreign keys should be present.
+                    // at least 1 of the following foreign keys should be present (in the database metadata?).
 
                     // Adding this foreign key in the hopes of finding a foreign key
                     // in the underlying database object of the source entity referencing
                     // the target entity.
-                    // This foreign key may NOT exist for either of the following reasons:
+                    // This foreign key may NOT exist when:
                     // a. this source entity is related to the target entity in an One-to-One relationship
                     // but the foreign key was added to the target entity's underlying source
                     // This is covered by the foreign key below.
@@ -775,20 +775,24 @@ namespace Azure.DataApiBuilder.Core.Services
                     // as the referencingTableName - in the situation of a One-to-One relationship
                     // and the foreign key is defined in the source of targetEntity.
                     // This foreign key WILL NOT exist if its a Many-One relationship.
-                    AddForeignKeyForTargetEntity(
+                    // Skips this fk when target and source entities are the same (self-referencing).
+                    if (targetEntityName != entityName)
+                    {
+                        AddForeignKeyForTargetEntity(
                         targetEntityName,
                         referencingDbTable: targetDbTable,
                         referencedDbTable: databaseTable,
                         referencingColumns: relationship.TargetFields,
                         referencedColumns: relationship.SourceFields,
                         relationshipData);
+                    }
                 }
                 else if (relationship.Cardinality is Cardinality.Many)
                 {
-                    // Case of publisher(One)-books(Many)
-                    // we would need to obtain the foreign key information from the books table
+                    // Example: publisher(One)-books(Many)
+                    // Obtain the foreign key information from the books table
                     // about the publisher id so we can do the join.
-                    // so, the referencingTable is the source of the target entity.
+                    // The referencingTable (books) is the source of the target entity (publisher). //confusing language.
                     AddForeignKeyForTargetEntity(
                         targetEntityName,
                         referencingDbTable: targetDbTable,
@@ -801,8 +805,9 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Adds a new foreign key definition for the target entity
-        /// in the relationship metadata.
+        /// Adds a new foreign key definition for the target entity in the relationship metadata.
+        /// The last argument "relationshipData" is modified (hydrated with the new foreign key definition)
+        /// as a side effect of executing this function.
         /// </summary>
         private static void AddForeignKeyForTargetEntity(
             string targetEntityName,

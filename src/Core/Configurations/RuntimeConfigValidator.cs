@@ -806,7 +806,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 && entity.Relationships.Count > 0)
             {
                 HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Cannot define relationship for entity: {entity}",
+                        message: $"Cannot define relationship for entity: {entityName}",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
@@ -814,7 +814,7 @@ public class RuntimeConfigValidator : IConfigValidator
             string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
             ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(databaseName);
 
-            foreach (EntityRelationship relationship in entity.Relationships!.Values)
+            foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
             {
                 // Validate if entity referenced in relationship is defined in the config.
                 if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
@@ -835,8 +835,35 @@ public class RuntimeConfigValidator : IConfigValidator
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
-                DatabaseTable sourceDatabaseObject = (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                DatabaseTable targetDatabaseObject = (DatabaseTable)sqlMetadataProvider.EntityToDatabaseObject[relationship.TargetEntity];
+                // Validation to ensure DatabaseObject is correctly inferred from the entity name.
+                DatabaseObject? sourceObject, targetObject;
+                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out sourceObject))
+                {
+                    sourceObject = null;
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Could not infer database object for source entity: {entityName} in relationship: {relationshipName}." +
+                            $" Check if the entity: {entityName} is correctly defined in the config.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(relationship.TargetEntity, out targetObject))
+                {
+                    targetObject = null;
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Could not infer database object for target entity: {relationship.TargetEntity} in relationship: {relationshipName}." +
+                            $" Check if the entity: {relationship.TargetEntity} is correctly defined in the config.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                if (sourceObject is null || targetObject is null)
+                {
+                    continue;
+                }
+
+                DatabaseTable sourceDatabaseObject = (DatabaseTable)sourceObject;
+                DatabaseTable targetDatabaseObject = (DatabaseTable)targetObject;
                 if (relationship.LinkingObject is not null)
                 {
                     (string linkingTableSchema, string linkingTableName) = sqlMetadataProvider.ParseSchemaAndDbTableName(relationship.LinkingObject)!;

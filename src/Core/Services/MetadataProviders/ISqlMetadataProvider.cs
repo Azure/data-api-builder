@@ -197,5 +197,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// mode, it returns false.
         /// </summary>
         public bool IsDevelopmentMode();
+
+        /// <summary>
+        /// Initializes this metadata provider for the runtime.
+        /// This method will take in various objects which we can use directly rather than recreating the objects
+        /// using multiple tsql queries
+        /// </summary>
+        /// <param name="entityToDatabaseObject">maps entity to DatabaseObject</param>
+        /// <param name="graphQLStoredProcedureExposedNameToEntityNameMap">Dictionary containing mapping of graphQL stored procedure exposed query/mutation name to their corresponding entity names defined in the config.</param>
+        void InitializeAsync(
+            Dictionary<string, DatabaseObject> entityToDatabaseObject,
+            Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap);
     }
 }

@@ -1137,6 +1137,46 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
 
         }
+
+        /// <summary>
+        /// Tests that the field level query filter work with list type
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterContains_WithStringArray()
+        {
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {tags: { contains : ""tag1""}})
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where ARRAY_CONTAINS(c.tags, 'tag1')";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests that the field level query filter work with list type
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterNotContains_WithStringArray()
+        {
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {tags: { notContains : ""tag3""}})
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where NOT ARRAY_CONTAINS(c.tags, 'tag3')";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
         #endregion
 
         [TestCleanup]

@@ -237,17 +237,27 @@ public class GQLFilterParser
                 }
                 else
                 {
+                    FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(queryStructure.EntityName, name);
+                    if (fieldDefinitionNode is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Invalid filter object used as a nested field input value type.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
                     predicates.Push(
-                        new PredicateOperand(
-                            ParseScalarType(
-                                ctx,
-                                argumentSchema: filterArgumentObject.Fields[name],
-                                backingColumnName,
-                                subfields,
-                                schemaName,
-                                sourceName,
-                                sourceAlias,
-                                queryStructure.MakeDbConnectionParam)));
+                   new PredicateOperand(
+                       ParseScalarType(
+                           ctx,
+                           argumentSchema: filterArgumentObject.Fields[name],
+                           backingColumnName,
+                           subfields,
+                           schemaName,
+                           sourceName,
+                           sourceAlias,
+                           queryStructure.MakeDbConnectionParam,
+                           fieldDefinitionNode.Type.IsListType())));
                 }
             }
         }
@@ -490,11 +500,12 @@ public class GQLFilterParser
         string schemaName,
         string tableName,
         string tableAlias,
-        Func<object, string?, string> processLiterals)
+        Func<object, string?, string> processLiterals,
+        bool isListType = false)
     {
         Column column = new(schemaName, tableName, columnName: name, tableAlias);
 
-        return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals);
+        return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals, isListType);
     }
 
     /// <summary>
@@ -616,7 +627,8 @@ public static class FieldFilterParser
         IInputField argumentSchema,
         Column column,
         List<ObjectFieldNode> fields,
-        Func<object, string?, string> processLiterals)
+        Func<object, string?, string> processLiterals,
+        bool isListType = false)
     {
         List<PredicateOperand> predicates = new();
 
@@ -658,12 +670,28 @@ public static class FieldFilterParser
                     op = PredicateOperation.GreaterThanOrEqual;
                     break;
                 case "contains":
-                    op = PredicateOperation.LIKE;
-                    value = $"%{EscapeLikeString((string)value)}%";
+                    if(isListType)
+                    {
+                        op = PredicateOperation.ARRAY_CONTAINS;
+                    }
+                    else
+                    {
+                        op = PredicateOperation.LIKE;
+                        value = $"%{EscapeLikeString((string)value)}%";
+                    }
+
                     break;
                 case "notContains":
-                    op = PredicateOperation.NOT_LIKE;
-                    value = $"%{EscapeLikeString((string)value)}%";
+                    if (isListType)
+                    {
+                        op = PredicateOperation.NOT_ARRAY_CONTAINS;
+                    }
+                    else
+                    {
+                        op = PredicateOperation.NOT_LIKE;
+                        value = $"%{EscapeLikeString((string)value)}%";
+                    }
+
                     break;
                 case "startsWith":
                     op = PredicateOperation.LIKE;

@@ -238,7 +238,7 @@ public class GQLFilterParser
                 else
                 {
                     bool isListType = false;
-                    if(queryStructure is CosmosQueryStructure)
+                    if (queryStructure is CosmosQueryStructure)
                     {
                         FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(queryStructure.EntityName, name);
                         if (fieldDefinitionNode is null)

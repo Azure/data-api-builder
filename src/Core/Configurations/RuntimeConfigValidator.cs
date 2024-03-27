@@ -15,6 +15,7 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Microsoft.Azure.Cosmos.Serialization.HybridRow.RecordIO;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
@@ -838,37 +839,111 @@ public class RuntimeConfigValidator : IConfigValidator
                 if (relationship.SourceFields is null && relationship.TargetFields is not null)
                 {
                     // record exception
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Source entity: {entityName} has source fields that are null, but target fields that are not null.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
                 if (relationship.TargetFields is null && relationship.SourceFields is not null)
                 {
                     // record exception
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Source entity: {entityName} has target fields that are null, but source fields that are not null.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
                 if (relationship.SourceFields is not null && relationship.TargetFields is not null)
                 {
                     if (relationship.SourceFields.Length != relationship.TargetFields.Length)
                     {
-                        // record exception
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Number of source and target fields mismatch. Entity: {entityName} has {relationship.SourceFields.Length} " +
+                                $"source fields defined, but {relationship.TargetFields.Length} target fields defined.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                     }
 
                     foreach (string sourceField in relationship.SourceFields)
                     {
                         if (!sqlMetadataProvider.TryGetBackingColumn(entityName, sourceField, out _))
                         {
-                            // record exception
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with source field: {sourceField} that " +
+                                    $"does not exist as a column in {entityName}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                         }
                     }
 
                     foreach (string targetField in relationship.TargetFields)
                     {
-                        if (!sqlMetadataProvider.TryGetBackingColumn(entityName, targetField, out _))
+                        if (!sqlMetadataProvider.TryGetBackingColumn(relationship.TargetEntity, targetField, out _))
                         {
-                            // record exception
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with target field: {targetField} that " +
+                                $"does not exist as a column in target entity: {relationship.TargetEntity}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                         }
                     } 
                 }
 
+                if (relationship.LinkingSourceFields is null && relationship.LinkingTargetFields is not null)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity: {entityName} has a relationship: {relationshipName} with linking source fields that are null, " +
+                            $"but linking target fields that are not null.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                if (relationship.LinkingTargetFields is null && relationship.LinkingSourceFields is not null)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity: {entityName} has a relationship: {relationshipName} with linking source fields that are not null, " +
+                            $"but linking target fields that are null.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                if (relationship.LinkingSourceFields is not null && relationship.LinkingTargetFields is not null)
+                {
+                    if (relationship.LinkingSourceFields.Length != relationship.LinkingTargetFields.Length)
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has a relationship: {relationshipName} with the number of linking source fields that " +
+                                $"do not match the number of linking target fields.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+
+                    foreach (string linkingSourceField in relationship.LinkingSourceFields)
+                    {
+                        if (!sqlMetadataProvider.TryGetBackingColumn(entityName, linkingSourceField, out _))
+                        {
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with linking source field: {linkingSourceField} that " +
+                                    $"does not exist as a column in {entityName}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        }
+                    }
+
+                    foreach (string linkingTargetField in relationship.LinkingTargetFields)
+                    {
+                        if (!sqlMetadataProvider.TryGetBackingColumn(relationship.TargetEntity, linkingTargetField, out _))
+                        {
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with target field: {linkingTargetField} that " +
+                                    $"does not exist as a column in target entity: {relationship.TargetEntity}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        }
+                    }
+                }
+                
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.
                 DatabaseObject? sourceObject, targetObject;
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out sourceObject))

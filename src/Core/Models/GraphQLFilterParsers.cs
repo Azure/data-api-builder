@@ -237,13 +237,19 @@ public class GQLFilterParser
                 }
                 else
                 {
-                    FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(queryStructure.EntityName, name);
-                    if (fieldDefinitionNode is null)
+                    bool isListType = false;
+                    if(queryStructure is CosmosQueryStructure)
                     {
-                        throw new DataApiBuilderException(
-                            message: "Invalid filter object used as a nested field input value type.",
-                            statusCode: HttpStatusCode.BadRequest,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(queryStructure.EntityName, name);
+                        if (fieldDefinitionNode is null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: "Invalid filter object used as a nested field input value type.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
+
+                        isListType = fieldDefinitionNode.Type.IsListType();
                     }
 
                     predicates.Push(
@@ -257,7 +263,7 @@ public class GQLFilterParser
                            sourceName,
                            sourceAlias,
                            queryStructure.MakeDbConnectionParam,
-                           fieldDefinitionNode.Type.IsListType())));
+                           isListType)));
                 }
             }
         }

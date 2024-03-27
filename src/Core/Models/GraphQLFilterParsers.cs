@@ -670,7 +670,7 @@ public static class FieldFilterParser
                     op = PredicateOperation.GreaterThanOrEqual;
                     break;
                 case "contains":
-                    if(isListType)
+                    if (isListType)
                     {
                         op = PredicateOperation.ARRAY_CONTAINS;
                     }

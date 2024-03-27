@@ -1,8 +1,11 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
+using Azure.Core;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -45,40 +48,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 !metadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject? targetDbObject))
             {
                 // This should not be hit ideally.
-                throw new Exception($"Could not determine definition for source: {sourceEntityName} and target: {targetEntityName} entities " +
-                    $"for relationship: {relationshipName} at level: {nestingLevel}");
+                throw new DataApiBuilderException(
+                    message: $"Could not determine definition for source: {sourceEntityName} and target: {targetEntityName} entities for " +
+                    $"relationship: {relationshipName} at level: {nestingLevel}",
+                    statusCode: HttpStatusCode.NotFound,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            string referencingEntityNameBasedOnEntityMetadata = DetermineReferencingEntityBasedOnEntityRelationshipMetadata(
+            if (TryDetermineReferencingEntityBasedOnEntityRelationshipMetadata(
                     sourceEntityName: sourceEntityName,
                     targetEntityName: targetEntityName,
                     sourceDbObject: sourceDbObject,
-                    targetDbObject: targetDbObject);
-
-            if (!string.IsNullOrEmpty(referencingEntityNameBasedOnEntityMetadata))
+                    referencingEntityName: out string? referencingEntityNameBasedOnEntityMetadata))
             {
                 return referencingEntityNameBasedOnEntityMetadata;
             }
+            else
+            {
+                // Had the target node represented an array value, it would have been an 1:N relationship from (source, target).
+                // For that case, we would not hit this code because the entity metadata would have been sufficient to tell us that the target entity
+                // is the referencing entity. Hence we conclude that the target node must represent a single input object corresponding to N:1 or 1:1 relationship types.
+                ObjectValueNode? objectValueNode = (ObjectValueNode?)targetNodeValue;
+                Dictionary<string, IValueNode?> columnDataInTargetBody = GetBackingColumnDataFromFields(
+                    context: context,
+                    entityName: targetEntityName,
+                    fieldNodes: objectValueNode!.Fields,
+                    metadataProvider: metadataProvider);
 
-            // Had the target node represented an array value, it would have been an 1:N relationship from (source, target).
-            // For that case, we would not hit this code because the entity metadata would have been sufficient to tell us that the target entity
-            // is the referencing entity. Hence we conclude that the target node must represent a single input object corresponding to N:1 or 1:1 relationship types.
-            ObjectValueNode? objectValueNode = (ObjectValueNode?)targetNodeValue;
-            Dictionary<string, IValueNode?> columnDataInTargetBody = GetBackingColumnDataFromFields(
-                context: context,
-                entityName: targetEntityName,
-                fieldNodes: objectValueNode!.Fields,
-                metadataProvider: metadataProvider);
-
-            return DetermineReferencingEntityBasedOnRequestBody(
-                relationshipName: relationshipName,
-                sourceEntityName: sourceEntityName,
-                targetEntityName: targetEntityName,
-                sourceDbObject: sourceDbObject,
-                targetDbObject: targetDbObject,
-                columnDataInSourceBody: columnDataInSourceBody,
-                columnDataInTargetBody: columnDataInTargetBody,
-                nestingLevel: nestingLevel);
+                return DetermineReferencingEntityBasedOnRequestBody(
+                    relationshipName: relationshipName,
+                    sourceEntityName: sourceEntityName,
+                    targetEntityName: targetEntityName,
+                    sourceDbObject: sourceDbObject,
+                    targetDbObject: targetDbObject,
+                    columnDataInSourceBody: columnDataInSourceBody,
+                    columnDataInTargetBody: columnDataInTargetBody,
+                    nestingLevel: nestingLevel);
+            }
         }
 
         /// <summary>
@@ -89,36 +95,47 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="sourceEntityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>
         /// <param name="sourceDbObject">Database object for source entity.</param>
-        /// <param name="targetDbObject">Database object for target entity.</param>
-        /// <returns>Referencing entity name (when the relationship is defined in the database),
-        /// or an empty string (when the relationship is defined only in the config).</returns>
-        private static string DetermineReferencingEntityBasedOnEntityRelationshipMetadata(
+        /// <param name="referencingEntityName">Stores the determined referencing entity name to be returned to the caller.</param>
+        /// <returns>True when the referencing entity name can be determined based on the foreign key constraint defined in the database),
+        /// else false.</returns>
+        private static bool TryDetermineReferencingEntityBasedOnEntityRelationshipMetadata(
             string sourceEntityName,
             string targetEntityName,
             DatabaseObject sourceDbObject,
-            DatabaseObject targetDbObject)
+            [NotNullWhen(true)] out string? referencingEntityName)
         {
             DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
-            DatabaseTable targetDbTable = (DatabaseTable)targetDbObject;
-            RelationShipPair sourceTargetPair = new(sourceDbTable, targetDbTable);
             SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
-            List<ForeignKeyDefinition> foreignKeys = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+            List<ForeignKeyDefinition> targetEntityForeignKeys = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
             HashSet<string> referencingEntityNames = new();
-            foreach (ForeignKeyDefinition foreignKey in foreignKeys)
+
+            // Loop over all the Foreign key definitions inferred for the target entity's relationship with the source entity.
+            // In the case when the relationship between the two entities is backed by an FK constraint, only one of the source/target
+            // entity should be present in the inferred foreign keys as the referencing table.
+            // However, if the relationship is not backed by an FK constraint, there will be 2 different FK definitions present
+            // in which both the source/target entities would be acting as referencing entities.
+            foreach (ForeignKeyDefinition targetEntityForeignKey in targetEntityForeignKeys)
             {
-                if (foreignKey.ReferencingColumns.Count == 0)
+                if (targetEntityForeignKey.ReferencingColumns.Count == 0)
                 {
                     continue;
                 }
 
-                string referencingEntityName = foreignKey.Pair.Equals(sourceTargetPair) ? sourceEntityName : targetEntityName;
-                referencingEntityNames.Add(referencingEntityName);
+                string referencingEntityNameForThisFK = targetEntityForeignKey.Pair.ReferencingDbTable.Equals(sourceDbTable) ? sourceEntityName : targetEntityName;
+                referencingEntityNames.Add(referencingEntityNameForThisFK);
             }
 
             // If the count of referencing entity names > 1, it indicates we have entries for both source and target entities acting as the referencing table
-            // in the relationship. This can only happend for relationships which are not backed by an FK constraint. For such relationships, we rely on request body
+            // in the relationship. This can only happen for relationships which are not backed by an FK constraint. For such relationships, we rely on request body
             // to help determine the referencing entity.
-            return referencingEntityNames.Count() > 1 ? string.Empty : referencingEntityNames.FirstOrDefault()!;
+            if (referencingEntityNames.Count() != 1)
+            {
+                referencingEntityName = null;
+                return false;
+            }
+
+            referencingEntityName = referencingEntityNames.FirstOrDefault()!;
+            return true;
         }
 
         /// <summary>
@@ -145,11 +162,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Dictionary<string, IValueNode?> columnDataInTargetBody,
             int nestingLevel)
         {
-            (List<string> relationshipFieldsInSource, List<string> relationshipFieldsInTarget) = GetRelationshipFieldsInSourceAndTarget(
+            RelationshipFields relationshipFields = GetRelationshipFieldsInSourceAndTarget(
                     sourceEntityName: sourceEntityName,
                     targetEntityName: targetEntityName,
-                    sourceDbObject: sourceDbObject,
-                    targetDbObject: targetDbObject);
+                    sourceDbObject: sourceDbObject);
+
+            List<string> sourceFields = relationshipFields.SourceFields;
+            List<string> targetFields = relationshipFields.TargetFields;
 
             // Collect column metadata for source/target columns.
             Dictionary<string, ColumnDefinition> sourceColumnDefinitions = sourceDbObject.SourceDefinition.Columns;
@@ -166,23 +185,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             bool doesTargetBodyContainAnyRelationshipField = false;
 
             // Set to false when source body can't assume a non-null value for one or more relationship fields.
+            // For a relationship field, the value cannot be assumed when:
+            // 1.The column is not autogenerated, and
+            // 2.The request body does not provide a value for the column.
             bool canSourceAssumeAllRelationshipFieldValues = true;
+
             // Set to false when target body can't assume a non-null value for one or more relationship fields.
             bool canTargetAssumeAllRelationshipFieldsValues = true;
 
             // Loop over all the relationship fields in source/target to appropriately set the above variables.
-            for (int idx = 0; idx < relationshipFieldsInSource.Count; idx++)
+            for (int idx = 0; idx < sourceFields.Count(); idx++)
             {
-                string relationshipFieldInSource = relationshipFieldsInSource[idx];
-                string relationshipFieldInTarget = relationshipFieldsInTarget[idx];
+                string relationshipFieldInSource = sourceFields[idx];
+                string relationshipFieldInTarget = targetFields[idx];
 
                 // Determine whether the source/target relationship fields for this pair are autogenerated.
-                bool isSourceRelationshipColumnAutogenerated = sourceColumnDefinitions[relationshipFieldInSource].IsAutoGenerated;
-                bool isTargetRelationshipColumnAutogenerated = targetColumnDefinitions[relationshipFieldInTarget].IsAutoGenerated;
+                bool isSourceRelationshipFieldAutogenerated = sourceColumnDefinitions[relationshipFieldInSource].IsAutoGenerated;
+                bool isTargetRelationshipFieldAutogenerated = targetColumnDefinitions[relationshipFieldInTarget].IsAutoGenerated;
 
                 // Update whether source/target contains any relationship field which is autogenerated.
-                doesSourceContainAnyAutogenRelationshipField = doesSourceContainAnyAutogenRelationshipField || isSourceRelationshipColumnAutogenerated;
-                doesTargetContainAnyAutogenRelationshipField = doesTargetContainAnyAutogenRelationshipField || isTargetRelationshipColumnAutogenerated;
+                doesSourceContainAnyAutogenRelationshipField = doesSourceContainAnyAutogenRelationshipField || isSourceRelationshipFieldAutogenerated;
+                doesTargetContainAnyAutogenRelationshipField = doesTargetContainAnyAutogenRelationshipField || isTargetRelationshipFieldAutogenerated;
 
                 // When both source/target entities contain an autogenerated relationship field, we cannot choose one entity
                 // as the referencing entity. This is because for a referencing entity, the values for all the referencing fields
@@ -196,16 +219,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                // Determine whether the input data for source/target contain a value (could be null) for this pair of relationship fields. 
-                bool doesSourceBodyContainThisRelationshipColumn = columnDataInSourceBody.TryGetValue(relationshipFieldInSource, out IValueNode? sourceColumnvalue);
-                bool doesTargetBodyContainThisRelationshipColumn = columnDataInTargetBody.TryGetValue(relationshipFieldInTarget, out IValueNode? targetColumnvalue);
-
-                // Update whether input data for source/target contains any relationship field.
-                doesSourceBodyContainAnyRelationshipField = doesSourceBodyContainAnyRelationshipField || doesSourceBodyContainThisRelationshipColumn;
-                doesTargetBodyContainAnyRelationshipField = doesTargetBodyContainAnyRelationshipField || doesTargetBodyContainThisRelationshipColumn;
-
-                // If the source entity contains a relationship field in request body which suggests us to do the insertion first in source entity,
-                // and there is an autogenerated relationship field in the target entity which suggests us to do insertion first in target entity,
+                // If the source entity contains a relationship field in request body which suggests us to perform the insertion first in source entity,
+                // and there is an autogenerated relationship field in the target entity which suggests us to perform the insertion first in target entity,
                 // we cannot determine a valid order of insertion.
                 if (doesSourceBodyContainAnyRelationshipField && doesTargetContainAnyAutogenRelationshipField)
                 {
@@ -215,8 +230,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                // If the target entity contains a relationship field in request body which suggests us to do the insertion first in target entity,
-                // and there is an autogenerated relationship field in the source entity which suggests us to do insertion first in source entity,
+                // If the target entity contains a relationship field in request body which suggests us to perform the insertion first in target entity,
+                // and there is an autogenerated relationship field in the source entity which suggests us to perform the insertion first in source entity,
                 // we cannot determine a valid order of insertion.
                 if (doesTargetBodyContainAnyRelationshipField && doesSourceContainAnyAutogenRelationshipField)
                 {
@@ -226,14 +241,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                // If relationship columns are presence in the input for both the source and target entities,
+                // Determine whether the input data for source/target contain a value (could be null) for this pair of relationship fields. 
+                bool doesSourceBodyContainThisRelationshipField = columnDataInSourceBody.TryGetValue(relationshipFieldInSource, out IValueNode? sourceColumnvalue);
+                bool doesTargetBodyContainThisRelationshipField = columnDataInTargetBody.TryGetValue(relationshipFieldInTarget, out IValueNode? targetColumnvalue);
+
+                // Update whether input data for source/target contains any relationship field.
+                doesSourceBodyContainAnyRelationshipField = doesSourceBodyContainAnyRelationshipField || doesSourceBodyContainThisRelationshipField;
+                doesTargetBodyContainAnyRelationshipField = doesTargetBodyContainAnyRelationshipField || doesTargetBodyContainThisRelationshipField;
+
+                // If relationship columns are present in the input for both the source and target entities,
                 // we cannot choose one entity as the referencing entity. This is because for a referencing entity,
                 // the values for all the referencing fields should be derived from the insertion in the referenced entity.
                 // However, here both entities contain atleast one relationship field whose value is provided in the request.
                 if (doesSourceBodyContainAnyRelationshipField && doesTargetBodyContainAnyRelationshipField)
                 {
                     throw new DataApiBuilderException(
-                        message: $"The relationship fields can be specified either for the source entity: {sourceEntityName} or the target entity: {targetEntityName} " +
+                        message: $"The relationship fields must be specified for either the source entity: {sourceEntityName} or the target entity: {targetEntityName} " +
                         $"for the relationship: {relationshipName} at level: {nestingLevel}.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
@@ -242,8 +265,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // The source/target entities can assume a value for insertion for a relationship field if:
                 // 1. The field is autogenerated, or
                 // 2. The field is given a non-null value by the user - since we don't allow null values for a relationship field.
-                bool canSourceAssumeThisFieldValue = isSourceRelationshipColumnAutogenerated || sourceColumnvalue is not null;
-                bool canTargetAssumeThisFieldValue = isTargetRelationshipColumnAutogenerated || targetColumnvalue is not null;
+                bool canSourceAssumeThisFieldValue = isSourceRelationshipFieldAutogenerated || sourceColumnvalue is not null;
+                bool canTargetAssumeThisFieldValue = isTargetRelationshipFieldAutogenerated || targetColumnvalue is not null;
 
                 // Update whether all the values(non-null) for relationship fields are available for source/target.
                 canSourceAssumeAllRelationshipFieldValues = canSourceAssumeAllRelationshipFieldValues && canSourceAssumeThisFieldValue;
@@ -266,23 +289,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Helper method to determine the relationship fields in the source and the target entities. Here, we don't really care about which of the entities between
-        /// source and target are referencing/referenced entities. We just want to determine what all columns from the entity are involved in the relationship.
+        /// source and target are going to act as referencing/referenced entities in the mutation.
+        /// We just want to determine which of the source entity and target entity's columns are involved in the relationship.
         /// </summary>
         /// <param name="sourceEntityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>
         /// <param name="sourceDbObject">Database object for source entity.</param>
-        /// <param name="targetDbObject">Database object for target entity.</param>
-        /// <returns>Tuple of relationship fields in source, target entities.</returns>
-        private static Tuple<List<string>, List<string>> GetRelationshipFieldsInSourceAndTarget(
+        /// <returns>Relationship fields in source, target entities.</returns>
+        private static RelationshipFields GetRelationshipFieldsInSourceAndTarget(
             string sourceEntityName,
             string targetEntityName,
-            DatabaseObject sourceDbObject,
-            DatabaseObject targetDbObject)
+            DatabaseObject sourceDbObject)
         {
             List<string> relationshipFieldsInSource, relationshipFieldsInTarget;
             DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
-            DatabaseTable targetDbTable = (DatabaseTable)targetDbObject;
-            RelationShipPair sourceTargetPair = new(sourceDbTable, targetDbTable);
             SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
             List<ForeignKeyDefinition> foreignKeys = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
             foreach (ForeignKeyDefinition foreignKey in foreignKeys)
@@ -292,18 +312,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
-                if (foreignKey.Pair.Equals(sourceTargetPair))
+                if (foreignKey.Pair.ReferencingDbTable.Equals(sourceDbTable))
                 {
                     relationshipFieldsInSource = foreignKey.ReferencingColumns;
                     relationshipFieldsInTarget = foreignKey.ReferencedColumns;
                 }
                 else
                 {
-                    relationshipFieldsInTarget = foreignKey.ReferencingColumns;
                     relationshipFieldsInSource = foreignKey.ReferencedColumns;
+                    relationshipFieldsInTarget = foreignKey.ReferencingColumns;
                 }
 
-                return new(relationshipFieldsInSource, relationshipFieldsInTarget);
+                return new RelationshipFields(sourceFields: relationshipFieldsInSource, targetFields: relationshipFieldsInTarget);
             }
 
             throw new Exception("Did not find FK definition");

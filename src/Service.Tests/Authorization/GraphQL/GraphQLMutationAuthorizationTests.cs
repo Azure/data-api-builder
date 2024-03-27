@@ -78,7 +78,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             try
             {
                 engine.AuthorizeMutation(
-                    MutationBuilder.ITEM_INPUT_ARGUMENT_NAME,
                     graphQLMiddlewareContext.Object,
                     parameters,
                     entityName: TEST_ENTITY,

@@ -85,7 +85,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             dataSourceName = GetValidatedDataSourceName(dataSourceName);
             string graphqlMutationName = context.Selection.Field.Name.Value;
             string entityName = GraphQLUtils.GetEntityNameFromContext(context);
-            bool isPointMutation = IsPointMutation(context);
 
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
@@ -93,10 +92,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Tuple<JsonDocument?, IMetadata?>? result = null;
             EntityActionOperation mutationOperation = MutationBuilder.DetermineMutationOperationTypeBasedOnInputType(graphqlMutationName);
             string roleName = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
-            string inputArgumentName = isPointMutation ? MutationBuilder.ITEM_INPUT_ARGUMENT_NAME : MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
 
             // If authorization fails, an exception will be thrown and request execution halts.
-            AuthorizeMutation(inputArgumentName, context, parameters, entityName, mutationOperation);
+            AuthorizeMutation(context, parameters, entityName, mutationOperation);
 
             if (parameters.TryGetValue(inputArgumentName, out object? param) && mutationOperation is EntityActionOperation.Create)
             {
@@ -1099,15 +1097,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <inheritdoc/>
         public void AuthorizeMutation(
-            string inputArgumentName,
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
             EntityActionOperation mutationOperation)
         {
+            string inputArgumentName = MutationBuilder.ITEM_INPUT_ARGUMENT_NAME;
             string clientRole = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
             if (mutationOperation is EntityActionOperation.Create)
             {
+                if (!IsPointMutation(context))
+                {
+                    inputArgumentName = MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
+                }
+
                 AuthorizeEntityAndFieldsForMutation(context, clientRole, entityName, mutationOperation, inputArgumentName, parameters);
             }
             else
@@ -1237,7 +1240,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                     item: {
         ///                         title: "book #1",
         ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
-        ///                         publisher: { name: "Macmillan publishers" },
+        ///                         publishers: { name: "Macmillan publishers" },
         ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
         ///                     })
         ///                 {
@@ -1248,13 +1251,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                     items: [{
         ///                         title: "book #1",
         ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
-        ///                         publisher: { name: "Macmillan publishers" },
+        ///                         publishers: { name: "Macmillan publishers" },
         ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
         ///                     },
         ///                     {
         ///                         title: "book #2",
         ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
-        ///                         publisher: { name: "Pearson Education" },
+        ///                         publishers: { name: "Pearson Education" },
         ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", author_name: "William Shakespeare" }]
         ///                     }])
         ///                 {
@@ -1273,7 +1276,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
             {
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
-                // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
+                // all the fields present for item namely- title, reviews, publishers, authors are interpreted as ObjectFieldNode.
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
@@ -1293,7 +1296,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else if (parameters is ObjectValueNode objectValueNode)
             {
-                // For the example createbook mutation written above, the node for publisher field is interpreted as an ObjectValueNode.
+                // For the example createbook mutation written above, the node for publishers field is interpreted as an ObjectValueNode.
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
                 ProcessObjectFieldNodesForAuthZ(
                     entityToExposedColumns: entityToExposedColumns,

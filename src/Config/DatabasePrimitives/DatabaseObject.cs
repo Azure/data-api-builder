@@ -243,9 +243,15 @@ public class ColumnDefinition
     }
 }
 
-[DebuggerDisplay("ReferencingDbTable = {Pair.ReferencingDbTable.FullName} (Count = {ReferencingColumns.Count}), ReferencedDbTable = {Pair.ReferencedDbTable.FullName} (Count = {ReferencedColumns.Count})")]
+[DebuggerDisplay("Relationship: {RelationshipName} ReferencingDbTable = {Pair.ReferencingDbTable.FullName} (Count = {ReferencingColumns.Count}), ReferencedDbTable = {Pair.ReferencedDbTable.FullName} (Count = {ReferencedColumns.Count})")]
 public class ForeignKeyDefinition
 {
+    public FkDefSource FkSource { get; set; } = FkDefSource.Config;
+    public string SourceEntityName { get; set; } = string.Empty;
+    public RelationshipRole ReferencingEntityRole { get; set; } = RelationshipRole.None;
+    public RelationshipRole ReferencedEntityRole { get; set; } = RelationshipRole.None;
+    public string RelationshipName { get; set; } = string.Empty;
+
     /// <summary>
     /// The referencing and referenced table pair.
     /// </summary>
@@ -264,6 +270,38 @@ public class ForeignKeyDefinition
     /// table are implicitly assumed to be the foreign key columns.
     /// </summary>
     public List<string> ReferencingColumns { get; set; } = new();
+
+    public List<string> ResolveTargetColumns()
+    {
+        if (ReferencingEntityRole == RelationshipRole.Target)
+        {
+            return ReferencingColumns;
+        }
+        else if (ReferencedEntityRole == RelationshipRole.Target)
+        {
+            return ReferencedColumns;
+        }
+        else
+        {
+            throw new Exception("Unexpected RelationshipRole for ReferencingEntityRole");
+        }
+    }
+
+    public List<string> ResolveSourceColumns()
+    {
+        if (ReferencingEntityRole == RelationshipRole.Source)
+        {
+            return ReferencingColumns;
+        }
+        else if (ReferencedEntityRole == RelationshipRole.Source)
+        {
+            return ReferencedColumns;
+        }
+        else
+        {
+            throw new Exception("Unexpected RelationshipRole for ReferencingEntityRole");
+        }
+    }
 
     public override bool Equals(object? other)
     {
@@ -288,12 +326,24 @@ public class ForeignKeyDefinition
 [DebuggerDisplay("ReferencingDbTable = {ReferencingDbTable.FullName}, ReferencedDbTable = {ReferencedDbTable.FullName}")]
 public class RelationShipPair
 {
+    public string RelationshipName { get; set; } = string.Empty;
+
     public RelationShipPair() { }
 
     public RelationShipPair(
+    DatabaseTable referencingDbObject,
+    DatabaseTable referencedDbObject)
+    {
+        ReferencingDbTable = referencingDbObject;
+        ReferencedDbTable = referencedDbObject;
+    }
+
+    public RelationShipPair(
+        string relationshipName,
         DatabaseTable referencingDbObject,
         DatabaseTable referencedDbObject)
     {
+        RelationshipName = relationshipName;
         ReferencingDbTable = referencingDbObject;
         ReferencedDbTable = referencedDbObject;
     }

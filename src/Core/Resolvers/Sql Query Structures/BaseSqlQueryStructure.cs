@@ -149,10 +149,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// valid foreign key definition. It is guaranteed at least one fk definition
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
         /// </summary>
+        /// <param name="relationshipName">Name of the relationship as represented in config file. The GraphQL
+        /// field referencing a nested entity has the same name as the relationship.</param>
         /// <param name="targetEntityName">Entity name as in config file for the related entity.</param>
         /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
         /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
         public void AddJoinPredicatesForRelatedEntity(
+            string relationshipName,
             string targetEntityName,
             string relatedSourceAlias,
             BaseSqlQueryStructure subQuery)
@@ -160,7 +163,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
             DatabaseObject relatedEntityDbObject = MetadataProvider.EntityToDatabaseObject[targetEntityName];
             SourceDefinition relatedEntitySourceDefinition = MetadataProvider.GetSourceDefinition(targetEntityName);
-            if (// Search for the foreign key information either in the source or target entity.
+
+            if (EntityName == targetEntityName)
+            {
+                // Special handling of self-joining relationships. Other relationships preserve behavior.
+                EntityRelationshipKey selfJoinKey = new(EntityName, relationshipName);
+                if (MetadataProvider.RelationshipToFkDefinitions.TryGetValue(key: selfJoinKey, out ForeignKeyDefinition? fkDef))
+                {
+                    subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                leftTableAlias: relatedSourceAlias, //target
+                                leftColumnNames: fkDef.ResolveTargetColumns(),
+                                rightTableAlias: SourceAlias, //source
+                                rightColumnNames: fkDef.ResolveSourceColumns()));
+                }
+            }
+            else if (// Search for the foreign key information either in the source or target entity.
                 sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
                     EntityName,
                     out RelationshipMetadata? relationshipMetadata)

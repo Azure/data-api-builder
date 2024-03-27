@@ -17,7 +17,7 @@ param tag string = 'latest'
 
 var dabConfigFilePath='--ConfigFileName=./${mountedStorageName}/${dabConfigFileName}'
 
-resource containerApp 'Microsoft.App/containerApps@2022-10-01' = {
+resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
   name: appName
   location: location
   properties: {

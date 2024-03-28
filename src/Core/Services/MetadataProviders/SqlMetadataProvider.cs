@@ -1780,8 +1780,10 @@ namespace Azure.DataApiBuilder.Core.Services
                         // FKDefinitions inferred from the db have no knowledge of relationship names in the config.
                         validatedFKDefinitionsToTarget.Add(inferredFKDefinition);
                         EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
+                        configResolvedFkDefinition.ReferencedColumns = inferredFKDefinition.ReferencedColumns;
+                        configResolvedFkDefinition.ReferencingColumns = inferredFKDefinition.ReferencingColumns;
                         // Here we copy the config resolved FKDefinition's relationship name to the inferred FKDefinition.
-                        RelationshipToFkDefinitions.Add(key, inferredFKDefinition);
+                        RelationshipToFkDefinitions.TryAdd(key, configResolvedFkDefinition);
                     }
                 }
                 else

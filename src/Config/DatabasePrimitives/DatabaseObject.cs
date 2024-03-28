@@ -283,7 +283,7 @@ public class ForeignKeyDefinition
         }
         else
         {
-            throw new Exception("Unexpected RelationshipRole for ReferencingEntityRole");
+            throw new Exception("Unable to resolve target columns");
         }
     }
 
@@ -299,7 +299,7 @@ public class ForeignKeyDefinition
         }
         else
         {
-            throw new Exception("Unexpected RelationshipRole for ReferencingEntityRole");
+            throw new Exception("Unable to resolve source columns");
         }
     }
 

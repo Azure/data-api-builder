@@ -2990,6 +2990,16 @@
           "target.fields": [
             "AccountKey"
           ]
+        },
+        "child_accounts": {
+          "cardinality": "many",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "AccountKey"
+          ],
+          "target.fields": [
+            "ParentAccountKey"
+          ]
         }
       }
     }

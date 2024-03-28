@@ -1655,7 +1655,7 @@ query {
           "AccountKey": 2,
           "ParentAccountKey": 1,
           "parent_account": {
-            "AccountKey": 3
+            "AccountKey": 1
           }
         }
       ]
@@ -1664,10 +1664,13 @@ query {
 }
              */
             Assert.AreEqual(1, response.GetProperty("items").GetArrayLength());
-            Assert.AreEqual(2, response.GetProperty("AccountKey").GetInt32());
+            List<JsonElement> results = response.GetProperty("items").EnumerateArray().ToList();
+            Assert.AreEqual(expected: 1, actual: results.Count, message: "More results than expected");
+            JsonElement account = results[0];
+            Assert.AreEqual(2, account.GetProperty("AccountKey").GetInt32());
             // help write an assert that checks the parent_account field
-            int expectedParentAccountKey = response.GetProperty("ParentAccountKey").GetInt32();
-            int relationshipResolvedAccountKey = response.GetProperty("parent_account").GetProperty("AccountKey").GetInt32();
+            int expectedParentAccountKey = account.GetProperty("ParentAccountKey").GetInt32();
+            int relationshipResolvedAccountKey = account.GetProperty("parent_account").GetProperty("AccountKey").GetInt32();
             Assert.AreEqual(expected: expectedParentAccountKey, actual: relationshipResolvedAccountKey);
         }
 

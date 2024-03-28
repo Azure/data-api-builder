@@ -13,7 +13,7 @@ namespace Cli
 {
     internal static class Exporter
     {
-        public static void Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        public static int Export(ExportOptions options, ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             StartOptions startOptions = new(false, LogLevel.None, false, options.Config!);
 
@@ -23,7 +23,7 @@ namespace Cli
             if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
             {
                 logger.LogError("Failed to find the config file provided, check your options and try again.");
-                return;
+                return -1;
             }
 
             if (!loader.TryLoadConfig(
@@ -32,7 +32,7 @@ namespace Cli
                     replaceEnvVar: true) || runtimeConfig is null)
             {
                 logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
-                return;
+                return -1;
             }
 
             Task server = Task.Run(() =>
@@ -40,6 +40,7 @@ namespace Cli
                 _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
             }, cancellationToken);
 
+            bool isSuccess = false;
             if (options.GraphQL)
             {
                 int retryCount = 5;
@@ -50,6 +51,7 @@ namespace Cli
                     try
                     {
                         ExportGraphQL(options, runtimeConfig, fileSystem);
+                        isSuccess = true;
                         break;
                     }
                     catch
@@ -65,6 +67,7 @@ namespace Cli
             }
 
             cancellationTokenSource.Cancel();
+            return isSuccess ? 0 : -1;
         }
 
         private static void ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem)

@@ -26,25 +26,31 @@ namespace Cli
             // Load environment variables from .env file if present.
             DotNetEnv.Env.Load();
 
-            // Setting up Logger for CLI.
+            // Logger setup and configuration
             ILoggerFactory loggerFactory = Utils.LoggerFactoryForCli;
-
             ILogger<Program> cliLogger = loggerFactory.CreateLogger<Program>();
             ILogger<ConfigGenerator> configGeneratorLogger = loggerFactory.CreateLogger<ConfigGenerator>();
             ILogger<Utils> cliUtilsLogger = loggerFactory.CreateLogger<Utils>();
             ConfigGenerator.SetLoggerForCliConfigGenerator(configGeneratorLogger);
             Utils.SetCliUtilsLogger(cliUtilsLogger);
+
+            // Sets up the filesystem used for reading and writing runtime configuration files.
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
 
             return Execute(args, cliLogger, fileSystem, loader);
         }
 
+        /// <summary>
+        /// Execute the CLI command
+        /// </summary>
+        /// <param name="args">Command line arguments</param>
+        /// <param name="cliLogger">Logger used as sink for informational and error messages.</param>
+        /// <param name="fileSystem">Filesystem used for reading and writing configuration files, and exporting GraphQL schemas.</param>
+        /// <param name="loader">Loads the runtime config.</param>
+        /// <returns>Exit Code: 0 success, -1 failure</returns>
         public static int Execute(string[] args, ILogger cliLogger, IFileSystem fileSystem, FileSystemRuntimeConfigLoader loader)
         {
-            // To know if `--help` or `--version` was requested.
-            bool isHelpOrVersionRequested = false;
-
             Parser parser = new(settings =>
             {
                 settings.CaseInsensitiveEnumValues = true;
@@ -52,33 +58,18 @@ namespace Cli
             });
 
             // Parsing user arguments and executing required methods.
-            ParserResult<object>? result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions>(args)
-                .WithParsed((Action<InitOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<AddOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<UpdateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<StartOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<ValidateOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<AddTelemetryOptions>)(options => options.Handler(cliLogger, loader, fileSystem)))
-                .WithParsed((Action<ExportOptions>)(options => Exporter.Export(options, cliLogger, loader, fileSystem)))
-                .WithNotParsed(err =>
-                {
-                    /// System.CommandLine considers --help and --version as NonParsed Errors
-                    /// ref: https://github.com/commandlineparser/commandline/issues/630
-                    /// This is a workaround to make sure our app exits with exit code 0,
-                    /// when user does --help or --versions.
-                    /// dab --help -> ErrorType.HelpVerbRequestedError
-                    /// dab [command-name] --help -> ErrorType.HelpRequestedError
-                    /// dab --version -> ErrorType.VersionRequestedError
-                    List<Error> errors = err.ToList();
-                    if (errors.Any(e => e.Tag == ErrorType.VersionRequestedError
-                                        || e.Tag == ErrorType.HelpRequestedError
-                                        || e.Tag == ErrorType.HelpVerbRequestedError))
-                    {
-                        isHelpOrVersionRequested = true;
-                    }
-                });
+            int result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions>(args)
+                .MapResult(
+                    (InitOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (AddOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (UpdateOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (StartOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (ValidateOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (AddTelemetryOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (ExportOptions options) => Exporter.Export(options, cliLogger, loader, fileSystem),
+                    errors => DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(errors));
 
-            return ((result is Parsed<object>) || (isHelpOrVersionRequested)) ? 0 : -1;
+            return result;
         }
     }
 }

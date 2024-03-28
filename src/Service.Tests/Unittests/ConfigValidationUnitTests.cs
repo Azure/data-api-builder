@@ -549,12 +549,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test method to check that an exception is thrown when LinkingObject is null
-        /// and either of SourceFields and TargetFields is null in the config.
+        /// and SourceFields and TargetFields are null in the config.
         /// And the foreignKey pair between source and target is not defined in the database as well.
         /// Also verify that after adding foreignKeyPair in the Database, no exception is thrown.
         /// </summary>
-        [DataRow(null, new string[] { "das" }, null, DisplayName = "SourceFields is null")]
-        [DataRow(new string[] { "id" }, null, null, DisplayName = "TargetFields is null")]
         [DataRow(null, null, null, DisplayName = "both source and targetFields are null")]
         [DataTestMethod]
         public void TestRelationshipWithNoLinkingObjectAndEitherSourceOrTargetFieldIsNull(

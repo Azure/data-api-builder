@@ -4,17 +4,13 @@
 # Version values referenced from https://hub.docker.com/_/microsoft-dotnet-aspnet
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0-cbl-mariner2.0. AS build
-
+RUN pwd
 RUN file="$(ls -1)" && echo $file
 WORKDIR /src
+RUN pwd
 COPY [".", "./"]
 RUN file="$(ls -1)" && echo $file
-RUN file="$(ls -1 /src/Service/)" && echo $file
-RUN file="$(ls -1 /src/out/engine/net6.0)" && echo $file
-RUN file="$(ls -1 ..)" && echo $file
-
-RUN dotnet restore "/src/Service/Azure.DataApiBuilder.Service.csproj" --packages /src/out/engine/net6.0
-RUN dotnet build "/src/Service/Azure.DataApiBuilder.Service.csproj" --no-restore -c Docker -o /out -r linux-x64
+RUN ls
 
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-cbl-mariner2.0 AS runtime
 

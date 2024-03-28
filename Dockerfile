@@ -8,7 +8,8 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0-cbl-mariner2.0. AS build
 
 WORKDIR /src
 COPY [".", "./"]
-RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" -c Docker --no-restore -o /out -r linux-x64
+RUN dotnet restore --packages /src/out/engine/net6.0
+RUN dotnet build "./src/Service/Azure.DataApiBuilder.Service.csproj" --no-restore -c Docker -o /out -r linux-x64
 
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-cbl-mariner2.0 AS runtime
 

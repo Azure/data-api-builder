@@ -123,14 +123,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Generate the structure for a SQL query based on GraphQL query
+        /// information.
         /// </summary>
-        /// <param name="ctx"></param>
-        /// <param name="queryParams"></param>
-        /// <param name="sqlMetadataProvider"></param>
-        /// <param name="authorizationResolver"></param>
-        /// <param name="runtimeConfigProvider"></param>
-        /// <param name="gQLFilterParser"></param>
         public SqlQueryStructure(
             IMiddlewareContext ctx,
             List<IDictionary<string, object?>> queryParams,
@@ -551,7 +546,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Adds predicates for the primary keys in the parameters of the GraphQL query
         /// </summary>
         private void AddPrimaryKeyPredicates(List<IDictionary<string, object?>> queryParams)
         {

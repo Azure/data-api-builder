@@ -72,6 +72,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     });
         }
 
+        /// <inheritdoc/>
         public virtual TResult? ExecuteQuery<TResult>(
             string sqltext,
             IDictionary<string, DbConnectionParam> parameters,
@@ -281,6 +282,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <inheritdoc/>
         public virtual TResult? ExecuteQueryAgainstDb<TResult>(
             TConnection conn,
             string sqltext,
@@ -378,6 +380,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <inheritdoc />
         public bool Read(DbDataReader reader)
         {
             try
@@ -437,6 +440,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return dbResultSet;
         }
 
+        /// <inheritdoc />
         public DbResultSet
             ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {

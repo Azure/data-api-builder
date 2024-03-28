@@ -405,9 +405,9 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <exception cref="ArgumentException"></exception>
         public static IValueNode GetFieldNodeForGivenFieldName(List<ObjectFieldNode> objectFieldNodes, string fieldName)
         {
-            foreach(ObjectFieldNode objectFieldNode in objectFieldNodes)
+            foreach (ObjectFieldNode objectFieldNode in objectFieldNodes)
             {
-                if(objectFieldNode.Name.Value == fieldName)
+                if (objectFieldNode.Name.Value == fieldName)
                 {
                     return objectFieldNode.Value;
                 }

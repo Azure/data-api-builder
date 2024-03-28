@@ -1786,7 +1786,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
-            
+
             // For each table definition that has to be populated with the inferred
             // foreign key information.
             foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)

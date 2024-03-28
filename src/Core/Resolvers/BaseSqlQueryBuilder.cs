@@ -320,9 +320,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         protected string Build(List<Predicate> predicates, string separator = " AND ", bool isNestedInsertOperation = false)
         {
-            if(isNestedInsertOperation)
+            if (isNestedInsertOperation)
             {
-                return "(" + string.Join(separator, predicates.Select(p => Build(p))) + ")" ;
+                return "(" + string.Join(separator, predicates.Select(p => Build(p))) + ")";
             }
 
             return string.Join(separator, predicates.Select(p => Build(p)));

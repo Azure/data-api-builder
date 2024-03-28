@@ -17,13 +17,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         /// <summary>
         /// Entities that need to be inserted before the current entity. Current entity references these entites and needs the PKs to construct its INSERT SQL statement.
         /// </summary>
-        public List<Tuple<string, object?>> DependencyEntities;
+        public List<Tuple<string, object?>> ReferencedEntities;
 
         /// <summary>
         /// Entities that need to be inserted after the current entity. Current entity is referenced by these entities and PKs of the current entity needs to be passed to
         /// these entities to construct the INSERT SQL statement.
         /// </summary>
-        public List<Tuple<string, object?>> DependentEntities;
+        public List<Tuple<string, object?>> ReferencingEntities;
 
         /// <summary>
         /// Fields belonging to the current entity.
@@ -73,8 +73,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
             HigherLevelEntityPKs = higherLevelEntityPKs;
             IsLinkingTableInsertionRequired = isLinkingTableInsertionRequired;
 
-            DependencyEntities = new();
-            DependentEntities = new();
+            ReferencedEntities = new();
+            ReferencingEntities = new();
             if (IsLinkingTableInsertionRequired)
             {
                 LinkingTableParams = new Dictionary<string, object?>();

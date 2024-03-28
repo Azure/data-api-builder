@@ -45,7 +45,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
         public const string SINGLE_INPUT_ARGUEMENT_NAME = "item";
         public const string MULTIPLE_INPUT_ARGUEMENT_NAME = "items";
-        public const string MULTIPLE_ITEMS_RESPONSE_TYPE_SUFFIX = "Connection";
 
         private static DataApiBuilderException _dabExceptionWithTransactionErrorMessage = new(message: TRANSACTION_EXCEPTION_ERROR_MSG,
                                                                                             statusCode: HttpStatusCode.InternalServerError,
@@ -165,25 +164,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         bool isPointMutation = IsPointMutation(context);
 
-                        List<IDictionary<string, object?>> resultPKs = PerformMultipleCreateOperation(
+                        List<IDictionary<string, object?>> primaryKeysOfCreatedItems = PerformMultipleCreateOperation(
                                     entityName,
+                                    context,
                                     parameters,
                                     sqlMetadataProvider,
-                                    context,
                                     !isPointMutation);
 
                         if (isPointMutation)
                         {
                             result = await queryEngine.ExecuteAsync(
                                         context,
-                                        resultPKs[0],
+                                        primaryKeysOfCreatedItems[0],
                                         dataSourceName);
                         }
                         else
                         {
                             result = await queryEngine.ExecuteAsync(
                                         context,
-                                        resultPKs,
+                                        primaryKeysOfCreatedItems,
                                         dataSourceName);
                         }
                     }
@@ -972,28 +971,38 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <exception cref="DataApiBuilderException"></exception>
         private List<IDictionary<string, object?>> PerformMultipleCreateOperation(
                 string entityName,
+                IMiddlewareContext context,
                 IDictionary<string, object?> parameters,
                 ISqlMetadataProvider sqlMetadataProvider,
-                IMiddlewareContext context,
                 bool multipleInputType = false)
         {
             string fieldName = multipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
-            object? inputParams = GQLMultipleCreateArgumentToDictParams(context, fieldName, parameters);
 
-            if (inputParams is null)
+            // Parse the hotchocolate input parameters into .net object types
+            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, fieldName, parameters);
+
+            if (parsedInputParams is null)
             {
-                throw new DataApiBuilderException(
-                              message: "Invalid data entered in the mutation request",
-                              statusCode: HttpStatusCode.BadRequest,
-                              subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                throw new DataApiBuilderException(message: "The create mutation body cannot be null.",
+                                                  statusCode: HttpStatusCode.BadRequest,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            List<IDictionary<string, object?>> finalResultPKs = new();
+            // List of Primary keys of the created records in the top level entity.
+            // Each dictionary in the list corresponds to the PKs of a single record.
+            List<IDictionary<string, object?>> primaryKeysOfCreatedItemsInTopLevelEntity = new();
 
             if (multipleInputType)
             {
-                int indexOfParamList = 0;
-                List<IDictionary<string, object?>> inputList = (List<IDictionary<string, object?>>)inputParams;
+                int idx = 0;
+
+                // For a many type multipe create operation, after parsing the hotchocolate input parameters, the resultant data structure is a list of dictionaries.
+                // Each entry in the list corresponds to the input parameters for a single input item.
+                // The fields belonging to the inputobjecttype are converted to
+                // 1. Scalar input fields: Key - Value pair of field name and field value.
+                // 2. Object type input fields: Key - Value pair of relationship name and a dictionary of parameters (takes place for 1:1, N:1 relationship types)
+                // 3. List type input fields: key -Value pair of relationship name and a list of dictionary of parameters (takes place for 1:N, M:N relationship types) 
+                List<IDictionary<string, object?>> parsedInputList = (List<IDictionary<string, object?>>)parsedInputParams;
 
                 if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
                 {
@@ -1002,77 +1011,138 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                if(param is not List<IValueNode> paramList)
+                // For many type multiple create operation, the "parameters" dictionary is a key pair of <"items", List<IValueNode>>.
+                // The value field got using the key "items" cannot be of any other type.
+                // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate. But, this acts as a guard against other types with "items" field.
+                if (param is not List<IValueNode> paramList)
                 {
-                    throw new DataApiBuilderException(message: "No other type expected", statusCode: HttpStatusCode.InternalServerError, subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    throw new DataApiBuilderException(message: "Unsupported type used with 'items' field in the create mutation input",
+                                                      statusCode: HttpStatusCode.BadRequest,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                foreach (IDictionary<string, object?> input in inputList)
+                // Consider a mutation request such as the following
+                // mutation{
+                //  createbooks(items: [
+                //                {
+                //                    title: "Harry Potter and the Chamber of Secrets",
+                //                    publishers: { name: "Bloomsbury" }
+                //                 },
+                //                 {
+                //                    title: "Educated",
+                //                    publishers: { name: "Random House"}    
+                //                 }
+                //     ]){
+                //      items{
+                //         id
+                //         title 
+                //         publisher_id 
+                //      }
+                //   }
+                // }
+                // For the above mutation request, in the parsedInputList, the 0th dictionary will correspond to the fields for the 0th element in the items array.  
+                // Likewise, 1st dictionary in the parsedInputList will correspond to the fields for the 1st element in the items array and so on.
+                // Each element in the items array is independent of any other element in the array. Therefore, the create operation for each element in the items array is independent of the other elements.
+                // So, parsedInputList is iterated and the create operation is performed for each element in the list.
+                foreach (IDictionary<string, object?> parsedInput in parsedInputList)
                 {
-                    MultipleCreateStructure nestedInsertStructure = new(entityName, entityName, null, input);
-                    Dictionary<string, Dictionary<string, object?>> resultPKs = new();
+                    MultipleCreateStructure multipleCreateStructure = new(entityName: entityName,
+                                                                          higherLevelEntityName: entityName,
+                                                                          higherLevelEntityPKs: null,
+                                                                          inputMutParams: parsedInput);
 
-                    IValueNode? nodeForCurrentInput = paramList[indexOfParamList];
-                    if (nodeForCurrentInput is null)
+                    Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItem = new();
+
+                    IValueNode? fieldNodeForCurrentItem = paramList[idx];
+                    if (fieldNodeForCurrentItem is null)
                     {
                         throw new DataApiBuilderException(message: "Error when processing the mutation request",
                                                           statusCode: HttpStatusCode.InternalServerError,
                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
-                    PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context, nodeForCurrentInput.Value);
-                    if (nestedInsertStructure.CurrentEntityPKs is not null)
+                    PerformDbInsertOperation(context, fieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure, primaryKeysOfCreatedItem);
+                    if (multipleCreateStructure.CurrentEntityPKs is not null)
                     {
-                        finalResultPKs.Add(nestedInsertStructure.CurrentEntityPKs);
+                        primaryKeysOfCreatedItemsInTopLevelEntity.Add(multipleCreateStructure.CurrentEntityPKs);
                     }
                 }
             }
             else
             {
-                IDictionary<string, object?> input = (IDictionary<string, object?>)inputParams;
+                // Consider a mutation request such as the following
+                // mutation{
+                //  createbook(item:{
+                //              title: "Harry Potter and the Chamber of Secrets",
+                //              publishers: {
+                //                  name: "Bloomsbury"
+                //                }})
+                //  {
+                //     id
+                //     title 
+                //     publisher_id 
+                //  }
+                // For the above mutation request, the parsedInputParams will be a dictionary with the following key value pairs
+                //
+                // Key          Value
+                // title        Harry Potter and the Chamber of Secrets
+                // publishers   Dictionary<name, Bloomsbury> 
+                IDictionary<string, object?> parsedInput = (IDictionary<string, object?>)parsedInputParams;
 
-                Dictionary<string, Dictionary<string, object?>> resultPKs = new();
-                MultipleCreateStructure nestedInsertStructure = new(entityName, entityName, null, input);
+                Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItem = new();
 
-                if( !parameters.TryGetValue(fieldName, out object? param) || param is null)
+                MultipleCreateStructure multipleCreateStructure = new(entityName: entityName,
+                                                                    higherLevelEntityName: entityName,
+                                                                    higherLevelEntityPKs: null,
+                                                                    inputMutParams: parsedInput);
+
+                if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
                 {
                     throw new DataApiBuilderException(message: "Mutation Request should contain a valid item field",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
+                // For point multiple create operation, the "parameters" dictionary is a key pair of <"item", List<ObjectFieldNode>>.
+                // The value field got using the key "item" cannot be of any other type.
+                // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate but acts as a guard against using any other types with "item" field
                 if (param is not List<ObjectFieldNode> paramList)
                 {
-                    throw new DataApiBuilderException(message: "No other type expected", statusCode: HttpStatusCode.InternalServerError, subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    throw new DataApiBuilderException(message: "Unsupported type used with 'items' field in the create mutation input",
+                                                      statusCode: HttpStatusCode.BadRequest,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context, paramList);
+                PerformDbInsertOperation(context, paramList, sqlMetadataProvider, multipleCreateStructure, primaryKeysOfCreatedItem);
 
-                if (nestedInsertStructure.CurrentEntityPKs is not null)
+                if (multipleCreateStructure.CurrentEntityPKs is not null)
                 {
-                    finalResultPKs.Add(nestedInsertStructure.CurrentEntityPKs);
+                    primaryKeysOfCreatedItemsInTopLevelEntity.Add(multipleCreateStructure.CurrentEntityPKs);
                 }
             }
 
-            return finalResultPKs;
+            return primaryKeysOfCreatedItemsInTopLevelEntity;
         }
 
         /// <summary>
-        /// Builds and executes the INSERT SQL statements necessary for the nested create mutation operation.
+        /// 1. Identifies the order of insertion into tables involed in the create mutation request.
+        /// 2. Builds and executes the necessary database queries to insert all the data into appropriate tables.
         /// </summary>
-        /// <param name="sqlMetadataProvider">SqlMetadataprovider for the given database type.</param>
-        /// <param name="nestedInsertStructure">Wrapper object for the current entity</param>
-        /// <param name="resultPKs">Dictionary containing the PKs of the created items.</param>
         /// <param name="context">Hotchocolate's context for the graphQL request.</param>
+        /// <param name="parameters">Mutation parameter argumentss</param>
+        /// <param name="sqlMetadataProvider">SqlMetadataprovider for the given database type.</param>
+        /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
+        /// <param name="primaryKeysOfCreatedItem">Dictionary containing the PKs of the created items.</param>
+
         private void PerformDbInsertOperation(
-            ISqlMetadataProvider sqlMetadataProvider,
-            MultipleCreateStructure nestedInsertStructure,
-            Dictionary<string, Dictionary<string, object?>> resultPKs,
             IMiddlewareContext context,
-            object? parameters)
+            object? parameters,
+            ISqlMetadataProvider sqlMetadataProvider,
+            MultipleCreateStructure multipleCreateStructure,
+            Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItem)
         {
 
-            if (nestedInsertStructure.InputMutParams is null || parameters is null)
+            if (multipleCreateStructure.InputMutParams is null || parameters is null)
             {
                 throw new DataApiBuilderException(
                         message: "Null input parameter is not acceptable",
@@ -1083,34 +1153,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // For One - Many and Many - Many relationship types, the entire logic needs to be run for each element of the input.
             // So, when the input is a list, we iterate over the list and run the logic for each element.
-            if (nestedInsertStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
+            if (multipleCreateStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
             {
-                List<IDictionary<string, object?>> inputParamList = (List<IDictionary<string, object?>>)nestedInsertStructure.InputMutParams;
+                List<IDictionary<string, object?>> inputParamList = (List<IDictionary<string, object?>>)multipleCreateStructure.InputMutParams;
                 List<IValueNode> paramList = (List<IValueNode>)parameters;
-                int indexOfParamList = 0;
+                int idx = 0;
 
                 foreach (IDictionary<string, object?> inputParam in inputParamList)
                 {
-                    MultipleCreateStructure ns = new(nestedInsertStructure.EntityName, nestedInsertStructure.HigherLevelEntityName, nestedInsertStructure.HigherLevelEntityPKs, inputParam, nestedInsertStructure.IsLinkingTableInsertionRequired);
+                    MultipleCreateStructure multipleCreateStrucutreForCurrentItem = new(multipleCreateStructure.EntityName, multipleCreateStructure.HigherLevelEntityName, multipleCreateStructure.HigherLevelEntityPKs, inputParam, multipleCreateStructure.IsLinkingTableInsertionRequired);
                     Dictionary<string, Dictionary<string, object?>> newResultPks = new();
-                    IValueNode? nodeForCurrentInput = paramList[indexOfParamList];
-                    if(nodeForCurrentInput is null)
+                    IValueNode? nodeForCurrentInput = paramList[idx];
+                    if (nodeForCurrentInput is null)
                     {
                         throw new DataApiBuilderException(message: "Error when processing the mutation request",
                                                           statusCode: HttpStatusCode.InternalServerError,
                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
-                    PerformDbInsertOperation(sqlMetadataProvider, ns, newResultPks, context, nodeForCurrentInput.Value);
-                    indexOfParamList++;
+                    PerformDbInsertOperation(context, nodeForCurrentInput.Value, sqlMetadataProvider, multipleCreateStrucutreForCurrentItem, newResultPks);
+                    idx++;
                 }
             }
             else
             {
-                string entityName = nestedInsertStructure.EntityName;
-                Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName]; // use tryGet to get the entity object
+                string entityName = multipleCreateStructure.EntityName;
+                Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
 
-                if(parameters is not List<ObjectFieldNode> parameterNodes)
+                if (parameters is not List<ObjectFieldNode> parameterNodes)
                 {
                     throw new DataApiBuilderException(message: "Error occured while processing the mutation request",
                                                       statusCode: HttpStatusCode.InternalServerError,
@@ -1121,31 +1191,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // to be able to successfully create a record in the table backing the top level entity. 
                 // Dependent Entity refers to those entities that are to be inserted after the top level entities. These entities require the PK of the top
                 // level entity.
-                DetermineDependentAndDependencyEntities(context, nestedInsertStructure.EntityName, nestedInsertStructure, sqlMetadataProvider, entity.Relationships, parameterNodes);
-                PopulateCurrentAndLinkingEntityParams(entityName, nestedInsertStructure, sqlMetadataProvider, entity.Relationships);
+                DetermineReferencedAndReferencingEntities(context, multipleCreateStructure.EntityName, multipleCreateStructure, sqlMetadataProvider, entity.Relationships, parameterNodes);
+
+                PopulateCurrentAndLinkingEntityParams(entityName, multipleCreateStructure, sqlMetadataProvider, entity.Relationships);
 
                 // Recurse for dependency entities
-                foreach (Tuple<string, object?> dependecyEntity in nestedInsertStructure.DependencyEntities)
+                foreach (Tuple<string, object?> referencedEntity in multipleCreateStructure.ReferencedEntities)
                 {
-                    MultipleCreateStructure dependencyEntityNestedInsertStructure = new(GetRelatedEntityNameInRelationship(entity, dependecyEntity.Item1), entityName, nestedInsertStructure.CurrentEntityPKs, dependecyEntity.Item2);
-                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, dependecyEntity.Item1);
-                    PerformDbInsertOperation(sqlMetadataProvider, dependencyEntityNestedInsertStructure, resultPKs, context, node.Value);
+                    MultipleCreateStructure ReferencedEntityMultipleCreateStructure = new(GetRelatedEntityNameInRelationship(entity, referencedEntity.Item1), entityName, multipleCreateStructure.CurrentEntityPKs, referencedEntity.Item2);
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencedEntity.Item1);
+                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, ReferencedEntityMultipleCreateStructure, primaryKeysOfCreatedItem);
                 }
 
                 SourceDefinition currentEntitySourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
-
-                List<string> primaryKeyColumnNames = new();
-                foreach (string primaryKey in currentEntitySourceDefinition.PrimaryKey)
-                {
-                    primaryKeyColumnNames.Add(primaryKey);
-                }
-
                 DatabaseObject entityObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
                 string entityFullName = entityObject.FullName;
-                
-                if(currentEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipData) && relationshipData is not null)
+
+                // Populate the relationship fields values for the current entity.
+                if (currentEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipData) && relationshipData is not null)
                 {
-                    // Populate the foreign key values for the current entity. 
                     foreach ((string relatedEntityName, List<ForeignKeyDefinition> fkDefinitions) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
                         DatabaseObject relatedEntityObject = sqlMetadataProvider.EntityToDatabaseObject[relatedEntityName];
@@ -1159,23 +1223,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 string referencingColumnName = fkDefinition.ReferencingColumns[i];
                                 string referencedColumnName = fkDefinition.ReferencedColumns[i];
 
-                                if (nestedInsertStructure.CurrentEntityParams!.ContainsKey(referencingColumnName))
+                                if (multipleCreateStructure.CurrentEntityParams!.ContainsKey(referencingColumnName))
                                 {
                                     continue;
                                 }
 
-                                if (resultPKs.TryGetValue(relatedEntityName, out Dictionary<string, object?>? relatedEntityPKs)
+                                if (primaryKeysOfCreatedItem.TryGetValue(relatedEntityName, out Dictionary<string, object?>? relatedEntityPKs)
                                      && relatedEntityPKs is not null
                                      && relatedEntityPKs.TryGetValue(referencedColumnName, out object? relatedEntityPKValue)
                                      && relatedEntityPKValue is not null)
                                 {
-                                    nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, relatedEntityPKValue);
+                                    multipleCreateStructure.CurrentEntityParams.Add(referencingColumnName, relatedEntityPKValue);
                                 }
-                                else if (nestedInsertStructure.HigherLevelEntityPKs is not null
-                                     && nestedInsertStructure.HigherLevelEntityPKs.TryGetValue(referencedColumnName, out object? pkValue)
+                                else if (multipleCreateStructure.HigherLevelEntityPKs is not null
+                                     && multipleCreateStructure.HigherLevelEntityPKs.TryGetValue(referencedColumnName, out object? pkValue)
                                      && pkValue is not null)
                                 {
-                                    nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, pkValue);
+                                    multipleCreateStructure.CurrentEntityParams.Add(referencingColumnName, pkValue);
                                 }
                                 else
                                 {
@@ -1187,46 +1251,48 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             }
                         }
                     }
-
                 }
 
-                SqlInsertStructure sqlInsertStructure = new(entityName,
-                                                            sqlMetadataProvider,
-                                                            _authorizationResolver,
-                                                            _gQLFilterParser,
-                                                            nestedInsertStructure.CurrentEntityParams!,
-                                                            GetHttpContext());
+                SqlInsertStructure sqlInsertStructureForCurrentEntity = new(entityName,
+                                                                            sqlMetadataProvider,
+                                                                            _authorizationResolver,
+                                                                            _gQLFilterParser,
+                                                                            multipleCreateStructure.CurrentEntityParams!,
+                                                                            GetHttpContext());
 
                 IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
                 IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
                 string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
-                string queryString = queryBuilder.Build(sqlInsertStructure);
-                Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructure.Parameters;
+                string queryString = queryBuilder.Build(sqlInsertStructureForCurrentEntity);
+                Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructureForCurrentEntity.Parameters;
 
-                DbResultSet? dbResultSet;
-                DbResultSetRow? dbResultSetRow;
+                DbResultSet? dbResultSetForCurrentEntity;
+                DbResultSetRow? dbResultSetRowForCurrentEntity;
 
-                dbResultSet = queryExecutor.ExecuteQuery(
-                                      queryString,
-                                      queryParameters,
-                                      queryExecutor.ExtractResultSetFromDbDataReader,
-                                      GetHttpContext(),
-                                      primaryKeyColumnNames,
-                                      dataSourceName);
-
-                dbResultSetRow = dbResultSet is not null ?
-                        (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
-
-                if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
+                List<string> primaryKeyColumnNames = new();
+                foreach (string primaryKey in currentEntitySourceDefinition.PrimaryKey)
                 {
-                    // For GraphQL, insert operation corresponds to Create action.
-                    throw new DataApiBuilderException(
-                        message: "Could not insert row with given values.",
-                        statusCode: HttpStatusCode.Forbidden,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                    primaryKeyColumnNames.Add(primaryKey);
                 }
 
-                if (dbResultSetRow is null)
+                dbResultSetForCurrentEntity = queryExecutor.ExecuteQuery(queryString,
+                                                                         queryParameters,
+                                                                         queryExecutor.ExtractResultSetFromDbDataReader,
+                                                                         GetHttpContext(),
+                                                                         primaryKeyColumnNames,
+                                                                         dataSourceName);
+
+                dbResultSetRowForCurrentEntity = dbResultSetForCurrentEntity is not null ? (dbResultSetForCurrentEntity.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
+
+                if (dbResultSetRowForCurrentEntity is not null && dbResultSetRowForCurrentEntity.Columns.Count == 0)
+                {
+                    // For GraphQL, insert operation corresponds to Create action.
+                    throw new DataApiBuilderException(message: "Could not insert row with given values.",
+                                                      statusCode: HttpStatusCode.Forbidden,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                }
+
+                if (dbResultSetRowForCurrentEntity is null)
                 {
                     throw new DataApiBuilderException(
                         message: "No data returned back from database.",
@@ -1234,73 +1300,73 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                 }
 
-                Dictionary<string, object?> insertedValues = dbResultSetRow.Columns;
+                Dictionary<string, object?> insertedValues = dbResultSetRowForCurrentEntity.Columns;
                 Dictionary<string, object?> pkValues = new();
                 foreach (string pk in primaryKeyColumnNames)
                 {
                     pkValues.Add(pk, insertedValues[pk]);
                 }
 
-                resultPKs.Add(entityName, pkValues);
-                nestedInsertStructure.CurrentEntityPKs = pkValues;
+                primaryKeysOfCreatedItem.Add(entityName, pkValues);
+                multipleCreateStructure.CurrentEntityPKs = pkValues;
 
                 //Perform an insertion in the linking table if required
-                if (nestedInsertStructure.IsLinkingTableInsertionRequired)
+                if (multipleCreateStructure.IsLinkingTableInsertionRequired)
                 {
-                    if (nestedInsertStructure.LinkingTableParams is null)
+                    if (multipleCreateStructure.LinkingTableParams is null)
                     {
-                        nestedInsertStructure.LinkingTableParams = new Dictionary<string, object?>();
+                        multipleCreateStructure.LinkingTableParams = new Dictionary<string, object?>();
                     }
 
                     // Add higher level entity PKs
-                    List<ForeignKeyDefinition> foreignKeyDefinitions = relationshipData!.TargetEntityToFkDefinitionMap[nestedInsertStructure.HigherLevelEntityName];
+                    List<ForeignKeyDefinition> foreignKeyDefinitions = relationshipData!.TargetEntityToFkDefinitionMap[multipleCreateStructure.HigherLevelEntityName];
                     ForeignKeyDefinition fkDefinition = foreignKeyDefinitions[0];
 
-                    int count = fkDefinition.ReferencingColumns.Count;
-                    for (int i = 0; i < count; i++)
+                    int countOfReferencingColumns = fkDefinition.ReferencingColumns.Count;
+                    for (int i = 0; i < countOfReferencingColumns; i++)
                     {
                         string referencingColumnName = fkDefinition.ReferencingColumns[i];
                         string referencedColumnName = fkDefinition.ReferencedColumns[i];
 
-                        if (nestedInsertStructure.LinkingTableParams.ContainsKey(referencingColumnName))
+                        if (multipleCreateStructure.LinkingTableParams.ContainsKey(referencingColumnName))
                         {
                             continue;
                         }
 
-                        nestedInsertStructure.LinkingTableParams.Add(referencingColumnName, nestedInsertStructure.CurrentEntityPKs![referencedColumnName]);
+                        multipleCreateStructure.LinkingTableParams.Add(referencingColumnName, multipleCreateStructure.CurrentEntityPKs![referencedColumnName]);
                     }
 
                     // Add current entity PKs
-                    SourceDefinition higherLevelEntityRelationshipMetadata = sqlMetadataProvider.GetSourceDefinition(nestedInsertStructure.HigherLevelEntityName);
-                    RelationshipMetadata relationshipMetadata2 = higherLevelEntityRelationshipMetadata.SourceEntityRelationshipMap[nestedInsertStructure.HigherLevelEntityName];
+                    SourceDefinition higherLevelEntityRelationshipMetadata = sqlMetadataProvider.GetSourceDefinition(multipleCreateStructure.HigherLevelEntityName);
+                    RelationshipMetadata relationshipMetadata2 = higherLevelEntityRelationshipMetadata.SourceEntityRelationshipMap[multipleCreateStructure.HigherLevelEntityName];
 
                     foreignKeyDefinitions = relationshipMetadata2.TargetEntityToFkDefinitionMap[entityName];
                     fkDefinition = foreignKeyDefinitions[0];
 
-                    count = fkDefinition.ReferencingColumns.Count;
-                    for (int i = 0; i < count; i++)
+                    countOfReferencingColumns = fkDefinition.ReferencingColumns.Count;
+                    for (int i = 0; i < countOfReferencingColumns; i++)
                     {
                         string referencingColumnName = fkDefinition.ReferencingColumns[i];
                         string referencedColumnName = fkDefinition.ReferencedColumns[i];
 
-                        if (nestedInsertStructure.LinkingTableParams.ContainsKey(referencingColumnName))
+                        if (multipleCreateStructure.LinkingTableParams.ContainsKey(referencingColumnName))
                         {
                             continue;
                         }
 
-                        nestedInsertStructure.LinkingTableParams.Add(referencingColumnName, nestedInsertStructure.HigherLevelEntityPKs![referencedColumnName]);
+                        multipleCreateStructure.LinkingTableParams.Add(referencingColumnName, multipleCreateStructure.HigherLevelEntityPKs![referencedColumnName]);
                     }
 
-                    SqlInsertStructure linkingEntitySqlInsertStructure = new(GraphQLUtils.GenerateLinkingEntityName(nestedInsertStructure.HigherLevelEntityName, entityName),
+                    SqlInsertStructure linkingEntitySqlInsertStructure = new(GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName),
                                                                             sqlMetadataProvider,
                                                                             _authorizationResolver,
                                                                             _gQLFilterParser,
-                                                                            nestedInsertStructure.LinkingTableParams!,
+                                                                            multipleCreateStructure.LinkingTableParams!,
                                                                             GetHttpContext(),
                                                                             isLinkingEntity: true);
 
                     string linkingTableQueryString = queryBuilder.Build(linkingEntitySqlInsertStructure);
-                    SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(GraphQLUtils.GenerateLinkingEntityName(nestedInsertStructure.HigherLevelEntityName, entityName));
+                    SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName));
 
                     List<string> linkingTablePkColumns = new();
                     foreach (string primaryKey in linkingTableSourceDefinition.PrimaryKey)
@@ -1308,8 +1374,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         linkingTablePkColumns.Add(primaryKey);
                     }
 
+                    DbResultSet? dbResultSetForLinkingEntity;
+                    DbResultSetRow? dbResultSetRowForLinkingEntity;
+
                     Dictionary<string, DbConnectionParam> linkingTableQueryParams = linkingEntitySqlInsertStructure.Parameters;
-                    dbResultSet = queryExecutor.ExecuteQuery(
+                    dbResultSetForLinkingEntity = queryExecutor.ExecuteQuery(
                                       linkingTableQueryString,
                                       linkingTableQueryParams,
                                       queryExecutor.ExtractResultSetFromDbDataReader,
@@ -1317,10 +1386,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                       linkingTablePkColumns,
                                       dataSourceName);
 
-                    dbResultSetRow = dbResultSet is not null ?
-                            (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
+                    dbResultSetRowForLinkingEntity = dbResultSetForLinkingEntity is not null ? (dbResultSetForLinkingEntity.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
 
-                    if (dbResultSetRow is not null && dbResultSetRow.Columns.Count == 0)
+                    if (dbResultSetRowForLinkingEntity is not null && dbResultSetRowForLinkingEntity.Columns.Count == 0)
                     {
                         // For GraphQL, insert operation corresponds to Create action.
                         throw new DataApiBuilderException(
@@ -1329,7 +1397,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
                     }
 
-                    if (dbResultSetRow is null)
+                    if (dbResultSetRowForLinkingEntity is null)
                     {
                         throw new DataApiBuilderException(
                             message: "No data returned back from database.",
@@ -1339,22 +1407,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
 
                 // Recurse for dependent entities
-                foreach (Tuple<string, object?> dependentEntity in nestedInsertStructure.DependentEntities)
+                foreach (Tuple<string, object?> referencingEntity in multipleCreateStructure.ReferencingEntities)
                 {
-                    string relatedEntityName = GetRelatedEntityNameInRelationship(entity, dependentEntity.Item1);
-                    MultipleCreateStructure dependentEntityNestedInsertStructure = new(relatedEntityName, entityName, nestedInsertStructure.CurrentEntityPKs, dependentEntity.Item2, IsManyToManyRelationship(entity, dependentEntity.Item1));
-                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, dependentEntity.Item1);
-                    PerformDbInsertOperation(sqlMetadataProvider, dependentEntityNestedInsertStructure, resultPKs, context, node.Value);
+                    string relatedEntityName = GetRelatedEntityNameInRelationship(entity, referencingEntity.Item1);
+                    MultipleCreateStructure referencingEntityMultipleCreateStructure = new(relatedEntityName, entityName, multipleCreateStructure.CurrentEntityPKs, referencingEntity.Item2, IsManyToManyRelationship(entity, referencingEntity.Item1));
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencingEntity.Item1);
+                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingEntityMultipleCreateStructure, primaryKeysOfCreatedItem);
                 }
             }
         }
 
         /// <summary>
-        /// 
+        /// Helper method to get the name of the related entity for a given relationship name.
         /// </summary>
-        /// <param name="entity"></param>
-        /// <param name="relationshipName"></param>
-        /// <returns></returns>
+        /// <param name="entity">Entity object</param>
+        /// <param name="relationshipName">Name of the relationship</param>
+        /// <returns>Name of the related entity</returns>
         public static string GetRelatedEntityNameInRelationship(Entity entity, string relationshipName)
         {
             if (entity.Relationships is null)
@@ -1394,41 +1462,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Helper method that looks at the input fields of a given entity and identifies, classifies the related entities into referenced and referencing entities.
         /// </summary>
-        /// <param name="parameters"></param>
-        /// <param name="sqlMetadataProvider"></param>
-        /// <param name="dependencyEntities"></param>
-        /// <param name="dependentEntities"></param>
-        /// <param name="currentEntityParams"></param>
-        private static void DetermineDependentAndDependencyEntities(IMiddlewareContext context,
-                                                                    string entityName,
-                                                                    MultipleCreateStructure nestedInsertStructure,
-                                                                    ISqlMetadataProvider sqlMetadataProvider,
-                                                                    Dictionary<string, EntityRelationship>? topLevelEntityRelationships,
-                                                                    List<ObjectFieldNode> sourceEntityFields)
+        /// <param name="context">Hotchocolate context</param>
+        /// <param name="entityName">Name of the source entity</param>
+        /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="topLevelEntityRelationships">Relationship metadata of the source entity</param>
+        /// <param name="sourceEntityFields">Field object nodes of the source entity</param>
+        private static void DetermineReferencedAndReferencingEntities(IMiddlewareContext context,
+                                                                      string entityName,
+                                                                      MultipleCreateStructure multipleCreateStructure,
+                                                                      ISqlMetadataProvider sqlMetadataProvider,
+                                                                      Dictionary<string, EntityRelationship>? topLevelEntityRelationships,
+                                                                      List<ObjectFieldNode> sourceEntityFields)
         {
 
-            if(topLevelEntityRelationships is null)
+            if (topLevelEntityRelationships is null)
             {
-                return ;
+                return;
             }
 
-            // throw an exception - ideally will be caught way earlier in the flow, but Visual Studio still complains
-            if (nestedInsertStructure.InputMutParams is null)
+            // Ideally, this condition should not become true. The input parameters being null should be caught earlier in the flow.
+            // Nevertheless, this check is added as a guard against cases where the input parameters are null is uncaught.
+            if (multipleCreateStructure.InputMutParams is null)
             {
-                return ;
+                throw new DataApiBuilderException(message: "The mutation parameters cannot be null.",
+                                                  statusCode: HttpStatusCode.BadRequest,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            foreach (KeyValuePair<string, object?> inputParam in (Dictionary<string, object?>)nestedInsertStructure.InputMutParams)
+            foreach (KeyValuePair<string, object?> inputParam in (Dictionary<string, object?>)multipleCreateStructure.InputMutParams)
             {
                 if (topLevelEntityRelationships.ContainsKey(inputParam.Key))
                 {
                     EntityRelationship entityRelationship = topLevelEntityRelationships[inputParam.Key];
 
-                    if(entityRelationship.LinkingObject is not null)
+                    // The linking object not being null indicates that the relationship is a many-to-many relationship.
+                    // For M:N realtionship, new item(s) have to be created in the linking table in addition to the source and target tables. Creation of item(s) in the linking table is handled when processing the
+                    // target entity. To be able to create item(s) in the linking table, PKs of the source and target items are required. Indirectly, the taget entity depends on the PKs of the source entity.
+                    // Hence, the target entity is added as a referencing entity.
+                    if (entityRelationship.LinkingObject is not null)
                     {
-                        nestedInsertStructure.DependentEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                        multipleCreateStructure.ReferencingEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
                         continue;
                     }
 
@@ -1446,32 +1522,39 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     if (string.Equals(entityName, referencingEntityName, StringComparison.OrdinalIgnoreCase))
                     {
-                        nestedInsertStructure.DependencyEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                        multipleCreateStructure.ReferencedEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
                     }
                     else
                     {
-                        nestedInsertStructure.DependentEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                        multipleCreateStructure.ReferencingEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
                     }
-                } 
+                }
             }
         }
 
+        /// <summary>
+        /// Helper method to that looks at the input fields of a given entity and classifies, populates the fields belonging to current entity and linking entity.
+        /// </summary>
+        /// <param name="entityName">Entity name</param>
+        /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="topLevelEntityRelationships">Relationship metadata of the source entity</param>
         private static void PopulateCurrentAndLinkingEntityParams(string entityName,
-                                                                  MultipleCreateStructure nestedInsertStructure,
+                                                                  MultipleCreateStructure multipleCreateStructure,
                                                                   ISqlMetadataProvider sqlMetadataProvider,
                                                                   Dictionary<string, EntityRelationship>? topLevelEntityRelationships)
         {
             IDictionary<string, object?> currentEntityParams = new Dictionary<string, object?>();
             IDictionary<string, object?> linkingTableParams = new Dictionary<string, object?>();
 
-            if (nestedInsertStructure.InputMutParams is null)
+            if (multipleCreateStructure.InputMutParams is null)
             {
                 return;
             }
 
-            foreach (KeyValuePair<string, object?> entry in (Dictionary<string, object?>)nestedInsertStructure.InputMutParams)
+            foreach (KeyValuePair<string, object?> entry in (Dictionary<string, object?>)multipleCreateStructure.InputMutParams)
             {
-                if(topLevelEntityRelationships is not null && topLevelEntityRelationships.ContainsKey(entry.Key))
+                if (topLevelEntityRelationships is not null && topLevelEntityRelationships.ContainsKey(entry.Key))
                 {
                     continue;
                 }
@@ -1486,25 +1569,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 }
             }
 
-            nestedInsertStructure.CurrentEntityParams = currentEntityParams;
-            nestedInsertStructure.LinkingTableParams = linkingTableParams;
+            multipleCreateStructure.CurrentEntityParams = currentEntityParams;
+            multipleCreateStructure.LinkingTableParams = linkingTableParams;
         }
 
         /// <summary>
-        /// Function to parse the mutation parameters from Hotchocolate input types to Dictionary of field names and values.
+        /// Parse the mutation parameters from Hotchocolate input types to Dictionary of field names and values.
         /// </summary>
         /// <param name="context">GQL middleware context used to resolve the values of arguments</param>
-        /// <param name="fieldName">GQL field from which to extract the parameters</param>
+        /// <param name="fieldName">GQL field from which to extract the parameters. It is either "item" or "items".</param>
         /// <param name="mutationParameters">Dictionary of mutation parameters</param>
-        /// <returns></returns>
+        /// <returns>Parsed input mutation parameters.</returns>
         internal static object? GQLMultipleCreateArgumentToDictParams(IMiddlewareContext context, string fieldName, IDictionary<string, object?> mutationParameters)
         {
             if (mutationParameters.TryGetValue(fieldName, out object? inputParameters))
             {
                 IObjectField fieldSchema = context.Selection.Field;
                 IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
-                InputObjectType itemsArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
-                return GQLMultipleCreateArgumentToDictParamsHelper(context, itemsArgumentObject, inputParameters);
+                InputObjectType inputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
+                return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters);
             }
             else
             {
@@ -1521,9 +1604,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// This function recursively parses for each input type.
         /// </summary>
         /// <param name="context">GQL middleware context used to resolve the values of arguments.</param>
-        /// <param name="rawInput">Hotchocolate input object type.</param>
+        /// <param name="inputObjectType">Type of the input object field.</param>
+        /// <param name="inputParameters"></param>
         /// <returns></returns>
-        internal static object? GQLMultipleCreateArgumentToDictParamsHelper(IMiddlewareContext context, InputObjectType itemsArgumentObject, object? inputParameters)
+        internal static object? GQLMultipleCreateArgumentToDictParamsHelper(IMiddlewareContext context, InputObjectType inputObjectType, object? inputParameters)
         {
             // This condition is met for input types that accepts an array of values.
             // Ex: 1. Multiple nested create operation ---> createbooks_multiple.   
@@ -1534,7 +1618,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 foreach (IValueNode input in inputList)
                 {
-                    object? resultItem = GQLMultipleCreateArgumentToDictParamsHelper(context, itemsArgumentObject, input.Value);
+                    object? resultItem = GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, input.Value);
 
                     if (resultItem is not null)
                     {
@@ -1556,16 +1640,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string name = node.Name.Value;
                     if (node.Value.Kind == SyntaxKind.ListValue)
                     {
-                        result.Add(name, GQLMultipleCreateArgumentToDictParamsHelper(context, GetInputObjectTypeForAField(name, itemsArgumentObject.Fields), node.Value.Value));
+                        result.Add(name, GQLMultipleCreateArgumentToDictParamsHelper(context, GetInputObjectTypeForAField(name, inputObjectType.Fields), node.Value.Value));
                     }
                     else if (node.Value.Kind == SyntaxKind.ObjectValue)
                     {
-                        result.Add(name, GQLMultipleCreateArgumentToDictParamsHelper(context, GetInputObjectTypeForAField(name, itemsArgumentObject.Fields), node.Value.Value));
+                        result.Add(name, GQLMultipleCreateArgumentToDictParamsHelper(context, GetInputObjectTypeForAField(name, inputObjectType.Fields), node.Value.Value));
                     }
                     else
                     {
                         object? value = ExecutionHelper.ExtractValueFromIValueNode(value: node.Value,
-                                                                                      argumentSchema: itemsArgumentObject.Fields[name],
+                                                                                      argumentSchema: inputObjectType.Fields[name],
                                                                                       variables: context.Variables);
 
                         result.Add(name, value);

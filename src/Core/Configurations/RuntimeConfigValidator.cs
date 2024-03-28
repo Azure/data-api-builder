@@ -890,7 +890,7 @@ public class RuntimeConfigValidator : IConfigValidator
                                 statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                         }
-                    } 
+                    }
                 }
 
                 if (relationship.LinkingSourceFields is not null && relationship.LinkingTargetFields is null)
@@ -952,7 +952,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         }
                     }
                 }
-                
+
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.
                 DatabaseObject? sourceObject, targetObject;
                 if (!sqlMetadataProvider.EntityToDatabaseObject.TryGetValue(entityName, out sourceObject))

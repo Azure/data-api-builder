@@ -9,7 +9,7 @@ RUN ls
 WORKDIR /src
 RUN pwd
 RUN ls
-RUN ls /mnt/vss/_work/1/b/2/_work/docker/artifacts/
+RUN ls /mnt
 
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-cbl-mariner2.0 AS runtime
 

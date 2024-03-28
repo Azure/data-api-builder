@@ -1159,7 +1159,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the field level query filter work with list type
+        /// Tests that the field level query filter work with list type for 'notcontains' operator.
         /// </summary>
         [TestMethod]
         public async Task TestQueryFilterNotContains_WithStringArray()

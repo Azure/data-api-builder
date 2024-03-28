@@ -4,6 +4,7 @@
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
+using HotChocolate.Language;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Parsers
@@ -35,6 +36,36 @@ namespace Azure.DataApiBuilder.Core.Parsers
         {
             return BuildEntityTypes(sqlMetadataProvider)
                 .BuildEntitySets(sqlMetadataProvider);
+        }
+
+        /// <summary>
+        /// Build the model from the provided schema.
+        /// </summary>
+        /// <param name="graphQLSchemaRoot">holds the whole schema.</param>
+        /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
+        public EdmModelBuilder BuildModel(DocumentNode graphQLSchemaRoot)
+        {
+            return BuildEdmModelsForCosmos(graphQLSchemaRoot);
+        }
+
+        private EdmModelBuilder BuildEdmModelsForCosmos(DocumentNode graphQLSchemaRoot)
+        {
+            EdmEntityContainer container = new(DEFAULT_NAMESPACE, DEFAULT_CONTAINER_NAME);
+
+            foreach (ObjectTypeDefinitionNode typeDefinition in graphQLSchemaRoot.Definitions)
+            {
+                EdmEntityType edmEntity = new(DEFAULT_NAMESPACE, typeDefinition.Name.Value);
+                foreach (FieldDefinitionNode field in typeDefinition.Fields)
+                {
+                    edmEntity.AddStructuralProperty(field.Name.Value, EdmPrimitiveTypeKind.String, false);
+                }
+
+                container.AddEntitySet(name: typeDefinition.Name.Value, edmEntity);
+            }
+
+            _model.AddElement(container);
+
+            return this;
         }
 
         /// <summary>

@@ -6,21 +6,36 @@ using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
+using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
+using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
     public class CosmosSqlMetadataProvider : ISqlMetadataProvider
     {
+        private ODataParser _oDataParser = new();
+
         private readonly IFileSystem _fileSystem;
         private readonly DatabaseType _databaseType;
         private CosmosDbNoSQLDataSourceOptions _cosmosDb;
         private readonly RuntimeConfig _runtimeConfig;
         private Dictionary<string, string> _partitionKeyPaths = new();
+
+        /// <summary>
+        /// This contains each entity into EDM model convention which will be used to traverse DB Policy filter using ODataParser
+        /// </summary>
+        public EdmModel EdmModel { get; set; } = new();
+
+        /// <summary>
+        /// This dictionary contains entity name as key (or its alias) and its path(s) in the graphQL schema as value which will be used in the generated conditions for the entity
+        /// </summary>
+        public Dictionary<string, List<EntityDbPolicyCosmosModel>> EntityWithJoins { get; set; } = new();
 
         /// <inheritdoc />
         public Dictionary<string, string> GraphQLStoredProcedureExposedNameToEntityNameMap { get; set; } = new();
@@ -65,6 +80,130 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             }
 
             ParseSchemaGraphQLFieldsForGraphQLType();
+            ParseSchemaGraphQLFieldsForJoins();
+
+            InitODataParser();
+        }
+
+        /// <summary>
+        /// Initialize OData parser by building OData model.
+        /// The parser will be used for parsing filter clause and order by clause.
+        /// </summary>
+        private void InitODataParser()
+        {
+            _oDataParser.BuildModel(GraphQLSchemaRoot);
+        }
+
+        /// <summary>
+        /// Parse the schema to get the entity paths for prefixes.
+        /// It will collect all the paths for each entity and its field, starting from the container model.
+        /// </summary>
+        private void ParseSchemaGraphQLFieldsForJoins()
+        {
+            IncrementingInteger tableCounter = new();
+
+            Dictionary<string, ObjectTypeDefinitionNode> schemaDefinitions = new();
+            foreach (ObjectTypeDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
+            {
+                schemaDefinitions.Add(typeDefinition.Name.Value, typeDefinition);
+            }
+
+            foreach (IDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
+            {
+                if (typeDefinition is ObjectTypeDefinitionNode node)
+                {
+                    if (node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
+                    {
+                        string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
+
+                        EntityWithJoins.Add(
+                            modelName,
+                            new List<EntityDbPolicyCosmosModel>
+                            {
+                                new (Path: GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
+                            });
+
+                        ProcessSchema(node.Fields, schemaDefinitions, GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Once container is found, it will traverse the fields and inner fields to get the paths for each entity.
+        /// Following steps are implemented here:
+        /// 1. If the entity is not in the runtime config, skip it.
+        /// 2. If the field is an array type, we need to add an alias to the table because we need to a JOIN to the same table.
+        /// 3. Create a new EntityDbPolicyCosmosModel object and add it to the EntityWithJoins dictionary.
+        /// 4. Check if we get previous entity with join information, if yes append it to the current entity also
+        /// 5. Recursively call this function, to process the schema
+        /// </summary>
+        /// <param name="fields"></param>
+        /// <param name="schemaDocument"></param>
+        /// <param name="currentPath"></param>
+        /// <param name="previousEntity"></param>
+        private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
+            Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
+            string currentPath,
+            IncrementingInteger tableCounter,
+            EntityDbPolicyCosmosModel? previousEntity = null)
+        {
+            // Traverse the fields and add them to the path
+            foreach (FieldDefinitionNode field in fields)
+            {
+                string entityType = field.Type.NamedType().Name.Value;
+                // If the entity is not in the runtime config, skip it
+                if (!_runtimeConfig.Entities.ContainsKey(entityType))
+                {
+                    continue;
+                }
+
+                string? alias = null;
+                bool isArrayType = field.Type is ListTypeNode;
+                if (isArrayType)
+                {
+                    // Since, we don't have query structure here.
+                    // we are going to generate alias and use this counter to generate unique alias for each table at later stage.
+                    alias = $"table{tableCounter.Next()}";
+                }
+
+                EntityDbPolicyCosmosModel currentEntity = new(Path: currentPath,
+                            EntityName: entityType,
+                            ColumnName: field.Name.Value,
+                            Alias: alias);
+
+                if (EntityWithJoins.ContainsKey(entityType))
+                {
+                    EntityWithJoins[entityType].Add(currentEntity);
+                }
+                else
+                {
+                    EntityWithJoins.Add(
+                        entityType,
+                        new List<EntityDbPolicyCosmosModel>() {
+                            currentEntity
+                        });
+                }
+
+                if (previousEntity is not null)
+                {
+                    if (string.IsNullOrEmpty(currentEntity.JoinStatement))
+                    {
+                        currentEntity.JoinStatement = previousEntity.JoinStatement;
+                    }
+                    else
+                    {
+                        currentEntity.JoinStatement = previousEntity.JoinStatement + " JOIN " + currentEntity.JoinStatement;
+                    }
+                }
+
+                // If the field is an array type, we need to add an alias to the table because we need to a JOIN to the same table
+                ProcessSchema(fields: schemaDocument[entityType].Fields,
+                                schemaDocument: schemaDocument,
+                                currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
+                                tableCounter: tableCounter,
+                                previousEntity: isArrayType ? currentEntity : null);
+            }
         }
 
         /// <inheritdoc />
@@ -246,7 +385,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public ODataParser GetODataParser()
         {
-            throw new NotImplementedException();
+            return _oDataParser;
         }
 
         public IQueryBuilder GetQueryBuilder()

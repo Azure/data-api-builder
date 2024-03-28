@@ -34,7 +34,7 @@
     }
   },
   "entities": {
-    "Planet": {
+    "PlanetAlias": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -96,6 +96,14 @@
               "action": "read"
             }
           ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
         }
       ]
     },
@@ -130,10 +138,18 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
         }
       ]
     },
-    "StarAlias": {
+    "Star": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -184,7 +200,7 @@
         }
       ]
     },
-    "TagAlias": {
+    "Tag": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -278,6 +294,287 @@
         "type": {
           "singular": "Earth",
           "plural": "Earths"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "field-mutation-with-read-permission",
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
+        },
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "*"
+                ],
+                "include": [
+                  "*"
+                ]
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "limited-read-role",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id",
+                  "type"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.type eq 'earth0'"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "Sun": {
+      "source": {
+        "object": "graphqldb.planet"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Sun",
+          "plural": "Suns"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "*"
+                ]
+              }
+            },
+            {
+              "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
+    "AdditionalAttribute": {
+      "source": {
+        "object": "graphqldb.planet"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "AdditionalAttribute",
+          "plural": "AdditionalAttributes"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.name eq 'volcano0'"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "MoonAdditionalAttribute": {
+      "source": {
+        "object": "graphqldb.planet"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "MoonAdditionalAttribute",
+          "plural": "MoonAdditionalAttributes"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "item-level-permission-role",
+          "actions": [
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.name eq 'moonattr0'"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "MoreAttribute": {
+      "source": {
+        "object": "graphqldb.planet"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "MoreAttribute",
+          "plural": "MoreAttributes"
+        }
+      },
+      "rest": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "update",
+              "fields": {
+                "exclude": [
+                  "*"
+                ]
+              }
+            },
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id"
+                ]
+              }
+            },
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "name"
+                ],
+                "include": [
+                  "id"
+                ]
+              }
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
+    "PlanetAgain": {
+      "source": {
+        "object": "graphqldb.newcontainer"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "PlanetAgain",
+          "plural": "PlanetAgains"
         }
       },
       "rest": {
@@ -424,107 +721,15 @@
         }
       ]
     },
-    "Sun": {
+    "InvalidAuthModel": {
       "source": {
-        "object": "graphqldb.planet"
+        "object": "graphqldb.invalidAuthModelContainer"
       },
       "graphql": {
         "enabled": true,
         "type": {
-          "singular": "Sun",
-          "plural": "Suns"
-        }
-      },
-      "rest": {
-        "enabled": false
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "read",
-              "fields": {
-                "exclude": [
-                  "name"
-                ],
-                "include": [
-                  "*"
-                ]
-              }
-            },
-            {
-              "action": "create"
-            },
-            {
-              "action": "update"
-            },
-            {
-              "action": "delete"
-            }
-          ]
-        }
-      ]
-    },
-    "AdditionalAttribute": {
-      "source": {
-        "object": "graphqldb.planet"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "AdditionalAttribute",
-          "plural": "AdditionalAttributes"
-        }
-      },
-      "rest": {
-        "enabled": false
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ]
-    },
-    "MoonAdditionalAttribute": {
-      "source": {
-        "object": "graphqldb.planet"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "MoonAdditionalAttribute",
-          "plural": "MoonAdditionalAttributes"
-        }
-      },
-      "rest": {
-        "enabled": false
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "*"
-            }
-          ]
-        }
-      ]
-    },
-    "MoreAttrAlias": {
-      "source": {
-        "object": "graphqldb.planet"
-      },
-      "graphql": {
-        "enabled": true,
-        "type": {
-          "singular": "MoreAttribute",
-          "plural": "MoreAttributes"
+          "singular": "InvalidAuthModel",
+          "plural": "InvalidAuthModels"
         }
       },
       "rest": {

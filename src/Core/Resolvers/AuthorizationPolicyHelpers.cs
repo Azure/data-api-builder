@@ -2,10 +2,12 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
@@ -25,14 +27,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Then, the OData clause is processed for the passed in SqlQueryStructure
         /// by calling OData visitor helpers.
         /// </summary>
-        /// <param name="operation">Action to provide the authorizationResolver during policy lookup.</param>
+        /// <param name="operationType">Action to provide the authorizationResolver during policy lookup.</param>
         /// <param name="queryStructure">SqlQueryStructure object, could be a subQueryStructure which is of the same type.</param>
         /// <param name="context">The GraphQL Middleware context with request metadata like HttpContext.</param>
         /// <param name="authorizationResolver">Used to lookup authorization policies.</param>
         /// <param name="sqlMetadataProvider">Provides helper method to process ODataFilterClause.</param>
         public static void ProcessAuthorizationPolicies(
             EntityActionOperation operationType,
-            BaseSqlQueryStructure queryStructure,
+            BaseQueryStructure queryStructure,
             HttpContext context,
             IAuthorizationResolver authorizationResolver,
             ISqlMetadataProvider sqlMetadataProvider)
@@ -46,23 +48,155 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string clientRoleHeader = roleHeaderValue.ToString();
-            List<EntityActionOperation> elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
+            List<EntityActionOperation>? elementalOperations = ResolveCompoundOperationToElementalOperations(operationType);
 
+            Dictionary<string, DatabaseObject> entitiesToProcess = new();
+            if (queryStructure is BaseSqlQueryStructure baseSqlQueryStructure)
+            {
+                ProcessFilter(
+                    context: context,
+                    authorizationResolver: authorizationResolver,
+                    sqlMetadataProvider: sqlMetadataProvider,
+                    clientRoleHeader: clientRoleHeader,
+                    elementalOperations: elementalOperations,
+                    entityName: queryStructure.EntityName,
+                    entityDBObject: queryStructure.DatabaseObject,
+                    postProcessCallback: (filterClause, elementalOperation) =>
+                    {
+                        baseSqlQueryStructure.ProcessOdataClause(filterClause, elementalOperation);
+                    });
+                ;
+            }
+            else if (sqlMetadataProvider is CosmosSqlMetadataProvider cosmosSqlMetadataProvider &&
+                queryStructure is CosmosQueryStructure cosmosQueryStructure)
+            {
+                Dictionary<string, List<EntityDbPolicyCosmosModel>> entityPaths = cosmosSqlMetadataProvider.EntityWithJoins;
+
+                foreach (KeyValuePair<string, List<EntityDbPolicyCosmosModel>> entity in entityPaths)
+                {
+                    ProcessFilter(
+                        context: context,
+                        authorizationResolver: authorizationResolver,
+                        sqlMetadataProvider: cosmosSqlMetadataProvider,
+                        clientRoleHeader: clientRoleHeader,
+                        elementalOperations: elementalOperations,
+                        entityName: entity.Key,
+                        entityDBObject: null,
+                        postProcessCallback: (filterClause, _) =>
+                        {
+                            if (filterClause is null)
+                            {
+                                return;
+                            }
+
+                            foreach (EntityDbPolicyCosmosModel pathConfig in entity.Value)
+                            {
+                                string? existQuery = null;
+                                string? fromClause = string.Empty;
+                                string? predicates = string.Empty;
+
+                                if (pathConfig.Alias is not null)
+                                {
+                                    if (pathConfig.ColumnName is null || pathConfig.EntityName is null)
+                                    {
+                                        continue;
+                                    }
+                                    //Increment Table counter with the new JOIN so that we can have unique alias for each join
+                                    cosmosQueryStructure.TableCounter.Next();
+
+                                    fromClause = pathConfig.JoinStatement;
+                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(pathConfig.Alias));
+                                }
+                                else
+                                {
+                                    fromClause = $"{pathConfig.Path}.{pathConfig.ColumnName}";
+                                    predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor($"{pathConfig.Path}.{pathConfig.ColumnName}"));
+                                }
+
+                                existQuery = GetExistQueryForCosmos(fromClause, predicates);
+
+                                if (pathConfig.EntityName == entity.Key)
+                                {
+                                    if (!cosmosQueryStructure.DbPolicyPredicatesForOperations.TryGetValue(operationType, out string? _))
+                                    {
+                                        cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
+                                                        = existQuery;
+                                    }
+                                    else
+                                    {
+                                        cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
+                                                        += $" AND {existQuery}";
+                                    }
+                                }
+                            }
+                        });
+                }
+            }
+        }
+
+        /// <summary>
+        /// Generate Cosmos DB Query for the given fromClause and predicates.
+        /// </summary>
+        /// <param name="fromClause"></param>
+        /// <param name="predicates"></param>
+        /// <returns></returns>
+        private static string GetExistQueryForCosmos(string? fromClause, string? predicates)
+        {
+            string? existQuery = $"EXISTS " +
+                                $"(SELECT VALUE 1 " +
+                                    $"FROM {fromClause} ";
+            if (predicates is not null)
+            {
+                existQuery += $"WHERE {predicates})";
+            }
+            else
+            {
+                existQuery += ")";
+            }
+
+            return existQuery;
+        }
+
+        /// <summary>
+        /// It process the filter clauses for the given elemental operation.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="authorizationResolver"></param>
+        /// <param name="sqlMetadataProvider"></param>
+        /// <param name="clientRoleHeader"></param>
+        /// <param name="elementalOperations"></param>
+        /// <param name="entityName"></param>
+        /// <param name="entityDBObject"></param>
+        /// <param name="postProcessCallback"></param>
+        /// <returns></returns>
+        private static List<FilterClause> ProcessFilter(HttpContext context,
+            IAuthorizationResolver authorizationResolver,
+            ISqlMetadataProvider sqlMetadataProvider,
+            string clientRoleHeader,
+            List<EntityActionOperation> elementalOperations,
+            string entityName,
+            DatabaseObject? entityDBObject,
+            Action<FilterClause?, EntityActionOperation> postProcessCallback)
+        {
+            List<FilterClause> filterClauses = new();
             foreach (EntityActionOperation elementalOperation in elementalOperations)
             {
                 string dbQueryPolicy = authorizationResolver.ProcessDBPolicy(
-                queryStructure.EntityName,
+                entityName,
                 clientRoleHeader,
                 elementalOperation,
                 context);
 
                 FilterClause? filterClause = GetDBPolicyClauseForQueryStructure(
                     dbQueryPolicy,
-                    entityName: queryStructure.EntityName,
-                    resourcePath: queryStructure.DatabaseObject.FullName,
+                    entityName: entityName,
+                    resourcePath: (entityDBObject is not null) ? $"{entityName}.{entityDBObject.FullName}" : entityName,
                     sqlMetadataProvider);
-                queryStructure.ProcessOdataClause(filterClause, elementalOperation);
+
+                postProcessCallback(filterClause, elementalOperation);
             }
+
+            return filterClauses;
         }
 
         /// <summary>
@@ -89,7 +223,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // FilterClauseInDbPolicy is an Abstract Syntax Tree representing the parsed policy text.
                 return sqlMetadataProvider.GetODataParser().GetFilterClause(
                     filterQueryString: dbPolicyClause,
-                    resourcePath: $"{entityName}.{resourcePath}",
+                    resourcePath: resourcePath,
                     customResolver: new ClaimsTypeDataUriResolver());
             }
 

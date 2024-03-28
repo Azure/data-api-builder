@@ -261,27 +261,26 @@ mutation {{
         [TestMethod]
         [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed fields.")]
         [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no create/read operation restrictions.")]
-        [DataRow("only-create-role", "The mutation operation createEarth was successful " +
+        [DataRow("only-create-role", "The mutation operation createPlanetAgain was successful " +
             "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "Successful create operation but AuthZ failure for read when role has ONLY create permission and NO read permission.")]
         [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed field using wildcard.")]
         [DataRow("only-update-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when create permission is NOT there.")]
         public async Task CreateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
-            // Run mutation Add Earth;
+            // Run mutation Add AuthTestModel;
             string id = Guid.NewGuid().ToString();
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanetAgain (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
-            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
-            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new(), authToken: authtoken, clientRoleHeader: roleName);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanetAgain", mutation, variables: new(), authToken: authToken, clientRoleHeader: roleName);
 
             // Validate the result contains the GraphQL authorization error code.
-            Console.WriteLine(response.ToString());
             if (string.IsNullOrEmpty(expectedErrorMessage))
             {
                 Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -301,8 +300,8 @@ mutation {{
         [TestMethod]
         [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for update mutation because of reference to excluded/disallowed fields.")]
         [DataRow("authenticated", NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no update/read operation restrictions.")]
-        [DataRow("only-update-role", "The mutation operation updateEarth was successful " +
-            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure  but sucessful operation where role has ONLY update permission and NO read permission.")]
+        [DataRow("only-update-role", "The mutation operation updatePlanetAgain was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure but successful operation where role has ONLY update permission and NO read permission.")]
         [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for update mutation because of reference to excluded/disallowed field using wildcard.")]
         [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when update permission is NOT there.")]
         public async Task UpdateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
@@ -312,13 +311,13 @@ mutation {{
             const string name = "test_name";
             string createMutation = $@"
 mutation {{
-    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanetAgain (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
 
-            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createEarth", createMutation,
+            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createPlanetAgain", createMutation,
                 variables: new(),
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
                 clientRoleHeader: AuthorizationType.Authenticated.ToString());
@@ -326,10 +325,10 @@ mutation {{
             // Making sure item is created successfully
             Assert.AreEqual(id, createResponse.GetProperty("id").GetString());
 
-            // Run mutation Update Earth;
+            // Run mutation Update AuthTestModel;
             string mutation = @"
-mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
-    updateEarth (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetAgainInput!) {
+    updatePlanetAgain (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
         id
         name
      }
@@ -340,15 +339,14 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
                 name = "new_name"
             };
 
-            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "updateEarth",
+                queryName: "updatePlanetAgain",
                 query: mutation,
                 variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } },
-                authToken: authtoken,
+                authToken: authToken,
                 clientRoleHeader: roleName);
 
-            Console.WriteLine(response.ToString());
             if (string.IsNullOrEmpty(expectedErrorMessage))
             {
                 Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -368,8 +366,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         [TestMethod]
         [DataRow("field-mutation-with-read-permission", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response for delete mutation because of reference to excluded/disallowed fields.")]
         [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response when role has no delete operation restrictions.")]
-        [DataRow("only-delete-role", "The mutation operation deleteEarth was successful " +
-            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure but sucessful operation where role has ONLY delete permission and NO read permission.")]
+        [DataRow("only-delete-role", "The mutation operation deletePlanetAgain was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure but successful operation where role has ONLY delete permission and NO read permission.")]
         [DataRow("wildcard-exclude-fields-role", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response for delete mutation because of reference to excluded/disallowed fields using wildcard")]
         [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when delete permission is NOT there.")]
         public async Task DeleteItemWithAuthPermissions(string roleName, string expectedErrorMessage)
@@ -379,13 +377,13 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
             const string name = "test_name";
             string createMutation = $@"
 mutation {{
-    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanetAgain (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
 
-            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createEarth", createMutation,
+            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createPlanetAgain", createMutation,
                 variables: new(),
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
                 clientRoleHeader: AuthorizationType.Authenticated.ToString());
@@ -393,23 +391,21 @@ mutation {{
             // Making sure item is created successfully
             Assert.AreEqual(id, createResponse.GetProperty("id").GetString());
 
-            // Run mutation Update Earth;
+            // Run mutation Update AuthTestModel;
             string mutation = @"
 mutation ($id: ID!, $partitionKeyValue: String!) {
-    deleteEarth (id: $id, _partitionKeyValue: $partitionKeyValue) {
+    deletePlanetAgain (id: $id, _partitionKeyValue: $partitionKeyValue) {
         id
         name
      }
 }";
-            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "deleteEarth",
+                queryName: "deletePlanetAgain",
                 query: mutation,
                 variables: new() { { "id", id }, { "partitionKeyValue", id } },
-                authToken: authtoken,
+                authToken: authToken,
                 clientRoleHeader: roleName);
-
-            Console.WriteLine(response.ToString());
 
             if (string.IsNullOrEmpty(expectedErrorMessage))
             {

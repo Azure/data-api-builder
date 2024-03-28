@@ -2,9 +2,8 @@
 // Licensed under the MIT License.
 
 using System.Text;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
-using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -24,14 +23,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 + $" FROM {_containerAlias}");
             string predicateString = Build(structure.Predicates);
 
-            if (structure.Joins != null && structure.Joins.Count > 0)
+            structure.DbPolicyPredicatesForOperations.TryGetValue(EntityActionOperation.Read, out string? policy);
+            // If there is a predicate or policy, add a WHERE clause
+            if (!string.IsNullOrEmpty(predicateString) || !string.IsNullOrEmpty(policy))
             {
-                queryStringBuilder.Append($" {Build(structure.Joins)}");
-            }
-
-            if (!string.IsNullOrEmpty(predicateString))
-            {
-                queryStringBuilder.Append($" WHERE {predicateString}");
+                queryStringBuilder
+                    .Append(" WHERE ")
+                    .Append(string.IsNullOrEmpty(predicateString) || string.IsNullOrEmpty(policy)
+                                ? predicateString + policy
+                                : string.Join(" AND ", predicateString, policy));
             }
 
             if (structure.OrderByColumns.Count > 0)
@@ -61,7 +61,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         public override string QuoteIdentifier(string ident)
         {
-            throw new System.NotImplementedException();
+            return ident;
         }
 
         /// <summary>
@@ -108,6 +108,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return "";
                 case PredicateOperation.IS_NOT:
                     return "NOT";
+                case PredicateOperation.EXISTS:
+                    return "EXISTS";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -125,13 +127,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string predicateString;
-            if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
+            if (predicate.Left is not null)
             {
-                predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
+                // For Binary predicates:
+                if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
+                {
+                    predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
+                }
+                else
+                {
+                    predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)} ";
+                }
             }
             else
             {
-                predicateString = $"{ResolveOperand(predicate.Left)} {Build(predicate.Op)} {ResolveOperand(predicate.Right)} ";
+                // For Unary predicates, there is always a parenthesis around the operand.
+                predicateString = $"{Build(predicate.Op)} ({ResolveOperand(predicate.Right)})";
             }
 
             if (predicate.AddParenthesis)
@@ -145,29 +156,56 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Build JOIN statements which will be used in the query.
-        /// It makes sure that the same table is not joined multiple times by maintaining a set of table names.
+        /// Resolves the operand either as a column, another predicate,
+        /// a SqlQueryStructure or returns it directly as string
         /// </summary>
-        /// <param name="joinstructure"></param>
-        /// <returns></returns>
-        private static string Build(Stack<CosmosJoinStructure> joinstructure)
+        protected new string ResolveOperand(PredicateOperand? operand)
         {
-            StringBuilder joinBuilder = new();
-
-            HashSet<DatabaseObject> tableNames = new();
-            foreach (CosmosJoinStructure structure in joinstructure)
+            if (operand == null)
             {
-                if (tableNames.Contains(structure.DbObject))
-                {
-                    continue;
-                }
-
-                joinBuilder.Append($" JOIN {structure.TableAlias} IN {structure.DbObject.FullName}");
-                tableNames.Add(structure.DbObject);
+                throw new ArgumentNullException(nameof(operand));
             }
 
-            return joinBuilder.ToString();
+            Column? c;
+            string? s;
+            Predicate? p;
+            BaseQueryStructure? sqlQueryStructure;
+            if ((c = operand.AsColumn()) != null)
+            {
+                return Build(c);
+            }
+            else if ((s = operand.AsString()) != null)
+            {
+                return s;
+            }
+            else if ((p = operand.AsPredicate()) != null)
+            {
+                return Build(p);
+            }
+            else if ((sqlQueryStructure = operand.AsCosmosQueryStructure()) is not null
+                        && sqlQueryStructure is CosmosExistsQueryStructure cosmosExistsQueryStructure)
+            {
+                return Build(cosmosExistsQueryStructure);
+            }
+            else if ((sqlQueryStructure = operand.AsCosmosQueryStructure()) is not null
+                        && sqlQueryStructure is CosmosQueryStructure cosmosQueryStructure)
+            {
+                return Build(cosmosQueryStructure);
+            }
+            else
+            {
+                throw new ArgumentException("Cannot get a value from PredicateOperand to build.");
+            }
         }
 
+        /// <inheritdoc />
+        public virtual string Build(CosmosExistsQueryStructure structure)
+        {
+            string query = $"SELECT 1 " +
+                   $"FROM {QuoteIdentifier(structure.SourceAlias)} IN {QuoteIdentifier(structure.DatabaseObject.SchemaName)} " +
+                   $"WHERE {Build(structure.Predicates)}";
+
+            return query;
+        }
     }
 }

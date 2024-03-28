@@ -108,6 +108,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     return "";
                 case PredicateOperation.IS_NOT:
                     return "NOT";
+                case PredicateOperation.ARRAY_CONTAINS:
+                    return "ARRAY_CONTAINS";
+                case PredicateOperation.NOT_ARRAY_CONTAINS:
+                    return "NOT ARRAY_CONTAINS";
                 default:
                     throw new ArgumentException($"Cannot build unknown predicate operation {op}.");
             }
@@ -125,7 +129,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             string predicateString;
-            if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
+            if (predicate.Op == PredicateOperation.ARRAY_CONTAINS || predicate.Op == PredicateOperation.NOT_ARRAY_CONTAINS)
+            {
+                predicateString = $" {Build(predicate.Op)} ( {ResolveOperand(predicate.Left)}, {ResolveOperand(predicate.Right)})";
+            }
+            else if (ResolveOperand(predicate.Right).Equals(GQLFilterParser.NullStringValue))
             {
                 predicateString = $" {Build(predicate.Op)} IS_NULL({ResolveOperand(predicate.Left)})";
             }

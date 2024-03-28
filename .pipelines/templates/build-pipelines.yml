@@ -14,6 +14,22 @@ steps:
 # generate the prerelease nuget version.
 # We cannot set this in variables section above because $(isNugetRelease) 
 # is not available at pipeline compilation time.
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      [xml]$directoryBuildProps = Get-Content -Path $(Build.SourcesDirectory)/src/Directory.Build.props
+      # Get Version from Directory.Build.props
+      # When you access this XML property, it returns an array of elements (even if there's only one element with that name).
+      # To extract the actual value as a string, you need to access the first element of the array.
+      $version = $directoryBuildProps.Project.PropertyGroup.Version[0]
+      # Get Major and Minor version from the version extracted
+      $major = $version.Split([char]'.')[0]
+      $minor = $version.Split([char]'.')[1]
+      # store $major and $minor powershell variables into azure dev ops pipeline variables
+      Write-Host "##vso[task.setvariable variable=major]$major"
+      Write-Host "##vso[task.setvariable variable=minor]$minor"
+
 - bash: |
     echo IsNugetRelease = $ISNUGETRELEASE
     echo IsReleaseCandidate = $ISRELEASECANDIDATE

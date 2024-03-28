@@ -820,7 +820,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
                 {
                     HandleOrRecordException(new DataApiBuilderException(
-                        message: $"entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
+                        message: $"Entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
@@ -830,9 +830,127 @@ public class RuntimeConfigValidator : IConfigValidator
                 if (!targetEntityGraphQLDetails.Enabled)
                 {
                     HandleOrRecordException(new DataApiBuilderException(
-                        message: $"entity: {relationship.TargetEntity} is disabled for GraphQL.",
+                        message: $"Entity: {relationship.TargetEntity} is disabled for GraphQL.",
                         statusCode: HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Validation to ensure that if source fields exist, target fields exist as well.
+                if (relationship.SourceFields is not null && relationship.TargetFields is null)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity: {entityName} has source fields that are not null, but target fields that are null.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Validation to ensure that if target fields exist, source fields exist as well.
+                if (relationship.TargetFields is not null && relationship.SourceFields is null)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity: {entityName} has target fields that are not null, but source fields that are null.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                if (relationship.SourceFields is not null && relationship.TargetFields is not null)
+                {
+                    // Validation to ensure that if target and source fields exist, that they have the same number of fields.
+                    if (relationship.SourceFields.Length != relationship.TargetFields.Length)
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has {relationship.SourceFields.Length} source fields defined, " +
+                                $"but {relationship.TargetFields.Length} target fields defined.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+
+                    foreach (string sourceField in relationship.SourceFields)
+                    {
+                        // Validation to ensure that entities have valid columns matching their source fields.
+                        if (!sqlMetadataProvider.TryGetBackingColumn(entityName, sourceField, out _))
+                        {
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with source field: {sourceField} that " +
+                                    $"does not exist as a column in {entityName}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        }
+                    }
+
+                    foreach (string targetField in relationship.TargetFields)
+                    {
+                        if (!sqlMetadataProvider.TryGetBackingColumn(relationship.TargetEntity, targetField, out _))
+                        {
+                            // Validation to ensure that entities that have target fields defined, define target fields
+                            // that are valid columns in the target entity.
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with target field: {targetField} that " +
+                                    $"does not exist as a column in target entity: {relationship.TargetEntity}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        }
+                    }
+                }
+
+                if (relationship.LinkingSourceFields is not null && relationship.LinkingTargetFields is null)
+                {
+                    // Validation to ensure that if linking source fields exist that linking target fields exist as well.
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity: {entityName} has a relationship: {relationshipName} with linking source fields that are not null, " +
+                            $"but linking target fields that are null.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                if (relationship.LinkingTargetFields is not null && relationship.LinkingSourceFields is null)
+                {
+                    // Validation to ensure that if linking target fields exist that linking source fields exist as well.
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity: {entityName} has a relationship: {relationshipName} with linking target fields that are not null, " +
+                            $"but linking source fields that are null.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                if (relationship.LinkingSourceFields is not null && relationship.LinkingTargetFields is not null)
+                {
+                    if (relationship.LinkingSourceFields.Length != relationship.LinkingTargetFields.Length)
+                    {
+                        // Validation to ensure that if linking source and linking target fields exist, that they have the same number of fields. 
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has {relationship.LinkingSourceFields.Length} linking source fields defined, " +
+                                $"but {relationship.LinkingTargetFields.Length} linking target fields defined.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+
+                    foreach (string linkingSourceField in relationship.LinkingSourceFields)
+                    {
+                        if (!sqlMetadataProvider.TryGetBackingColumn(entityName, linkingSourceField, out _))
+                        {
+                            // Validation to ensure that entities have valid columns matching their linking source fields.
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with linking source field: {linkingSourceField} that " +
+                                    $"does not exist as a column in {entityName}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        }
+                    }
+
+                    foreach (string linkingTargetField in relationship.LinkingTargetFields)
+                    {
+                        if (!sqlMetadataProvider.TryGetBackingColumn(relationship.TargetEntity, linkingTargetField, out _))
+                        {
+                            // Validation to ensure that entities that have linking target fields defined, define linking target fields
+                            // that are valid columns in the target entity.
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with linking target field: {linkingTargetField} that " +
+                                    $"does not exist as a column in target entity: {relationship.TargetEntity}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        }
+                    }
                 }
 
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.

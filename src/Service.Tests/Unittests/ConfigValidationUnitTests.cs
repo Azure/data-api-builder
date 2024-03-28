@@ -859,6 +859,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual(expectedExceptionMessage, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
         [DataRow(
@@ -944,6 +945,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual(expectedExceptionMessage, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
         /// <summary>

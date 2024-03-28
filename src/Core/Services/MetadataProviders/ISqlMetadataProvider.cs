@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Maps {entityName, relationshipName} to the foreign key definition defined for the relationship.
-        /// The fk definition denotes referencing/referenced fields and whether the referencing/refereced fields
+        /// The fk definition denotes referencing/referenced fields and whether the referencing/referenced fields
         /// apply to the target or source entity as defined in the relationshp config.
         /// </summary>
         public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinitions { get; set; }

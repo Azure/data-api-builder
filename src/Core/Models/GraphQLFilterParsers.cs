@@ -429,7 +429,7 @@ public class GQLFilterParser
 
         // Add JoinPredicates to the subquery query structure so a predicate connecting
         // the outer table is added to the where clause of subquery
-        existsQuery.AddJoinPredicatesForRelatedEntityNEW(
+        existsQuery.AddJoinPredicatesForRelatedEntity(
             relationshipName: string.Empty,
             queryStructure.EntityName,
             queryStructure.SourceAlias,

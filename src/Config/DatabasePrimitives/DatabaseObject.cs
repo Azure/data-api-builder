@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
 namespace Azure.DataApiBuilder.Config.DatabasePrimitives;

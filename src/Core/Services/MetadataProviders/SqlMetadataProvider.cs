@@ -49,6 +49,13 @@ namespace Azure.DataApiBuilder.Core.Services
         // of referencing and referenced tables.
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; set; }
 
+        /// <summary>
+        /// Maps {entityName, relationshipName} to the foreign key definition defined for the relationship.
+        /// The fk definition denotes referencing/referenced fields and whether the referencing/referenced fields
+        /// apply to the target or source entity as defined in the relationshp config.
+        /// </summary>
+        public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinitions { get; set; } = new();
+
         protected IQueryExecutor QueryExecutor { get; }
 
         protected const int NUMBER_OF_RESTRICTIONS = 4;
@@ -716,11 +723,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// specified in the relationships section of this entity
         /// to gather the referencing and referenced columns from the database at a later stage.
         /// Sets the referencing and referenced tables based on the kind of relationship.
-        /// If encounter a linking object, use that as the referencing table
+        /// A linking object encountered is used as the referencing table
         /// for the foreign key definition.
-        /// There may not be a foreign key defined on the backend in which case
-        /// the relationship.source.fields and relationship.target fields are mandatory.
-        /// Initializing a definition here is an indication to find the foreign key
+        /// When no foreign key is defined in the database for the relationship,
+        /// the relationship.source.fields and relationship.target.fields are mandatory.
+        /// Initializing a FKDefinition indicates to find the foreign key
         /// between the referencing and referenced tables.
         /// </summary>
         /// <param name="entityName"></param>
@@ -741,7 +748,7 @@ namespace Azure.DataApiBuilder.Core.Services
             }
 
             string targetSchemaName, targetDbTableName, linkingTableSchema, linkingTableName;
-            foreach (EntityRelationship relationship in entity.Relationships!.Values)
+            foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
             {
                 string targetEntityName = relationship.TargetEntity;
                 if (!_entities.TryGetValue(targetEntityName, out Entity? targetEntity))
@@ -766,19 +773,27 @@ namespace Azure.DataApiBuilder.Core.Services
                     (linkingTableSchema, linkingTableName) = ParseSchemaAndDbTableName(relationship.LinkingObject)!;
                     DatabaseTable linkingDbTable = new(linkingTableSchema, linkingTableName);
                     AddForeignKeyForTargetEntity(
+                        sourceEntityName: entityName,
+                        relationshipName: relationshipName,
                         targetEntityName,
                         referencingDbTable: linkingDbTable,
                         referencedDbTable: databaseTable,
                         referencingColumns: relationship.LinkingSourceFields,
                         referencedColumns: relationship.SourceFields,
+                        referencingEntityRole: RelationshipRole.Linking,
+                        referencedEntityRole: RelationshipRole.Source,
                         relationshipData);
 
                     AddForeignKeyForTargetEntity(
+                        sourceEntityName: entityName,
+                        relationshipName: relationshipName,
                         targetEntityName,
                         referencingDbTable: linkingDbTable,
                         referencedDbTable: targetDbTable,
                         referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
+                        referencingEntityRole: RelationshipRole.Linking,
+                        referencedEntityRole: RelationshipRole.Target,
                         relationshipData);
                 }
                 else if (relationship.Cardinality == Cardinality.One)
@@ -786,73 +801,99 @@ namespace Azure.DataApiBuilder.Core.Services
                     // For Many-One OR One-One Relationships, optimistically
                     // add foreign keys from either sides in the hopes of finding their metadata
                     // at a later stage when we query the database about foreign keys.
-                    // Both or either of these may be present if its a One-One relationship,
-                    // The second fk would not be present if its a Many-One relationship.
+                    // Any of these may be present when it's a One-One relationship,
+                    // The second fk isn't present when it's a Many-One relationship.
                     // When the configuration file doesn't specify how to relate these entities,
-                    // at least 1 of the following foreign keys should be present.
+                    // at least 1 of the following foreign keys should be present (in the database metadata?).
 
                     // Adding this foreign key in the hopes of finding a foreign key
                     // in the underlying database object of the source entity referencing
                     // the target entity.
-                    // This foreign key may NOT exist for either of the following reasons:
-                    // a. this source entity is related to the target entity in an One-to-One relationship
+                    // This foreign key may NOT exist when:
+                    // a. this source entity is related to the target entity in a One-to-One relationship
                     // but the foreign key was added to the target entity's underlying source
                     // This is covered by the foreign key below.
                     // OR
                     // b. no foreign keys were defined at all.
                     AddForeignKeyForTargetEntity(
+                        sourceEntityName: entityName,
+                        relationshipName: relationshipName,
                         targetEntityName,
                         referencingDbTable: databaseTable,
                         referencedDbTable: targetDbTable,
                         referencingColumns: relationship.SourceFields,
                         referencedColumns: relationship.TargetFields,
+                        referencingEntityRole: RelationshipRole.Source,
+                        referencedEntityRole: RelationshipRole.Target,
                         relationshipData);
 
                     // Adds another foreign key definition with targetEntity.GetSourceName()
                     // as the referencingTableName - in the situation of a One-to-One relationship
                     // and the foreign key is defined in the source of targetEntity.
                     // This foreign key WILL NOT exist if its a Many-One relationship.
-                    AddForeignKeyForTargetEntity(
-                        targetEntityName,
-                        referencingDbTable: targetDbTable,
-                        referencedDbTable: databaseTable,
-                        referencingColumns: relationship.TargetFields,
-                        referencedColumns: relationship.SourceFields,
-                        relationshipData);
+                    // Skips this fk when target and source entities are the same (self-referencing).
+                    if (targetEntityName != entityName)
+                    {
+                        AddForeignKeyForTargetEntity(
+                            sourceEntityName: entityName,
+                            relationshipName: relationshipName,
+                            targetEntityName,
+                            referencingDbTable: targetDbTable,
+                            referencedDbTable: databaseTable,
+                            referencingColumns: relationship.TargetFields,
+                            referencedColumns: relationship.SourceFields,
+                            referencingEntityRole: RelationshipRole.Target,
+                            referencedEntityRole: RelationshipRole.Source,
+                            relationshipData);
+                    }
                 }
                 else if (relationship.Cardinality is Cardinality.Many)
                 {
-                    // Case of publisher(One)-books(Many)
-                    // we would need to obtain the foreign key information from the books table
+                    // Example: publisher(One)-books(Many)
+                    // Obtain the foreign key information from the books table
                     // about the publisher id so we can do the join.
-                    // so, the referencingTable is the source of the target entity.
+                    // The referencingTable (books) is the source of the target entity (publisher). //confusing language.
                     AddForeignKeyForTargetEntity(
+                        sourceEntityName: entityName,
+                        relationshipName: relationshipName,
                         targetEntityName,
                         referencingDbTable: targetDbTable,
                         referencedDbTable: databaseTable,
                         referencingColumns: relationship.TargetFields,
                         referencedColumns: relationship.SourceFields,
+                        referencingEntityRole: RelationshipRole.Target,
+                        referencedEntityRole: RelationshipRole.Source,
                         relationshipData);
                 }
             }
         }
 
         /// <summary>
-        /// Adds a new foreign key definition for the target entity
-        /// in the relationship metadata.
+        /// Adds a new foreign key definition for the target entity in the relationship metadata.
+        /// The last argument "relationshipData" is modified (hydrated with the new foreign key definition)
+        /// as a side effect of executing this function.
         /// </summary>
         private static void AddForeignKeyForTargetEntity(
+            string sourceEntityName,
+            string relationshipName,
             string targetEntityName,
             DatabaseTable referencingDbTable,
             DatabaseTable referencedDbTable,
             string[]? referencingColumns,
             string[]? referencedColumns,
+            RelationshipRole referencingEntityRole,
+            RelationshipRole referencedEntityRole,
             RelationshipMetadata relationshipData)
         {
             ForeignKeyDefinition foreignKeyDefinition = new()
             {
+                SourceEntityName = sourceEntityName,
+                RelationshipName = relationshipName,
+                ReferencingEntityRole = referencingEntityRole,
+                ReferencedEntityRole = referencedEntityRole,
                 Pair = new()
                 {
+                    RelationshipName = relationshipName,
                     ReferencingDbTable = referencingDbTable,
                     ReferencedDbTable = referencedDbTable
                 }
@@ -1556,7 +1597,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="schemaNames">List of names of the schemas to which entities belong.</param>
         /// <param name="tableNames">List of names of the entities(tables)</param>
-        /// <returns>A collection of entity names</returns>
+        /// <returns>A collection of distinct entity names</returns>
         private IEnumerable<SourceDefinition> FindAllEntitiesWhoseForeignKeyIsToBeRetrieved(
             List<string> schemaNames,
             List<string> tableNames)
@@ -1569,6 +1610,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 // by database itself.
                 if (dbObject.SourceType is EntitySourceType.Table)
                 {
+                    // We only keep track of unique tables identified.
                     if (!sourceNameToSourceDefinition.ContainsKey(dbObject.Name))
                     {
                         SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
@@ -1658,6 +1700,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     foreignKeyDefinition = new()
                     {
+                        // This function resolves foreign key definitions from the database
+                        // so we explicitly persist that information here.
+                        FkSource = FkDefSource.DatabaseSchema,
                         Pair = pair
                     };
                     pairToFkDefinition.Add(pair, foreignKeyDefinition);
@@ -1701,8 +1746,9 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Fills the table definition with the inferred foreign key metadata
+        /// Hydrates the table definition (SourceDefinition) with the inferred foreign key metadata
         /// about the referencing and referenced columns.
+        /// sourceDefinition.SourceEntityRelationshipMap
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
         /// whose definition has to be populated with foreign key information.</param>
@@ -1715,52 +1761,114 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 // For each source entities, which maps to this table definition
                 // and has a relationship metadata to be filled.
-                foreach ((_, RelationshipMetadata relationshipData)
+                foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
                     // Enumerate all the foreign keys required for all the target entities
                     // that this source is related to.
-                    IEnumerable<List<ForeignKeyDefinition>> foreignKeysForAllTargetEntities =
-                        relationshipData.TargetEntityToFkDefinitionMap.Values;
-                    // For each target, loop through each foreign key
-                    foreach (List<ForeignKeyDefinition> foreignKeysForTarget in foreignKeysForAllTargetEntities)
+                    foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        // For each foreign key between this pair of source and target entities
-                        // which needs the referencing columns,
-                        // find the fk inferred for this pair the backend and
-                        // equate the referencing columns and referenced columns.
-                        foreach (ForeignKeyDefinition fk in foreignKeysForTarget)
-                        {
-                            // if the referencing and referenced columns count > 0,
-                            // we have already gathered this information from the runtime config.
-                            if (fk.ReferencingColumns.Count > 0 && fk.ReferencedColumns.Count > 0)
-                            {
-                                continue;
-                            }
-
-                            // Add the referencing and referenced columns for this foreign key definition
-                            // for the target.
-                            if (PairToFkDefinition is not null && PairToFkDefinition.TryGetValue(
-                                    fk.Pair, out ForeignKeyDefinition? inferredDefinition))
-                            {
-                                // Only add the referencing columns if they have not been
-                                // specified in the configuration file.
-                                if (fk.ReferencingColumns.Count == 0)
-                                {
-                                    fk.ReferencingColumns.AddRange(inferredDefinition.ReferencingColumns);
-                                }
-
-                                // Only add the referenced columns if they have not been
-                                // specified in the configuration file.
-                                if (fk.ReferencedColumns.Count == 0)
-                                {
-                                    fk.ReferencedColumns.AddRange(inferredDefinition.ReferencedColumns);
-                                }
-                            }
-                        }
+                        // 
+                        // Scenario 1: When a FK constraint is defined between source and target entities in the database.
+                        // In this case, there will be exactly one ForeignKeyDefinition with the right pair of Referencing and Referenced tables. 
+                        // Scenario 2: When no FK constraint is defined between source and target entities and the relationship fields are configured through the config,
+                        // two entries are present in fkDefinitionsToTarget. 
+                        // First entry: Referencing table: Source entity, Referenced table: Target entity
+                        // Second entry: Referencing table: Target entity, Referenced table: Source entity 
+                        List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = GetValidatedFKs(fKDefinitionsToTarget);
+                        relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Loops over all the foreign key definitions defined for the target entity in the source entity's definition
+        /// and adds to the set of validated FK definitions:
+        /// 1. All the FK definitions which actually map to a foreign key constraint defined in the database.
+        ///    - When the source/target fields are also provided in the config, they are given precedence over the FK constraint.
+        /// 2. FK definitions for custom relationships defined by the user in the configuration file where no FK constraint exists between
+        /// the pair of (source, target) entities.
+        /// </summary>
+        /// <param name="fKDefinitionsToTarget">List of FK definitions defined in the runtime config from source to target.</param>
+        /// <returns>List of validated FK definitions from source to target.</returns>
+        private List<ForeignKeyDefinition> GetValidatedFKs(
+            List<ForeignKeyDefinition> fKDefinitionsToTarget)
+        {
+            List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = new();
+            foreach (ForeignKeyDefinition configResolvedFkDefinition in fKDefinitionsToTarget)
+            {
+                // This code block adds FK definitions between source and target entities when there is an FK constraint defined
+                // in the database, either from source->target or target->source entities or both.
+
+                // Check whether we resolved a foreign key definition from the database for the current
+                // configResolvedFkDefinition's {referencing -> referenced} entity pair.
+                if (PairToFkDefinition is not null &&
+                    PairToFkDefinition.TryGetValue(configResolvedFkDefinition.Pair, out ForeignKeyDefinition? inferredFKDefinition))
+                {
+                    // Being here indicates that we inferred an FK constraint for the current FK represented by a relationship in the runtime config.
+                    // The count of referencing and referenced columns being > 0 indicates that source.fields and target.fields 
+                    // have been specified in the config file.
+                    // Precedence is given to the fields configured in the config file. So, the existing FK definition is retained as is.
+                    if (configResolvedFkDefinition.ReferencingColumns.Count > 0 && configResolvedFkDefinition.ReferencedColumns.Count > 0)
+                    {
+                        validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
+                        EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
+                        RelationshipToFkDefinitions.Add(key, configResolvedFkDefinition);
+                    }
+                    // The count of referenced and referencing columns being = 0 indicates that source.fields and target.fields 
+                    // are not provided in the config file. Here, we consider the database inferred FKDefinition as the "validated FK definition."
+                    // and discard the config resolved FK definition.
+                    else
+                    {
+                        // FKDefinitions inferred from the db have no knowledge of relationship names in the config.
+                        validatedFKDefinitionsToTarget.Add(inferredFKDefinition);
+                        EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
+                        configResolvedFkDefinition.ReferencedColumns = inferredFKDefinition.ReferencedColumns;
+                        configResolvedFkDefinition.ReferencingColumns = inferredFKDefinition.ReferencingColumns;
+                        // Here we copy the config resolved FKDefinition's relationship name to the inferred FKDefinition.
+                        RelationshipToFkDefinitions.TryAdd(key, configResolvedFkDefinition);
+                    }
+                }
+                else
+                {
+                    // This code block adds FK definitions between source and target entities when there is no FK constraint defined
+                    // in the database, either from source->target or target->source entities.
+
+                    // Being here indicates that we did not find an FK constraint in the database for the current FK definition.
+                    // But this does not indicate absence of an FK constraint between the source, target entities yet.
+                    // This may happen when an FK constraint exists between two tables, but in an order opposite to the order
+                    // of referencing and referenced tables present in the current FK definition. This happens because for a relationship
+                    // with right cardinality as 1, we add FK definitons from both source->target and target->source to the source entity's definition.
+                    // because at that point we don't know if the relationship is an N:1 relationship or a 1:1 relationship.
+                    // So here, we need to remove the wrong FK definition for:
+                    // 1. N:1 relationships,
+                    // 2. 1:1 relationships where an FK constraint exists only from source->target or target->source but not both.
+
+                    // E.g. for a relationship between Book-Publisher entities with cardinality 1, we would have added a Foreign key definition
+                    // from Book->Publisher and Publisher->Book to Book's source definition earlier.
+                    // Since it is an N:1 relationship, it might have been the case that the current FK definition had
+                    // 'publishers' table as the referencing table and 'books' table as the referenced table, and hence,
+                    // we did not find any FK constraint. But an FK constraint does exist where 'books' is the referencing table
+                    // while the 'publishers' is the referenced table.
+                    // (The definition for that constraint would be taken care of while adding database FKs above.)
+
+                    // So, before concluding that there is no FK constraint between the source, target entities, we need
+                    // to confirm absence of FK constraint from source->target and target->source tables.
+                    RelationShipPair inverseFKPair = new(configResolvedFkDefinition.Pair.ReferencedDbTable, configResolvedFkDefinition.Pair.ReferencingDbTable);
+
+                    // Add FK definition to the set of validated FKs only if no FK constraint is defined for the source and target entities
+                    // in the database, either from source -> target or target -> source.
+                    if (PairToFkDefinition is not null && !PairToFkDefinition.ContainsKey(inverseFKPair))
+                    {
+                        validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
+                        EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
+                        RelationshipToFkDefinitions.Add(key, configResolvedFkDefinition);
+                    }
+                }
+            }
+
+            return validatedFKDefinitionsToTarget;
         }
 
         /// <summary>

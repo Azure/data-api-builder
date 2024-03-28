@@ -15,7 +15,6 @@ using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
-using Microsoft.Azure.Cosmos.Serialization.HybridRow.RecordIO;
 using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
@@ -946,7 +945,7 @@ public class RuntimeConfigValidator : IConfigValidator
                             // Validation to ensure that entities that have linking target fields defined, define linking target fields
                             // that are valid columns in the target entity.
                             HandleOrRecordException(new DataApiBuilderException(
-                                message: $"Entity: {entityName} has a relationship: {relationshipName} with target field: {linkingTargetField} that " +
+                                message: $"Entity: {entityName} has a relationship: {relationshipName} with linking target field: {linkingTargetField} that " +
                                     $"does not exist as a column in target entity: {relationship.TargetEntity}.",
                                 statusCode: HttpStatusCode.ServiceUnavailable,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));

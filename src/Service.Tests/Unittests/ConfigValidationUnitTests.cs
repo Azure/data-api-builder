@@ -631,6 +631,321 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
         }
 
+        [DataRow(new[] { "non null" }, null, "Entity: SampleEntity1 has source fields that are not null, but target fields that are null.",
+            DisplayName = "sourceFields exist but targetFields are null")]
+        [DataRow(null, new[] { "non null" }, "Entity: SampleEntity1 has target fields that are not null, but source fields that are null.",
+            DisplayName = "targetFields exist but sourceFields are null")]
+        [DataRow(new[] { "A", "B", "C" }, new[] { "1", "2" }, "Entity: SampleEntity1 has 3 source fields defined, but 2 target fields defined.",
+            DisplayName = "sourceFields and targetFields have different length.")]
+        [DataTestMethod]
+        public void TestRelationshipWithoutSourceAndTargetFieldsMatching(
+            string[] sourceFields,
+            string[] targetFields,
+            string expectedExceptionMessage)
+        {
+            // Creating an EntityMap with two sample entity
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
+                sourceEntity: "SampleEntity1",
+                targetEntity: "SampleEntity2",
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null
+            );
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap));
+
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable("dbo", "TEST_SOURCE1")
+                },
+
+                {
+                    "SampleEntity2",
+                    new DatabaseTable("dbo", "TEST_SOURCE2")
+                }
+            };
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            // Exception is thrown since sourceFields and targetFields do not match in either their existence,
+            // or their length.
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+            Assert.AreEqual(expectedExceptionMessage, ex.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        [DataRow(new[] { "field without backing column" }, new[] { "field with backing column" },
+            "Entity: SampleEntity1 has a relationship: rname1 with source field: field without backing column " +
+            "that does not exist as a column in SampleEntity1.",
+            DisplayName = "sourceField does not exist as valid backing column in source entity.")]
+        [DataRow(new[] { "field with backing column" }, new[] { "field without backing column" },
+            "Entity: SampleEntity1 has a relationship: rname1 with target field: field without backing column that " +
+            "does not exist as a column in target entity: SampleEntity2.",
+            DisplayName = "targetField does not exist as valid backing column in target entity.")]
+        [DataTestMethod]
+        public void TestRelationshipWithoutSourceAndTargetFieldsAsValidBackingColumns(
+            string[] sourceFields,
+            string[] targetFields,
+            string expectedExceptionMessage)
+        {
+            // Creating an EntityMap with two sample entity
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
+                sourceEntity: "SampleEntity1",
+                targetEntity: "SampleEntity2",
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: null,
+                linkingSourceFields: null,
+                linkingTargetFields: null
+            );
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap));
+
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable("dbo", "TEST_SOURCE1")
+                },
+
+                {
+                    "SampleEntity2",
+                    new DatabaseTable("dbo", "TEST_SOURCE2")
+                }
+            };
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+            string discard;
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "field without backing column", out discard)).Returns(false);
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "field with backing column", out discard)).Returns(true);
+
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            // Exception is thrown since either source or target field does not exist as a valid backing column in their respective entity.
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+            Assert.AreEqual(expectedExceptionMessage, ex.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+        }
+
+        [DataRow(
+            new string[] { "sourceField" },
+            new string[] { "non null" },
+            new string[] { "targetField" },
+            null,
+            "SampleEntity2",
+            "Entity: SampleEntity1 has a relationship: rname1 with linking source fields that are not null, " +
+                "but linking target fields that are null.",
+            DisplayName = "Linking source fields are non null, but linking target fields are null.")]
+        [DataRow(
+            new string[] { "sourceField" },
+            null,
+            new string[] { "targetField" },
+            new string[] { "non null" },
+            "SampleEntity2",
+            "Entity: SampleEntity1 has a relationship: rname1 with linking target fields that are not null, " +
+                "but linking source fields that are null.",
+            DisplayName = "Linking target fields are non null, but linking source fields are null.")]
+        [DataRow(
+            new string[] { "sourceField" },
+            new string[] { "A", "B", "C" },
+            new string[] { "targetField" },
+            new string[] { "1", "2" },
+            "SampleEntity2",
+            "Entity: SampleEntity1 has 3 linking source fields defined, but 2 linking target fields defined.",
+            DisplayName = "Linking source fields and linking target fields are different length.")]
+        [DataTestMethod]
+        public void TestRelationshipWithoutLinkingSourceAndTargetFieldsMatching(
+            string[] sourceFields,
+            string[] linkingSourceFields,
+            string[] targetFields,
+            string[] linkingTargetFields,
+            string relationshipEntity,
+            string expectedExceptionMessage)
+        {
+            // Creating an EntityMap with two sample entity
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
+                sourceEntity: "SampleEntity1",
+                targetEntity: "SampleEntity2",
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: "TEST_SOURCE_LINK",
+                linkingSourceFields: linkingSourceFields,
+                linkingTargetFields: linkingTargetFields
+            );
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap));
+
+            // Mocking EntityToDatabaseObject
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable("dbo", "TEST_SOURCE1")
+                },
+
+                {
+                    "SampleEntity2",
+                    new DatabaseTable("dbo", "TEST_SOURCE2")
+                }
+            };
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            string discard;
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
+
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            // Exception thrown as linking source fields exist, but linking target fields are null.
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+            Assert.AreEqual(expectedExceptionMessage, ex.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+        }
+
+        [DataRow(
+            new string[] { "field with backing column" },
+            new string[] { "field without backing column" },
+            new string[] { "field with backing column" },
+            new string[] { "field with backing column" },
+            "SampleEntity2",
+            "Entity: SampleEntity1 has a relationship: rname1 with linking source field: field without backing column that " +
+            "does not exist as a column in SampleEntity1.",
+            DisplayName = "linkingSourceField does not exist as valid backing column in source entity.")]
+        [DataRow(
+            new string[] { "field with backing column" },
+            new string[] { "field with backing column" },
+            new string[] { "field with backing column" },
+            new string[] { "field without backing column" },
+            "SampleEntity2",
+            "Entity: SampleEntity1 has a relationship: rname1 with linking target field: field without backing column that " +
+            "does not exist as a column in target entity: SampleEntity2.",
+            DisplayName = "linkingTargetField does not exist as valid backing column in target entity.")]
+        [DataTestMethod]
+        public void TestRelationshipWithoutLinkingSourceAndTargetFieldsAsValidBackingColumns(
+            string[] sourceFields,
+            string[] linkingSourceFields,
+            string[] targetFields,
+            string[] linkingTargetFields,
+            string relationshipEntity,
+            string expectedExceptionMessage)
+        {
+            // Creating an EntityMap with two sample entity
+            Dictionary<string, Entity> entityMap = GetSampleEntityMap(
+                sourceEntity: "SampleEntity1",
+                targetEntity: "SampleEntity2",
+                sourceFields: sourceFields,
+                targetFields: targetFields,
+                linkingObject: "TEST_SOURCE_LINK",
+                linkingSourceFields: linkingSourceFields,
+                linkingTargetFields: linkingTargetFields
+            );
+
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                    Rest: new(),
+                    GraphQL: new(),
+                    Host: new(null, null)
+                ),
+                Entities: new(entityMap));
+
+            // Mocking EntityToDatabaseObject
+            MockFileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
+
+            Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
+            {
+                {
+                    "SampleEntity1",
+                    new DatabaseTable("dbo", "TEST_SOURCE1")
+                },
+
+                {
+                    "SampleEntity2",
+                    new DatabaseTable("dbo", "TEST_SOURCE2")
+                }
+            };
+
+            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
+                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
+
+            string discard;
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "field without backing column", out discard)).Returns(false);
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "field with backing column", out discard)).Returns(true);
+
+            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
+            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
+
+            // Exception thrown as linking source fields exist, but linking target fields are null.
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
+                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+            Assert.AreEqual(expectedExceptionMessage, ex.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+        }
+
         /// <summary>
         /// Test method to validate that an appropriate exception is thrown when there is
         /// one or more empty claimtypes specified in the database policy.
@@ -1367,8 +1682,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// Returns Dictionary containing pair of string and entity.
         /// It creates two sample entities and forms relationship between them.
         /// </summary>
-        /// <param name="source">Database name of entity.</param>
-        /// <param name="relationshipMap">Dictionary containing {relationshipName, Relationship}</param>
+        /// <param name="sourceEntity">Name of the source entity.</param>
+        /// <param name="targetEntity">Name of the target entity.</param>
+        /// <param name="sourceFields">List of strings representing the source field names.</param>
+        /// <param name="targetFields">List of strings representing the target field names.</param>
+        /// <param name="linkingObject">Name of the linking object.</param>
+        /// <param name="linkingSourceFields">List of strings representing the linking source field names.</param>
+        /// <param name="linkingTargetFields">List of strings representing the linking target field names.</param>
         private static Dictionary<string, Entity> GetSampleEntityMap(
             string sourceEntity,
             string targetEntity,

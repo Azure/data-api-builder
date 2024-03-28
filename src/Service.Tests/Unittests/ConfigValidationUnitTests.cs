@@ -342,10 +342,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// And the relationship is not defined in the database.
         /// Also verify that after adding foreignKeyPair in the Database, no exception is thrown.
         /// </summary>
-        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "LinkingSourceField is null")]
-        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", DisplayName = "SourceField is null")]
-        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", DisplayName = "LinkingTargetField is null")]
-        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", DisplayName = "TargetField is null")]
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity1", DisplayName = "LinkingSourceField is null")]
+        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity1", DisplayName = "SourceField is null")]
         [DataTestMethod]
         public void TestRelationshipWithLinkingObjectNotHavingRequiredFields(
             string[] sourceFields,
@@ -403,6 +401,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup(x =>
                 x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
+            string discard;
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
+
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
@@ -437,21 +438,21 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// LinkingSourceField OR SourceFields are null but relationship between source and linking object exists, no relationship between target and linking object
         /// LinkingTargetField OR TargetField are null but relationship between target and linking object exists, no relationship between source and linking object
         /// </summary>
-        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", false, true, false,
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity1", false, true, false,
             DisplayName = "LinkingSourceField is null, only ForeignKeyPair between LinkingObject and target is present. Invalid Case.")]
-        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", false, true, false,
+        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity1", false, true, false,
             DisplayName = "SourceField is null, only ForeignKeyPair between LinkingObject and target is present.  Invalid Case.")]
-        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", true, false, false,
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity2", true, false, false,
             DisplayName = "LinkingTargetField is null, only ForeignKeyPair between LinkingObject and source is present. Invalid Case.")]
-        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", true, false, false,
+        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", true, false, false,
             DisplayName = "TargetField is null, , only ForeignKeyPair between LinkingObject and source is present. Invalid Case.")]
-        [DataRow(new string[] { "id" }, null, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", true, false, true,
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity1", true, false, true,
             DisplayName = "LinkingSourceField is null, only ForeignKeyPair between LinkingObject and target is present. Valid Case.")]
-        [DataRow(null, new string[] { "token_id" }, new string[] { "num" }, new string[] { "book_num" }, "SampleEntity1", true, false, true,
+        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity1", true, false, true,
             DisplayName = "SourceField is null, only ForeignKeyPair between LinkingObject and target is present. Valid Case.")]
-        [DataRow(new string[] { "id" }, new string[] { "token_id" }, new string[] { "num" }, null, "SampleEntity2", false, true, true,
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity2", false, true, true,
             DisplayName = "LinkingTargetField is null, only ForeignKeyPair between LinkingObject and source is present. Valid Case.")]
-        [DataRow(new string[] { "id" }, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", false, true, true,
+        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", false, true, true,
             DisplayName = "TargetField is null, , only ForeignKeyPair between LinkingObject and source is present. Valid Case.")]
         [DataTestMethod]
         public void TestRelationshipForCorrectPairingOfLinkingObjectWithSourceAndTarget(
@@ -523,6 +524,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 x.VerifyForeignKeyExistsInDB(
                     new DatabaseTable("dbo", "TEST_SOURCE_LINK"), new DatabaseTable("dbo", "TEST_SOURCE2")
                 )).Returns(isForeignKeyPairBetTargetAndLinkingObject);
+
+            string discard;
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);

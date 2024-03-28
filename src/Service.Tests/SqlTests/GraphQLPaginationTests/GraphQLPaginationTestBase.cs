@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                   ""title"": ""Before Sunset""
                 }
               ],
-              ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":14,\"Direction\":0}}]") + @""",
+              ""endCursor"": null,
               ""hasNextPage"": false
             }";
 
@@ -196,7 +196,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             object afterValue,
             object endCursorValue,
             object afterIdValue,
-            object endCursorIdValue)
+            object endCursorIdValue,
+            bool isLastPage)
         {
             string graphQLQueryName = "supportedTypes";
             string after;
@@ -212,14 +213,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             }
 
             string graphQLQuery = @"{
-                supportedTypes(first: 3," + $"after: \"{after}\" " +
+                supportedTypes(first: 2," + $"after: \"{after}\" " +
                  $"orderBy: {{ {exposedFieldName} : ASC }} )" + @"{
                     endCursor
                 }
             }";
 
             JsonElement root = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
-            string actual = SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
+            string actual = root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString();
+            // Decode if not null
+            actual = string.IsNullOrEmpty(actual) ? "null" : SqlPaginationUtil.Base64Decode(root.GetProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME).GetString());
             string expected;
             if ("typeid".Equals(exposedFieldName))
             {
@@ -229,6 +232,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             {
                 expected = $"[{{\"EntityName\":\"SupportedType\",\"FieldName\":\"{exposedFieldName}\",\"FieldValue\":{endCursorValue},\"Direction\":0}}," +
                     $"{{\"EntityName\":\"SupportedType\",\"FieldName\":\"typeid\",\"FieldValue\":{endCursorIdValue},\"Direction\":0}}]";
+            }
+
+            if (isLastPage)
+            {
+                expected = "null";
             }
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -350,7 +358,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                           ""title"": ""US history in a nutshell""
                         }
                       ],
-                      ""endCursor"": """ + SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":4,\"Direction\":0}}]") + @""",
+                      ""endCursor"": null,
                       ""hasNextPage"": false
                     }
                   }
@@ -573,8 +581,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
-            after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Review\",\"FieldName\":\"book_id\",\"FieldValue\":1,\"Direction\":0}}," +
-                $"{{\"EntityName\":\"Review\",\"FieldName\":\"id\",\"FieldValue\":569,\"Direction\":0}}]");
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [
@@ -588,7 +594,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
               ],
               ""hasNextPage"": false,
-              ""endCursor"": """ + after + @"""
+              ""endCursor"": null
             }";
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
@@ -625,8 +631,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                   ""publisher_id"": 2345
                 }
               ],
-              ""endCursor"": """ +
-                SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Book\",\"FieldName\":\"id\",\"FieldValue\":4,\"Direction\":0}}]") + @""",
+              ""endCursor"": null,
               ""hasNextPage"": false
             }";
 

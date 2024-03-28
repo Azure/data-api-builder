@@ -25,42 +25,66 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
         /// <inheritdoc />
         [DataTestMethod]
-        [DataRow("typeid", 1, 4, "", "",
+        [DataRow("typeid", 1, 3, "", "", false,
             DisplayName = "Test after token for primary key with mapped name.")]
-        [DataRow("short_types", -32768, 32767, 3, 4, DisplayName = "Test after token for short values.")]
-        [DataRow("int_types", -2147483648, 2147483647, 3, 4,
+        [DataRow("typeid", 4, 6, "", "", true,
+            DisplayName = "Test after token for primary key with mapped name for last page.")]
+        [DataRow("short_types", -32768, 1, 3, 1, false, DisplayName = "Test after token for short values.")]
+        [DataRow("short_types", 1, "", 1, "", true, DisplayName = "Test after token for short values for last page.")]
+        [DataRow("int_types", -2147483648, 1, 3, 1, false,
             DisplayName = "Test after token for int values.")]
-        [DataRow("long_types", -9223372036854775808, 9.223372036854776E+18, 3, 4,
+        [DataRow("int_types", 1, "", 1, "", true,
+            DisplayName = "Test after token for int values for last page.")]
+        [DataRow("long_types", -9223372036854775808, 1, 3, 1, false,
             DisplayName = "Test after token for long values.")]
-        [DataRow("string_types", "\"\"", "\"null\"", 1, 4,
+        [DataRow("long_types", 1, "", 1, "", true,
+            DisplayName = "Test after token for long values for last page.")]
+        [DataRow("string_types", "\"\"", "\"lksa;jdflasdf;alsdflksdfkldj\"", 1, 2, false,
             DisplayName = "Test after token for string values.")]
-        [DataRow("single_types", -3.39E38, 3.4E38, 3, 4,
+        [DataRow("string_types", "null", "", 3, "", true,
+            DisplayName = "Test after token for string values for last page.")]
+        [DataRow("single_types", -3.39E38, .33, 3, 1, false,
             DisplayName = "Test after token for single values.")]
-        [DataRow("float_types", -1.7E308, 1.7E308, 3, 4,
+        [DataRow("single_types", .33, "", 1, "", true,
+            DisplayName = "Test after token for single values for last page.")]
+        [DataRow("float_types", -1.7E308, .33, 3, 1, false,
             DisplayName = "Test after token for float values.")]
-        [DataRow("decimal_types", -9.292929, 0.333333, 2, 1,
+        [DataRow("float_types", .33, "", 1, "", true,
+            DisplayName = "Test after token for float values for last page.")]
+        [DataRow("decimal_types", -9.292929, 0.0000000000000292929, 2, 4, false,
             DisplayName = "Test after token for decimal values.")]
-        [DataRow("boolean_types", "false", "true", 2, 4,
+        [DataRow("decimal_types", 0.333333, "", 1, "", true,
+            DisplayName = "Test after token for decimal values for last page.")]
+        [DataRow("boolean_types", "false", "true", 2, 3, false,
             DisplayName = "Test after token for boolean values.")]
+        [DataRow("boolean_types", "true", "", 3, "", true,
+            DisplayName = "Test after token for boolean values for last page.")]
         [DataRow("datetime_types", "\"1753-01-01T00:00:00.000\"",
-            "\"9999-12-31T23:59:59.997\"", 3, 4,
+            "\"1999-01-08T10:23:54\"", 3, 1, false,
             DisplayName = "Test after token for datetime values.")]
-        [DataRow("bytearray_types", "\"AAAAAA==\"", "\"/////w==\"", 3, 4,
+        [DataRow("datetime_types", "\"9999-12-31T23:59:59\"",
+            "", 4, "", true,
+            DisplayName = "Test after token for datetime values for last page.")]
+        [DataRow("bytearray_types", "\"AAAAAA==\"", "\"q83vASM=\"", 3, 1, false,
             DisplayName = "Test after token for bytearray values.")]
+        [DataRow("bytearray_types", "\"q83vASM=\"", "", 1, "", true,
+            DisplayName = "Test after token for bytearray values for last page.")]
         [TestMethod]
         public override async Task RequestAfterTokenOnly(
             string exposedFieldName,
             object afterValue,
             object endCursorValue,
             object afterIdValue,
-            object endCursorIdValue)
+            object endCursorIdValue,
+            bool isLastPage)
         {
             await base.RequestAfterTokenOnly(
                 exposedFieldName,
                 afterValue,
                 endCursorValue,
                 afterIdValue,
-                endCursorIdValue);
+                endCursorIdValue,
+                isLastPage);
         }
     }
 }

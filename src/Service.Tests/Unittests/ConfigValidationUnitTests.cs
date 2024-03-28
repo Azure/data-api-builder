@@ -446,13 +446,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "LinkingTargetField is null, only ForeignKeyPair between LinkingObject and source is present. Invalid Case.")]
         [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", true, false, false,
             DisplayName = "TargetField is null, , only ForeignKeyPair between LinkingObject and source is present. Invalid Case.")]
-        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity1", true, false, true,
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity1", true, true, true,
             DisplayName = "LinkingSourceField is null, only ForeignKeyPair between LinkingObject and target is present. Valid Case.")]
-        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity1", true, false, true,
+        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity1", true, true, true,
             DisplayName = "SourceField is null, only ForeignKeyPair between LinkingObject and target is present. Valid Case.")]
-        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity2", false, true, true,
+        [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity2", true, true, true,
             DisplayName = "LinkingTargetField is null, only ForeignKeyPair between LinkingObject and source is present. Valid Case.")]
-        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", false, true, true,
+        [DataRow(null, new string[] { "token_id" }, null, new string[] { "book_num" }, "SampleEntity2", true, true, true,
             DisplayName = "TargetField is null, , only ForeignKeyPair between LinkingObject and source is present. Valid Case.")]
         [DataTestMethod]
         public void TestRelationshipForCorrectPairingOfLinkingObjectWithSourceAndTarget(

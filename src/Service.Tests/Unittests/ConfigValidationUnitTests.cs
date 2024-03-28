@@ -269,7 +269,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
-            Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} used for relationship is not defined in the config.", ex.Message);
+            Assert.AreEqual($"Entity: {sampleRelationship.TargetEntity} used for relationship is not defined in the config.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         }
 
@@ -332,7 +332,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
                 configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
-            Assert.AreEqual($"entity: {sampleRelationship.TargetEntity} is disabled for GraphQL.", ex.Message);
+            Assert.AreEqual($"Entity: {sampleRelationship.TargetEntity} is disabled for GraphQL.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         }
 

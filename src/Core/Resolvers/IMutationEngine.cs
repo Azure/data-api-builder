@@ -4,6 +4,7 @@
 using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Service.Exceptions;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,12 +42,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Authorization check on mutation fields provided in a GraphQL Mutation request.
         /// </summary>
-        /// <param name="context">Middleware context of the mutation</param>
+        /// <param name="context">GraphQL request context.</param>
+        /// <param name="clientRole">Client role header value extracted from the middleware context of the mutation</param>
         /// <param name="parameters">parameters in the mutation query.</param>
         /// <param name="entityName">entity name</param>
         /// <param name="mutationOperation">mutation operation</param>
         /// <exception cref="DataApiBuilderException"></exception>
-        public void AuthorizeMutationFields(
+        public void AuthorizeMutation(
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,

@@ -20,7 +20,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// The item field's metadata is of type OperationEntityInput
         /// i.e. CreateBookInput
         /// </summary>
-        public const string INPUT_ARGUMENT_NAME = "item";
+        public const string ITEM_INPUT_ARGUMENT_NAME = "item";
+        public const string ARRAY_INPUT_ARGUMENT_NAME = "items";
 
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing mutations
@@ -30,13 +31,15 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="entities">Map of entityName -> EntityMetadata</param>
         /// <param name="entityPermissionsMap">Permissions metadata defined in runtime config.</param>
         /// <param name="dbObjects">Database object metadata</param>
+        /// <param name="IsMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
         /// <returns>Mutations DocumentNode</returns>
         public static DocumentNode Build(
             DocumentNode root,
             Dictionary<string, DatabaseType> databaseTypes,
             RuntimeEntities entities,
             Dictionary<string, EntityMetadata>? entityPermissionsMap = null,
-            Dictionary<string, DatabaseObject>? dbObjects = null)
+            Dictionary<string, DatabaseObject>? dbObjects = null,
+            bool IsMultipleCreateOperationEnabled = false)
         {
             List<FieldDefinitionNode> mutationFields = new();
             Dictionary<NameNode, InputObjectTypeDefinitionNode> inputs = new();
@@ -47,19 +50,17 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 {
                     string dbEntityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
                     NameNode name = objectTypeDefinitionNode.Name;
-
+                    Entity entity = entities[dbEntityName];
                     // For stored procedures, only one mutation is created in the schema
                     // unlike table/views where we create one for each CUD operation.
-                    if (entities[dbEntityName].Source.Type is EntitySourceType.StoredProcedure)
+                    if (entity.Source.Type is EntitySourceType.StoredProcedure)
                     {
                         // check graphql sp config
-                        string entityName = ObjectTypeToEntityName(objectTypeDefinitionNode);
-                        Entity entity = entities[entityName];
                         bool isSPDefinedAsMutation = (entity.GraphQL.Operation ?? GraphQLOperation.Mutation) is GraphQLOperation.Mutation;
 
                         if (isSPDefinedAsMutation)
                         {
-                            if (dbObjects is not null && dbObjects.TryGetValue(entityName, out DatabaseObject? dbObject) && dbObject is not null)
+                            if (dbObjects is not null && dbObjects.TryGetValue(dbEntityName, out DatabaseObject? dbObject) && dbObject is not null)
                             {
                                 AddMutationsForStoredProcedure(dbEntityName, entityPermissionsMap, name, entities, mutationFields, dbObject);
                             }
@@ -75,7 +76,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                     else
                     {
                         string returnEntityName = databaseTypes[dbEntityName] is DatabaseType.DWSQL ? GraphQLUtils.DB_OPERATION_RESULT_TYPE : name.Value;
-                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
+                        AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName, IsMultipleCreateOperationEnabled);
                         AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
                         AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
                     }
@@ -109,6 +110,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <param name="databaseType"></param>
         /// <param name="entities"></param>
         /// <param name="mutationFields"></param>
+        /// <param name="IsMultipleCreateOperationEnabled">Indicates whether multiple create operation is enabled</param>
         /// <exception cref="ArgumentOutOfRangeException"></exception>
         private static void AddMutations(
             string dbEntityName,
@@ -121,7 +123,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             DatabaseType databaseType,
             RuntimeEntities entities,
             List<FieldDefinitionNode> mutationFields,
-            string returnEntityName
+            string returnEntityName,
+            bool IsMultipleCreateOperationEnabled = false
             )
         {
             IEnumerable<string> rolesAllowedForMutation = IAuthorizationResolver.GetRolesForOperation(dbEntityName, operation: operation, entityPermissionsMap);
@@ -130,7 +133,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 switch (operation)
                 {
                     case EntityActionOperation.Create:
-                        mutationFields.Add(CreateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, databaseType, entities, dbEntityName, returnEntityName, rolesAllowedForMutation));
+                        // Get the create one/many fields for the create mutation.
+                        IEnumerable<FieldDefinitionNode> createMutationNodes = CreateMutationBuilder.Build(name,
+                                                                                                           inputs,
+                                                                                                           objectTypeDefinitionNode,
+                                                                                                           root,
+                                                                                                           databaseType,
+                                                                                                           entities,
+                                                                                                           dbEntityName,
+                                                                                                           returnEntityName,
+                                                                                                           rolesAllowedForMutation,
+                                                                                                           IsMultipleCreateOperationEnabled);
+                        mutationFields.AddRange(createMutationNodes);
                         break;
                     case EntityActionOperation.Update:
                         mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));

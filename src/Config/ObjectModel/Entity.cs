@@ -32,6 +32,9 @@ public record Entity
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
     public EntityCacheOptions? Cache { get; init; }
 
+    [JsonIgnore]
+    public bool IsLinkingEntity { get; init; }
+
     [JsonConstructor]
     public Entity(
         EntitySource Source,
@@ -40,7 +43,8 @@ public record Entity
         EntityPermission[] Permissions,
         Dictionary<string, string>? Mappings,
         Dictionary<string, EntityRelationship>? Relationships,
-        EntityCacheOptions? Cache = null)
+        EntityCacheOptions? Cache = null,
+        bool IsLinkingEntity = false)
     {
         this.Source = Source;
         this.GraphQL = GraphQL;
@@ -49,6 +53,7 @@ public record Entity
         this.Mappings = Mappings;
         this.Relationships = Relationships;
         this.Cache = Cache;
+        this.IsLinkingEntity = IsLinkingEntity;
     }
 
     /// <summary>

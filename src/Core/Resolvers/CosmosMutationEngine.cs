@@ -16,7 +16,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
-using Microsoft.Extensions.Primitives;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -64,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             string graphQLType = context.Selection.Field.Type.NamedType().Name.Value;
             string entityName = metadataProvider.GetEntityName(graphQLType);
-            AuthorizeMutationFields(context, queryArgs, entityName, resolver.OperationType);
+            AuthorizeMutation(context, queryArgs, entityName, resolver.OperationType);
 
             ItemResponse<JObject>? response = resolver.OperationType switch
             {
@@ -74,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
-            string roleName = GetRoleOfGraphQLRequest(context);
+            string roleName = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
             // READ permission is inherited by other roles from Anonymous role when present.
@@ -93,18 +92,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc/>
-        public void AuthorizeMutationFields(
+        public void AuthorizeMutation(
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
             string entityName,
             EntityActionOperation mutationOperation)
         {
-            string role = GetRoleOfGraphQLRequest(context);
-
+            string clientRole = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
             List<string> inputArgumentKeys;
             if (mutationOperation != EntityActionOperation.Delete)
             {
-                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.INPUT_ARGUMENT_NAME, parameters);
+                inputArgumentKeys = BaseSqlQueryStructure.GetSubArgumentNamesFromGQLMutArguments(MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, parameters);
             }
             else
             {
@@ -114,9 +112,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             bool isAuthorized = mutationOperation switch
             {
                 EntityActionOperation.UpdateGraphQL =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: EntityActionOperation.Update, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: EntityActionOperation.Update, inputArgumentKeys),
                 EntityActionOperation.Create =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: role, operation: mutationOperation, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: mutationOperation, inputArgumentKeys),
                 EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
                                                      // to perform the delete operation on the entity to reach this point.
                 _ => throw new DataApiBuilderException(
@@ -165,7 +163,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private static async Task<ItemResponse<JObject>> HandleCreateAsync(IDictionary<string, object?> queryArgs, Container container)
         {
-            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[MutationBuilder.ITEM_INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation
@@ -212,7 +210,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new InvalidDataException("Partition Key field is mandatory");
             }
 
-            object? item = queryArgs[CreateMutationBuilder.INPUT_ARGUMENT_NAME];
+            object? item = queryArgs[MutationBuilder.ITEM_INPUT_ARGUMENT_NAME];
 
             JObject? input;
             // Variables were provided to the mutation
@@ -259,29 +257,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return item;
-        }
-
-        /// <summary>
-        /// Helper method to get the role with which the GraphQL API request was executed.
-        /// </summary>
-        /// <param name="context">HotChocolate context for the GraphQL request</param>
-        private static string GetRoleOfGraphQLRequest(IMiddlewareContext context)
-        {
-            string role = string.Empty;
-            if (context.ContextData.TryGetValue(key: AuthorizationResolver.CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
-            {
-                role = stringVals.ToString();
-            }
-
-            if (string.IsNullOrEmpty(role))
-            {
-                throw new DataApiBuilderException(
-                    message: "No ClientRoleHeader available to perform authorization.",
-                    statusCode: HttpStatusCode.Unauthorized,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
-            }
-
-            return role;
         }
 
         /// <summary>

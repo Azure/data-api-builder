@@ -162,7 +162,7 @@ public class ConfigGeneratorTests
                   ""enabled"": true,
                   ""path"": ""/An_"",
                   ""allow-introspection"": true
-                  },
+                 },
                 ""host"": {
                   ""cors"": {
                     ""origins"": [],

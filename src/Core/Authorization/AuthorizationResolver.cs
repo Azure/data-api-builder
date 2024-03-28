@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -211,6 +212,31 @@ public class AuthorizationResolver : IAuthorizationResolver
         string? dbPolicy = operationMetadata.DatabasePolicy;
 
         return dbPolicy is not null ? dbPolicy : string.Empty;
+    }
+
+    /// <summary>
+    ///  Helper method to get the role with which the GraphQL API request was executed.
+    /// </summary>
+    /// <param name="context">HotChocolate context for the GraphQL request.</param>
+    /// <returns>Role of the current GraphQL API request.</returns>
+    /// <exception cref="DataApiBuilderException">Throws exception when no client role could be inferred from the context.</exception>
+    public static string GetRoleOfGraphQLRequest(IMiddlewareContext context)
+    {
+        string role = string.Empty;
+        if (context.ContextData.TryGetValue(key: CLIENT_ROLE_HEADER, out object? value) && value is StringValues stringVals)
+        {
+            role = stringVals.ToString();
+        }
+
+        if (string.IsNullOrEmpty(role))
+        {
+            throw new DataApiBuilderException(
+                message: "No ClientRoleHeader available to perform authorization.",
+                statusCode: HttpStatusCode.Forbidden,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+        }
+
+        return role;
     }
 
     #region Helpers

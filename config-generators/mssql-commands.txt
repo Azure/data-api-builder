@@ -14,6 +14,7 @@ add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permis
 update stocks_price --config "dab-config.MsSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
 update stocks_price --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"
+update stocks_price --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_create:create,read,update,delete"
 add Tree --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete"
 add Shrub --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.MsSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
@@ -65,6 +66,8 @@ update Publisher --config "dab-config.MsSql.json" --permissions "database_policy
 update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
 update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.name ne 'New publisher'"
 update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
+update Stock --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_create:read,update,delete"
+update Stock --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_create:create" --fields.exclude "piecesAvailable"
 update Stock --config "dab-config.MsSql.json" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.MsSql.json" --relationship publishers --target.entity Publisher --cardinality one
@@ -112,6 +115,7 @@ update WebsiteUser --config "dab-config.MsSql.json" --permissions "authenticated
 update Revenue --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.revenue gt 1000"
 update Comic --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
 update series --config "dab-config.MsSql.json" --relationship comics --target.entity Comic --cardinality many
+update stocks_price --config "dab-config.MsSql.json" --relationship Stock --target.entity Stock --cardinality one
 update Broker --config "dab-config.MsSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.MsSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
 update Shrub --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"

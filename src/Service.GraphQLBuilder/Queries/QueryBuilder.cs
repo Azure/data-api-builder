@@ -248,21 +248,21 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
                 new List<DirectiveNode>(),
                 new List<NamedTypeNode>(),
                 new List<FieldDefinitionNode> {
-                    new FieldDefinitionNode(
+                    new(
                         location: null,
                         new NameNode(PAGINATION_FIELD_NAME),
                         new StringValueNode("The list of items that matched the filter"),
                         new List<InputValueDefinitionNode>(),
                         new NonNullTypeNode(new ListTypeNode(new NonNullTypeNode(new NamedTypeNode(name)))),
                         new List<DirectiveNode>()),
-                    new FieldDefinitionNode(
+                    new(
                         location : null,
                         new NameNode(PAGINATION_TOKEN_FIELD_NAME),
                         new StringValueNode("A pagination token to provide to subsequent pages of a query"),
                         new List<InputValueDefinitionNode>(),
                         new StringType().ToTypeNode(),
                         new List<DirectiveNode>()),
-                    new FieldDefinitionNode(
+                    new(
                         location: null,
                         new NameNode(HAS_NEXT_PAGE_FIELD_NAME),
                         new StringValueNode("Indicates if there are more pages of items to return"),

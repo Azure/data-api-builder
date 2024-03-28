@@ -178,6 +178,12 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (KeyValuePair<string, DatabaseObject> entityDbMetadataMap in metadataProvider.EntityToDatabaseObject)
             {
                 string entityName = entityDbMetadataMap.Key;
+                if (!_runtimeConfig.Entities.ContainsKey(entityName))
+                {
+                    // This can happen for linking entities which are not present in runtime config.
+                    continue;
+                }
+
                 string entityRestPath = GetEntityRestPath(entityName);
                 string entityBasePathComponent = $"/{entityRestPath}";
 
@@ -962,12 +968,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 string entityName = entityDbMetadataMap.Key;
                 DatabaseObject dbObject = entityDbMetadataMap.Value;
 
-                if (_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) && entity is not null)
+                if (!_runtimeConfig.Entities.TryGetValue(entityName, out Entity? entity) || !entity.Rest.Enabled)
                 {
-                    if (!entity.Rest.Enabled)
-                    {
-                        continue;
-                    }
+                    // Don't create component schemas for:
+                    // 1. Linking entity: The entity will be null when we are dealing with a linking entity, which is not exposed in the config.
+                    // 2. Entity for which REST endpoint is disabled.
+                    continue;
                 }
 
                 SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);

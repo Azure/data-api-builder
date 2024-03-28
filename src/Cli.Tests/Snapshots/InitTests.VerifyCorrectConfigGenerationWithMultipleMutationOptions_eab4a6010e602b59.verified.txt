@@ -1,0 +1,30 @@
+﻿{
+  DataSource: {
+    DatabaseType: PostgreSQL
+  },
+  Runtime: {
+    Rest: {
+      Enabled: true,
+      Path: /rest-api,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        Origins: [
+          http://localhost:3000,
+          http://nolocalhost:80
+        ],
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      }
+    }
+  },
+  Entities: []
+}

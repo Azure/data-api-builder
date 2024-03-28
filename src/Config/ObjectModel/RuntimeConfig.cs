@@ -453,4 +453,22 @@ public record RuntimeConfig
         // always return false while hot reload is not an available feature.
         return false;
     }
+
+    /// <summary>
+    /// Helper method to check if multiple create option is supported and enabled.
+    /// 
+    /// Returns true when
+    /// 1. Multiple create operation is supported by the database type and
+    /// 2. Multiple create operation is enabled in the runtime config.
+    /// 
+    /// </summary>
+    public bool IsMultipleCreateOperationEnabled()
+    {
+        return Enum.GetNames(typeof(MultipleCreateSupportingDatabaseType)).Any(x => x.Equals(DataSource.DatabaseType.ToString(), StringComparison.OrdinalIgnoreCase)) &&
+               (Runtime is not null &&
+               Runtime.GraphQL is not null &&
+               Runtime.GraphQL.MultipleMutationOptions is not null &&
+               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null &&
+               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
+    }
 }

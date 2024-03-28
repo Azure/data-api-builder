@@ -31,6 +31,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsCachingEnabled);
         // Ignore the entity IsCachingEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsCachingEnabled);
+        // Ignore the entity IsLinkingEntity as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.IsLinkingEntity);
         // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
         VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedTtlOptions);
         // Ignore the IsRequestBodyStrict as that's unimportant from a test standpoint.

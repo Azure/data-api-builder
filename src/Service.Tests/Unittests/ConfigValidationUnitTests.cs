@@ -633,6 +633,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
         }
 
+        /// <summary>
+        /// Test method that ensures our validation code catches the cases where source and target fields do not match in some way.
+        /// This can either be because one is null and the other is not, or because they have a different number of fields.
+        /// </summary>
+        /// <param name="sourceFields">List of strings representing the source fields.</param>
+        /// <param name="targetFields">List of strings representing the target fields.</param>
+        /// <param name="expectedExceptionMessage">The error message we expect from validation.</param>
         [DataRow(new[] { "non null" }, null, "Entity: SampleEntity1 has source fields that are not null, but target fields that are null.",
             DisplayName = "sourceFields exist but targetFields are null")]
         [DataRow(null, new[] { "non null" }, "Entity: SampleEntity1 has target fields that are not null, but source fields that are null.",
@@ -700,13 +707,24 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
-        [DataRow(new[] { "field without backing column" }, new[] { "field with backing column" },
-            "Entity: SampleEntity1 has a relationship: rname1 with source field: field without backing column " +
-            "that does not exist as a column in SampleEntity1.",
+        /// <summary>
+        /// This test methods ensures that our validation code catches the case where the listed source or target fields
+        /// are not valid backing columns in either the source or target entity respectively.
+        /// </summary>
+        /// <param name="sourceFields">List of strings representing the source fields.</param>
+        /// <param name="targetFields">List of strings representing the target fields.</param>
+        /// <param name="expectedExceptionMessage">The error message we expect from validation.</param>
+        [DataRow(
+            new[] { "noBackingColumn" },
+            new[] { "backingColumn" },
+            "Entity: SampleEntity1 has a relationship: rname1 with source field: noBackingColumn " +
+                "that does not exist as a column in SampleEntity1.",
             DisplayName = "sourceField does not exist as valid backing column in source entity.")]
-        [DataRow(new[] { "field with backing column" }, new[] { "field without backing column" },
-            "Entity: SampleEntity1 has a relationship: rname1 with target field: field without backing column that " +
-            "does not exist as a column in target entity: SampleEntity2.",
+        [DataRow(
+            new[] { "backingColumn" },
+            new[] { "noBackingColumn" },
+            "Entity: SampleEntity1 has a relationship: rname1 with target field: noBackingColumn " +
+                "does not exist as a column in target entity: SampleEntity2.",
             DisplayName = "targetField does not exist as valid backing column in target entity.")]
         [DataTestMethod]
         public void TestRelationshipWithoutSourceAndTargetFieldsAsValidBackingColumns(
@@ -771,9 +789,19 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
+        /// <summary>
+        /// Test method that ensures our validation code catches the cases where linking source and target fields do not match in some way.
+        /// This can either be because one is null and the other is not, or because they have a different number of fields.
+        /// </summary>
+        /// <param name="sourceFields">List of strings representing the source fields.</param>
+        /// <param name="linkingSourceFields">List of strings representing the linking source fields.</param>
+        /// <param name="targetFields">List of strings representing the target fields.</param>
+        /// <param name="linkingTargetFields">List of strings representing the linking target fields.</param>
+        /// <param name="relationshipEntity">The name of the entity in the relationship.</param>
+        /// <param name="expectedExceptionMessage">The expected error message.</param>
         [DataRow(
             new string[] { "sourceField" },
-            new string[] { "non null" },
+            new string[] { "nonNull" },
             new string[] { "targetField" },
             null,
             "SampleEntity2",
@@ -784,7 +812,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             new string[] { "sourceField" },
             null,
             new string[] { "targetField" },
-            new string[] { "non null" },
+            new string[] { "nonNull" },
             "SampleEntity2",
             "Entity: SampleEntity1 has a relationship: rname1 with linking target fields that are not null, " +
                 "but linking source fields that are null.",
@@ -864,23 +892,33 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
         }
 
+        /// <summary>
+        /// This test methods ensures that our validation code catches the case where the listed linking source or target fields
+        /// are not valid backing columns in either the source or target entity respectively.
+        /// </summary>
+        /// <param name="sourceFields">List of strings representing the source fields.</param>
+        /// <param name="linkingSourceFields">List of strings representing the linking source fields.</param>
+        /// <param name="targetFields">List of strings representing the target fields.</param>
+        /// <param name="linkingTargetFields">List of strings representing the linking target fields.</param>
+        /// <param name="relationshipEntity">The name of the entity in the relationship.</param>
+        /// <param name="expectedExceptionMessage">The expected error message.</param>
         [DataRow(
-            new string[] { "field with backing column" },
-            new string[] { "field without backing column" },
-            new string[] { "field with backing column" },
-            new string[] { "field with backing column" },
+            new string[] { "backingColumn" },
+            new string[] { "noBackingColumn" },
+            new string[] { "backingColumn" },
+            new string[] { "backingColumn" },
             "SampleEntity2",
-            "Entity: SampleEntity1 has a relationship: rname1 with linking source field: field without backing column that " +
-            "does not exist as a column in SampleEntity1.",
+            "Entity: SampleEntity1 has a relationship: rname1 with linking source field: noBackingColumn that " +
+                "does not exist as a column in SampleEntity1.",
             DisplayName = "linkingSourceField does not exist as valid backing column in source entity.")]
         [DataRow(
-            new string[] { "field with backing column" },
-            new string[] { "field with backing column" },
-            new string[] { "field with backing column" },
-            new string[] { "field without backing column" },
+            new string[] { "backingColumn" },
+            new string[] { "backingColumn" },
+            new string[] { "backingColumn" },
+            new string[] { "noBackingColumn" },
             "SampleEntity2",
-            "Entity: SampleEntity1 has a relationship: rname1 with linking target field: field without backing column that " +
-            "does not exist as a column in target entity: SampleEntity2.",
+            "Entity: SampleEntity1 has a relationship: rname1 with linking target field: noBackingColumn that " +
+                "does not exist as a column in target entity: SampleEntity2.",
             DisplayName = "linkingTargetField does not exist as valid backing column in target entity.")]
         [DataTestMethod]
         public void TestRelationshipWithoutLinkingSourceAndTargetFieldsAsValidBackingColumns(
@@ -936,8 +974,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
 
             string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "field without backing column", out discard)).Returns(false);
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "field with backing column", out discard)).Returns(true);
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "backingColumn", out discard)).Returns(false);
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "noBackingColumn", out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);

@@ -942,8 +942,8 @@ public class RuntimeConfigValidator : IConfigValidator
                     {
                         if (!sqlMetadataProvider.TryGetBackingColumn(relationship.TargetEntity, linkingTargetField, out _))
                         {
-                            // Validation to ensure that entities that have linking target fields defined, define linking target fields
-                            // that are valid columns in the target entity.
+                            // Validation to ensure that entities that have linking target fields defined in their relationship(s), define linking target fields
+                            // that are valid columns in the target entity of that relationship.
                             HandleOrRecordException(new DataApiBuilderException(
                                 message: $"Entity: {entityName} has a relationship: {relationshipName} with linking target field: {linkingTargetField} that " +
                                     $"does not exist as a column in target entity: {relationship.TargetEntity}.",

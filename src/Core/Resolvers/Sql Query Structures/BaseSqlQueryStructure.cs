@@ -124,6 +124,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Get column type from table underlying the query structure
         /// </summary>
+        /// <param name="columnName">backing column name</param>
         public Type GetColumnSystemType(string columnName)
         {
             if (GetUnderlyingSourceDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
@@ -275,8 +276,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     (leftColumnName, rightColumnName) =>
                     {
                         // no table name or schema here is needed because this is a subquery that joins on table alias
-                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftTableAlias);
-                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightTableAlias);
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: leftColumnName, tableAlias: leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: rightColumnName, tableAlias: rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,

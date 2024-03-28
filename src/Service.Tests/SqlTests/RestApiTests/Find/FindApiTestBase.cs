@@ -581,6 +581,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: GetQuery("FindTestWithFilterQueryOneLeftNullNeFilter")
             );
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=color eq null and ownername eq 'Abhishek'",
+                entityNameOrPath: _entityWithVarcharMax,
+                sqlQuery: GetQuery("FindTestFilterForVarcharColumnWithNullAndNonNullValues"),
+                clientRoleHeader: "authorizationHandlerTester"
+            );
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=habitat eq 'sand'",
+                entityNameOrPath: _integrationBrokenMappingEntity,
+                sqlQuery: GetQuery("FindTestFilterForVarcharColumnWithNotMaximumSize")
+            );
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$filter=habitat eq 'forestland'",
+                entityNameOrPath: _integrationBrokenMappingEntity,
+                sqlQuery: GetQuery("FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation")
+            );
         }
 
         /// <summary>

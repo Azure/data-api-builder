@@ -42,6 +42,7 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly RuntimeEntities _entities;
         private readonly IAuthorizationResolver _authorizationResolver;
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private bool _isMultipleCreateOperationEnabled;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GraphQLSchemaCreator"/> class.
@@ -60,6 +61,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
 
+            _isMultipleCreateOperationEnabled = runtimeConfig.IsMultipleCreateOperationEnabled();
             _entities = runtimeConfig.Entities;
             _queryEngineFactory = queryEngineFactory;
             _mutationEngineFactory = mutationEngineFactory;
@@ -137,7 +139,7 @@ namespace Azure.DataApiBuilder.Core.Services
             DocumentNode queryNode = QueryBuilder.Build(root, entityToDatabaseType, _entities, inputTypes, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);
 
             // Generate the GraphQL mutations from the provided objects
-            DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects);
+            DocumentNode mutationNode = MutationBuilder.Build(root, entityToDatabaseType, _entities, _authorizationResolver.EntityPermissionsMap, entityToDbObjects, _isMultipleCreateOperationEnabled);
 
             return (queryNode, mutationNode);
         }
@@ -215,8 +217,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             configEntity: entity,
                             entities: entities,
                             rolesAllowedForEntity: rolesAllowedForEntity,
-                            rolesAllowedForFields: rolesAllowedForFields
-                            );
+                            rolesAllowedForFields: rolesAllowedForFields);
 
                         if (databaseObject.SourceType is not EntitySourceType.StoredProcedure)
                         {
@@ -234,8 +235,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            // For all the fields in the object which hold a foreign key reference to any referenced entity, add a foreign key directive.
-            AddReferencingFieldDirective(entities, objectTypes);
+            // ReferencingFieldDirective is added to eventually mark the referencing fields in the input object types as optional. When multiple create operations are disabled
+            // the referencing fields should be required fields. Hence, ReferencingFieldDirective is added only when the multiple create operations are enabled.
+            if (_isMultipleCreateOperationEnabled)
+            {
+                // For all the fields in the object which hold a foreign key reference to any referenced entity, add a foreign key directive.
+                AddReferencingFieldDirective(entities, objectTypes);
+            }
 
             // Pass two - Add the arguments to the many-to-* relationship fields
             foreach ((string entityName, ObjectTypeDefinitionNode node) in objectTypes)
@@ -245,8 +251,13 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Create ObjectTypeDefinitionNode for linking entities. These object definitions are not exposed in the schema
             // but are used to generate the object definitions of directional linking entities for (source, target) and (target, source) entities.
-            Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities();
-            GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes);
+            // However, ObjectTypeDefinitionNode for linking entities are need only for multiple create operation. So, creating these only when multiple create operations are
+            // enabled.
+            if (_isMultipleCreateOperationEnabled)
+            {
+                Dictionary<string, ObjectTypeDefinitionNode> linkingObjectTypes = GenerateObjectDefinitionsForLinkingEntities();
+                GenerateSourceTargetLinkingObjectDefinitions(objectTypes, linkingObjectTypes);
+            }
 
             // Return a list of all the object types to be exposed in the schema.
             Dictionary<string, FieldDefinitionNode> fields = new();

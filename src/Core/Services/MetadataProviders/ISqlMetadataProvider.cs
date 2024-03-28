@@ -199,6 +199,17 @@ namespace Azure.DataApiBuilder.Core.Services
         public bool IsDevelopmentMode();
 
         /// <summary>
+        /// Initializes this metadata provider for the runtime.
+        /// This method will take in various objects which we can use directly rather than recreating the objects
+        /// using multiple tsql queries
+        /// </summary>
+        /// <param name="entityToDatabaseObject">maps entity to DatabaseObject</param>
+        /// <param name="graphQLStoredProcedureExposedNameToEntityNameMap">Dictionary containing mapping of graphQL stored procedure exposed query/mutation name to their corresponding entity names defined in the config.</param>
+        void InitializeAsync(
+            Dictionary<string, DatabaseObject> entityToDatabaseObject,
+            Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap);
+
+        /// <summary>
         /// Helper method to get the Foreign Key definition in the object definition of the source entity which relates it
         /// with the target entity. In the Foreign key definition, the referencing entity acts as the referencing table and the
         /// referenced entity acts as the referenced table.

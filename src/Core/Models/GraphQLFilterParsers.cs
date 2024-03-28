@@ -162,7 +162,7 @@ public class GQLFilterParser
 
                     bool columnAccessPermitted = queryStructure.AuthorizationResolver.AreColumnsAllowedForOperation(
                         entityName: originalEntityName,
-                        roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+                        roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER].ToString(),
                         operation: EntityActionOperation.Read,
                         columns: new[] { name });
 
@@ -302,7 +302,7 @@ public class GQLFilterParser
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
             entityIdentifier: entityName,
-            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER].ToString(),
             operation: EntityActionOperation.Read);
 
         if (!entityAccessPermitted)
@@ -394,7 +394,7 @@ public class GQLFilterParser
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
             entityIdentifier: nestedFilterEntityName,
-            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
+            roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER].ToString(),
             operation: EntityActionOperation.Read);
 
         if (!entityAccessPermitted)

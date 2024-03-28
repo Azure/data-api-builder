@@ -428,7 +428,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                string roleName = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                if (!GetHttpContext().Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues headerValues) && headerValues.Count != 1)
+                {
+                    throw new DataApiBuilderException(
+                            message: $"No role found.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                }
+
+                string roleName = headerValues.ToString();
                 bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);
                 bool isDatabasePolicyDefinedForReadAction = false;
                 JsonDocument? selectOperationResponse = null;

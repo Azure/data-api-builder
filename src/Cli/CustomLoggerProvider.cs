@@ -81,9 +81,7 @@ public class CustomLoggerProvider : ILoggerProvider
         {
             return true;
         }
-
-        /// <inheritdoc/>
-        public IDisposable BeginScope<TState>(TState state)
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
         {
             throw new NotImplementedException();
         }

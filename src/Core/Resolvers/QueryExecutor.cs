@@ -115,7 +115,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
                     {
-                        throw e;
+                        throw;
                     }
                     else
                     {

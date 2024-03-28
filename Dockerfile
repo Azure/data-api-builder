@@ -5,16 +5,15 @@
 
 FROM mcr.microsoft.com/dotnet/sdk:6.0-cbl-mariner2.0. AS build
 RUN pwd
-RUN file="$(ls -1)" && echo $file
+RUN ls
 WORKDIR /src
 RUN pwd
-COPY [".", "./"]
-RUN file="$(ls -1)" && echo $file
 RUN ls
+RUN ls /mnt/vss/_work/1/b/2/_work/docker/artifacts/
 
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-cbl-mariner2.0 AS runtime
 
-COPY --from=build /out /App
+COPY ./src/out /App
 WORKDIR /App
 ENV ASPNETCORE_URLS=http://+:5000
 ENTRYPOINT ["dotnet", "Azure.DataApiBuilder.Service.dll"]

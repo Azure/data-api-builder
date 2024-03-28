@@ -492,7 +492,7 @@ public class GQLFilterParser
     /// </summary>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
     /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
-    /// <param name="name">The name of the field</param>
+    /// <param name="fieldName">The name of the field</param>
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="schemaName">The db schema name to which the table belongs</param>
     /// <param name="tableName">The name of the table underlying the *FilterInput being processed</param>
@@ -501,7 +501,7 @@ public class GQLFilterParser
     private static Predicate ParseScalarType(
         IMiddlewareContext ctx,
         IInputField argumentSchema,
-        string name,
+        string fieldName,
         List<ObjectFieldNode> fields,
         string schemaName,
         string tableName,
@@ -509,7 +509,7 @@ public class GQLFilterParser
         Func<object, string?, string> processLiterals,
         bool isListType = false)
     {
-        Column column = new(schemaName, tableName, columnName: name, tableAlias);
+        Column column = new(schemaName, tableName, columnName: fieldName, tableAlias);
 
         return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals, isListType);
     }

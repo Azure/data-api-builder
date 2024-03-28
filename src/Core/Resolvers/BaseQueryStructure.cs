@@ -107,13 +107,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///  Add parameter to Parameters and return the name associated with it
         /// </summary>
         /// <param name="value">Value to be assigned to parameter, which can be null for nullable columns.</param>
-        /// <param name="paramName"> The name of the parameter - column name for table/views or parameter name for stored procedures.</param>
+        /// <param name="paramName"> The name of the parameter - backing column name for table/views or parameter name for stored procedures.</param>
         public virtual string MakeDbConnectionParam(object? value, string? paramName = null)
         {
             string encodedParamName = GetEncodedParamName(Counter.Next());
             if (!string.IsNullOrEmpty(paramName))
             {
-                Parameters.Add(encodedParamName, new(value, GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName)));
+                Parameters.Add(encodedParamName,
+                    new(value,
+                        dbType: GetUnderlyingSourceDefinition().GetDbTypeForParam(paramName),
+                        sqlDbType: GetUnderlyingSourceDefinition().GetSqlDbTypeForParam(paramName)));
             }
             else
             {

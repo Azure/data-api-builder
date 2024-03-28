@@ -166,7 +166,8 @@ CREATE TABLE trees (
 
 CREATE TABLE fungi (
     speciesid int PRIMARY KEY,
-    region text
+    region text,
+    habitat varchar(6)
 );
 
 CREATE TABLE empty_table (
@@ -365,9 +366,17 @@ INSERT INTO type_table(id, short_types, int_types, long_types, string_types, sin
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 INSERT INTO trees("treeId", species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
-INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
+INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');
 INSERT INTO notebooks(id, noteBookName, color, ownerName) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
-INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');
+INSERT INTO journals(id, journalname, color, ownername)
+VALUES
+    (1, 'Journal1', 'red', 'Sean'),
+    (2, 'Journal2', 'green', 'Ani'),
+    (3, 'Journal3', 'blue', 'Jarupat'),
+    (4, 'Journal4', 'yellow', 'Aaron'),
+    (5, 'Journal5', null, 'Abhishek'),
+    (6, 'Journal6', 'green', null),
+    (7, 'Journal7', null, null);
 
 INSERT INTO aow("NoteNum", "DetailAssessmentAndPlanning", "WagingWar", "StrategicAttack") VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.59), (2, 'Montior', 120.50, 11.12);

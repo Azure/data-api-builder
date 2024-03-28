@@ -974,6 +974,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         FROM " + _integrationTableName + @" 
                     ) AS subq
                 "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', id, 'journalname', journalname, 'color', color, 'ownername', ownername)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _tableWithVarcharMax + @"
+                        WHERE color IS NULL AND ownername = 'Abhishek'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('speciesid', speciesid, 'region', region, 'habitat', habitat)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'sand'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('speciesid', speciesid, 'region', region, 'habitat', habitat)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'forestland'
+                    ) AS subq
+                "
             }
         };
 

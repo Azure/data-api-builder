@@ -412,7 +412,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             // test number of properties/fields defined in Column Definition
             int fields = typeof(ColumnDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 7);
+            Assert.AreEqual(fields, 8);
 
             // test values
             expectedColumnDefinition.Equals(deserializedColumnDefinition);
@@ -422,7 +422,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             // test number of properties/fields defined in Column Definition
             int fields = typeof(ParameterDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 4);
+            Assert.AreEqual(fields, 5);
             // test values
             expectedParameterDefinition.Equals(deserializedParameterDefinition);
         }

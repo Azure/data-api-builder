@@ -553,6 +553,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FROM {_integrationTableName} " +
                 $"ORDER BY [publisher_id] ASC, [id] ASC " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                $"SELECT * FROM { _tableWithVarcharMax } " +
+                $"WHERE color IS NULL AND ownername = 'Abhishek' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                $"SELECT * FROM { _integrationBrokenMappingTable } " +
+                $"WHERE habitat = 'sand' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                $"SELECT * FROM { _integrationBrokenMappingTable } " +
+                $"WHERE habitat = 'forestland' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             }
         };
         #region Test Fixture Setup

@@ -551,6 +551,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },
             {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                $"SELECT * FROM { _tableWithVarcharMax } " +
+                $"WHERE color IS NULL AND ownername = 'Abhishek' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                $"SELECT * FROM { _integrationBrokenMappingTable } " +
+                $"WHERE habitat = 'sand' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                $"SELECT * FROM { _integrationBrokenMappingTable } " +
+                $"WHERE habitat = 'forestland' " +
+                $"FOR JSON PATH, INCLUDE_NULL_VALUES"
+            },
+            {
                 "FindManyStoredProcedureTest",
                 $"EXECUTE {_integrationProcedureFindMany_ProcName}"
             },

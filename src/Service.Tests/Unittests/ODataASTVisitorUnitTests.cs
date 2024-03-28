@@ -51,6 +51,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("short_types eq 255", "([short_types] = @param1)", DisplayName = "Equate short types.")]
         [DataRow("long_types eq 9223372036854775807", "([long_types] = @param1)", DisplayName = "Equate long types.")]
         [DataRow("string_types eq 'hello'", "([string_types] = @param1)", DisplayName = "Equate string types.")]
+        [DataRow("nvarchar_string_types eq 'hello'", "([nvarchar_string_types] = @param1)", DisplayName = "Equate nvarchar string types.")]
         [DataRow("single_types eq 10.0", "([single_types] = @param1)", DisplayName = "Equate single types.")]
         [DataRow("float_types eq 65535.9", "([float_types] = @param1)", DisplayName = "Equate float types.")]
         [DataRow("decimal_types eq 25.5", "([decimal_types] = @param1)", DisplayName = "Equate decimal types.")]

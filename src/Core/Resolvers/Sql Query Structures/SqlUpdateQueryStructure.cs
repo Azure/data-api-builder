@@ -159,7 +159,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Predicate predicate;
             // since we have already validated param we know backing column exists
             MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-            if (param.Value is null && !sourceDefinition.Columns[backingColumn!].IsNullable)
+            if (backingColumn is null)
+            {
+                // If param.Key was not present in the ExposedToBackingColumnMap then provided param.Key is already the backing column
+                backingColumn = param.Key;
+            }
+
+            if (param.Value is null && !sourceDefinition.Columns[backingColumn].IsNullable)
             {
                 throw new DataApiBuilderException(
                     message: $"Cannot set argument {param.Key} to null.",
@@ -170,7 +176,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"{MakeDbConnectionParam(null, backingColumn)}")
                 );

@@ -72,6 +72,100 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         }
 
         /// <summary>
+        /// Tests correct rows are returned with filters containing 2 varchar columns one with null and one with non-null values. 
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterForVarcharColumnWithNullAndNonNullValues()
+        {
+            string graphQLQueryName = "journals";
+            string gqlQuery = @"{
+                journals( " + QueryBuilder.FILTER_FIELD_NAME + @" : { and: [ {color: {isNull: true}} {ownername: {eq: ""Abhishek""}}]})
+                {
+                    items {
+                        id
+                        journalname
+                        color
+                        ownername
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "journals",
+                new List<string> { "id", "journalname", "color", "ownername" },
+                "color IS NULL AND ownername = 'Abhishek'",
+                GetDefaultSchema());
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true, clientRoleHeader: "AuthorizationHandlerTester");
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Tests filter operation on column habitat of type varchar(6)
+        /// giving correct result.
+        /// To verify filter works not only with varchar(max)
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterForVarcharColumnWithNotMaximumSize()
+        {
+            string graphQLQueryName = "fungi";
+            string gqlQuery = @"{
+                fungi( " + QueryBuilder.FILTER_FIELD_NAME + @" :  {habitat: {eq: ""sand""}})
+                {
+                    items {
+                        speciesid
+                        region
+                        habitat
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "fungi",
+                new List<string> { "speciesid", "region", "habitat" },
+                "habitat = 'sand'",
+                GetDefaultSchema(),
+                new List<string> { "speciesid" });
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Test that filter values are not truncated to fit the column size.
+        /// Here, the habitat column is of size 6 and the filter value is "forestland" which is of size 10.
+        /// So, "forestland" should not be truncated to "forest" before matching values in the table. 
+        /// </summary>
+        [TestMethod]
+        public async Task TestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation()
+        {
+            string graphQLQueryName = "fungi";
+            string gqlQuery = @"{
+                fungi( " + QueryBuilder.FILTER_FIELD_NAME + @" :  {habitat: {eq: ""forestland""}})
+                {
+                    items {
+                        speciesid
+                        region
+                        habitat
+                    }
+                }
+            }";
+
+            string dbQuery = MakeQueryOn(
+                "fungi",
+                new List<string> { "speciesid", "region", "habitat" },
+                "habitat = 'forestland'",
+                GetDefaultSchema(),
+                new List<string> { "speciesid" });
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
         /// Tests neq of StringFilterInput
         /// </summary>
         [TestMethod]

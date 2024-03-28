@@ -981,6 +981,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                         ORDER BY publisher_id, id
                     ) AS subq
                 "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                @"
+                    SELECT COALESCE( json_agg(to_jsonb(subq)), '[]') AS data
+                    FROM (
+                        SELECT * FROM " + _tableWithVarcharMax + @"
+                        WHERE color IS NULL AND ownername = 'Abhishek'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                @"
+                    SELECT COALESCE( json_agg(to_jsonb(subq)), '[]') AS data
+                    FROM (
+                        SELECT * FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'sand'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                @"
+                    SELECT COALESCE( json_agg(to_jsonb(subq)), '[]') AS data
+                    FROM (
+                        SELECT * FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'forestland'
+                    ) AS subq
+                "
             }
         };
 

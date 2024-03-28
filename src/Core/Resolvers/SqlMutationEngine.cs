@@ -96,6 +96,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutation(context, parameters, entityName, mutationOperation);
 
+            string inputArgumentName = IsPointMutation(context) ? MutationBuilder.ITEM_INPUT_ARGUMENT_NAME : MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
+            if (parameters.TryGetValue(inputArgumentName, out object? param) && mutationOperation is EntityActionOperation.Create)
+            {
+                IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
+                MultipleMutationInputValidator.ValidateGraphQLValueNode(
+                    schema: schemaForArgument,
+                    entityName: entityName,
+                    context: context,
+                    parameters: param,
+                    runtimeConfig: _runtimeConfigProvider.GetConfig(),
+                    columnsDerivedFromParentEntity: new(),
+                    columnsToBeDerivedFromEntity: new(),
+                    nestingLevel: 0,
+                    parentEntityName: string.Empty,
+                    sqlMetadataProviderFactory: _sqlMetadataProviderFactory);
+            }
+
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
             // READ permission is inherited by other roles from Anonymous role when present.
             bool isReadPermissionConfigured = _authorizationResolver.AreRoleAndOperationDefinedForEntity(entityName, roleName, EntityActionOperation.Read)

@@ -325,7 +325,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to determine whether a field is a column or complex (relationship) field based on its syntax kind.
+        /// Helper method to determine whether a field is a column (or scalar) or complex (relationship) field based on its syntax kind.
         /// If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column/scalar field which
         /// has an IntValue, FloatValue, StringValue, BooleanValue or an EnumValue.
         /// </summary>

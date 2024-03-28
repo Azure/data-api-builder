@@ -153,25 +153,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null)
         {
             await conn.OpenAsync();
-            DbCommand cmd = conn.CreateCommand();
-            cmd.CommandType = CommandType.Text;
-
-            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
-            // at the database level.
-            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
-
-            cmd.CommandText = sessionParamsQuery + sqltext;
-            if (parameters is not null)
-            {
-                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
-                {
-                    DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
-                    PopulateDbTypeForParameter(parameterEntry, parameter);
-                    cmd.Parameters.Add(parameter);
-                }
-            }
+            DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
             try
             {
@@ -195,6 +177,45 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     e.Message);
                 throw DbExceptionParser.Parse(e);
             }
+        }
+
+        /// <summary>
+        /// Prepares a database command for execution.
+        /// </summary>
+        /// <param name="conn">Connection object used to connect to database.</param>
+        /// <param name="sqltext">Sql text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <param name="httpContext">Current user httpContext.</param>
+        /// <param name="dataSourceName">The name of the data source.</param>
+        /// <returns>A DbCommand object ready for execution.</returns>
+        public virtual DbCommand PrepareDbCommand(
+            TConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            HttpContext? httpContext,
+            string dataSourceName)
+        {
+            DbCommand cmd = conn.CreateCommand();
+            cmd.CommandType = CommandType.Text;
+
+            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // at the database level.
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
+
+            cmd.CommandText = sessionParamsQuery + sqltext;
+            if (parameters is not null)
+            {
+                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
+                {
+                    DbParameter parameter = cmd.CreateParameter();
+                    parameter.ParameterName = parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    PopulateDbTypeForParameter(parameterEntry, parameter);
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+
+            return cmd;
         }
 
         /// <inheritdoc />

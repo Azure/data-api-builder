@@ -992,12 +992,35 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (multipleInputType)
             {
+                int indexOfParamList = 0;
                 List<IDictionary<string, object?>> inputList = (List<IDictionary<string, object?>>)inputParams;
+
+                if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
+                {
+                    throw new DataApiBuilderException(message: "Mutation Request should contain a valid item field",
+                                                      statusCode: HttpStatusCode.BadRequest,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                if(param is not List<IValueNode> paramList)
+                {
+                    throw new DataApiBuilderException(message: "No other type expected", statusCode: HttpStatusCode.InternalServerError, subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+
                 foreach (IDictionary<string, object?> input in inputList)
                 {
                     MultipleCreateStructure nestedInsertStructure = new(entityName, entityName, null, input);
                     Dictionary<string, Dictionary<string, object?>> resultPKs = new();
-                    PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context);
+
+                    IValueNode? nodeForCurrentInput = paramList[indexOfParamList];
+                    if (nodeForCurrentInput is null)
+                    {
+                        throw new DataApiBuilderException(message: "Error when processing the mutation request",
+                                                          statusCode: HttpStatusCode.InternalServerError,
+                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    }
+
+                    PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context, nodeForCurrentInput.Value);
                     if (nestedInsertStructure.CurrentEntityPKs is not null)
                     {
                         finalResultPKs.Add(nestedInsertStructure.CurrentEntityPKs);
@@ -1011,7 +1034,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Dictionary<string, Dictionary<string, object?>> resultPKs = new();
                 MultipleCreateStructure nestedInsertStructure = new(entityName, entityName, null, input);
 
-                PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context);
+                if( !parameters.TryGetValue(fieldName, out object? param) || param is null)
+                {
+                    throw new DataApiBuilderException(message: "Mutation Request should contain a valid item field",
+                                                      statusCode: HttpStatusCode.BadRequest,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                if (param is not List<ObjectFieldNode> paramList)
+                {
+                    throw new DataApiBuilderException(message: "No other type expected", statusCode: HttpStatusCode.InternalServerError, subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+
+                PerformDbInsertOperation(sqlMetadataProvider, nestedInsertStructure, resultPKs, context, paramList);
+
                 if (nestedInsertStructure.CurrentEntityPKs is not null)
                 {
                     finalResultPKs.Add(nestedInsertStructure.CurrentEntityPKs);
@@ -1032,10 +1068,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider sqlMetadataProvider,
             MultipleCreateStructure nestedInsertStructure,
             Dictionary<string, Dictionary<string, object?>> resultPKs,
-            IMiddlewareContext? context = null)
+            IMiddlewareContext context,
+            object? parameters)
         {
 
-            if (nestedInsertStructure.InputMutParams is null)
+            if (nestedInsertStructure.InputMutParams is null || parameters is null)
             {
                 throw new DataApiBuilderException(
                         message: "Null input parameter is not acceptable",
@@ -1049,11 +1086,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (nestedInsertStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
             {
                 List<IDictionary<string, object?>> inputParamList = (List<IDictionary<string, object?>>)nestedInsertStructure.InputMutParams;
+                List<IValueNode> paramList = (List<IValueNode>)parameters;
+                int indexOfParamList = 0;
+
                 foreach (IDictionary<string, object?> inputParam in inputParamList)
                 {
                     MultipleCreateStructure ns = new(nestedInsertStructure.EntityName, nestedInsertStructure.HigherLevelEntityName, nestedInsertStructure.HigherLevelEntityPKs, inputParam, nestedInsertStructure.IsLinkingTableInsertionRequired);
                     Dictionary<string, Dictionary<string, object?>> newResultPks = new();
-                    PerformDbInsertOperation(sqlMetadataProvider, ns, newResultPks, context);
+                    IValueNode? nodeForCurrentInput = paramList[indexOfParamList];
+                    if(nodeForCurrentInput is null)
+                    {
+                        throw new DataApiBuilderException(message: "Error when processing the mutation request",
+                                                          statusCode: HttpStatusCode.InternalServerError,
+                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    }
+
+                    PerformDbInsertOperation(sqlMetadataProvider, ns, newResultPks, context, nodeForCurrentInput.Value);
+                    indexOfParamList++;
                 }
             }
             else
@@ -1061,17 +1110,26 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string entityName = nestedInsertStructure.EntityName;
                 Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName]; // use tryGet to get the entity object
 
+                if(parameters is not List<ObjectFieldNode> parameterNodes)
+                {
+                    throw new DataApiBuilderException(message: "Error occured while processing the mutation request",
+                                                      statusCode: HttpStatusCode.InternalServerError,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+
                 // Dependency Entity refers to those entities that are to be inserted before the top level entities. PKs of these entites are required
                 // to be able to successfully create a record in the table backing the top level entity. 
                 // Dependent Entity refers to those entities that are to be inserted after the top level entities. These entities require the PK of the top
                 // level entity.
-                DetermineDependentAndDependencyEntities(nestedInsertStructure.EntityName, nestedInsertStructure, sqlMetadataProvider, entity.Relationships);
+                DetermineDependentAndDependencyEntities(context, nestedInsertStructure.EntityName, nestedInsertStructure, sqlMetadataProvider, entity.Relationships, parameterNodes);
+                PopulateCurrentAndLinkingEntityParams(entityName, nestedInsertStructure, sqlMetadataProvider, entity.Relationships);
 
                 // Recurse for dependency entities
                 foreach (Tuple<string, object?> dependecyEntity in nestedInsertStructure.DependencyEntities)
                 {
                     MultipleCreateStructure dependencyEntityNestedInsertStructure = new(GetRelatedEntityNameInRelationship(entity, dependecyEntity.Item1), entityName, nestedInsertStructure.CurrentEntityPKs, dependecyEntity.Item2);
-                    PerformDbInsertOperation(sqlMetadataProvider, dependencyEntityNestedInsertStructure, resultPKs, context);
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, dependecyEntity.Item1);
+                    PerformDbInsertOperation(sqlMetadataProvider, dependencyEntityNestedInsertStructure, resultPKs, context, node.Value);
                 }
 
                 SourceDefinition currentEntitySourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
@@ -1084,49 +1142,52 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 DatabaseObject entityObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
                 string entityFullName = entityObject.FullName;
-                RelationshipMetadata relationshipData = currentEntitySourceDefinition.SourceEntityRelationshipMap[entityName];
-
-                // Populate the foreign key values for the current entity. 
-                foreach ((string relatedEntityName, List<ForeignKeyDefinition> fkDefinitions) in relationshipData.TargetEntityToFkDefinitionMap)
+                
+                if(currentEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? relationshipData) && relationshipData is not null)
                 {
-                    DatabaseObject relatedEntityObject = sqlMetadataProvider.EntityToDatabaseObject[relatedEntityName];
-                    string relatedEntityFullName = relatedEntityObject.FullName;
-                    ForeignKeyDefinition fkDefinition = fkDefinitions[0];
-                    if (string.Equals(fkDefinition.Pair.ReferencingDbTable.FullName, entityFullName) && string.Equals(fkDefinition.Pair.ReferencedDbTable.FullName, relatedEntityFullName))
+                    // Populate the foreign key values for the current entity. 
+                    foreach ((string relatedEntityName, List<ForeignKeyDefinition> fkDefinitions) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        int count = fkDefinition.ReferencingColumns.Count;
-                        for (int i = 0; i < count; i++)
+                        DatabaseObject relatedEntityObject = sqlMetadataProvider.EntityToDatabaseObject[relatedEntityName];
+                        string relatedEntityFullName = relatedEntityObject.FullName;
+                        ForeignKeyDefinition fkDefinition = fkDefinitions[0];
+                        if (string.Equals(fkDefinition.Pair.ReferencingDbTable.FullName, entityFullName) && string.Equals(fkDefinition.Pair.ReferencedDbTable.FullName, relatedEntityFullName))
                         {
-                            string referencingColumnName = fkDefinition.ReferencingColumns[i];
-                            string referencedColumnName = fkDefinition.ReferencedColumns[i];
+                            int count = fkDefinition.ReferencingColumns.Count;
+                            for (int i = 0; i < count; i++)
+                            {
+                                string referencingColumnName = fkDefinition.ReferencingColumns[i];
+                                string referencedColumnName = fkDefinition.ReferencedColumns[i];
 
-                            if (nestedInsertStructure.CurrentEntityParams!.ContainsKey(referencingColumnName))
-                            {
-                                continue;
-                            }
+                                if (nestedInsertStructure.CurrentEntityParams!.ContainsKey(referencingColumnName))
+                                {
+                                    continue;
+                                }
 
-                            if (resultPKs.TryGetValue(relatedEntityName, out Dictionary<string, object?>? relatedEntityPKs)
-                                 && relatedEntityPKs is not null
-                                 && relatedEntityPKs.TryGetValue(referencedColumnName, out object? relatedEntityPKValue)
-                                 && relatedEntityPKValue is not null)
-                            {
-                                nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, relatedEntityPKValue);
-                            }
-                            else if (nestedInsertStructure.HigherLevelEntityPKs is not null
-                                 && nestedInsertStructure.HigherLevelEntityPKs.TryGetValue(referencedColumnName, out object? pkValue)
-                                 && pkValue is not null)
-                            {
-                                nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, pkValue);
-                            }
-                            else
-                            {
-                                throw new DataApiBuilderException(
-                                                        message: $"Foreign Key value for  Entity: {entityName}, Column : {referencedColumnName} not found",
-                                                        subStatusCode: DataApiBuilderException.SubStatusCodes.ForeignKeyNotFound,
-                                                        statusCode: HttpStatusCode.InternalServerError);
+                                if (resultPKs.TryGetValue(relatedEntityName, out Dictionary<string, object?>? relatedEntityPKs)
+                                     && relatedEntityPKs is not null
+                                     && relatedEntityPKs.TryGetValue(referencedColumnName, out object? relatedEntityPKValue)
+                                     && relatedEntityPKValue is not null)
+                                {
+                                    nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, relatedEntityPKValue);
+                                }
+                                else if (nestedInsertStructure.HigherLevelEntityPKs is not null
+                                     && nestedInsertStructure.HigherLevelEntityPKs.TryGetValue(referencedColumnName, out object? pkValue)
+                                     && pkValue is not null)
+                                {
+                                    nestedInsertStructure.CurrentEntityParams.Add(referencingColumnName, pkValue);
+                                }
+                                else
+                                {
+                                    throw new DataApiBuilderException(
+                                                            message: $"Foreign Key value for  Entity: {entityName}, Column : {referencedColumnName} not found",
+                                                            subStatusCode: DataApiBuilderException.SubStatusCodes.ForeignKeyNotFound,
+                                                            statusCode: HttpStatusCode.InternalServerError);
+                                }
                             }
                         }
                     }
+
                 }
 
                 SqlInsertStructure sqlInsertStructure = new(entityName,
@@ -1192,7 +1253,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     // Add higher level entity PKs
-                    List<ForeignKeyDefinition> foreignKeyDefinitions = relationshipData.TargetEntityToFkDefinitionMap[nestedInsertStructure.HigherLevelEntityName];
+                    List<ForeignKeyDefinition> foreignKeyDefinitions = relationshipData!.TargetEntityToFkDefinitionMap[nestedInsertStructure.HigherLevelEntityName];
                     ForeignKeyDefinition fkDefinition = foreignKeyDefinitions[0];
 
                     int count = fkDefinition.ReferencingColumns.Count;
@@ -1282,7 +1343,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     string relatedEntityName = GetRelatedEntityNameInRelationship(entity, dependentEntity.Item1);
                     MultipleCreateStructure dependentEntityNestedInsertStructure = new(relatedEntityName, entityName, nestedInsertStructure.CurrentEntityPKs, dependentEntity.Item2, IsManyToManyRelationship(entity, dependentEntity.Item1));
-                    PerformDbInsertOperation(sqlMetadataProvider, dependentEntityNestedInsertStructure, resultPKs, context);
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, dependentEntity.Item1);
+                    PerformDbInsertOperation(sqlMetadataProvider, dependentEntityNestedInsertStructure, resultPKs, context, node.Value);
                 }
             }
         }
@@ -1339,10 +1401,65 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dependencyEntities"></param>
         /// <param name="dependentEntities"></param>
         /// <param name="currentEntityParams"></param>
-        private static void DetermineDependentAndDependencyEntities(string entityName,
-                                                             MultipleCreateStructure nestedInsertStructure,
-                                                             ISqlMetadataProvider sqlMetadataProvider,
-                                                             Dictionary<string, EntityRelationship>? topLevelEntityRelationships)
+        private static void DetermineDependentAndDependencyEntities(IMiddlewareContext context,
+                                                                    string entityName,
+                                                                    MultipleCreateStructure nestedInsertStructure,
+                                                                    ISqlMetadataProvider sqlMetadataProvider,
+                                                                    Dictionary<string, EntityRelationship>? topLevelEntityRelationships,
+                                                                    List<ObjectFieldNode> sourceEntityFields)
+        {
+
+            if(topLevelEntityRelationships is null)
+            {
+                return ;
+            }
+
+            // throw an exception - ideally will be caught way earlier in the flow, but Visual Studio still complains
+            if (nestedInsertStructure.InputMutParams is null)
+            {
+                return ;
+            }
+
+            foreach (KeyValuePair<string, object?> inputParam in (Dictionary<string, object?>)nestedInsertStructure.InputMutParams)
+            {
+                if (topLevelEntityRelationships.ContainsKey(inputParam.Key))
+                {
+                    EntityRelationship entityRelationship = topLevelEntityRelationships[inputParam.Key];
+
+                    if(entityRelationship.LinkingObject is not null)
+                    {
+                        nestedInsertStructure.DependentEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                        continue;
+                    }
+
+                    string targetEntityName = entityRelationship.TargetEntity;
+                    Dictionary<string, IValueNode?> columnDataInSourceBody = MultipleCreateOrderHelper.GetBackingColumnDataFromFields(context, entityName, sourceEntityFields, sqlMetadataProvider);
+                    IValueNode? targetNode = GraphQLUtils.GetFieldNodeForGivenFieldName(objectFieldNodes: sourceEntityFields, fieldName: inputParam.Key);
+                    string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(context: context,
+                                                                                                      sourceEntityName: entityName,
+                                                                                                      targetEntityName: targetEntityName,
+                                                                                                      relationshipName: inputParam.Key,
+                                                                                                      metadataProvider: sqlMetadataProvider,
+                                                                                                      nestingLevel: 0,
+                                                                                                      columnDataInSourceBody: columnDataInSourceBody,
+                                                                                                      targetNodeValue: targetNode);
+
+                    if (string.Equals(entityName, referencingEntityName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        nestedInsertStructure.DependencyEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                    }
+                    else
+                    {
+                        nestedInsertStructure.DependentEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                    }
+                } 
+            }
+        }
+
+        private static void PopulateCurrentAndLinkingEntityParams(string entityName,
+                                                                  MultipleCreateStructure nestedInsertStructure,
+                                                                  ISqlMetadataProvider sqlMetadataProvider,
+                                                                  Dictionary<string, EntityRelationship>? topLevelEntityRelationships)
         {
             IDictionary<string, object?> currentEntityParams = new Dictionary<string, object?>();
             IDictionary<string, object?> linkingTableParams = new Dictionary<string, object?>();
@@ -1352,55 +1469,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return;
             }
 
-            if (topLevelEntityRelationships is not null)
+            foreach (KeyValuePair<string, object?> entry in (Dictionary<string, object?>)nestedInsertStructure.InputMutParams)
             {
-                foreach (KeyValuePair<string, object?> entry in (Dictionary<string, object?>)nestedInsertStructure.InputMutParams)
+                if(topLevelEntityRelationships is not null && topLevelEntityRelationships.ContainsKey(entry.Key))
                 {
-                    if (topLevelEntityRelationships.ContainsKey(entry.Key))
-                    {
-                        EntityRelationship relationshipInfo = topLevelEntityRelationships[entry.Key];
-                        string relatedEntityName = relationshipInfo.TargetEntity;
+                    continue;
+                }
 
-                        if (relationshipInfo.Cardinality is Cardinality.Many)
-                        {
-                            nestedInsertStructure.DependentEntities.Add(new Tuple<string, object?>(entry.Key, entry.Value) { });
-                        }
-
-                        if (relationshipInfo.Cardinality is Cardinality.One)
-                        {
-                            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
-                            RelationshipMetadata relationshipMetadata = sourceDefinition.SourceEntityRelationshipMap[entityName];
-                            List<ForeignKeyDefinition> fkDefinitions = relationshipMetadata.TargetEntityToFkDefinitionMap[relatedEntityName];
-                            ForeignKeyDefinition fkDefinition = fkDefinitions[0];
-                            DatabaseObject entityDbObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                            string topLevelEntityFullName = entityDbObject.FullName;
-                            Console.WriteLine("Top Level Entity Full Name : " + topLevelEntityFullName);
-
-                            DatabaseObject relatedDbObject = sqlMetadataProvider.EntityToDatabaseObject[relatedEntityName];
-                            string relatedEntityFullName = relatedDbObject.FullName;
-                            Console.WriteLine("Related Entity Full Name : " + relatedEntityFullName);
-
-                            if (string.Equals(fkDefinition.Pair.ReferencingDbTable.FullName, topLevelEntityFullName) && string.Equals(fkDefinition.Pair.ReferencedDbTable.FullName, relatedEntityFullName))
-                            {
-                                nestedInsertStructure.DependencyEntities.Add(new Tuple<string, object?>(entry.Key, entry.Value) { });
-                            }
-                            else
-                            {
-                                nestedInsertStructure.DependentEntities.Add(new Tuple<string, object?>(entry.Key, entry.Value) { });
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (sqlMetadataProvider.TryGetBackingColumn(entityName, entry.Key, out _))
-                        {
-                            currentEntityParams.Add(entry.Key, entry.Value);
-                        }
-                        else
-                        {
-                            linkingTableParams.Add(entry.Key, entry.Value);
-                        }
-                    }
+                if (sqlMetadataProvider.TryGetBackingColumn(entityName, entry.Key, out _))
+                {
+                    currentEntityParams.Add(entry.Key, entry.Value);
+                }
+                else
+                {
+                    linkingTableParams.Add(entry.Key, entry.Value);
                 }
             }
 
@@ -1513,55 +1595,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             throw new DataApiBuilderException(message: $"Field {fieldName} not found.",
                                               subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError,
                                               statusCode: HttpStatusCode.InternalServerError);
-        }
-
-        internal static IDictionary<string, object?> GQLMutArgumentToDictParams(
-            IMiddlewareContext context,
-            string fieldName,
-            IDictionary<string, object?> mutationParameters)
-        {
-            string errMsg;
-
-            if (mutationParameters.TryGetValue(fieldName, out object? item))
-            {
-                IObjectField fieldSchema = context.Selection.Field;
-                IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
-                InputObjectType itemsArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
-
-                Dictionary<string, object?> mutationInput;
-                // An inline argument was set
-                // TODO: This assumes the input was NOT nullable.
-                if (item is List<ObjectFieldNode> mutationInputRaw)
-                {
-                    mutationInput = new Dictionary<string, object?>();
-                    foreach (ObjectFieldNode node in mutationInputRaw)
-                    {
-                        string nodeName = node.Name.Value;
-                        Console.WriteLine(node.Value.ToString());
-
-                        mutationInput.Add(nodeName, ExecutionHelper.ExtractValueFromIValueNode(
-                            value: node.Value,
-                            argumentSchema: itemsArgumentObject.Fields[nodeName],
-                            variables: context.Variables));
-                    }
-
-                    return mutationInput;
-                }
-                else
-                {
-                    errMsg = $"Unexpected {fieldName} argument format.";
-                }
-            }
-            else
-            {
-                errMsg = $"Expected {fieldName} argument in mutation arguments.";
-            }
-
-            // should not happen due to gql schema validation
-            throw new DataApiBuilderException(
-                message: errMsg,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
-                statusCode: HttpStatusCode.BadRequest);
         }
 
         /// <summary>

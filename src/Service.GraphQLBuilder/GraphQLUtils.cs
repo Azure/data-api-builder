@@ -396,5 +396,24 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
             return new(sourceTargetEntityNames[1], sourceTargetEntityNames[2]);
         }
+
+        /// <summary>
+        /// Helper method to extract a hotchocolate field node object with the specified name from all the field node objects belonging to an input type object.  
+        /// </summary>
+        /// <param name="objectFieldNodes">List of field node objects belonging to an input type object</param>
+        /// <param name="fieldName"> Name of the field node object to extract from the list of all field node objects</param>
+        /// <exception cref="ArgumentException"></exception>
+        public static IValueNode GetFieldNodeForGivenFieldName(List<ObjectFieldNode> objectFieldNodes, string fieldName)
+        {
+            foreach(ObjectFieldNode objectFieldNode in objectFieldNodes)
+            {
+                if(objectFieldNode.Name.Value == fieldName)
+                {
+                    return objectFieldNode.Value;
+                }
+            }
+
+            throw new ArgumentException($"The provided field {fieldName} does not exist.");
+        }
     }
 }

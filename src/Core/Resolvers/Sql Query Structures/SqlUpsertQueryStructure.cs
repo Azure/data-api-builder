@@ -128,6 +128,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // since we have already validated mutationParams we know backing column exists
                     MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
+
                     // Create Parameter and map it to column for downstream logic to utilize.
                     string paramIdentifier;
                     if (param.Value is not null)

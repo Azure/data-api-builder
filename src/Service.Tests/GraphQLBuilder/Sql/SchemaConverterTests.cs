@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = new() };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 entityName,
                 dbObject,
                 GenerateEmptyEntity(entityName),
@@ -70,7 +70,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "table",
                 dbObject,
                 GenerateEmptyEntity("table"),
@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             Entity configEntity = GenerateEmptyEntity("table") with { Mappings = mappings };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "table",
                 dbObject,
                 configEntity,
@@ -145,7 +145,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "table",
                 dbObject,
                 GenerateEmptyEntity("table"),
@@ -174,7 +174,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "table",
                 dbObject,
                 GenerateEmptyEntity("table"),
@@ -204,7 +204,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "table",
                 dbObject,
                 GenerateEmptyEntity("table"),
@@ -243,7 +243,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "table",
                 dbObject,
                 GenerateEmptyEntity("table"),
@@ -270,7 +270,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "table",
                 dbObject,
                 GenerateEmptyEntity("table"),
@@ -297,7 +297,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "table",
                 dbObject,
                 GenerateEmptyEntity("table"),
@@ -368,7 +368,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             ObjectTypeDefinitionNode od =
-                SchemaConverter.FromDatabaseObject(
+                SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                     SOURCE_ENTITY,
                     dbObject,
                     configEntity,
@@ -405,7 +405,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
 
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 entityName,
                 dbObject,
                 configEntity,
@@ -438,7 +438,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             Entity configEntity = GenerateEmptyEntity("entity");
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
@@ -489,7 +489,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             Entity configEntity = GenerateEmptyEntity("entity");
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
@@ -533,7 +533,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             Entity configEntity = GenerateEmptyEntity("entity");
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
@@ -573,7 +573,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity("entity");
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
@@ -615,7 +615,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
             Entity configEntity = GenerateEmptyEntity("entity");
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
@@ -663,7 +663,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             Entity configEntity = GenerateEmptyEntity("entity");
             DatabaseObject dbObject = new DatabaseTable() { TableDefinition = table };
 
-            ObjectTypeDefinitionNode od = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode od = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 "entity",
                 dbObject,
                 configEntity,
@@ -776,7 +776,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
             DatabaseObject dbObject = new DatabaseTable()
             { SchemaName = SCHEMA_NAME, Name = TABLE_NAME, TableDefinition = table };
 
-            return SchemaConverter.FromDatabaseObject(
+            return SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 SOURCE_ENTITY,
                 dbObject,
                 configEntity, new(new Dictionary<string, Entity>() { { TARGET_ENTITY, relationshipEntity } }),

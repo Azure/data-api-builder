@@ -29,6 +29,15 @@ $executableFileDirectory = "$BuildOutputDir/publish/$BuildConfiguration/$RID/dab
 $executableDAB = "$executableFileDirectory/Microsoft.DataApiBuilder"
 $configFileName = "dab-config-smoke-test.json"
 
+# Print all files in BuildOutputDir
+Write-Host "Files in $BuildOutputDir:"
+Get-ChildItem -Path $BuildOutputDir -Recurse
+
+if (-not (Test-Path -Path $executableDAB)) {
+    Write-Error "Executable file $executableDAB does not exist"
+    exit 1
+}
+
 describe SmokeTest {
     it 'Check Version' {
         $ver = Invoke-expression "$executableDAB --version"

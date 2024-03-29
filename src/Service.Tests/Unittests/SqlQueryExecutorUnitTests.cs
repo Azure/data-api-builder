@@ -7,6 +7,7 @@ using System.Data;
 using System.Data.Common;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -184,9 +185,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<string>(),
                 It.IsAny<HttpContext>(),
-                It.IsAny<List<string>>(),
-                It.IsAny<string>())).CallBase();
+                It.IsAny<List<string>>())).CallBase();
 
             DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () =>
             {
@@ -194,6 +195,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     sqltext: string.Empty,
                     parameters: new Dictionary<string, DbConnectionParam>(),
                     dataReaderHandler: null,
+                    dataSourceName: String.Empty,
                     httpContext: null,
                     args: null);
             });
@@ -203,6 +205,54 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // For each attempt logger is invoked once. Currently we have hardcoded the number of attempts.
             // Once we have number of retry attempts specified in config, we will make it dynamic.
             Assert.AreEqual(maxAttempts, queryExecutorLogger.Invocations.Count);
+        }
+
+        /// <summary>
+        /// Test to validate that DbCommand parameters are correctly populated with the provided values and database types.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public void Test_DbCommandParameter_PopulatedWithCorrectDbTypes()
+        {
+            // Setup mock configuration
+            RuntimeConfig mockConfig = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MSSQL, "Server =<>;Database=<>;", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   Host: new(null, null)
+               ),
+               Entities: new(new Dictionary<string, Entity>())
+           );
+
+            // Setup file system and loader for runtime configuration
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME, new MockFileData(mockConfig.ToJson()));
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+
+            // Setup necessary mocks and objects for MsSqlQueryExecutor
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
+
+            // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+            IDictionary<string, DbConnectionParam> parameters = new Dictionary<string, DbConnectionParam>();
+            parameters.Add("@param1", new DbConnectionParam("My Awesome book", DbType.AnsiString, SqlDbType.VarChar));
+            parameters.Add("@param2", new DbConnectionParam("Ramen", DbType.String, SqlDbType.NVarChar));
+
+            // Prepare the DbCommand
+            DbCommand dbCommand = msSqlQueryExecutor.PrepareDbCommand(new SqlConnection(), "SELECT * FROM books where title='My Awesome book' and author='Ramen'", parameters, null, null);
+
+            // Assert that the parameters are correctly populated with the provided values and database types.
+            List<SqlParameter> parametersList = dbCommand.Parameters.OfType<SqlParameter>().ToList();
+            Assert.AreEqual(parametersList[0].Value, "My Awesome book");
+            Assert.AreEqual(parametersList[0].DbType, DbType.AnsiString);
+            Assert.AreEqual(parametersList[0].SqlDbType, SqlDbType.VarChar);
+            Assert.AreEqual(parametersList[1].Value, "Ramen");
+            Assert.AreEqual(parametersList[1].DbType, DbType.String);
+            Assert.AreEqual(parametersList[1].SqlDbType, SqlDbType.NVarChar);
         }
 
         /// <summary>
@@ -223,6 +273,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
             queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
+            queryExecutor.Setup(x => x.PrepareDbCommand(
+                It.IsAny<SqlConnection>(),
+                It.IsAny<string>(),
+                It.IsAny<IDictionary<string, DbConnectionParam>>(),
+                It.IsAny<HttpContext>(),
+                It.IsAny<string>())).CallBase();
 
             // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
             queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
@@ -242,14 +298,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 It.IsAny<string>(),
                 It.IsAny<IDictionary<string, DbConnectionParam>>(),
                 It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
+                It.IsAny<string>(),
                 It.IsAny<HttpContext>(),
-                It.IsAny<List<string>>(),
-                It.IsAny<string>())).CallBase();
+                It.IsAny<List<string>>())).CallBase();
 
             string sqltext = "SELECT * from books";
 
             await queryExecutor.Object.ExecuteQueryAsync<object>(
                     sqltext: sqltext,
+                    dataSourceName: String.Empty,
                     parameters: new Dictionary<string, DbConnectionParam>(),
                     dataReaderHandler: null,
                     args: null);

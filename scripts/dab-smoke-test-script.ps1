@@ -30,7 +30,7 @@ $executableDAB = "$executableFileDirectory/Microsoft.DataApiBuilder"
 $configFileName = "dab-config-smoke-test.json"
 
 # Print all files in BuildOutputDir
-Write-Host "Files in $BuildOutputDir:"
+Write-Host "Files in BuildOutputDir:"
 Get-ChildItem -Path $BuildOutputDir -Recurse
 
 if (-not (Test-Path -Path $executableDAB)) {

@@ -1177,7 +1177,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string dbQuery = $"SELECT c.id, c.name FROM c where NOT ARRAY_CONTAINS(c.tags, 'tag3')";
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
-        
+
         /// <summary>
         /// Tests that the pk level query filter is working with variables
         /// </summary>

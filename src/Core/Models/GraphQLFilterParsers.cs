@@ -255,15 +255,15 @@ public class GQLFilterParser
                     predicates.Push(
                    new PredicateOperand(
                        ParseScalarType(
-                           ctx,
+                           ctx: ctx,
                            argumentSchema: filterArgumentObject.Fields[name],
-                           backingColumnName,
-                           subfields,
-                           schemaName,
-                           sourceName,
-                           sourceAlias,
-                           queryStructure.MakeDbConnectionParam,
-                           isListType)));
+                           fieldName: backingColumnName,
+                           fields: subfields,
+                           schemaName: schemaName,
+                           tableName: sourceName,
+                           tableAlias: sourceAlias,
+                           processLiterals: queryStructure.MakeDbConnectionParam,
+                           isListType: isListType)));
                 }
             }
         }
@@ -488,7 +488,7 @@ public class GQLFilterParser
 
     /// <summary>
     /// Calls the appropriate scalar type filter parser based on the type of
-    /// the fields
+    /// the fields.
     /// </summary>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
     /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
@@ -498,6 +498,7 @@ public class GQLFilterParser
     /// <param name="tableName">The name of the table underlying the *FilterInput being processed</param>
     /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
+    /// <param name="isListType">Flag to give a hint about the node type. It is only applicable for CosmosDB</param>
     private static Predicate ParseScalarType(
         IMiddlewareContext ctx,
         IInputField argumentSchema,
@@ -628,6 +629,7 @@ public static class FieldFilterParser
     /// <param name="column">The table column targeted by the field</param>
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
+    /// <param name="isListType">Flag which gives a hint about the node type in the given schema. only for CosmosDB it can be of list type. Refer <a href=https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/query/array-contains>here</a>.</param>
     public static Predicate Parse(
         IMiddlewareContext ctx,
         IInputField argumentSchema,

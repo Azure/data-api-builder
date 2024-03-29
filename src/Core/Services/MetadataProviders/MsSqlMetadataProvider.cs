@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLNaming;
@@ -28,6 +29,8 @@ namespace Azure.DataApiBuilder.Core.Services
     public class MsSqlMetadataProvider :
         SqlMetadataProvider<SqlConnection, SqlDataAdapter, SqlCommand>
     {
+        private RuntimeConfigProvider _runtimeConfigProvider;
+
         public MsSqlMetadataProvider(
             RuntimeConfigProvider runtimeConfigProvider,
             IAbstractQueryManagerFactory queryManagerFactory,
@@ -36,6 +39,7 @@ namespace Azure.DataApiBuilder.Core.Services
             bool isValidateOnly = false)
             : base(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly)
         {
+            _runtimeConfigProvider = runtimeConfigProvider;
         }
 
         public override string GetDefaultSchemaName()
@@ -218,6 +222,39 @@ namespace Azure.DataApiBuilder.Core.Services
 
             // Generating exposed stored-procedure query/mutation name and adding to the dictionary mapping it to its entity name.
             GraphQLStoredProcedureExposedNameToEntityNameMap.TryAdd(GenerateStoredProcedureGraphQLFieldName(entityName, procedureEntity), entityName);
+        }
+
+        /// <inheritdoc/>
+        protected override void PopulateMetadataForLinkingObject(
+            string entityName,
+            string targetEntityName,
+            string linkingObject,
+            Dictionary<string, DatabaseObject> sourceObjects)
+        {
+            if (!_runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled())
+            {
+                // Currently we have this same class instantiated for both MsSql and DwSql.
+                // This is a refactor we need to take care of in future.
+                return;
+            }
+
+            string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(entityName, targetEntityName);
+
+            // Create linking entity with disabled REST/GraphQL endpoints.
+            // Even though GraphQL endpoint is disabled, we will be able to later create an object type definition
+            // for this linking entity (which is later used to generate source->target linking object definition)
+            // because the logic for creation of object definition for linking entity does not depend on whether
+            // GraphQL is enabled/disabled. The linking object definitions are not exposed in the schema to the user.
+            Entity linkingEntity = new(
+                Source: new EntitySource(Type: EntitySourceType.Table, Object: linkingObject, Parameters: null, KeyFields: null),
+                Rest: new(Array.Empty<SupportedHttpVerb>(), Enabled: false),
+                GraphQL: new(Singular: linkingEntityName, Plural: linkingEntityName, Enabled: false),
+                Permissions: Array.Empty<EntityPermission>(),
+                Relationships: null,
+                Mappings: new(),
+                IsLinkingEntity: true);
+            _linkingEntities.TryAdd(linkingEntityName, linkingEntity);
+            PopulateDatabaseObjectForEntity(linkingEntity, linkingEntityName, sourceObjects);
         }
 
         /// <summary>

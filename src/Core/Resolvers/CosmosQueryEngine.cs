@@ -323,7 +323,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
 #nullable enable
-        private static async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IMiddlewareContext context, IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure, ISqlMetadataProvider metadataStoreProvider)
+
+        /// <summary>
+        /// Resolve partition key and id value from input parameters.
+        /// </summary>
+        /// <param name="context">Provide the information about variables and filters</param>
+        /// <param name="parameters">Contains argument information such as id, filter</param>
+        /// <param name="container">Container instance to get the container properties such as partition path</param>
+        /// <param name="structure">Fallback to get partition path information</param>
+        /// <param name="metadataStoreProvider">Set partition key path, fetched from container properties</param>
+        /// <returns></returns>
+        private static async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters,
+            Container container,
+            CosmosQueryStructure structure,
+            ISqlMetadataProvider metadataStoreProvider)
         {
             string? partitionKeyValue = null, idValue = null;
             string partitionKeyPath = await GetPartitionKeyPath(container, metadataStoreProvider);

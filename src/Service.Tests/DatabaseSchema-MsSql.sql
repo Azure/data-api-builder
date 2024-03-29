@@ -109,6 +109,7 @@ CREATE TABLE reviews(
 CREATE TABLE book_author_link(
     book_id int NOT NULL,
     author_id int NOT NULL,
+    royalty_percentage float DEFAULT 0 NULL,
     PRIMARY KEY(book_id, author_id)
 );
 
@@ -167,6 +168,7 @@ CREATE TABLE type_table(
     int_types int,
     long_types bigint,
     string_types varchar(max),
+    nvarchar_string_types nvarchar(max),
     single_types real,
     float_types float,
     decimal_types decimal(38, 19),
@@ -190,7 +192,8 @@ CREATE TABLE trees (
 
 CREATE TABLE fungi (
     speciesid int PRIMARY KEY,
-    region varchar(max)
+    region varchar(max),
+    habitat varchar(6)
 );
 
 CREATE TABLE empty_table (
@@ -451,25 +454,25 @@ SET IDENTITY_INSERT reviews OFF
 SET IDENTITY_INSERT type_table ON
 INSERT INTO type_table(id,
 byte_types, short_types, int_types, long_types,
-string_types,
+string_types, nvarchar_string_types,
 single_types, float_types, decimal_types,
 boolean_types,
 date_types, datetime_types, datetime2_types, datetimeoffset_types, smalldatetime_types, time_types,
 bytearray_types)
 VALUES
-    (1, 1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1,
+    (1, 1, 1, 1, 1, '', '', 0.33, 0.33, 0.333333, 1,
     '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '1999-01-08 10:23:54.9999999-14:00', '1999-01-08 10:23:54', '10:23:54.9999999',
     0xABCDEF0123),
-    (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
+    (2, 0, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
     '1999-01-08', '1999-01-08 10:23:00', '1999-01-08 10:23:00.9999999', '1999-01-08 10:23:00.9999999+13:00', '1999-01-08 10:23:00', '10:23:00.9999999',
     0x98AB7511AABB1234),
-    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
+    (3, 0, -32768, -2147483648, -9223372036854775808, 'null', 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
     '0001-01-01', '1753-01-01 00:00:00.000', '0001-01-01 00:00:00.0000000', '0001-01-01 00:00:00.0000000+0:00', '1900-01-01 00:00:00', '00:00:00.0000000',
     0x00000000),
-    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
+    (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
     '9999-12-31', '9999-12-31 23:59:59', '9999-12-31 23:59:59.9999999', '9999-12-31 23:59:59.9999999+14:00', '2079-06-06', '23:59:59.9999999',
     0xFFFFFFFF),
-    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 SET IDENTITY_INSERT type_table OFF
 
@@ -478,7 +481,15 @@ INSERT INTO sales(id, item_name, subtotal, tax) VALUES (1, 'Watch', 249.00, 20.5
 SET IDENTITY_INSERT sales OFF
 
 INSERT INTO notebooks(id, notebookname, color, ownername) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
-INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');
+INSERT INTO journals(id, journalname, color, ownername)
+VALUES
+    (1, 'Journal1', 'red', 'Sean'),
+    (2, 'Journal2', 'green', 'Ani'),
+    (3, 'Journal3', 'blue', 'Jarupat'),
+    (4, 'Journal4', 'yellow', 'Aaron'),
+    (5, 'Journal5', null, 'Abhishek'),
+    (6, 'Journal6', 'green', null),
+    (7, 'Journal7', null, null);
 
 INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
@@ -497,7 +508,7 @@ INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES 
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100.57, 1);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
-INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
+INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');
 
 SET IDENTITY_INSERT authors_history ON
 INSERT INTO authors_history(id, first_name, middle_name, last_name, year_of_publish, books_published)

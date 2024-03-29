@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             sqlMetadataProvider,
             authorizationResolver,
             gQLFilterParser,
-            GQLMutArgumentToDictParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams),
+            GQLMutArgumentToDictParams(context, MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, mutationParams),
             httpContext)
         { }
 

@@ -927,9 +927,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string dbQuery = $"SELECT c.id " +
                 $"FROM c " +
                 $"WHERE c.character.type = 'Mars' " +
-                $"AND EXISTS (SELECT VALUE 1 " +
-                            $"FROM c.earth " +
-                            $"WHERE (c.earth.type = 'earth0')) " + // From DB Policy
+                $"AND c.earth.type = 'earth0' " + // From DB Policy
                 $"AND EXISTS (SELECT VALUE 1 " +
                             $"FROM  table1 IN c.additionalAttributes " +
                             $"WHERE (table1.name = 'volcano0')) " + // From DB Policy

@@ -106,26 +106,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                                     fromClause = pathConfig.JoinStatement;
                                     predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(pathConfig.Alias));
+
+                                    existQuery = GetExistQueryForCosmos(fromClause, predicates);
                                 }
                                 else
                                 {
-                                    fromClause = $"{pathConfig.Path}.{pathConfig.ColumnName}";
                                     predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor($"{pathConfig.Path}.{pathConfig.ColumnName}"));
                                 }
-
-                                existQuery = GetExistQueryForCosmos(fromClause, predicates);
 
                                 if (pathConfig.EntityName == entity.Key)
                                 {
                                     if (!cosmosQueryStructure.DbPolicyPredicatesForOperations.TryGetValue(operationType, out string? _))
                                     {
                                         cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
-                                                        = existQuery;
+                                                        = existQuery ?? predicates;
                                     }
                                     else
                                     {
                                         cosmosQueryStructure.DbPolicyPredicatesForOperations[operationType]
-                                                        += $" AND {existQuery}";
+                                                        += $" AND {existQuery ?? predicates}";
                                     }
                                 }
                             }

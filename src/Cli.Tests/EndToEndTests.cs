@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using Microsoft.Data.SqlClient;
 
 namespace Cli.Tests;
@@ -21,9 +22,10 @@ public class EndToEndTests
     public void TestInitialize()
     {
         MockFileSystem fileSystem = FileSystemUtils.ProvisionMockFileSystem();
-        fileSystem.AddFile(
-            TEST_SCHEMA_FILE,
-            new MockFileData(""));
+        // Mock GraphQL Schema File
+        fileSystem.AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
+        // Empty runtime config file
+        fileSystem.AddFile("dab-config-empty.json", new MockFileData(""));
 
         _fileSystem = fileSystem;
 
@@ -691,20 +693,48 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to verify that `--help` and `--version` along with know command/option produce the exit code 0,
-    /// while unknown commands/options have exit code -1.
+    /// Validates that valid usage of verbs and associated options produce exit code 0 (CliReturnCode.SUCCESS).
+    /// Verifies that explicitly implemented verbs (add, update, init, start) and appropriately
+    /// supplied options produce exit code 0.
+    /// Verifies that non-explicitly implemented DAB CLI options `--help` and `--version` produce exit code 0.
+    /// init --config "dab-config.MsSql.json" --database-type mssql --connection-string "InvalidConnectionString"
     /// </summary>
     [DataTestMethod]
-    [DataRow(new string[] { "--version" }, 0, DisplayName = "Checking version should have exit code 0.")]
-    [DataRow(new string[] { "--help" }, 0, DisplayName = "Checking commands with help should have exit code 0.")]
-    [DataRow(new string[] { "add", "--help" }, 0, DisplayName = "Checking options with help should have exit code 0.")]
-    [DataRow(new string[] { "initialize" }, -1, DisplayName = "Invalid Command should have exit code -1.")]
-    [DataRow(new string[] { "init", "--database-name", "mssql" }, -1, DisplayName = "Invalid Options should have exit code -1.")]
-    [DataRow(new string[] { "init", "--database-type", "mssql", "-c", TEST_RUNTIME_CONFIG_FILE }, 0,
-    DisplayName = "Correct command with correct options should have exit code 0.")]
-    public void VerifyExitCodeForCli(string[] cliArguments, int expectedErrorCode)
+    [DataRow(new string[] { "--version" }, DisplayName = "Checking version.")]
+    [DataRow(new string[] { "--help" }, DisplayName = "Valid verbs with help.")]
+    [DataRow(new string[] { "add", "--help" }, DisplayName = "Valid options with help.")]
+    [DataRow(new string[] { "init", "--database-type", "mssql", "-c", TEST_RUNTIME_CONFIG_FILE }, DisplayName = "Valid verb with supported option.")]
+    public void ValidVerbsAndOptionsReturnZero(string[] cliArguments)
     {
-        Assert.AreEqual(expectedErrorCode, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+        Assert.AreEqual(expected: CliReturnCode.SUCCESS, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+    }
+
+    /// <summary>
+    /// Validates that invalid verbs and options produce exit code -1 (CliReturnCode.GENERAL_ERROR).
+    /// </summary>
+    /// <param name="cliArguments">cli verbs, options, and option values</param>
+    [DataTestMethod]
+    [DataRow(new string[] { "--remove-telemetry" }, DisplayName = "Usage of non-existent verb remove-telemetry")]
+    [DataRow(new string[] { "--initialize" }, DisplayName = "Usage of invalid verb (longform of init not supported) initialize")]
+    [DataRow(new string[] { "init", "--database-name", "mssql" }, DisplayName = "Invalid init options database-name")]
+    public void InvalidVerbsAndOptionsReturnNonZeroExitCode(string[] cliArguments)
+    {
+        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+    }
+
+    /// <summary>
+    /// Usage of valid verbs and options with values triggering exceptions should produce a non-zero exit code.
+    /// - File read/write issues when reading/writing to the config file.
+    /// - DAB engine failure.
+    /// </summary>
+    /// <param name="cliArguments">cli verbs, options, and option values</param>
+    [DataTestMethod]
+    [DataRow(new string[] { "init", "--config", "dab-config-empty.json", "--database-type", "mssql", "--connection-string", "SampleValue" },
+ DisplayName = "Config file value used already exists on the file system and results in init failure.")]
+    [DataRow(new string[] { "start", "--config", "dab-config-empty.json" }, DisplayName = "Config file value used is empty and engine startup fails")]
+    public void CliAndEngineFailuresReturnNonZeroExitCode(string[] cliArguments)
+    {
+        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }
 
     /// <summary>

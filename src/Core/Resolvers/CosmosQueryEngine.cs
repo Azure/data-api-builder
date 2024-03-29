@@ -9,6 +9,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
@@ -68,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
-            (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure, metadataStoreProvider);
+            (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(context, parameters, container, structure, metadataStoreProvider);
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {
@@ -271,7 +272,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
 #nullable enable
-        private static async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure, ISqlMetadataProvider metadataStoreProvider)
+
+        /// <summary>
+        /// Resolve partition key and id value from input parameters.
+        /// </summary>
+        /// <param name="context">Provide the information about variables and filters</param>
+        /// <param name="parameters">Contains argument information such as id, filter</param>
+        /// <param name="container">Container instance to get the container properties such as partition path</param>
+        /// <param name="structure">Fallback to get partition path information</param>
+        /// <param name="metadataStoreProvider">Set partition key path, fetched from container properties</param>
+        /// <returns></returns>
+        private static async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters,
+            Container container,
+            CosmosQueryStructure structure,
+            ISqlMetadataProvider metadataStoreProvider)
         {
             string? partitionKeyValue = null, idValue = null;
             string partitionKeyPath = await GetPartitionKeyPath(container, metadataStoreProvider);
@@ -287,8 +303,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 else if (parameterEntry.Key == QueryBuilder.FILTER_FIELD_NAME)
                 {
                     // Mapping partitionKey and id value from filter object if filter keyword exists in args
-                    partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, parameterEntry.Value);
-                    idValue = GetIdValue(parameterEntry.Value);
+                    partitionKeyValue = GetPartitionKeyValue(context, partitionKeyPath, parameterEntry.Value);
+                    idValue = GetIdValue(context, parameterEntry.Value);
                 }
             }
 
@@ -310,7 +326,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameter"></param>
         /// <returns></returns>
 #nullable enable
-        private static string? GetPartitionKeyValue(string? partitionKeyPath, object? parameter)
+        private static string? GetPartitionKeyValue(IMiddlewareContext context, string? partitionKeyPath, object? parameter)
         {
             if (parameter is null || partitionKeyPath is null)
             {
@@ -324,7 +340,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (partitionKeyPath == string.Empty
                     && string.Equals(item.Name.Value, "eq", StringComparison.OrdinalIgnoreCase))
                 {
-                    return item.Value.Value?.ToString();
+                    return ExecutionHelper.ExtractValueFromIValueNode(
+                        item.Value,
+                        context.Selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
+                        context.Variables)?.ToString();
                 }
 
                 if (partitionKeyPath != string.Empty
@@ -333,7 +352,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // Recursion to mapping next inner object
                     int index = partitionKeyPath.IndexOf(currentEntity);
                     string newPartitionKeyPath = partitionKeyPath[(index + currentEntity.Length)..partitionKeyPath.Length];
-                    return GetPartitionKeyValue(newPartitionKeyPath, item.Value.Value);
+                    return GetPartitionKeyValue(context, newPartitionKeyPath, item.Value.Value);
                 }
             }
 
@@ -345,7 +364,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        private static string? GetIdValue(object? parameter)
+        private static string? GetIdValue(IMiddlewareContext context, object? parameter)
         {
             if (parameter != null)
             {
@@ -354,7 +373,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
                     {
                         IList<ObjectFieldNode>? idValueObj = (IList<ObjectFieldNode>?)item.Value.Value;
-                        return idValueObj?.FirstOrDefault(x => x.Name.Value == "eq")?.Value?.Value?.ToString();
+
+                        ObjectFieldNode? itemToResolve = idValueObj?.FirstOrDefault(x => x.Name.Value == "eq");
+                        if (itemToResolve is null)
+                        {
+                            return null;
+                        }
+
+                        return ExecutionHelper.ExtractValueFromIValueNode(
+                            itemToResolve.Value,
+                            context.Selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
+                            context.Variables)?
+                            .ToString();
                     }
                 }
             }

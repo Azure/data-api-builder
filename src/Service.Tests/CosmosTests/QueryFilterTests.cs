@@ -262,9 +262,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
 
-        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
+        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, bool ignoreBlankResults = false, Dictionary<string, object> variables = null)
         {
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken, variables: variables);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
             ValidateResults(actual.GetProperty("items"), expected.RootElement);
         }
@@ -1089,6 +1090,28 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             string errorMessage = response.ToString();
             Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
 
+        }
+
+        /// <summary>
+        /// Tests that the pk level query filter is working variables
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryIdFilterField_WithVariables()
+        {
+            string gqlQuery = @"
+            query ($id: ID) {
+                    planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {eq : $id}})
+                    {
+                        items {
+                            id
+                            name
+                        }
+                    }
+                }
+            ";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where c.id = \"{_idList[0]}\"";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, variables: new() { { "id", _idList[0] } });
         }
         #endregion
 

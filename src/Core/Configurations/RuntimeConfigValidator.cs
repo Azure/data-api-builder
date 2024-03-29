@@ -924,33 +924,6 @@ public class RuntimeConfigValidator : IConfigValidator
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                     }
-
-                    foreach (string linkingSourceField in relationship.LinkingSourceFields)
-                    {
-                        if (!sqlMetadataProvider.TryGetBackingColumn(entityName, linkingSourceField, out _))
-                        {
-                            // Validation to ensure that entities have valid columns matching their linking source fields.
-                            HandleOrRecordException(new DataApiBuilderException(
-                                message: $"Entity: {entityName} has a relationship: {relationshipName} with linking source field: {linkingSourceField} that " +
-                                    $"does not exist as a column in {entityName}.",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                        }
-                    }
-
-                    foreach (string linkingTargetField in relationship.LinkingTargetFields)
-                    {
-                        if (!sqlMetadataProvider.TryGetBackingColumn(relationship.TargetEntity, linkingTargetField, out _))
-                        {
-                            // Validation to ensure that entities that have linking target fields defined in their relationship(s), define linking target fields
-                            // that are valid columns in the target entity of that relationship.
-                            HandleOrRecordException(new DataApiBuilderException(
-                                message: $"Entity: {entityName} has a relationship: {relationshipName} with linking target field: {linkingTargetField} that " +
-                                    $"does not exist as a column in target entity: {relationship.TargetEntity}.",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                        }
-                    }
                 }
 
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.

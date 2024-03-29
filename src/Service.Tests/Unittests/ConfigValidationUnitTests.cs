@@ -775,8 +775,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
             string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "field without backing column", out discard)).Returns(false);
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "field with backing column", out discard)).Returns(true);
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "noBackingColumn", out discard)).Returns(false);
+            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "backingColumn", out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);

@@ -485,8 +485,9 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             ISqlMetadataProvider sqlMetadataProvider = GetSqlMetadataProvider(entityName);
             IEnumerable<string> entities = sqlMetadataProvider.EntityToDatabaseObject.Keys;
-            if (!entities.Contains(entityName))
+            if (!entities.Contains(entityName) || sqlMetadataProvider.GetLinkingEntities().ContainsKey(entityName))
             {
+                // Do not validate the entity if the entity definition does not exist or if the entity is a linking entity.
                 throw new DataApiBuilderException(
                     message: $"{entityName} is not a valid entity.",
                     statusCode: HttpStatusCode.NotFound,

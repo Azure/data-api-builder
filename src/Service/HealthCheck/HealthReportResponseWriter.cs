@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Service.HealthCheck
 {
@@ -16,8 +17,19 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
     /// </summary>
     public class HealthReportResponseWriter
     {
+        // Dependencies
+        private ILogger? _logger;
+
+        // State
         private byte[]? _responseBytes;
+
+        // Constants
         private const string JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+
+        public HealthReportResponseWriter(ILogger<HealthReportResponseWriter>? logger)
+        {
+            _logger = logger;
+        }
 
         /// <summary>
         /// Function provided to the health check middleware to write the response.
@@ -66,17 +78,41 @@ namespace Azure.DataApiBuilder.Service.HealthCheck
                     {
                         jsonWriter.WriteString(DabHealthCheck.DAB_VERSION_KEY, versionNumber);
                     }
+                    else
+                    {
+                        LogTrace("DabHealthCheck did not contain the version number in the HealthReport.");
+                    }
 
                     if (healthReportEntry.Data.TryGetValue(DabHealthCheck.DAB_APPNAME_KEY, out object? appNameValue) && appNameValue is string appName)
                     {
                         jsonWriter.WriteString(DabHealthCheck.DAB_APPNAME_KEY, appName);
                     }
+                    else
+                    {
+                        LogTrace("DabHealthCheck did not contain the app name in the HealthReport.");
+                    }
+                }
+                else
+                {
+                    LogTrace("DabHealthCheck was not found in the HealthReport.");
                 }
 
                 jsonWriter.WriteEndObject();
             }
 
             return memoryStream.ToArray();
+        }
+
+        /// <summary>
+        /// Logs a trace message if a logger is present and the logger is enabled for trace events.
+        /// </summary>
+        /// <param name="message">Message to emit.</param>
+        private void LogTrace(string message)
+        {
+            if (_logger is not null && _logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace(message);
+            }
         }
     }
 }

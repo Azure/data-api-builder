@@ -144,6 +144,13 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<RestService>();
             services.AddSingleton<HealthReportResponseWriter>();
 
+            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            services.AddSingleton<ILogger<HealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<HealthReportResponseWriter>();
+            });
+
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
             {
                 ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);

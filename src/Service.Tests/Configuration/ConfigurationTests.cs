@@ -587,8 +587,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string assemblyResolvedVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += assemblyResolvedVersion;
+            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
+            expectedDabModifiedConnString += resolvedAssemblyVersion;
 
             RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
 
@@ -655,8 +655,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string assemblyResolvedVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += assemblyResolvedVersion;
+            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
+            expectedDabModifiedConnString += resolvedAssemblyVersion;
 
             RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
 

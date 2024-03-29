@@ -823,15 +823,14 @@ public class EndToEndTests
     /// For valid CLI commands (Valid verbs and options) validate that the correct
     /// version is logged (without commit hash) and that the config file name is printed to console.
     /// </summary>
-    [DataRow("init", "--database-type mssql", true, DisplayName = "Version printed with valid command init.")]
-    [DataRow("add", "MyEntity -s my_entity --permissions \"anonymous:*\"", true, DisplayName = "Version printed with valid command add.")]
-    [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Version printed with valid command update.")]
-    [DataRow("start", "", true, DisplayName = "Version printed with valid command start.")]
+    [DataRow("init", "--database-type mssql", DisplayName = "Version printed with valid command init.")]
+    [DataRow("add", "MyEntity -s my_entity --permissions \"anonymous:*\"", DisplayName = "Version printed with valid command add.")]
+    [DataRow("update", "MyEntity -s my_entity", DisplayName = "Version printed with valid command update.")]
+    [DataRow("start", "", DisplayName = "Version printed with valid command start.")]
     [DataTestMethod]
     public void ValidCliVerbsAndOptions_DisplayVersionAndConfigFileName(
         string command,
-        string options,
-        bool isParsableDabCommandName)
+        string options)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
@@ -848,24 +847,23 @@ public class EndToEndTests
         // uses the options.Handler() method to display relevant info and process the command.
         // All options.Handler() methods print the version without commit hash.
         StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
-
-        if (isParsableDabCommandName)
-        {
-            output = process.StandardOutput.ReadLine();
-            StringAssert.Contains(output, TEST_RUNTIME_CONFIG_FILE, StringComparison.Ordinal);
-        }
+        output = process.StandardOutput.ReadLine();
+        StringAssert.Contains(output, TEST_RUNTIME_CONFIG_FILE, StringComparison.Ordinal);
 
         process.Kill();
     }
 
+    /// <summary>
+    /// For invalid CLI commands (invalid verbs, '--version', or '--help'), validate that the
+    /// version is logged with the commit hash and that the config file name is printed to console.
+    /// </summary>
     [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
     [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
     [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
     [DataTestMethod]
     public void InvalidCliVerbsAndOptions_DisplayVersionWithCommitHashAndConfigFileName(
     string command,
-    string options,
-    bool isParsableDabCommandName)
+    string options)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
@@ -882,12 +880,6 @@ public class EndToEndTests
         // CommandLineParser's default HelpWriter is used to display the version and help information.
         // Because the HelpWriter uses fileVersionInfo.ProductVersion, the version includes the commit hash.
         StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
-
-        if (isParsableDabCommandName)
-        {
-            output = process.StandardOutput.ReadLine();
-            StringAssert.Contains(output, TEST_RUNTIME_CONFIG_FILE, StringComparison.Ordinal);
-        }
 
         process.Kill();
     }

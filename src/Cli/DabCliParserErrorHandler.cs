@@ -14,7 +14,10 @@ namespace Cli
         /// Processes errors accumulated by each parser in parser.ParseArguments<parsers>().
         /// For DAB CLI, this only includes scenarios where the user provides invalid DAB CLI input.
         /// e.g. incorrectly formed or missing options and parameters.
-        /// Additionally, an error is tracked if the user uses an unsupported CLI verb or uses --help.
+        /// Additionally, an error is tracked if the user uses:
+        /// -> an unsupported CLI verb
+        /// -> --help.
+        /// -> --version
         /// </summary>
         /// <param name="err">Collection of Error objects collected by the CLI parser.</param>
         /// <returns>Return code: 0 when --help is used, otherwise -1.</returns>

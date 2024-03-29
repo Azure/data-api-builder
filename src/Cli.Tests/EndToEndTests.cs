@@ -622,7 +622,7 @@ public class EndToEndTests
     [DataRow(new string[] { "init", "--database-type", "mssql", "-c", TEST_RUNTIME_CONFIG_FILE }, DisplayName = "Valid verb with supported option.")]
     public void ValidVerbsAndOptionsReturnZero(string[] cliArguments)
     {
-        Assert.AreEqual(expected: CliReturnCode.SUCCESS, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+        Assert.AreEqual(expected: CliReturnCode.SUCCESS, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }
 
     /// <summary>
@@ -635,7 +635,7 @@ public class EndToEndTests
     [DataRow(new string[] { "init", "--database-name", "mssql" }, DisplayName = "Invalid init options database-name")]
     public void InvalidVerbsAndOptionsReturnNonZeroExitCode(string[] cliArguments)
     {
-        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }
 
     /// <summary>
@@ -650,7 +650,7 @@ public class EndToEndTests
     [DataRow(new string[] { "start", "--config", "dab-config-empty.json" }, DisplayName = "Config file value used is empty and engine startup fails")]
     public void CliAndEngineFailuresReturnNonZeroExitCode(string[] cliArguments)
     {
-        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }
 
     /// <summary>

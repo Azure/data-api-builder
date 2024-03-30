@@ -124,6 +124,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Get column type from table underlying the query structure
         /// </summary>
+        /// <param name="columnName">backing column name</param>
         public Type GetColumnSystemType(string columnName)
         {
             if (GetUnderlyingSourceDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
@@ -154,14 +155,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="targetEntityName">Entity name as in config file for the related entity.</param>
         /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
         /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
-        public void AddJoinPredicatesForRelatedEntityNEW(
+        public void AddJoinPredicatesForRelatedEntity(
             string relationshipName,
             string targetEntityName,
             string relatedSourceAlias,
             BaseSqlQueryStructure subQuery)
         {
-            EntityRelationshipKey selfJoinKey = new(EntityName, relationshipName);
-            if (MetadataProvider.RelationshipToFkDefinitions.TryGetValue(key: selfJoinKey, out ForeignKeyDefinition? fkDef))
+            EntityRelationshipKey currentEntityRelationshipKey = new(EntityName, relationshipName);
+            if (MetadataProvider.RelationshipToFkDefinitions.TryGetValue(key: currentEntityRelationshipKey, out ForeignKeyDefinition? fkDef))
             {
                 if (fkDef.ReferencedEntityRole is not RelationshipRole.Linking && fkDef.ReferencingEntityRole is not RelationshipRole.Linking)
                 {
@@ -221,20 +222,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     // First identify which side of the relationship, this fk definition
                     // is looking at.
-                    if (EntityName == targetEntityName)
-                    {
-                        // Self-referencing (self-join) case.
-                        if (foreignKeyDefinition.ReferencingColumns.Count > 0
-                            && foreignKeyDefinition.ReferencedColumns.Count > 0)
-                        {
-                            subQuery.Predicates.AddRange(CreateJoinPredicates(
-                                relatedSourceAlias,
-                                foreignKeyDefinition.ReferencingColumns,
-                                SourceAlias,
-                                foreignKeyDefinition.ReferencedColumns));
-                        }
-                    }
-                    else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(DatabaseObject))
+                    if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(DatabaseObject))
                     {
                         // Case where fk in parent entity references the nested entity.
                         // Verify this is a valid fk definition before adding the join predicate.
@@ -326,8 +314,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     (leftColumnName, rightColumnName) =>
                     {
                         // no table name or schema here is needed because this is a subquery that joins on table alias
-                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftTableAlias);
-                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightTableAlias);
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: leftColumnName, tableAlias: leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: rightColumnName, tableAlias: rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,

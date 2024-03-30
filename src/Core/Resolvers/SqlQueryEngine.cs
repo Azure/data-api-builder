@@ -295,7 +295,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string queryString;
 
             // Open connection and execute query using _queryExecutor
-            if(isMultipleCreateOperation)
+            if (isMultipleCreateOperation)
             {
                 queryString = queryBuilder.BuildQueryForMultipleCreateOperation(structure);
             }

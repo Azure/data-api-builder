@@ -1925,6 +1925,11 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
         }
+
+        public bool IsMultipleCreateOperationEnabled()
+        {
+            return _runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled();
+        }
     }
 }
 

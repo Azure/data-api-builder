@@ -341,11 +341,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return query;
         }
 
-        string IQueryBuilder.Build(SqlQueryStructure structure, bool isQueryForNestedInsertOperation)
-        {
-            throw new NotImplementedException();
-        }
-
         /// <summary>
         /// Builds the parameter list for the stored procedure execute call
         /// paramKeys are the user-generated procedure parameter names
@@ -362,6 +357,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string parameterList = sb.ToString();
             // If at least one parameter added, remove trailing comma and space, else return empty string
             return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
+        }
+
+        string IQueryBuilder.BuildQueryForMultipleCreateOperation(SqlQueryStructure structure)
+        {
+            throw new NotImplementedException();
         }
     }
 }

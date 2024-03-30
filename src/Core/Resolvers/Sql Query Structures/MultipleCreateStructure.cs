@@ -4,7 +4,7 @@
 namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
 {
     /// <summary>
-    /// Wrapper class for the current entity to help with nested insert operation.
+    /// Wrapper class for the current entity to help with multiple create operation.
     /// </summary>
     internal class MultipleCreateStructure
     {

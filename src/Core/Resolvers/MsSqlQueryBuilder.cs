@@ -62,13 +62,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return query;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="structure"></param>
-        /// <param name="isQueryForNestedInsertOperation"></param>
-        /// <returns></returns>
-        public string Build(SqlQueryStructure structure, bool isQueryForNestedInsertOperation = false)
+        /// <inheritdoc />
+        public string BuildQueryForMultipleCreateOperation(SqlQueryStructure structure)
         {
             string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
             string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
@@ -77,26 +72,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             fromSql += string.Join(
                     "",
                     structure.JoinQueries.Select(
-                        x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
+                        x => $" OUTER APPLY ({BuildQueryForMultipleCreateOperation(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
-            string predicates;
-
-            if (isQueryForNestedInsertOperation)
-            {
-                predicates = JoinPredicateStrings(
-                                structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                                structure.FilterPredicates,
-                                Build(structure.Predicates, " OR ", true),
-                                Build(structure.PaginationMetadata.PaginationPredicate));
-            }
-            else
-            {
-                predicates = JoinPredicateStrings(
-                                structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                                structure.FilterPredicates,
-                                Build(structure.Predicates),
-                                Build(structure.PaginationMetadata.PaginationPredicate));
-            }
+            string predicates = JoinPredicateStrings(
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                    structure.FilterPredicates,
+                                    Build(structure.Predicates, " OR ", isMultipleCreateOperation: true),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"

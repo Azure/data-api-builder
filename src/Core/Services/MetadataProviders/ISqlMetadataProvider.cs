@@ -208,5 +208,12 @@ namespace Azure.DataApiBuilder.Core.Services
         void InitializeAsync(
             Dictionary<string, DatabaseObject> entityToDatabaseObject,
             Dictionary<string, string> graphQLStoredProcedureExposedNameToEntityNameMap);
+
+        /// <summary>
+        /// Helper method to check if multiple create operation is enabled.
+        /// </summary>
+        /// <returns>True/False depending on multiple create operation is enabled or not.</returns>
+        public bool IsMultipleCreateOperationEnabled();
+
     }
 }

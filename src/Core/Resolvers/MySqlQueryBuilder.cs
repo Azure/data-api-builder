@@ -367,7 +367,7 @@ WHERE
             throw new NotImplementedException();
         }
 
-        string IQueryBuilder.Build(SqlQueryStructure structure, bool isQueryForNestedInsertOperation)
+        string IQueryBuilder.BuildQueryForMultipleCreateOperation(SqlQueryStructure structure)
         {
             throw new NotImplementedException();
         }

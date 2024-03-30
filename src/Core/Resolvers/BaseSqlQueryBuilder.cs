@@ -318,9 +318,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Build and join predicates with separator (" AND " by default)
         /// </summary>
-        protected string Build(List<Predicate> predicates, string separator = " AND ", bool isNestedInsertOperation = false)
+        protected string Build(List<Predicate> predicates, string separator = " AND ", bool isMultipleCreateOperation = false)
         {
-            if (isNestedInsertOperation)
+            if (isMultipleCreateOperation)
             {
                 return "(" + string.Join(separator, predicates.Select(p => Build(p))) + ")";
             }

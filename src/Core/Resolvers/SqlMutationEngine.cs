@@ -160,7 +160,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             result = GetDbOperationResultJsonDocument("success");
                         }
                     }
-                    else if (mutationOperation is EntityActionOperation.Create)
+                    // This code block contains logic for handling multiple create mutation operations.
+                    else if (mutationOperation is EntityActionOperation.Create && sqlMetadataProvider.IsMultipleCreateOperationEnabled())
                     {
                         bool isPointMutation = IsPointMutation(context);
 
@@ -1600,7 +1601,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Helper function to parse the mutation parameters from Hotchocolate input types to Dictionary of field names and values.
-        /// For nested create mutation, the input types of a field can be a scalar, object or list type.
+        /// For multiple create mutation, the input types of a field can be a scalar, object or list type.
         /// This function recursively parses for each input type.
         /// </summary>
         /// <param name="context">GQL middleware context used to resolve the values of arguments.</param>
@@ -1610,8 +1611,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         internal static object? GQLMultipleCreateArgumentToDictParamsHelper(IMiddlewareContext context, InputObjectType inputObjectType, object? inputParameters)
         {
             // This condition is met for input types that accepts an array of values.
-            // Ex: 1. Multiple nested create operation ---> createbooks_multiple.   
-            //     2. Input types for 1:N and M:N relationships.
+            // 1. Many type multiple create operation ---> creatbooks, create.   
+            // 2. Input types for 1:N and M:N relationships.
             if (inputParameters is List<IValueNode> inputList)
             {
                 List<IDictionary<string, object?>> resultList = new();
@@ -1628,9 +1629,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 return resultList;
             }
+
             // This condition is met for input types that accept input for a single item.
-            // Ex: 1. Simple nested create operation --> createbook.
-            //     2. Input types for 1:1 and N:1 relationships.
+            // 1. Point multiple create operation --> createbook.
+            // 2. Input types for 1:1 and N:1 relationships.
             else if (inputParameters is List<ObjectFieldNode> nodes)
             {
                 Dictionary<string, object?> result = new();

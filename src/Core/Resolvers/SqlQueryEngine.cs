@@ -94,22 +94,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, List<IDictionary<string, object?>> parameters, string dataSourceName)
         {
-            IOutputType outputType = context.Selection.Field.Type;
-            string entityName = outputType.TypeName();
-            ObjectType _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
 
-            if (_underlyingFieldType.Name.Value.EndsWith("Connection"))
-            {
-                IObjectField subField = GraphQLUtils.UnderlyingGraphQLEntityType(context.Selection.Field.Type).Fields["items"];
-                outputType = subField.Type;
-                _underlyingFieldType = GraphQLUtils.UnderlyingGraphQLEntityType(outputType);
-                entityName = _underlyingFieldType.Name;
-            }
-
-            if (GraphQLUtils.TryExtractGraphQLFieldModelName(_underlyingFieldType.Directives, out string? modelName))
-            {
-                entityName = modelName;
-            }
+            string entityName = GraphQLUtils.GetEntityNameFromContext(context);
 
             SqlQueryStructure structure = new(
                 context,
@@ -124,13 +110,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (structure.PaginationMetadata.IsPaginated)
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName, true), structure.PaginationMetadata),
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName, isMultipleCreateOperation: true), structure.PaginationMetadata),
                     structure.PaginationMetadata);
             }
             else
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
-                    await ExecuteAsync(structure, dataSourceName, true),
+                    await ExecuteAsync(structure, dataSourceName, isMultipleCreateOperation: true),
                     structure.PaginationMetadata);
             }
         }
@@ -299,15 +285,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName, bool isNestedQueryOperation = false)
+        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName, bool isMultipleCreateOperation = false)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
 
+            string queryString;
+
             // Open connection and execute query using _queryExecutor
-            string queryString = queryBuilder.Build(structure, isNestedQueryOperation);
+            if(isMultipleCreateOperation)
+            {
+                queryString = queryBuilder.BuildQueryForMultipleCreateOperation(structure);
+            }
+            else
+            {
+                queryString = queryBuilder.Build(structure);
+            }
 
             // Global Cache enablement check
             if (runtimeConfig.CanUseCache())

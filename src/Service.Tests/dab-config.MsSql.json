@@ -1446,6 +1446,23 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ],
       "relationships": {

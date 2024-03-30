@@ -502,7 +502,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     AddColumnsForEndCursor();
                 }
 
-                if (PaginationMetadata.RequestedHasNextPage)
+                if (PaginationMetadata.RequestedHasNextPage || PaginationMetadata.RequestedEndCursor)
                 {
                     _limit++;
                 }

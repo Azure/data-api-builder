@@ -1791,7 +1791,8 @@ namespace Azure.DataApiBuilder.Core.Services
                     // This code block adds FK definitions between source and target entities when there is no FK constraint defined
                     // in the database, either from source->target or target->source entities.
 
-                    // Being here indicates that we did not find an FK constraint in the database for the current FK definition.
+                    // Being here indicates that we did not find an FK constraint in the database for the current FK definition
+                    // (relationship) defined in the runtime config.
                     // But this does not indicate absence of an FK constraint between the source, target entities yet.
                     // This may happen when an FK constraint exists between two tables, but in an order opposite to the order
                     // of referencing and referenced tables present in the current FK definition. This happens because for a relationship
@@ -1801,25 +1802,38 @@ namespace Azure.DataApiBuilder.Core.Services
                     // 1. N:1 relationships,
                     // 2. 1:1 relationships where an FK constraint exists only from source->target or target->source but not both.
 
-                    // E.g. for a relationship between Book-Publisher entities with cardinality 1, we would have added a Foreign key definition
-                    // from Book->Publisher and Publisher->Book to Book's source definition earlier.
-                    // Since it is an N:1 relationship, it might have been the case that the current FK definition had
-                    // 'publishers' table as the referencing table and 'books' table as the referenced table, and hence,
-                    // we did not find any FK constraint. But an FK constraint does exist where 'books' is the referencing table
-                    // while the 'publishers' is the referenced table.
-                    // (The definition for that constraint would be taken care of while adding database FKs above.)
+                    // E.g. For a relationship between Book->Publisher entities with cardinality configured to 1 (many to one),
+                    // DAB added two Foreign key definitions to Book's source definition:
+                    // 1. Book->Publisher
+                    // 2. Publisher->Book 
+                    // Why?
+                    // DAB does some relationship processing prior to pulling FK definitions from the database.
+                    // Consequently, because Book->Publisher is an N:1 relationship, DAB optimistically genereates FK definitions for both
+                    // source->target and target->source entities because database metadata hasn't yet been pulled to confirm which combination
+                    // of optimistically generated FK defintions matches the database FK relationship metadata.
+                    // At this point in the code, the database resolved FK metadata is available. So, we need to remove the wrong FK definition.
 
                     // So, before concluding that there is no FK constraint between the source, target entities, we need
                     // to confirm absence of FK constraint from source->target and target->source tables.
                     RelationShipPair inverseFKPair = new(configResolvedFkDefinition.Pair.ReferencedDbTable, configResolvedFkDefinition.Pair.ReferencingDbTable);
 
-                    // Add FK definition to the set of validated FKs only if no FK constraint is defined for the source and target entities
+                    // When no database FK definition is resolved relating the source and target entities, DAB adds its own generated FK Definition
+                    // (based on user provided config values) to the set of validated FKs to be returned by this function.
+                    // Add the DAB generated FK definition  to the set of validated FKs only if no FK constraint is defined for the source and target entities
                     // in the database, either from source -> target or target -> source.
                     if (PairToFkDefinition is not null && !PairToFkDefinition.ContainsKey(inverseFKPair))
                     {
                         validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
+
+                        // The following operation generates FK metadata for use when processing requests on self-joined/referencing entities.
                         EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
-                        RelationshipToFkDefinitions.Add(key, configResolvedFkDefinition);
+                        if (!RelationshipToFkDefinitions.TryAdd(key, configResolvedFkDefinition))
+                        {
+                            throw new DataApiBuilderException(
+                                message: $"Relationship name {configResolvedFkDefinition.RelationshipName} already exists for entity {configResolvedFkDefinition.SourceEntityName}.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                        }
                     }
                 }
             }

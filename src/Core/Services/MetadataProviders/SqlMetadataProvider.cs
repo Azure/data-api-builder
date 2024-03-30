@@ -1638,7 +1638,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Method to validate that the foreign key information is populdated
+        /// Method to validate that the foreign key information is populated
         /// for all the expected entities
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
@@ -1654,10 +1654,11 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
                     // If none of the inferred foreign keys have the referencing columns,
-                    // it means metadata is still missing fail the bootstrap.
-                    if (!foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() != 0)))
+                    // it means metadata is still missing. DAB startup must fail and terminate.
+                    bool isAtLeastOneEntityMissingReferencingColumns = foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count == 0));
+                    if (isAtLeastOneEntityMissingReferencingColumns)
                     {
-                        HandleOrRecordException(new NotSupportedException($"Some of the relationship information missing and could not be inferred for {sourceEntityName}."));
+                        HandleOrRecordException(new NotSupportedException($"Some of relationship information is missing and could not be inferred for {sourceEntityName}."));
                     }
                 }
             }
@@ -1838,7 +1839,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // Being here indicates that we did not find an FK constraint in the database for the current FK definition
                     // (relationship) defined in the runtime config.
                     // But this does not indicate absence of an FK constraint between the source, target entities yet.
-                    // This may happen when an FK constraint exists between two tables, but in an order opposite to the order
+                    // This may happen when an FK constraint exists between two tables, but in an opposite order
                     // of referencing and referenced tables present in the current FK definition. This happens because for a relationship
                     // with right cardinality as 1, we add FK definitons from both source->target and target->source to the source entity's definition.
                     // because at that point we don't know if the relationship is an N:1 relationship or a 1:1 relationship.
@@ -1859,7 +1860,9 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     // So, before concluding that there is no FK constraint between the source, target entities, we need
                     // to confirm absence of FK constraint from source->target and target->source tables.
-                    RelationShipPair inverseFKPair = new(configResolvedFkDefinition.Pair.ReferencedDbTable, configResolvedFkDefinition.Pair.ReferencingDbTable);
+                    RelationShipPair inverseFKPair = new(
+                        referencingDbObject: configResolvedFkDefinition.Pair.ReferencedDbTable,
+                        referencedDbObject: configResolvedFkDefinition.Pair.ReferencingDbTable);
 
                     // When no database FK definition is resolved relating the source and target entities, DAB adds its own generated FK Definition
                     // (based on user provided config values) to the set of validated FKs to be returned by this function.
@@ -1873,10 +1876,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
                         if (!RelationshipToFkDefinitions.TryAdd(key, configResolvedFkDefinition))
                         {
-                            throw new DataApiBuilderException(
-                                message: $"Relationship name {configResolvedFkDefinition.RelationshipName} already exists for entity {configResolvedFkDefinition.SourceEntityName}.",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                            Console.WriteLine("for config-only defined relationship, no db fk, dab is failing to keep track of both 2 generated fk definitions.");
                         }
                     }
                 }

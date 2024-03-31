@@ -1179,7 +1179,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
-        /// Tests that the pk level query filter is working with variables
+        /// Tests that the pk level query filter is working with variables.
         /// </summary>
         [TestMethod]
         public async Task TestQueryIdFilterField_WithVariables()

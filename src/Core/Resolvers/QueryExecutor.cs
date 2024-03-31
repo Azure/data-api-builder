@@ -422,7 +422,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public async Task<DbResultSet>
             ExtractResultSetFromDbDataReaderAsync(DbDataReader dbDataReader, List<string>? args = null)
         {
-            DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader).Result ?? new());
+            DbResultSet dbResultSet = new(resultProperties: GetResultPropertiesAsync(dbDataReader).Result ?? new());
 
             while (await ReadAsync(dbDataReader))
             {
@@ -465,7 +465,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public DbResultSet
             ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
-            DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader).Result ?? new());
+            DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader) ?? new());
 
             while (Read(dbDataReader))
             {
@@ -607,7 +607,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type
         /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
-        public Task<Dictionary<string, object>> GetResultProperties(
+        public Task<Dictionary<string, object>> GetResultPropertiesAsync(
             DbDataReader dbDataReader,
             List<string>? columnNames = null)
         {
@@ -617,6 +617,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 { nameof(dbDataReader.HasRows), dbDataReader.HasRows }
             };
             return Task.FromResult(resultProperties);
+        }
+
+        /// <inheritdoc />
+        /// <Note>This function is a DbDataReader handler of type
+        /// Func<DbDataReader, List<string>?, TResult?></Note>
+        public Dictionary<string, object> GetResultProperties(
+            DbDataReader dbDataReader,
+            List<string>? columnNames = null)
+        {
+            Dictionary<string, object> resultProperties = new()
+            {
+                { nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected },
+                { nameof(dbDataReader.HasRows), dbDataReader.HasRows }
+            };
+            return resultProperties;
         }
 
         private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)

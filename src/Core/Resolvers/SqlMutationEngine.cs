@@ -827,6 +827,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             GetHttpContext());
                     queryString = queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
+
                     break;
                 case EntityActionOperation.Update:
                     SqlUpdateStructure updateStructure = new(
@@ -1148,12 +1149,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new DataApiBuilderException(
                         message: "Null input parameter is not acceptable",
                         statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError
-                    );
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
             }
 
             // For One - Many and Many - Many relationship types, the entire logic needs to be run for each element of the input.
-            // So, when the input is a list, we iterate over the list and run the logic for each element.
+            // So, when the input parameters is of list type, we iterate over the list and run the logic for each element.
             if (multipleCreateStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
             {
                 List<IDictionary<string, object?>> inputParamList = (List<IDictionary<string, object?>>)multipleCreateStructure.InputMutParams;
@@ -1245,7 +1245,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     throw new DataApiBuilderException(
-                                                            message: $"Foreign Key value for  Entity: {entityName}, Column : {referencedColumnName} not found",
+                                                            message: $"Foreign Key value for  Entity: {entityName}, Column : {referencingColumnName} not found",
                                                             subStatusCode: DataApiBuilderException.SubStatusCodes.ForeignKeyNotFound,
                                                             statusCode: HttpStatusCode.InternalServerError);
                                 }
@@ -1273,7 +1273,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 List<string> primaryKeyColumnNames = new();
                 foreach (string primaryKey in currentEntitySourceDefinition.PrimaryKey)
                 {
-                    primaryKeyColumnNames.Add(primaryKey);
+                    if (sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? exposedPrimaryKeyName) && !string.IsNullOrWhiteSpace(exposedPrimaryKeyName))
+                    {
+                        primaryKeyColumnNames.Add(exposedPrimaryKeyName);
+                    }
                 }
 
                 dbResultSetForCurrentEntity = queryExecutor.ExecuteQuery(queryString,
@@ -1380,12 +1383,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     Dictionary<string, DbConnectionParam> linkingTableQueryParams = linkingEntitySqlInsertStructure.Parameters;
                     dbResultSetForLinkingEntity = queryExecutor.ExecuteQuery(
-                                      linkingTableQueryString,
-                                      linkingTableQueryParams,
-                                      queryExecutor.ExtractResultSetFromDbDataReader,
-                                      GetHttpContext(),
-                                      linkingTablePkColumns,
-                                      dataSourceName);
+                                                                  linkingTableQueryString,
+                                                                  linkingTableQueryParams,
+                                                                  queryExecutor.ExtractResultSetFromDbDataReader,
+                                                                  GetHttpContext(),
+                                                                  linkingTablePkColumns,
+                                                                  dataSourceName);
 
                     dbResultSetRowForLinkingEntity = dbResultSetForLinkingEntity is not null ? (dbResultSetForLinkingEntity.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
 
@@ -1717,7 +1720,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 resultProperties = await queryExecutor.ExecuteQueryAsync(
                     sqltext: queryString,
                     parameters: queryParameters,
-                    dataReaderHandler: queryExecutor.GetResultProperties,
+                    dataReaderHandler: queryExecutor.GetResultPropertiesAsync,
                     httpContext: GetHttpContext(),
                     dataSourceName: dataSourceName);
 

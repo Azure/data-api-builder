@@ -119,7 +119,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">List of string arguments if any.</param>
         /// <returns>A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.</returns>
-        public Task<Dictionary<string, object>> GetResultProperties(
+        public Task<Dictionary<string, object>> GetResultPropertiesAsync(
+                DbDataReader dbDataReader,
+                List<string>? args = null);
+
+        /// <summary>
+        /// Gets the result properties like RecordsAffected, HasRows in a dictionary.
+        /// This is a synchronous method. It does not make use of async/await.
+        /// </summary>
+        /// <param name="dbDataReader">A DbDataReader.</param>
+        /// <param name="args">List of string arguments if any.</param>
+        /// <returns>A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.</returns>
+        public Dictionary<string, object> GetResultProperties(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 

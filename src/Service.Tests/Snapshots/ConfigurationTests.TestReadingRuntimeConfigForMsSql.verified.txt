@@ -14,7 +14,12 @@
     GraphQL: {
       Enabled: true,
       Path: /graphql,
-      AllowIntrospection: true
+      AllowIntrospection: true,
+      MultipleMutationOptions: {
+        MultipleCreateOptions: {
+          Enabled: true
+        }
+      }
     },
     Host: {
       Cors: {

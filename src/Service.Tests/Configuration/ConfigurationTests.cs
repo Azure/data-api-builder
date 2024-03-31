@@ -2385,7 +2385,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 Assert.IsNotNull(mutationResponse);
                 SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
-                                                            message: "Cannot insert the value NULL into column 'publisher_id', table 'master.dbo.books'; column does not allow nulls. INSERT fails.");
+                                                            message: "Foreign Key value for  Entity: Book, Column : publisher_id not found");
             }
         }
 

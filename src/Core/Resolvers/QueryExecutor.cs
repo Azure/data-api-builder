@@ -314,25 +314,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null)
         {
             conn.Open();
-            DbCommand cmd = conn.CreateCommand();
-            cmd.CommandType = CommandType.Text;
-
-            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
-            // at the database level.
-            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
-
-            cmd.CommandText = sessionParamsQuery + sqltext;
-            if (parameters is not null)
-            {
-                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
-                {
-                    DbParameter parameter = cmd.CreateParameter();
-                    parameter.ParameterName = parameterEntry.Key;
-                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
-                    PopulateDbTypeForParameter(parameterEntry, parameter);
-                    cmd.Parameters.Add(parameter);
-                }
-            }
+            DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
 
             try
             {

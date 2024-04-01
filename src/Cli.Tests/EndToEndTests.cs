@@ -854,16 +854,18 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// For invalid CLI commands (invalid verbs, '--version', or '--help'), validate that the
-    /// version is logged with the commit hash and that the config file name is printed to console.
+    /// Validate that the DAB CLI logs the correct version (with commit hash) to the console
+    /// when invalid verbs, '--version', or '--help' are used.
+    /// Console Output:
+    /// Microsoft.DataApiBuilder 0.12+5009b8720409ab321fd8cd19c716835528c8385b
     /// </summary>
-    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
-    [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
-    [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
+    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", DisplayName = "Version printed with invalid command edit.")]
     [DataTestMethod]
     public void InvalidCliVerbsAndOptions_DisplayVersionWithCommitHashAndConfigFileName(
-    string command,
-    string options)
+        string command,
+        string options)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 

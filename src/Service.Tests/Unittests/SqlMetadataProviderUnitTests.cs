@@ -461,6 +461,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Resets the database state and infers metadata for all the entities exposed in the config.
+        /// The `ResetDbStateAsync()` method executes the .sql script of the respective database type and
+        /// serves as a setup phase for this test. 
         /// </summary>
         private static async Task SetupTestFixtureAndInferMetadata()
         {

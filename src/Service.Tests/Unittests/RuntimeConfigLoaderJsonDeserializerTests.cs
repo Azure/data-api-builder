@@ -422,7 +422,12 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
     ""graphql"": {
       ""enabled"": true,
       ""path"": """ + reps[++index % reps.Length] + @""",
-      ""allow-introspection"": true
+      ""allow-introspection"": true,
+      ""multiple-mutations"": {
+        ""create"": {
+            ""enabled"": false
+        }
+      }      
     },
     ""host"": {
       ""mode"": ""development"",

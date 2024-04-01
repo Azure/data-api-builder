@@ -32,6 +32,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -42,6 +43,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Moq.Protected;
 using VerifyMSTest;
 using static Azure.DataApiBuilder.Config.FileSystemRuntimeConfigLoader;
 using static Azure.DataApiBuilder.Service.Tests.Configuration.ConfigurationEndpoints;
@@ -69,6 +71,43 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         private const int RETRY_COUNT = 5;
         private const int RETRY_WAIT_SECONDS = 1;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public const string BOOK_ENTITY_JSON = @"
+            {
+              ""entities"": {
+                    ""Book"": {
+                    ""source"": {
+                        ""object"": ""books"",
+                        ""type"": ""table""
+                    },
+                    ""graphql"": {
+                        ""enabled"": true,
+                        ""type"": {
+                        ""singular"": ""book"",
+                        ""plural"": ""books""
+                        }
+                    },
+                    ""rest"":{
+                        ""enabled"": true
+                    },
+                    ""permissions"": [
+                        {
+                        ""role"": ""anonymous"",
+                        ""actions"": [
+                                {
+                                    ""action"": ""read""
+                                }
+                            ]
+                        }
+                    ],
+                    ""mappings"": null,
+                    ""relationships"": null
+                    }
+                }
+            }";
 
         /// <summary>
         /// A valid REST API request body with correct parameter types for all the fields.
@@ -514,64 +553,129 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Checks if the connection string provided in the config is correctly updated for MSSQL.
-        /// If the connection string already contains the `Application Name` property, it should append the DataApiBuilder Application Name to the existing value.
-        /// If not, it should append the property `Application Name` to the connection string.
+        /// Validates that DAB supplements the MSSQL database connection strings with the property "Application Name" and
+        /// 1. Adds the property/value "Application Name=dab_oss_Major.Minor.Patch" when the env var DAB_APP_NAME_ENV is not set.
+        /// 2. Adds the property/value "Application Name=dab_hosted_Major.Minor.Patch" when the env var DAB_APP_NAME_ENV is set to "dab_hosted".
+        /// (DAB_APP_NAME_ENV is set in hosted scenario or when user sets the value.)
+        /// NOTE: "#pragma warning disable format" is used here to avoid removing intentional, readability promoting spacing in DataRow display names. 
         /// </summary>
-        /// <param name="databaseType">database type.</param>
-        /// <param name="providedConnectionString">connection string provided in the config.</param>
-        /// <param name="expectedUpdatedConnectionString">Updated connection string with Application Name.</param>
-        /// <param name="isHostedScenario">If Dab is hosted or OSS.</param>
+        /// <param name="configProvidedConnString">connection string provided in the config.</param>
+        /// <param name="expectedDabModifiedConnString">Updated connection string with Application Name.</param>
+        /// <param name="dabEnvOverride">Whether DAB_APP_NAME_ENV is set in environment. (Always present in hosted scenario or if user supplies value.)</param>
+        #pragma warning disable format
         [DataTestMethod]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;", "Data Source=<>;Application Name=dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Adding Application Name property to connectionString with dab_oss app name.")]
-        [DataRow(DatabaseType.MySQL, "Something;", "Something;", false, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", false, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;", "Data Source=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Updating connectionString containing customer Application name with dab_oss app name.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;User ID=<>", "Data Source=<>;User ID=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL2]:Updating connectionString containing customer Application name with dab_oss app name.")]
-        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containg customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;", "Data Source=<>;Application Name=dab_hosted_1.0.0", true, DisplayName = "[MSSQL]:Adding Application Name property to connectionString with dab_hosted app.")]
-        [DataRow(DatabaseType.MySQL, "Something;", "Something;", true, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", true, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;", "Data Source=<>;Application Name=CustAppName,dab_hosted_1.0.0", true, DisplayName = "[MSSQL]:Updating connectionString containing customer Application name with dab_hosted app name.")]
-        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;App=CustAppName;User ID=<>", "Data Source=<>;User ID=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Updating connectionString containing `App` for customer Application name with dab_oss app name.")]
-        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;", "Something1;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for `App` preoperty in connectionString for DBs other than MSSQL.")]
-        [DataRow(DatabaseType.MySQL, "username=dabApp;App=CustAppName;Something2;", "username=dabApp;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for other properties in connectionString containing `App`.")]
-        public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
-            DatabaseType databaseType,
-            string providedConnectionString,
-            string expectedUpdatedConnectionString,
-            bool isHostedScenario)
+        [DataRow("Data Source=<>;"                              , "Data Source=<>;Application Name="             , false, DisplayName = "[MSSQL]: DAB adds version 'dab_oss_major_minor_patch' to non-provided connection string property 'Application Name'.")]
+        [DataRow("Data Source=<>;Application Name=CustAppName;" , "Data Source=<>;Application Name=CustAppName," , false, DisplayName = "[MSSQL]: DAB appends version 'dab_oss_major_minor_patch' to user supplied 'Application Name' property.")]
+        [DataRow("Data Source=<>;App=CustAppName;"              , "Data Source=<>;Application Name=CustAppName," , false, DisplayName = "[MSSQL]: DAB appends version 'dab_oss_major_minor_patch' to user supplied 'App' property and resolves property to 'Application Name'.")]
+        [DataRow("Data Source=<>;"                              , "Data Source=<>;Application Name="             , true , DisplayName = "[MSSQL]: DAB adds DAB_APP_NAME_ENV value 'dab_hosted' and version suffix '_major_minor_patch' to non-provided connection string property 'Application Name'.")]
+        [DataRow("Data Source=<>;Application Name=CustAppName;" , "Data Source=<>;Application Name=CustAppName," , true , DisplayName = "[MSSQL]: DAB appends DAB_APP_NAME_ENV value 'dab_hosted' and version suffix '_major_minor_patch' to user supplied 'Application Name' property.")]
+        [DataRow("Data Source=<>;App=CustAppName;"              , "Data Source=<>;Application Name=CustAppName," , true , DisplayName = "[MSSQL]: DAB appends version string 'dab_hosted' and version suffix '_major_minor_patch' to user supplied 'App' property and resolves property to 'Application Name'.")]
+        #pragma warning restore format
+        public void MsSqlConnStringSupplementedWithAppNameProperty(
+            string configProvidedConnString,
+            string expectedDabModifiedConnString,
+            bool dabEnvOverride)
         {
-            if (isHostedScenario)
+            // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
+            if (dabEnvOverride)
             {
-                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted_1.0.0");
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
             }
             else
             {
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, providedConnectionString);
+            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
+            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
+            expectedDabModifiedConnString += resolvedAssemblyVersion;
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
+
+            // Act
+            bool configParsed = RuntimeConfigLoader.TryParseConfig(
                 runtimeConfig.ToJson(),
                 out RuntimeConfig updatedRuntimeConfig,
-                replaceEnvVar: true));
+                replaceEnvVar: true);
 
-            string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
+            // Assert
+            Assert.AreEqual(
+                expected: true,
+                actual: configParsed,
+                message: "Runtime config unexpectedly failed parsing.");
+            Assert.AreEqual(
+                expected: expectedDabModifiedConnString,
+                actual: updatedRuntimeConfig.DataSource.ConnectionString,
+                message: "DAB did not properly set the 'Application Name' connection string property.");
+        }
 
-            Assert.AreEqual(actualUpdatedConnectionString, expectedUpdatedConnectionString);
+        /// <summary>
+        /// Validates that DAB doesn't append nor modify
+        /// - the 'Application Name' or 'App' properties in MySQL database connection strings.
+        /// - the 'Application Name' property in
+        /// PostgreSQL, CosmosDB_PostgreSQl, CosmosDB_NoSQL database connection strings.
+        /// This test validates that this behavior holds true when the DAB_APP_NAME_ENV environment variable
+        /// - is set (dabEnvOverride==true) -> (DAB hosted)
+        /// - is not set (dabEnvOverride==false) -> (DAB OSS).
+        /// </summary>
+        /// <param name="databaseType">database type.</param>
+        /// <param name="configProvidedConnString">connection string provided in the config.</param>
+        /// <param name="expectedDabModifiedConnString">Updated connection string with Application Name.</param>
+        /// <param name="dabEnvOverride">Whether DAB_APP_NAME_ENV is set in environment. (Always present in hosted scenario or if user supplies value.)</param>
+        #pragma warning disable format
+        [DataTestMethod]
+        [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , false, DisplayName = "[MYSQL|DAB OSS]:No addition of 'Application Name' or 'App' property to connection string.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , false, DisplayName = "[MYSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;"     , "Something1;App=CustAppName;Something2;"     , false, DisplayName = "[MySQL|DAB OSS]:No modification of customer overridden 'App' property.")]
+        [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , true , DisplayName = "[MYSQL|DAB hosted]:No addition of 'Application Name' or 'App' property to connection string.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , true , DisplayName = "[MYSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;"     , "Something1;App=CustAppName;Something2;"     , true, DisplayName = "[MySQL|DAB hosted]:No modification of customer overridden 'App' property.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[PGSQL|DAB OSS]:No addition of 'Application Name' property to connection string.]")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[PGSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[PGSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_NOSQL|DAB OSS]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_NOSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[COSMOSDB_NOSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_PGSQL|DAB OSS]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_PGSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[COSMOSDB_PGSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        #pragma warning restore format
+        public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
+            DatabaseType databaseType,
+            string configProvidedConnString,
+            string expectedDabModifiedConnString,
+            bool dabEnvOverride)
+        {
+            // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
+            if (dabEnvOverride)
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+            }
+            else
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            }
+
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, configProvidedConnString);
+
+            // Act
+            bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                runtimeConfig.ToJson(),
+                out RuntimeConfig updatedRuntimeConfig,
+                replaceEnvVar: true);
+
+            // Assert
+            Assert.AreEqual(
+                expected: true,
+                actual: configParsed,
+                message: "Runtime config unexpectedly failed parsing.");
+            Assert.AreEqual(
+                expected: expectedDabModifiedConnString,
+                actual: updatedRuntimeConfig.DataSource.ConnectionString,
+                message: "DAB did not properly set the 'Application Name' connection string property.");
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
@@ -1201,6 +1305,94 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// This Test validates that when the entities in the runtime config have source object as null,
+        /// the validation exception handler collects the message and exits gracefully.
+        /// </summary>
+        [TestMethod("Validate Exception handling for Entities with Source object as null."), TestCategory(TestCategory.MSSQL)]
+        public async Task TestSqlMetadataValidationForEntitiesWithInvalidSource()
+        {
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL),
+                Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new());
+
+            // creating an entity with invalid table name
+            Entity entityWithInvalidSource = new(
+                Source: new(null, EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "book", Plural: "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+                );
+
+            // creating an entity with invalid source object and adding relationship with an entity with invalid source
+            Entity entityWithInvalidSourceAndRelationship = new(
+                Source: new(null, EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: new Dictionary<string, EntityRelationship>() { {"books", new (
+                    Cardinality: Cardinality.Many,
+                    TargetEntity: "Book",
+                    SourceFields: null,
+                    TargetFields: null,
+                    LinkingObject: null,
+                    LinkingSourceFields: null,
+                    LinkingTargetFields: null
+                    )}},
+                Mappings: null
+                );
+
+            configuration = configuration with
+            {
+                Entities = new RuntimeEntities(new Dictionary<string, Entity>()
+                    {
+                        { "Book", entityWithInvalidSource },
+                        { "Publisher", entityWithInvalidSourceAndRelationship}
+                    })
+            };
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            FileSystemRuntimeConfigLoader configLoader = TestHelper.GetRuntimeConfigLoader();
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    new MockFileSystem(),
+                    configValidatorLogger.Object,
+                    isValidateOnly: true);
+
+            ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
+
+            try
+            {
+                await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+            }
+            catch
+            {
+                Assert.Fail("Execution of dab validate should not result in unhandled exceptions.");
+            }
+
+            Assert.IsTrue(configValidator.ConfigValidationExceptions.Any());
+            List<string> exceptionMessagesList = configValidator.ConfigValidationExceptions.Select(x => x.Message).ToList();
+            Assert.IsTrue(exceptionMessagesList.Contains("The entity Book does not have a valid source object."));
+            Assert.IsTrue(exceptionMessagesList.Contains("The entity Publisher does not have a valid source object."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Table Definition for Book has not been inferred."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Table Definition for Publisher has not been inferred."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Could not infer database object for source entity: Publisher in relationship: books. Check if the entity: Publisher is correctly defined in the config."));
+            Assert.IsTrue(exceptionMessagesList.Contains("Could not infer database object for target entity: Book in relationship: books. Check if the entity: Book is correctly defined in the config."));
+        }
+
+        /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
         /// It asserts that the validation is successful and there are no validation failures. 
         /// It also verifies that the expected log message is logged.
@@ -1321,6 +1513,101 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
             }
+        }
+
+        /// <summary>
+        /// This test checks that the GetJsonSchema method of the JsonConfigSchemaValidator class
+        /// correctly downloads a JSON schema from a given URL, and that the downloaded schema matches the expected schema.
+        /// </summary>
+        [TestMethod]
+        public async Task GetJsonSchema_DownloadsSchemaFromUrl()
+        {
+            // Arrange
+            Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
+            string jsonSchemaContent = "{\"type\": \"object\", \"properties\": {\"property1\": {\"type\": \"string\"}}}";
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.OK,
+                Content = new StringContent(jsonSchemaContent, Encoding.UTF8, "application/json"),
+            })
+            .Verifiable();
+
+            HttpClient mockHttpClient = new(handlerMock.Object);
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+            JsonConfigSchemaValidator jsonConfigSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
+
+            string url = "http://example.com/schema.json";
+            RuntimeConfig runtimeConfig = new(
+                Schema: url,
+                DataSource: new(DatabaseType.MSSQL, "connectionString", null),
+                new RuntimeEntities(new Dictionary<string, Entity>())
+            );
+
+            // Act
+            string receivedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+
+            // Assert
+            Assert.AreEqual(jsonSchemaContent, receivedJsonSchema);
+            handlerMock.Protected().Verify(
+            "SendAsync",
+            Times.Exactly(1),
+            ItExpr.Is<HttpRequestMessage>(req =>
+                req.Method == HttpMethod.Get
+                && req.RequestUri == new Uri(url)),
+            ItExpr.IsAny<CancellationToken>());
+        }
+
+        /// <summary>
+        /// This test checks that even when the schema download fails, the GetJsonSchema method
+        /// fetches the schema from the package succesfully.
+        /// </summary>
+        [TestMethod]
+        public async Task GetJsonSchema_DownloadsSchemaFromUrlFailure()
+        {
+            // Arrange
+            Mock<HttpMessageHandler> handlerMock = new(MockBehavior.Strict);
+            handlerMock
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage()
+            {
+                StatusCode = HttpStatusCode.InternalServerError,    // Simulate a failure
+                Content = new StringContent("", Encoding.UTF8, "application/json"),
+            })
+            .Verifiable();
+
+            HttpClient mockHttpClient = new(handlerMock.Object);
+            Mock<ILogger<JsonConfigSchemaValidator>> schemaValidatorLogger = new();
+            JsonConfigSchemaValidator jsonConfigSchemaValidator = new(schemaValidatorLogger.Object, new MockFileSystem(), mockHttpClient);
+
+            string url = "http://example.com/schema.json";
+            RuntimeConfig runtimeConfig = new(
+                Schema: url,
+                DataSource: new(DatabaseType.MSSQL, "connectionString", null),
+                new RuntimeEntities(new Dictionary<string, Entity>())
+            );
+
+            // Act
+            string receivedJsonSchema = await jsonConfigSchemaValidator.GetJsonSchema(runtimeConfig);
+
+            // Assert
+            Assert.IsFalse(string.IsNullOrEmpty(receivedJsonSchema));
+
+            // Sanity check to ensure the schema is valid
+            Assert.IsTrue(receivedJsonSchema.Contains("$schema"));
+            Assert.IsTrue(receivedJsonSchema.Contains("data-source"));
+            Assert.IsTrue(receivedJsonSchema.Contains("entities"));
         }
 
         /// <summary>
@@ -1623,6 +1910,119 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Validates that deserialization of config file is successful for the following scenarios:
+        /// 1. Multiple Mutations section is null
+        /// {
+        ///     "multiple-mutations": null
+        /// }
+        /// 
+        /// 2. Multiple Mutations section is empty.
+        /// {
+        ///     "multiple-mutations": {}
+        /// }
+        ///
+        /// 3. Create field within Multiple Mutation section is null.
+        /// {
+        ///     "multiple-mutations": {
+        ///         "create": null
+        ///     }
+        /// }
+        ///
+        /// 4. Create field within Multiple Mutation section is empty.
+        /// {
+        ///     "multiple-mutations": {
+        ///         "create": {}
+        ///     }
+        /// }
+        /// 
+        /// For all the above mentioned scenarios, the expected value for MultipleMutationOptions field is null.
+        /// </summary>
+        /// <param name="baseConfig">Base Config Json string.</param>
+        [DataTestMethod]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_MULTIPLE_MUTATIONS_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when multiple mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_MULTIPLE_MUTATIONS_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when multiple mutation section is empty")]
+        [DataRow(TestHelper.BASE_CONFIG_NULL_MULTIPLE_CREATE_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when create field within multiple mutation section is null")]
+        [DataRow(TestHelper.BASE_CONFIG_EMPTY_MULTIPLE_CREATE_FIELD, DisplayName = "MultipleMutationOptions field deserialized as null when create field within multiple mutation section is empty")]
+        public void ValidateDeserializationOfConfigWithNullOrEmptyInvalidMultipleMutationSection(string baseConfig)
+        {
+            string configJson = TestHelper.AddPropertiesToJson(baseConfig, BOOK_ENTITY_JSON);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig));
+            Assert.IsNotNull(deserializedConfig.Runtime);
+            Assert.IsNotNull(deserializedConfig.Runtime.GraphQL);
+            Assert.IsNull(deserializedConfig.Runtime.GraphQL.MultipleMutationOptions);
+        }
+
+        /// <summary>
+        /// Sanity check to validate that DAB engine starts successfully when used with a config file without the multiple 
+        /// mutations feature flag section.
+        /// The runtime graphql section of the config file used looks like this: 
+        ///
+        /// "graphql": {
+        ///    "path": "/graphql",
+        ///    "allow-introspection": true
+        ///  }
+        /// 
+        /// Without the multiple mutations feature flag section, DAB engine should be able to 
+        ///  1. Successfully deserialize the config file without multiple mutation section.
+        ///  2. Process REST and GraphQL API requests.
+        /// 
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task SanityTestForRestAndGQLRequestsWithoutMultipleMutationFeatureFlagSection()
+        {
+            // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the            
+            // configuration file (instead of using CLI).
+            string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
+            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
+            string configFileName = "custom-config.json";
+            File.WriteAllText(configFileName, deserializedConfig.ToJson());
+            string[] args = new[]
+            {
+                    $"--ConfigFileName={configFileName}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                try
+                {
+
+                    // Perform a REST GET API request to validate that REST GET API requests are executed correctly.
+                    HttpRequestMessage restRequest = new(HttpMethod.Get, "api/Book");
+                    HttpResponseMessage restResponse = await client.SendAsync(restRequest);
+                    Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+
+                    // Perform a GraphQL API request to validate that DAB engine executes GraphQL requests successfully. 
+                    string query = @"{
+                        book_by_pk(id: 1) {
+                           id,
+                           title,
+                           publisher_id
+                        }
+                    }";
+
+                    object payload = new { query };
+
+                    HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                    {
+                        Content = JsonContent.Create(payload)
+                    };
+
+                    HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+                    Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                    Assert.IsNotNull(graphQLResponse.Content);
+                    string body = await graphQLResponse.Content.ReadAsStringAsync();
+                    Assert.IsFalse(body.Contains("errors"));
+                }
+                catch (Exception ex)
+                {
+                    Assert.Fail($"Unexpected exception : {ex}");
+                }
+            }
+        }
+
+        /// <summary>
         /// Test to validate that when an entity which will return a paginated response is queried, and a custom runtime base route is configured in the runtime configuration,
         /// then the generated nextLink in the response would contain the rest base-route just before the rest path. For the subsequent query, the rest base-route will be trimmed
         /// by the upstream before the request lands at DAB.
@@ -1877,6 +2277,181 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                         authToken: authToken,
                         clientRoleHeader: AuthorizationResolver.ROLE_AUTHENTICATED);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Multiple mutation operations are disabled through the configuration properties.
+        /// 
+        /// Test to validate that when multiple-create is disabled:
+        /// 1. Including a relationship field in the input for create mutation for an entity returns an exception as when multiple mutations are disabled,
+        /// we don't add fields for relationships in the input type schema and hence users should not be able to do insertion in the related entities.
+        ///
+        /// 2. Excluding all the relationship fields i.e. performing insertion in just the top-level entity executes successfully.
+        ///
+        /// 3. Relationship fields are marked as optional fields in the schema when multiple create operation is enabled. However, when multiple create operations
+        /// are disabled, the relationship fields should continue to be marked as required fields.
+        /// With multiple create operation disabled, executing a create mutation operation without a relationship field ("publisher_id" in createbook mutation operation) should be caught by
+        /// HotChocolate since it is a required field.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateMultipleCreateAndCreateMutationWhenMultipleCreateOperationIsDisabled()
+        {
+            // Generate a custom config file with multiple create operation disabled.
+            RuntimeConfig runtimeConfig = InitialzieRuntimeConfigForMultipleCreateTests(isMultipleCreateOperationEnabled: false);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            File.WriteAllText(CUSTOM_CONFIG, runtimeConfig.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // When multiple create operation is disabled, fields belonging to related entities are not generated for the input type objects of create operation.
+                // Executing a create mutation with fields belonging to related entities should be caught by Hotchocolate as unrecognized fields.
+                string pointMultipleCreateOperation = @"mutation createbook{
+                                                            createbook(item: { title: ""Book #1"", publishers: { name: ""The First Publisher"" } }) {
+                                                                id
+                                                                title
+                                                            }
+                                                        }";
+
+                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                                    query: pointMultipleCreateOperation,
+                                                                                                    queryName: "createbook",
+                                                                                                    variables: null,
+                                                                                                    clientRoleHeader: null);
+
+                Assert.IsNotNull(mutationResponse);
+
+                SqlTestHelper.TestForErrorInGraphQLResponse(mutationResponse.ToString(),
+                                                            message: "The specified input object field `publishers` does not exist.",
+                                                            path: @"[""createbook""]");
+
+                // When multiple create operation is enabled, two types of create mutation operations are generated 1) Point create mutation operation 2) Many type create mutation operation.
+                // When multiple create operation is disabled, only point create mutation operation is generated.
+                // With multiple create operation disabled, executing a many type multiple create operation should be caught by HotChocolate as the many type mutation operation should not exist in the schema.
+                string manyTypeMultipleCreateOperation = @"mutation {
+                                                              createbooks(
+                                                                items: [
+                                                                  { title: ""Book #1"", publishers: { name: ""Publisher #1"" } }
+                                                                  { title: ""Book #2"", publisher_id: 1234 }
+                                                                ]
+                                                              ) {
+                                                                items {
+                                                                  id
+                                                                  title
+                                                                }
+                                                              }
+                                                            }";
+
+                mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                        query: manyTypeMultipleCreateOperation,
+                                                                                        queryName: "createbook",
+                                                                                        variables: null,
+                                                                                        clientRoleHeader: null);
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.TestForErrorInGraphQLResponse(mutationResponse.ToString(),
+                                                            message: "The field `createbooks` does not exist on the type `Mutation`.");
+
+                // Sanity test to validate that executing a point create mutation with multiple create operation disabled,
+                // a) Creates the new item successfully.
+                // b) Returns the expected response.
+                string pointCreateOperation = @"mutation createbook{
+                                                            createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {
+                                                                title
+                                                                publisher_id
+                                                            }
+                                                        }";
+
+                mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                        query: pointCreateOperation,
+                                                                                        queryName: "createbook",
+                                                                                        variables: null,
+                                                                                        clientRoleHeader: null);
+
+                string expectedResponse = @"{ ""title"":""Book #1"",""publisher_id"":1234}";
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, mutationResponse.ToString());
+
+                // When  a create multiple operation is enabled, the "publisher_id" field will be generated as an optional field in the schema. But, when multiple create operation is disabled,
+                // "publisher_id" should be a required field.
+                // With multiple create operation disabled, executing a createbook mutation operation without the "publisher_id" field is expected to be caught by HotChocolate
+                // as the schema should be generated with "publisher_id" as a required field.
+                string pointCreateOperationWithMissingFields = @"mutation createbook{
+                                                                    createbook(item: { title: ""Book #1""}) {
+                                                                        title
+                                                                        publisher_id
+                                                                    }
+                                                                }";
+
+                mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                        server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                        query: pointCreateOperationWithMissingFields,
+                                                                                        queryName: "createbook",
+                                                                                        variables: null,
+                                                                                        clientRoleHeader: null);
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
+                                                            message: "`publisher_id` is a required field and cannot be null.");
+            }
+        }
+
+        /// <summary>
+        /// When multiple create operation is enabled, the relationship fields are generated as optional fields in the schema.
+        /// However, when not providing the relationship field as well the related object in the create mutation request should result in an error from the database layer.
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateCreateMutationWithMissingFieldsFailWithMultipleCreateEnabled()
+        {
+            // Multiple create operations are enabled.
+            RuntimeConfig runtimeConfig = InitialzieRuntimeConfigForMultipleCreateTests(isMultipleCreateOperationEnabled: true);
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            File.WriteAllText(CUSTOM_CONFIG, runtimeConfig.ToJson());
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+
+                // When  a create multiple operation is enabled, the "publisher_id" field will generated as an optional field in the schema. But, when multiple create operation is disabled,
+                // "publisher_id" should be a required field.
+                // With multiple create operation disabled, executing a createbook mutation operation without the "publisher_id" field is expected to be caught by HotChocolate
+                // as the schema should be generated with "publisher_id" as a required field.
+                string pointCreateOperationWithMissingFields = @"mutation createbook{
+                                                                    createbook(item: { title: ""Book #1""}) {
+                                                                        title
+                                                                        publisher_id
+                                                                    }
+                                                                }";
+
+                JsonElement mutationResponse = await GraphQLRequestExecutor.PostGraphQLRequestAsync(client,
+                                                                                                    server.Services.GetRequiredService<RuntimeConfigProvider>(),
+                                                                                                    query: pointCreateOperationWithMissingFields,
+                                                                                                    queryName: "createbook",
+                                                                                                    variables: null,
+                                                                                                    clientRoleHeader: null);
+
+                Assert.IsNotNull(mutationResponse);
+                SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
+                                                            message: "Cannot insert the value NULL into column 'publisher_id', table 'master.dbo.books'; column does not allow nulls. INSERT fails.");
             }
         }
 
@@ -2688,6 +3263,99 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
+        /// Simulates a GET request to DAB's health check endpoint ('/') and validates the contents of the response.
+        /// The expected format of the response is:
+        /// {
+        ///     "status": "Healthy",
+        ///     "version": "0.12.0",
+        ///     "appName": "dab_oss_0.12.0"
+        /// }
+        /// - the 'version' property format is 'major.minor.patch'
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task HealthEndpoint_ValidateContents()
+        {
+            // Arrange
+            // At least one entity is required in the runtime config for the engine to start.
+            // Even though this entity is not under test, it must be supplied enable successfull
+            // config file creation.
+            Entity requiredEntity = new(
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: false),
+                GraphQL: new("book", "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", requiredEntity }
+            };
+
+            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            // Setup and send GET request to root path.
+            HttpRequestMessage getHealthEndpointContents = new(HttpMethod.Get, $"/");
+
+            // Act - Exercise the health check endpoint code by requesting the health endpoint path '/'.
+            HttpResponseMessage response = await client.SendAsync(getHealthEndpointContents);
+
+            // Assert - Process response body and validate contents.
+            // Validate HTTP return code.
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
+
+            // Validate value of 'status' property in reponse.
+            if (responseProperties.TryGetValue(key: "status", out JsonElement statusValue))
+            {
+                Assert.AreEqual(
+                    expected: "Healthy",
+                    actual: statusValue.ToString(),
+                    message: "Expected endpoint to report 'Healthy'.");
+            }
+            else
+            {
+                Assert.Fail();
+            }
+
+            // Validate value of 'version' property in response.
+            if (responseProperties.TryGetValue(key: DabHealthCheck.DAB_VERSION_KEY, out JsonElement versionValue))
+            {
+                Assert.AreEqual(
+                    expected: ProductInfo.GetProductVersion(),
+                    actual: versionValue.ToString(),
+                    message: "Unexpected or missing version value.");
+            }
+            else
+            {
+                Assert.Fail();
+            }
+
+            // Validate value of 'app-name' property in response.
+            if (responseProperties.TryGetValue(key: DabHealthCheck.DAB_APPNAME_KEY, out JsonElement appNameValue))
+            {
+                Assert.AreEqual(
+                    expected: ProductInfo.GetDataApiBuilderUserAgent(),
+                    actual: appNameValue.ToString(),
+                    message: "Unexpected or missing DAB user agent string.");
+            }
+            else
+            {
+                Assert.Fail();
+            }
+        }
+
+        /// <summary>
         /// Validates the behavior of the OpenApiDocumentor when the runtime config has entities with
         /// REST endpoint enabled and disabled.
         /// Enabled -> path should be created
@@ -3172,6 +3840,78 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
 
             return responseCode;
+        }
+
+        /// <summary>
+        /// Helper  method to instantiate RuntimeConfig object needed for multiple create tests.
+        /// </summary>
+        /// <returns></returns>
+        public static RuntimeConfig InitialzieRuntimeConfigForMultipleCreateTests(bool isMultipleCreateOperationEnabled)
+        {
+            // Multiple create operations are enabled.
+            GraphQLRuntimeOptions graphqlOptions = new(Enabled: true, MultipleMutationOptions: new(new(enabled: isMultipleCreateOperationEnabled)));
+
+            RestRuntimeOptions restRuntimeOptions = new(Enabled: false);
+
+            DataSource dataSource = new(DatabaseType.MSSQL, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            EntityAction createAction = new(
+                Action: EntityActionOperation.Create,
+                Fields: null,
+                Policy: new());
+
+            EntityAction readAction = new(
+                Action: EntityActionOperation.Read,
+                Fields: null,
+                Policy: new());
+
+            EntityPermission[] permissions = new[] { new EntityPermission(Role: AuthorizationResolver.ROLE_ANONYMOUS, Actions: new[] { readAction, createAction }) };
+
+            EntityRelationship bookRelationship = new(Cardinality: Cardinality.One,
+                                                      TargetEntity: "Publisher",
+                                                      SourceFields: new string[] { },
+                                                      TargetFields: new string[] { },
+                                                      LinkingObject: null,
+                                                      LinkingSourceFields: null,
+                                                      LinkingTargetFields: null);
+
+            Entity bookEntity = new(Source: new("books", EntitySourceType.Table, null, null),
+                                    Rest: null,
+                                    GraphQL: new(Singular: "book", Plural: "books"),
+                                    Permissions: permissions,
+                                    Relationships: new Dictionary<string, EntityRelationship>() { { "publishers", bookRelationship } },
+                                    Mappings: null);
+
+            string bookEntityName = "Book";
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { bookEntityName, bookEntity }
+            };
+
+            EntityRelationship publisherRelationship = new(Cardinality: Cardinality.Many,
+                                                           TargetEntity: "Book",
+                                                           SourceFields: new string[] { },
+                                                           TargetFields: new string[] { },
+                                                           LinkingObject: null,
+                                                           LinkingSourceFields: null,
+                                                           LinkingTargetFields: null);
+
+            Entity publisherEntity = new(
+                Source: new("publishers", EntitySourceType.Table, null, null),
+                Rest: null,
+                GraphQL: new(Singular: "publisher", Plural: "publishers"),
+                Permissions: permissions,
+                Relationships: new Dictionary<string, EntityRelationship>() { { "books", publisherRelationship } },
+                Mappings: null);
+
+            entityMap.Add("Publisher", publisherEntity);
+
+            RuntimeConfig runtimeConfig = new(Schema: "IntegrationTestMinimalSchema",
+                                              DataSource: dataSource,
+                                              Runtime: new(restRuntimeOptions, graphqlOptions, Host: new(Cors: null, Authentication: null, Mode: HostMode.Development), Cache: null),
+                                              Entities: new(entityMap));
+            return runtimeConfig;
         }
 
         /// <summary>

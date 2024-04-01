@@ -9,6 +9,10 @@ namespace Azure.DataApiBuilder.Config.Converters;
 
 internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
 {
+    // Determines whether to replace environment variable with its
+    // value or not while deserializing.
+    private bool _replaceEnvVar;
+
     /// <inheritdoc/>
     public override bool CanConvert(Type typeToConvert)
     {
@@ -18,11 +22,27 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
     /// <inheritdoc/>
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        return new GraphQLRuntimeOptionsConverter();
+        return new GraphQLRuntimeOptionsConverter(_replaceEnvVar);
+    }
+
+    internal GraphQLRuntimeOptionsConverterFactory(bool replaceEnvVar)
+    {
+        _replaceEnvVar = replaceEnvVar;
     }
 
     private class GraphQLRuntimeOptionsConverter : JsonConverter<GraphQLRuntimeOptions>
     {
+        // Determines whether to replace environment variable with its
+        // value or not while deserializing.
+        private bool _replaceEnvVar;
+
+        /// <param name="replaceEnvVar">Whether to replace environment variable with its
+        /// value or not while deserializing.</param>
+        internal GraphQLRuntimeOptionsConverter(bool replaceEnvVar)
+        {
+            _replaceEnvVar = replaceEnvVar;
+        }
+
         public override GraphQLRuntimeOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.True || reader.TokenType == JsonTokenType.Null)
@@ -35,11 +55,85 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                 return new GraphQLRuntimeOptions(Enabled: false);
             }
 
-            // Remove the converter so we don't recurse.
-            JsonSerializerOptions innerOptions = new(options);
-            _ = innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is GraphQLRuntimeOptionsConverterFactory));
+            if (reader.TokenType == JsonTokenType.StartObject)
+            {
+                // Initialize with Multiple Mutation operations disabled by default
+                GraphQLRuntimeOptions graphQLRuntimeOptions = new();
+                MultipleMutationOptionsConverter multipleMutationOptionsConverter = options.GetConverter(typeof(MultipleMutationOptions)) as MultipleMutationOptionsConverter ??
+                                            throw new JsonException("Failed to get multiple mutation options converter");
 
-            return JsonSerializer.Deserialize<GraphQLRuntimeOptions>(ref reader, innerOptions);
+                while (reader.Read())
+                {
+
+                    if (reader.TokenType == JsonTokenType.EndObject)
+                    {
+                        break;
+                    }
+
+                    string? propertyName = reader.GetString();
+
+                    if (propertyName is null)
+                    {
+                        throw new JsonException("Invalid property : null");
+                    }
+
+                    reader.Read();
+                    switch (propertyName)
+                    {
+                        case "enabled":
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { Enabled = reader.GetBoolean() };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unsupported value entered for the property 'enabled': {reader.TokenType}");
+                            }
+
+                            break;
+
+                        case "allow-introspection":
+                            if (reader.TokenType is JsonTokenType.True || reader.TokenType is JsonTokenType.False)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { AllowIntrospection = reader.GetBoolean() };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unexpected type of value entered for allow-introspection: {reader.TokenType}");
+                            }
+
+                            break;
+                        case "path":
+                            if (reader.TokenType is JsonTokenType.String)
+                            {
+                                string? path = reader.DeserializeString(_replaceEnvVar);
+                                if (path is null)
+                                {
+                                    path = "/graphql";
+                                }
+
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { Path = path };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unexpected type of value entered for path: {reader.TokenType}");
+                            }
+
+                            break;
+
+                        case "multiple-mutations":
+                            graphQLRuntimeOptions = graphQLRuntimeOptions with { MultipleMutationOptions = multipleMutationOptionsConverter.Read(ref reader, typeToConvert, options) };
+                            break;
+
+                        default:
+                            throw new JsonException($"Unexpected property {propertyName}");
+                    }
+                }
+
+                return graphQLRuntimeOptions;
+            }
+
+            throw new JsonException("Failed to read the GraphQL Runtime Options");
         }
 
         public override void Write(Utf8JsonWriter writer, GraphQLRuntimeOptions value, JsonSerializerOptions options)
@@ -48,6 +142,16 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteBoolean("enabled", value.Enabled);
             writer.WriteString("path", value.Path);
             writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
+
+            if (value.MultipleMutationOptions is not null)
+            {
+
+                MultipleMutationOptionsConverter multipleMutationOptionsConverter = options.GetConverter(typeof(MultipleMutationOptions)) as MultipleMutationOptionsConverter ??
+                                            throw new JsonException("Failed to get multiple mutation options converter");
+
+                multipleMutationOptionsConverter.Write(writer, value.MultipleMutationOptions, options);
+            }
+
             writer.WriteEndObject();
         }
     }

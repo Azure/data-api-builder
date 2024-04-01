@@ -8,22 +8,39 @@ namespace Azure.DataApiBuilder.Product;
 
 public static class ProductInfo
 {
-    public const string DEFAULT_VERSION = "0.0.0";
     public const string DAB_APP_NAME_ENV = "DAB_APP_NAME_ENV";
-    public static readonly string DEFAULT_APP_NAME = $"dab_oss_{ProductInfo.GetProductVersion()}";
-    public static readonly string ROLE_NAME = "DataApiBuilder";
+    public static readonly string DAB_USER_AGENT = $"dab_oss_{GetProductVersion()}";
+    public static readonly string CLOUD_ROLE_NAME = "DataApiBuilder";
 
     /// <summary>
-    /// Reads the product version from the executing assembly's file version information.
+    /// Returns the Product version in Major.Minor.Patch format without a commit hash.
+    /// FileVersionInfo.ProductBuildPart is used to represent the Patch version.
+    /// FileVersionInfo is used to retrieve the version information from the executing assembly
+    /// set by the Version property in Directory.Build.props.
+    /// FileVersionInfo.ProductVersion includes the commit hash.
     /// </summary>
-    /// <returns>Product version if not null, default version 0.0.0 otherwise.</returns>
-    public static string GetProductVersion()
+    /// <param name="includeCommitHash">If true, returns the version string with the commit hash</param>
+    /// <returns>Version string without commit hash: Major.Minor.Patch
+    /// Version string with commit hash: Major.Minor.Patch+COMMIT_ID"</returns>
+    public static string GetProductVersion(bool includeCommitHash = false)
     {
         Assembly assembly = Assembly.GetExecutingAssembly();
-        FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(assembly.Location);
-        string? version = fileVersionInfo.ProductVersion;
+        FileVersionInfo fileVersionInfo = FileVersionInfo.GetVersionInfo(fileName: assembly.Location);
 
-        return version ?? DEFAULT_VERSION;
+        string versionString;
+
+        // fileVersionInfo's ProductVersion is nullable, while PoductMajorPart, ProductMinorPart, and ProductBuildPart are not.
+        // if ProductVersion is null, the other properties will be 0 since they do not return null. 
+        if (includeCommitHash && fileVersionInfo.ProductVersion is not null)
+        {
+            versionString = fileVersionInfo.ProductVersion;
+        }
+        else
+        {
+            versionString = fileVersionInfo.ProductMajorPart + "." + fileVersionInfo.ProductMinorPart + "." + fileVersionInfo.ProductBuildPart;
+        }
+
+        return versionString;
     }
 
     /// <summary>
@@ -31,21 +48,11 @@ public static class ProductInfo
     /// DAB_APP_NAME_ENV environment variable. If the environment variable is not set,
     /// it returns a default value indicating connections from open source.
     /// </summary>
+    /// <returns>Returns the value in the environment variable DAB_APP_NAME_ENV, when set.
+    /// Otherwise, returns user agent string: dab_oss_Major.Minor.Patch</returns>
     public static string GetDataApiBuilderUserAgent()
     {
-        return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DEFAULT_APP_NAME;
-    }
-
-    /// <summary>
-    /// Returns the application name to be used for database connections for the DataApiBuilder.
-    /// It strips the hash value from the user agent string to only return the application name and the version.
-    /// The method serves as a means of identifying the source of connections made through the DataApiBuilder.
-    /// </summary>
-    public static string GetDataApiBuilderApplicationName()
-    {
-        string dabVersion = ProductInfo.GetDataApiBuilderUserAgent();
-        int hashStartPosition = dabVersion.LastIndexOf('+');
-        return hashStartPosition != -1 ? dabVersion[..hashStartPosition] : dabVersion;
+        return Environment.GetEnvironmentVariable(DAB_APP_NAME_ENV) ?? DAB_USER_AGENT;
     }
 }
 

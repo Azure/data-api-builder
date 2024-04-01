@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
             CosmosClient client = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             // Validate results
-            Assert.AreEqual(client.ClientOptions.ApplicationName, ProductInfo.DEFAULT_APP_NAME);
+            Assert.AreEqual(client.ClientOptions.ApplicationName, ProductInfo.DAB_USER_AGENT);
         }
 
         [TestMethod]

@@ -610,9 +610,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Validates that DAB does not append the 'Application Name' property to connection strings for MySQL, PostgreSQL, CosmosDB_PostgreSQl, CosmosDB_NoSQL databases.
-        /// If the connection string already contains the `Application Name` property, it should append the DataApiBuilder Application Name to the existing value.
-        /// If not, it should NOT append the property `Application Name` to the connection string.
+        /// Validates that DAB doesn't append nor modify
+        /// - the 'Application Name' or 'App' properties in MySQL database connection strings.
+        /// - the 'Application Name' property in
+        /// PostgreSQL, CosmosDB_PostgreSQl, CosmosDB_NoSQL database connection strings.
+        /// This test validates that this behavior holds true when the DAB_APP_NAME_ENV environment variable
+        /// - is set (dabEnvOverride==true) -> (DAB hosted)
+        /// - is not set (dabEnvOverride==false) -> (DAB OSS).
         /// </summary>
         /// <param name="databaseType">database type.</param>
         /// <param name="configProvidedConnString">connection string provided in the config.</param>
@@ -620,23 +624,24 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// <param name="dabEnvOverride">Whether DAB_APP_NAME_ENV is set in environment. (Always present in hosted scenario or if user supplies value.)</param>
         #pragma warning disable format
         [DataTestMethod]
-        [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , false, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , false, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;"     , "Something1;App=CustAppName;Something2;"     , false, DisplayName = "[MySQL]:No updates for `App` preoperty in connectionString for DBs other than MSSQL.")]
-        [DataRow(DatabaseType.MySQL, "username=dabApp;App=CustAppName;Something2;", "username=dabApp;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for other properties in connectionString containing `App`.")]
-        [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , true , DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , true , DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containg customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
+        [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , false, DisplayName = "[MYSQL|DAB OSS]:No addition of 'Application Name' or 'App' property to connection string.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , false, DisplayName = "[MYSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;"     , "Something1;App=CustAppName;Something2;"     , false, DisplayName = "[MySQL|DAB OSS]:No modification of customer overridden 'App' property.")]
+        [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , true , DisplayName = "[MYSQL|DAB hosted]:No addition of 'Application Name' or 'App' property to connection string.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , true , DisplayName = "[MYSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;"     , "Something1;App=CustAppName;Something2;"     , true, DisplayName = "[MySQL|DAB hosted]:No modification of customer overridden 'App' property.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[PGSQL|DAB OSS]:No addition of 'Application Name' property to connection string.]")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[PGSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[PGSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_NOSQL|DAB OSS]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_NOSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[COSMOSDB_NOSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_PGSQL|DAB OSS]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_PGSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[COSMOSDB_PGSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
         #pragma warning restore format
         public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
             DatabaseType databaseType,
@@ -654,11 +659,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
-            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
-            expectedDabModifiedConnString += resolvedAssemblyVersion;
-
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, configProvidedConnString);
 
             // Act
             bool configParsed = RuntimeConfigLoader.TryParseConfig(

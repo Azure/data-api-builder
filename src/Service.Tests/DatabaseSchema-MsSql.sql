@@ -110,6 +110,7 @@ CREATE TABLE reviews(
 CREATE TABLE book_author_link(
     book_id int NOT NULL,
     author_id int NOT NULL,
+    royalty_percentage float DEFAULT 0 NULL,
     PRIMARY KEY(book_id, author_id)
 );
 

@@ -7,6 +7,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using HotChocolate.Execution;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using HotChocolate.Types;
@@ -25,6 +26,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         public const string SYSTEM_ROLE_ANONYMOUS = "anonymous";
         public const string DB_OPERATION_RESULT_TYPE = "DbOperationResult";
         public const string DB_OPERATION_RESULT_FIELD_NAME = "result";
+
+        // String used as a prefix for the name of a linking entity.
+        private const string LINKING_ENTITY_PREFIX = "LinkingEntity";
+        // Delimiter used to separate linking entity prefix/source entity name/target entity name, in the name of a linking entity.
+        private const string ENTITY_NAME_DELIMITER = "$";
+
+        public static HashSet<DatabaseType> RELATIONAL_DBS = new() { DatabaseType.MSSQL, DatabaseType.MySQL,
+            DatabaseType.DWSQL, DatabaseType.PostgreSQL, DatabaseType.CosmosDB_PostgreSQL };
 
         public static bool IsModelType(ObjectTypeDefinitionNode objectTypeDefinitionNode)
         {
@@ -59,6 +68,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             };
             string name = typeNode.NamedType().Name.Value;
             return builtInTypes.Contains(name);
+        }
+
+        /// <summary>
+        /// Helper method to evaluate whether database type represents a NoSQL database.
+        /// </summary>
+        public static bool IsRelationalDb(DatabaseType databaseType)
+        {
+            return RELATIONAL_DBS.Contains(databaseType);
         }
 
         /// <summary>
@@ -272,7 +289,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             if (graphQLTypeName is DB_OPERATION_RESULT_TYPE)
             {
                 // CUD for a mutation whose result set we do not have. Get Entity name mutation field directive.
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
+                if (TryExtractGraphQLFieldModelName(context.Selection.Field.Directives, out string? modelName))
                 {
                     entityName = modelName;
                 }
@@ -293,7 +310,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
                 // if name on schema is different from name in config.
                 // Due to possibility of rename functionality, entityName on runtimeConfig could be different from exposed schema name.
-                if (GraphQLUtils.TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
+                if (TryExtractGraphQLFieldModelName(underlyingFieldType.Directives, out string? modelName))
                 {
                     entityName = modelName;
                 }
@@ -305,6 +322,79 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         private static string GenerateDataSourceNameKeyFromPath(IPureResolverContext context)
         {
             return $"{context.Path.ToList()[0]}";
+        }
+
+        /// <summary>
+        /// Helper method to determine whether a field is a column or complex (relationship) field based on its syntax kind.
+        /// If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column/scalar field which
+        /// has an IntValue, FloatValue, StringValue, BooleanValue or an EnumValue.
+        /// </summary>
+        /// <param name="fieldSyntaxKind">SyntaxKind of the field.</param>
+        /// <returns>true if the field is a scalar field, else false.</returns>
+        public static bool IsScalarField(SyntaxKind fieldSyntaxKind)
+        {
+            return fieldSyntaxKind is SyntaxKind.IntValue || fieldSyntaxKind is SyntaxKind.FloatValue ||
+                fieldSyntaxKind is SyntaxKind.StringValue || fieldSyntaxKind is SyntaxKind.BooleanValue ||
+                fieldSyntaxKind is SyntaxKind.EnumValue;
+        }
+
+        /// <summary>
+        /// Helper method to get the field details i.e. (field value, field kind) from the GraphQL request body.
+        /// If the field value is being provided as a variable in the mutation, a recursive call is made to the method
+        /// to get the actual value of the variable.
+        /// </summary>
+        /// <param name="value">Value of the field.</param>
+        /// <param name="variables">Collection of variables declared in the GraphQL mutation request.</param>
+        /// <returns>A tuple containing a constant field value and the field kind.</returns>
+        public static Tuple<IValueNode?, SyntaxKind> GetFieldDetails(IValueNode? value, IVariableValueCollection variables)
+        {
+            if (value is null)
+            {
+                return new(null, SyntaxKind.NullValue);
+            }
+
+            if (value.Kind == SyntaxKind.Variable)
+            {
+                string variableName = ((VariableNode)value).Name.Value;
+                IValueNode? variableValue = variables.GetVariable<IValueNode>(variableName);
+                return GetFieldDetails(variableValue, variables);
+            }
+
+            return new(value, value.Kind);
+        }
+
+        /// <summary>
+        /// Helper method to generate the linking entity name using the source and target entity names.
+        /// </summary>
+        /// <param name="source">Source entity name.</param>
+        /// <param name="target">Target entity name.</param>
+        /// <returns>Name of the linking entity 'LinkingEntity$SourceEntityName$TargetEntityName'.</returns>
+        public static string GenerateLinkingEntityName(string source, string target)
+        {
+            return LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER + source + ENTITY_NAME_DELIMITER + target;
+        }
+
+        /// <summary>
+        ///  Helper method to decode the names of source and target entities from the name of a linking entity.
+        /// </summary>
+        /// <param name="linkingEntityName">linking entity name of the format 'LinkingEntity$SourceEntityName$TargetEntityName'.</param>
+        /// <returns>tuple of source, target entities name of the format (SourceEntityName, TargetEntityName).</returns>
+        /// <exception cref="ArgumentException">Thrown when the linking entity name is not of the expected format.</exception>
+        public static Tuple<string, string> GetSourceAndTargetEntityNameFromLinkingEntityName(string linkingEntityName)
+        {
+            if (!linkingEntityName.StartsWith(LINKING_ENTITY_PREFIX + ENTITY_NAME_DELIMITER))
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            string[] sourceTargetEntityNames = linkingEntityName.Split(ENTITY_NAME_DELIMITER, StringSplitOptions.RemoveEmptyEntries);
+
+            if (sourceTargetEntityNames.Length != 3)
+            {
+                throw new ArgumentException("The provided entity name is an invalid linking entity name.");
+            }
+
+            return new(sourceTargetEntityNames[1], sourceTargetEntityNames[2]);
         }
     }
 }

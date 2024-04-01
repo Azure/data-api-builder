@@ -393,36 +393,44 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Helper method for tests which validate that the relationship data is correctly inferred based on the info provided
-        /// in the config and the metadata collected from the database. It runs the test against various test cases verifying that
-        /// when a relationship is defined in the config between source and target entity and an FK constraint exists in the database between the two entities: We successfully determine which is the referencing
-        /// entity based on the FK constraint.
+        /// Helper method for test methods ValidateInferredRelationshipInfoFor{MsSql, MySql, and PgSql}.
+        /// This helper validates that an entity's relationship data is correctly inferred based on config and database supplied relationship metadata.
+        /// Each test verifies that the referencing entity is correctly determined based on the FK constraints in the database.
         /// </summary>
         private static void ValidateInferredRelationshipInfoForTables()
         {
             // Validate that when for an 1:N relationship between Book - Review, an FK constraint
-            // exists from Review->Book, we successfully determine at the startup that
-            // Review is the referencing entity.
-            ValidateReferencingEntitiesForRelationship("Book", "Review", new List<string>() { "Review" });
+            // exists from Review->Book.
+            // DAB determines that Review is the referencing entity during startup.
+            ValidateReferencingEntitiesForRelationship(
+                sourceEntityName: "Book",
+                targetEntityName: "Review",
+                expectedReferencingEntityNames: new List<string>() { "Review" });
 
             // Validate that when for an 1:1 relationship between Stock - stocks_price, an FK constraint
-            // exists from stocks_price -> Stock, we successfully determine at the startup that
-            // stocks_price is the referencing entity.
-            ValidateReferencingEntitiesForRelationship("Stock", "stocks_price", new List<string>() { "stocks_price" });
+            // exists from stocks_price -> Stock.
+            // DAB determines that stocks_price is the referencing entity during startup.
+            ValidateReferencingEntitiesForRelationship(
+                sourceEntityName: "Stock",
+                targetEntityName: "stocks_price",
+                expectedReferencingEntityNames: new List<string>() { "stocks_price" });
 
             // Validate that when for an N:1 relationship between Book - Publisher, an FK constraint
-            // exists from Book->Publisher, we successfully determine at the startup that
-            // Book is the referencing entity.
-            ValidateReferencingEntitiesForRelationship("Book", "Publisher", new List<string>() { "Book" });
+            // exists from Book->Publisher.
+            // DAB determiens that Book is the referencing entity during startup.
+            ValidateReferencingEntitiesForRelationship(
+                sourceEntityName: "Book",
+                targetEntityName: "Publisher",
+                expectedReferencingEntityNames: new List<string>() { "Book" });
         }
 
         /// <summary>
-        /// Helper method to validate that for given source, target entities, we correctly infer the referencing entity/entities
-        /// at the startup.
-        /// 1. For relationships backed by an FK, there would be only one referencing entity.
-        /// 2. For relationships not backed by an FK, there would be two referencing entities. This is because
-        /// at startup, We ÇANNOT determine which entity is the referencing entity and hence we keep ourselves open to the possibility
-        /// of either entity acting as the referencing entity. The actual referencing entity is determined during request execution.
+        /// Helper method to validate that for a given pair of source and target entities, DAB correctly infers the referencing entity/entities
+        /// during startup.
+        /// 1. For relationships backed by an FK, there is only one referencing entity.
+        /// 2. For relationships not backed by an FK, there are two referencing entities because
+        /// at startup, DAB can't determine which entity is the referencing entity. DAB can only determine the referecing entity
+        /// during request execution.
         /// </summary>
         /// <param name="sourceEntityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>

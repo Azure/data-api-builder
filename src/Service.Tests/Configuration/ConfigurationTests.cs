@@ -32,6 +32,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.HealthCheck;
 using Azure.DataApiBuilder.Service.Tests.Authorization;
 using Azure.DataApiBuilder.Service.Tests.OpenApiIntegration;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -552,64 +553,129 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Checks if the connection string provided in the config is correctly updated for MSSQL.
-        /// If the connection string already contains the `Application Name` property, it should append the DataApiBuilder Application Name to the existing value.
-        /// If not, it should append the property `Application Name` to the connection string.
+        /// Validates that DAB supplements the MSSQL database connection strings with the property "Application Name" and
+        /// 1. Adds the property/value "Application Name=dab_oss_Major.Minor.Patch" when the env var DAB_APP_NAME_ENV is not set.
+        /// 2. Adds the property/value "Application Name=dab_hosted_Major.Minor.Patch" when the env var DAB_APP_NAME_ENV is set to "dab_hosted".
+        /// (DAB_APP_NAME_ENV is set in hosted scenario or when user sets the value.)
+        /// NOTE: "#pragma warning disable format" is used here to avoid removing intentional, readability promoting spacing in DataRow display names. 
         /// </summary>
-        /// <param name="databaseType">database type.</param>
-        /// <param name="providedConnectionString">connection string provided in the config.</param>
-        /// <param name="expectedUpdatedConnectionString">Updated connection string with Application Name.</param>
-        /// <param name="isHostedScenario">If Dab is hosted or OSS.</param>
+        /// <param name="configProvidedConnString">connection string provided in the config.</param>
+        /// <param name="expectedDabModifiedConnString">Updated connection string with Application Name.</param>
+        /// <param name="dabEnvOverride">Whether DAB_APP_NAME_ENV is set in environment. (Always present in hosted scenario or if user supplies value.)</param>
+        #pragma warning disable format
         [DataTestMethod]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;", "Data Source=<>;Application Name=dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Adding Application Name property to connectionString with dab_oss app name.")]
-        [DataRow(DatabaseType.MySQL, "Something;", "Something;", false, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", false, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB oss.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;", "Data Source=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Updating connectionString containing customer Application name with dab_oss app name.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;User ID=<>", "Data Source=<>;User ID=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL2]:Updating connectionString containing customer Application name with dab_oss app name.")]
-        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containg customer Application name for DAB oss.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;", "Data Source=<>;Application Name=dab_hosted_1.0.0", true, DisplayName = "[MSSQL]:Adding Application Name property to connectionString with dab_hosted app.")]
-        [DataRow(DatabaseType.MySQL, "Something;", "Something;", true, DisplayName = "[MYSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;", "Something;", true, DisplayName = "[PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;", "Something;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString without Application name for DAB hosted.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;Application Name=CustAppName;", "Data Source=<>;Application Name=CustAppName,dab_hosted_1.0.0", true, DisplayName = "[MSSQL]:Updating connectionString containing customer Application name with dab_hosted app name.")]
-        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[MYSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_PGSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true, DisplayName = "[COSMOSDB_NOSQL]:No Change in connectionString containing customer Application name for DAB hosted.")]
-        [DataRow(DatabaseType.MSSQL, "Data Source=<>;App=CustAppName;User ID=<>", "Data Source=<>;User ID=<>;Application Name=CustAppName,dab_oss_1.0.0", false, DisplayName = "[MSSQL]:Updating connectionString containing `App` for customer Application name with dab_oss app name.")]
-        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;", "Something1;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for `App` preoperty in connectionString for DBs other than MSSQL.")]
-        [DataRow(DatabaseType.MySQL, "username=dabApp;App=CustAppName;Something2;", "username=dabApp;App=CustAppName;Something2;", false, DisplayName = "[MySQL]:No updates for other properties in connectionString containing `App`.")]
-        public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
-            DatabaseType databaseType,
-            string providedConnectionString,
-            string expectedUpdatedConnectionString,
-            bool isHostedScenario)
+        [DataRow("Data Source=<>;"                              , "Data Source=<>;Application Name="             , false, DisplayName = "[MSSQL]: DAB adds version 'dab_oss_major_minor_patch' to non-provided connection string property 'Application Name'.")]
+        [DataRow("Data Source=<>;Application Name=CustAppName;" , "Data Source=<>;Application Name=CustAppName," , false, DisplayName = "[MSSQL]: DAB appends version 'dab_oss_major_minor_patch' to user supplied 'Application Name' property.")]
+        [DataRow("Data Source=<>;App=CustAppName;"              , "Data Source=<>;Application Name=CustAppName," , false, DisplayName = "[MSSQL]: DAB appends version 'dab_oss_major_minor_patch' to user supplied 'App' property and resolves property to 'Application Name'.")]
+        [DataRow("Data Source=<>;"                              , "Data Source=<>;Application Name="             , true , DisplayName = "[MSSQL]: DAB adds DAB_APP_NAME_ENV value 'dab_hosted' and version suffix '_major_minor_patch' to non-provided connection string property 'Application Name'.")]
+        [DataRow("Data Source=<>;Application Name=CustAppName;" , "Data Source=<>;Application Name=CustAppName," , true , DisplayName = "[MSSQL]: DAB appends DAB_APP_NAME_ENV value 'dab_hosted' and version suffix '_major_minor_patch' to user supplied 'Application Name' property.")]
+        [DataRow("Data Source=<>;App=CustAppName;"              , "Data Source=<>;Application Name=CustAppName," , true , DisplayName = "[MSSQL]: DAB appends version string 'dab_hosted' and version suffix '_major_minor_patch' to user supplied 'App' property and resolves property to 'Application Name'.")]
+        #pragma warning restore format
+        public void MsSqlConnStringSupplementedWithAppNameProperty(
+            string configProvidedConnString,
+            string expectedDabModifiedConnString,
+            bool dabEnvOverride)
         {
-            if (isHostedScenario)
+            // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
+            if (dabEnvOverride)
             {
-                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted_1.0.0");
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
             }
             else
             {
                 Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
             }
 
-            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, providedConnectionString);
+            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
+            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
+            expectedDabModifiedConnString += resolvedAssemblyVersion;
 
-            Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.MSSQL, configProvidedConnString);
+
+            // Act
+            bool configParsed = RuntimeConfigLoader.TryParseConfig(
                 runtimeConfig.ToJson(),
                 out RuntimeConfig updatedRuntimeConfig,
-                replaceEnvVar: true));
+                replaceEnvVar: true);
 
-            string actualUpdatedConnectionString = updatedRuntimeConfig.DataSource.ConnectionString;
+            // Assert
+            Assert.AreEqual(
+                expected: true,
+                actual: configParsed,
+                message: "Runtime config unexpectedly failed parsing.");
+            Assert.AreEqual(
+                expected: expectedDabModifiedConnString,
+                actual: updatedRuntimeConfig.DataSource.ConnectionString,
+                message: "DAB did not properly set the 'Application Name' connection string property.");
+        }
 
-            Assert.AreEqual(actualUpdatedConnectionString, expectedUpdatedConnectionString);
+        /// <summary>
+        /// Validates that DAB doesn't append nor modify
+        /// - the 'Application Name' or 'App' properties in MySQL database connection strings.
+        /// - the 'Application Name' property in
+        /// PostgreSQL, CosmosDB_PostgreSQl, CosmosDB_NoSQL database connection strings.
+        /// This test validates that this behavior holds true when the DAB_APP_NAME_ENV environment variable
+        /// - is set (dabEnvOverride==true) -> (DAB hosted)
+        /// - is not set (dabEnvOverride==false) -> (DAB OSS).
+        /// </summary>
+        /// <param name="databaseType">database type.</param>
+        /// <param name="configProvidedConnString">connection string provided in the config.</param>
+        /// <param name="expectedDabModifiedConnString">Updated connection string with Application Name.</param>
+        /// <param name="dabEnvOverride">Whether DAB_APP_NAME_ENV is set in environment. (Always present in hosted scenario or if user supplies value.)</param>
+        #pragma warning disable format
+        [DataTestMethod]
+        [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , false, DisplayName = "[MYSQL|DAB OSS]:No addition of 'Application Name' or 'App' property to connection string.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , false, DisplayName = "[MYSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;"     , "Something1;App=CustAppName;Something2;"     , false, DisplayName = "[MySQL|DAB OSS]:No modification of customer overridden 'App' property.")]
+        [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , true , DisplayName = "[MYSQL|DAB hosted]:No addition of 'Application Name' or 'App' property to connection string.")]
+        [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , true , DisplayName = "[MYSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;"     , "Something1;App=CustAppName;Something2;"     , true, DisplayName = "[MySQL|DAB hosted]:No modification of customer overridden 'App' property.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[PGSQL|DAB OSS]:No addition of 'Application Name' property to connection string.]")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[PGSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[PGSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_NOSQL|DAB OSS]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_NOSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[COSMOSDB_NOSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_PGSQL|DAB OSS]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_PGSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_PGSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
+        [DataRow(DatabaseType.CosmosDB_PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[COSMOSDB_PGSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
+        #pragma warning restore format
+        public void TestConnectionStringIsCorrectlyUpdatedWithApplicationName(
+            DatabaseType databaseType,
+            string configProvidedConnString,
+            string expectedDabModifiedConnString,
+            bool dabEnvOverride)
+        {
+            // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
+            if (dabEnvOverride)
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+            }
+            else
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            }
+
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(databaseType, configProvidedConnString);
+
+            // Act
+            bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                runtimeConfig.ToJson(),
+                out RuntimeConfig updatedRuntimeConfig,
+                replaceEnvVar: true);
+
+            // Assert
+            Assert.AreEqual(
+                expected: true,
+                actual: configParsed,
+                message: "Runtime config unexpectedly failed parsing.");
+            Assert.AreEqual(
+                expected: expectedDabModifiedConnString,
+                actual: updatedRuntimeConfig.DataSource.ConnectionString,
+                message: "DAB did not properly set the 'Application Name' connection string property.");
         }
 
         [TestMethod("Validates that once the configuration is set, the config controller isn't reachable."), TestCategory(TestCategory.COSMOSDBNOSQL)]
@@ -3193,6 +3259,99 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 // Validate response body
                 Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
                 ValidateOpenApiDocTopLevelPropertiesExist(responseProperties);
+            }
+        }
+
+        /// <summary>
+        /// Simulates a GET request to DAB's health check endpoint ('/') and validates the contents of the response.
+        /// The expected format of the response is:
+        /// {
+        ///     "status": "Healthy",
+        ///     "version": "0.12.0",
+        ///     "appName": "dab_oss_0.12.0"
+        /// }
+        /// - the 'version' property format is 'major.minor.patch'
+        /// </summary>
+        [TestMethod]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task HealthEndpoint_ValidateContents()
+        {
+            // Arrange
+            // At least one entity is required in the runtime config for the engine to start.
+            // Even though this entity is not under test, it must be supplied enable successfull
+            // config file creation.
+            Entity requiredEntity = new(
+                Source: new("books", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: false),
+                GraphQL: new("book", "books"),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null);
+
+            Dictionary<string, Entity> entityMap = new()
+            {
+                { "Book", requiredEntity }
+            };
+
+            CreateCustomConfigFile(globalRestEnabled: true, entityMap);
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG_FILENAME}"
+            };
+
+            using TestServer server = new(Program.CreateWebHostBuilder(args));
+            using HttpClient client = server.CreateClient();
+
+            // Setup and send GET request to root path.
+            HttpRequestMessage getHealthEndpointContents = new(HttpMethod.Get, $"/");
+
+            // Act - Exercise the health check endpoint code by requesting the health endpoint path '/'.
+            HttpResponseMessage response = await client.SendAsync(getHealthEndpointContents);
+
+            // Assert - Process response body and validate contents.
+            // Validate HTTP return code.
+            string responseBody = await response.Content.ReadAsStringAsync();
+            Dictionary<string, JsonElement> responseProperties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(responseBody);
+            Assert.AreEqual(expected: HttpStatusCode.OK, actual: response.StatusCode, message: "Received unexpected HTTP code from health check endpoint.");
+
+            // Validate value of 'status' property in reponse.
+            if (responseProperties.TryGetValue(key: "status", out JsonElement statusValue))
+            {
+                Assert.AreEqual(
+                    expected: "Healthy",
+                    actual: statusValue.ToString(),
+                    message: "Expected endpoint to report 'Healthy'.");
+            }
+            else
+            {
+                Assert.Fail();
+            }
+
+            // Validate value of 'version' property in response.
+            if (responseProperties.TryGetValue(key: DabHealthCheck.DAB_VERSION_KEY, out JsonElement versionValue))
+            {
+                Assert.AreEqual(
+                    expected: ProductInfo.GetProductVersion(),
+                    actual: versionValue.ToString(),
+                    message: "Unexpected or missing version value.");
+            }
+            else
+            {
+                Assert.Fail();
+            }
+
+            // Validate value of 'app-name' property in response.
+            if (responseProperties.TryGetValue(key: DabHealthCheck.DAB_APPNAME_KEY, out JsonElement appNameValue))
+            {
+                Assert.AreEqual(
+                    expected: ProductInfo.GetDataApiBuilderUserAgent(),
+                    actual: appNameValue.ToString(),
+                    message: "Unexpected or missing DAB user agent string.");
+            }
+            else
+            {
+                Assert.Fail();
             }
         }
 

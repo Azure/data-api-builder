@@ -1,5 +1,5 @@
 {
-    "name": ".NET 8 with 6",
+    "name": ".NET 8 with .NET 6",
     "image": "mcr.microsoft.com/dotnet/sdk:8.0",
     "features": {
         "ghcr.io/devcontainers/features/dotnet:2": {
@@ -7,5 +7,10 @@
             "dotnetRuntimeVersions": "6.0",
             "aspNetCoreRuntimeVersions": "6.0"
         }
-    }
+    },
+	"customizations": {
+		"vscode": {
+			"extensions": ["ms-dotnettools.csdevkit"]
+		}
+	}
 }

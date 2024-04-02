@@ -8,7 +8,7 @@ public class AppInsightsTelemetryInitializer : ITelemetryInitializer
 {
     public static readonly IReadOnlyDictionary<string, string> GlobalProperties = new Dictionary<string, string>
     {
-        { "ProductName", $"{ProductInfo.DEFAULT_APP_NAME}"},
+        { "ProductName", $"{ProductInfo.DAB_USER_AGENT}"},
         { "UserAgent", $"{ProductInfo.GetDataApiBuilderUserAgent()}" }
         // Add more custom properties here
     };
@@ -19,7 +19,7 @@ public class AppInsightsTelemetryInitializer : ITelemetryInitializer
     /// <param name="telemetry">The telemetry object to initialize</param>
     public void Initialize(ITelemetry telemetry)
     {
-        telemetry.Context.Cloud.RoleName = ProductInfo.ROLE_NAME;
+        telemetry.Context.Cloud.RoleName = ProductInfo.CLOUD_ROLE_NAME;
         telemetry.Context.Session.Id = Guid.NewGuid().ToString();
         telemetry.Context.Component.Version = ProductInfo.GetProductVersion();
 

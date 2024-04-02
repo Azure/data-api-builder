@@ -143,7 +143,7 @@ public enum PredicateOperation
     None,
     Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual,
     AND, OR, LIKE, NOT_LIKE,
-    IS, IS_NOT, EXISTS
+    IS, IS_NOT, EXISTS, ARRAY_CONTAINS, NOT_ARRAY_CONTAINS
 }
 
 /// <summary>

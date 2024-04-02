@@ -5,6 +5,7 @@ using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using CommandLine;
 using Microsoft.Extensions.Logging;
 using static Cli.Utils;
@@ -32,7 +33,7 @@ namespace Cli.Commands
         [Option("app-insights-enabled", Default = CliBool.True, Required = false, HelpText = "(Default: true) Enable/Disable Application Insights")]
         public CliBool AppInsightsEnabled { get; }
 
-        public void Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
         {
             logger.LogInformation("{productName} {version}", PRODUCT_NAME, ProductInfo.GetProductVersion());
 
@@ -46,6 +47,8 @@ namespace Cli.Commands
             {
                 logger.LogError("Failed to add telemetry to the configuration file.");
             }
+
+            return isSuccess ? CliReturnCode.SUCCESS : CliReturnCode.GENERAL_ERROR;
         }
     }
 }

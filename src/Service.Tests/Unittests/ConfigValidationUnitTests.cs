@@ -338,8 +338,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test method to check that an exception is thrown when LinkingObject was provided
-        /// while either LinkingSourceField or SourceField is null, and either targetFields or LinkingTargetField is null.
-        /// And the relationship is not defined in the database.
+        /// while either LinkingSourceField or SourceField is null, and the corresponding targetFields
+        /// or LinkingTargetField is null, while the relationship is not defined in the database.
         /// Also verify that after adding foreignKeyPair in the Database, no exception is thrown.
         /// </summary>
         [DataRow(new string[] { "id" }, null, new string[] { "num" }, null, "SampleEntity1", DisplayName = "LinkingSourceField is null")]
@@ -640,9 +640,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="sourceFields">List of strings representing the source fields.</param>
         /// <param name="targetFields">List of strings representing the target fields.</param>
         /// <param name="expectedExceptionMessage">The error message we expect from validation.</param>
-        [DataRow(new[] { "non null" }, null, "Entity: SampleEntity1 has source fields that are not null, but target fields that are null.",
+        [DataRow(new[] { "nonNull" }, null, "Entity: SampleEntity1 has source fields that are not null, but target fields that are null.",
             DisplayName = "sourceFields exist but targetFields are null")]
-        [DataRow(null, new[] { "non null" }, "Entity: SampleEntity1 has target fields that are not null, but source fields that are null.",
+        [DataRow(null, new[] { "nonNull" }, "Entity: SampleEntity1 has target fields that are not null, but source fields that are null.",
             DisplayName = "targetFields exist but sourceFields are null")]
         [DataRow(new[] { "A", "B", "C" }, new[] { "1", "2" }, "Entity: SampleEntity1 has 3 source fields defined, but 2 target fields defined.",
             DisplayName = "sourceFields and targetFields have different length.")]

@@ -234,17 +234,33 @@ public class GQLFilterParser
                 }
                 else
                 {
+                    bool isListType = false;
+                    if (queryStructure is CosmosQueryStructure)
+                    {
+                        FieldDefinitionNode? fieldDefinitionNode = metadataProvider.GetSchemaGraphQLFieldFromFieldName(queryStructure.EntityName, name);
+                        if (fieldDefinitionNode is null)
+                        {
+                            throw new DataApiBuilderException(
+                                message: "Invalid filter object used as a nested field input value type.",
+                                statusCode: HttpStatusCode.BadRequest,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        }
+
+                        isListType = fieldDefinitionNode.Type.IsListType();
+                    }
+
                     predicates.Push(
-                        new PredicateOperand(
-                            ParseScalarType(
-                                ctx,
-                                argumentSchema: filterArgumentObject.Fields[name],
-                                backingColumnName,
-                                subfields,
-                                schemaName,
-                                sourceName,
-                                sourceAlias,
-                                queryStructure.MakeDbConnectionParam)));
+                   new PredicateOperand(
+                       ParseScalarType(
+                           ctx: ctx,
+                           argumentSchema: filterArgumentObject.Fields[name],
+                           name: backingColumnName,
+                           fields: subfields,
+                           schemaName: schemaName,
+                           tableName: sourceName,
+                           tableAlias: sourceAlias,
+                           processLiterals: queryStructure.MakeDbConnectionParam,
+                           isListType: isListType)));
                 }
             }
         }
@@ -451,7 +467,7 @@ public class GQLFilterParser
 
     /// <summary>
     /// Calls the appropriate scalar type filter parser based on the type of
-    /// the fields
+    /// the fields.
     /// </summary>
     /// <param name="ctx">The GraphQL context, used to get the query variables</param>
     /// <param name="argumentSchema">An IInputField object which describes the schema of the scalar input argument (e.g. IntFilterInput)</param>
@@ -461,6 +477,7 @@ public class GQLFilterParser
     /// <param name="tableName">The name of the table underlying the *FilterInput being processed</param>
     /// <param name="tableAlias">The alias of the table underlying the *FilterInput being processed</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
+    /// <param name="isListType">Flag to give a hint about the node type. It is only applicable for CosmosDB</param>
     private static Predicate ParseScalarType(
         IMiddlewareContext ctx,
         IInputField argumentSchema,
@@ -469,11 +486,12 @@ public class GQLFilterParser
         string schemaName,
         string tableName,
         string tableAlias,
-        Func<object, string?, string> processLiterals)
+        Func<object, string?, string> processLiterals,
+        bool isListType = false)
     {
         Column column = new(schemaName, tableName, columnName: name, tableAlias);
 
-        return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals);
+        return FieldFilterParser.Parse(ctx, argumentSchema, column, fields, processLiterals, isListType);
     }
 
     /// <summary>
@@ -590,12 +608,14 @@ public static class FieldFilterParser
     /// <param name="column">The table column targeted by the field</param>
     /// <param name="fields">The subfields of the scalar field</param>
     /// <param name="processLiterals">Parametrizes literals before they are written in string predicate operands</param>
+    /// <param name="isListType">Flag which gives a hint about the node type in the given schema. only for CosmosDB it can be of list type. Refer <a href=https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/query/array-contains>here</a>.</param>
     public static Predicate Parse(
         IMiddlewareContext ctx,
         IInputField argumentSchema,
         Column column,
         List<ObjectFieldNode> fields,
-        Func<object, string?, string> processLiterals)
+        Func<object, string?, string> processLiterals,
+        bool isListType = false)
     {
         List<PredicateOperand> predicates = new();
 
@@ -637,12 +657,28 @@ public static class FieldFilterParser
                     op = PredicateOperation.GreaterThanOrEqual;
                     break;
                 case "contains":
-                    op = PredicateOperation.LIKE;
-                    value = $"%{EscapeLikeString((string)value)}%";
+                    if (isListType)
+                    {
+                        op = PredicateOperation.ARRAY_CONTAINS;
+                    }
+                    else
+                    {
+                        op = PredicateOperation.LIKE;
+                        value = $"%{EscapeLikeString((string)value)}%";
+                    }
+
                     break;
                 case "notContains":
-                    op = PredicateOperation.NOT_LIKE;
-                    value = $"%{EscapeLikeString((string)value)}%";
+                    if (isListType)
+                    {
+                        op = PredicateOperation.NOT_ARRAY_CONTAINS;
+                    }
+                    else
+                    {
+                        op = PredicateOperation.NOT_LIKE;
+                        value = $"%{EscapeLikeString((string)value)}%";
+                    }
+
                     break;
                 case "startsWith":
                     op = PredicateOperation.LIKE;

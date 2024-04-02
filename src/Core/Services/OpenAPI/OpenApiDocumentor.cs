@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
+using Azure.DataApiBuilder.Product;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Writers;
@@ -30,7 +31,6 @@ namespace Azure.DataApiBuilder.Core.Services
         private OpenApiResponses _defaultOpenApiResponses;
         private OpenApiDocument? _openApiDocument;
 
-        private const string DOCUMENTOR_VERSION = "PREVIEW";
         private const string DOCUMENTOR_UI_TITLE = "Data API builder - REST Endpoint";
         private const string GETALL_DESCRIPTION = "Returns entities.";
         private const string GETONE_DESCRIPTION = "Returns an entity.";
@@ -132,8 +132,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     Info = new OpenApiInfo
                     {
-                        Version = DOCUMENTOR_VERSION,
-                        Title = DOCUMENTOR_UI_TITLE,
+                        Version = ProductInfo.GetProductVersion(),
+                        Title = DOCUMENTOR_UI_TITLE
                     },
                     Servers = new List<OpenApiServer>
                     {

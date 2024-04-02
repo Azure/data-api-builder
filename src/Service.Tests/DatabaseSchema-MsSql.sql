@@ -105,6 +105,7 @@ CREATE TABLE reviews(
     book_id int,
     id int IDENTITY(5001, 1),
     content varchar(max) DEFAULT('Its a classic') NOT NULL,
+    websiteuser_id INT DEFAULT 1,
     PRIMARY KEY(book_id, id)
 );
 
@@ -462,6 +463,8 @@ SET IDENTITY_INSERT book_website_placements OFF
 
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
 
+INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
+
 SET IDENTITY_INSERT reviews ON
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 SET IDENTITY_INSERT reviews OFF
@@ -506,7 +509,7 @@ VALUES
     (6, 'Journal6', 'green', null),
     (7, 'Journal7', null, null);
 
-INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
+
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO [bar].[magazines](upc, comic_name, issue) VALUES (0, 'NotVogue', 0);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');

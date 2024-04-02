@@ -260,6 +260,26 @@
               }
             }
           ]
+        },
+        {
+          "role": "role_multiple_create_policy_tester",
+          "actions": [
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "create",
+              "policy": {
+                "database": "@item.name ne 'Test'"
+              }
+            }
+          ]
         }
       ],
       "relationships": {
@@ -409,28 +429,6 @@
             },
             {
               "action": "create"
-            },
-            {
-              "action": "update"
-            },
-            {
-              "action": "delete"
-            }
-          ]
-        },
-        {
-          "role": "test_role_with_excluded_fields_on_create",
-          "actions": [
-            {
-              "action": "create",
-              "fields": {
-                "exclude": [
-                  "piecesAvailable"
-                ]
-              }
-            },
-            {
-              "action": "read"
             },
             {
               "action": "update"
@@ -861,6 +859,29 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "role_multiple_create_policy_tester",
+          "actions": [
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "create",
+              "policy": {
+                "database": "@item.title ne 'Test'"
+              }
+            },
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.publisher_id ne 1234"
+              }
+            }
+          ]
         }
       ],
       "mappings": {
@@ -1103,6 +1124,29 @@
               "action": "delete"
             }
           ]
+        },
+        {
+          "role": "role_multiple_create_policy_tester",
+          "actions": [
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            },
+            {
+              "action": "create",
+              "policy": {
+                "database": "@item.content ne 'Great'"
+              }
+            },
+            {
+              "action": "read",
+              "policy": {
+                "database": "@item.websiteuser_id ne 1"
+              }
+            }
+          ]
         }
       ],
       "relationships": {
@@ -1111,6 +1155,18 @@
           "target.entity": "Book",
           "source.fields": [],
           "target.fields": [],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "website_users": {
+          "cardinality": "one",
+          "target.entity": "WebsiteUser",
+          "source.fields": [
+            "websiteuser_id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.source.fields": [],
           "linking.target.fields": []
         }
@@ -1311,7 +1367,21 @@
             }
           ]
         }
-      ]
+      ],
+      "relationships": {
+        "reviews": {
+          "cardinality": "many",
+          "target.entity": "Review",
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "websiteuser_id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
     },
     "SupportedType": {
       "source": {
@@ -1385,14 +1455,6 @@
       },
       "permissions": [
         {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "read"
-            }
-          ]
-        },
-        {
           "role": "authenticated",
           "actions": [
             {
@@ -1406,6 +1468,14 @@
             },
             {
               "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "read"
             }
           ]
         },
@@ -1427,23 +1497,6 @@
           "actions": [
             {
               "action": "create"
-            }
-          ]
-        },
-        {
-          "role": "test_role_with_excluded_fields_on_create",
-          "actions": [
-            {
-              "action": "create"
-            },
-            {
-              "action": "read"
-            },
-            {
-              "action": "update"
-            },
-            {
-              "action": "delete"
             }
           ]
         },
@@ -2440,7 +2493,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "get"
+          "post"
         ]
       },
       "permissions": [
@@ -2520,7 +2573,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "get"
+          "post"
         ]
       },
       "permissions": [
@@ -2641,7 +2694,7 @@
       "rest": {
         "enabled": true,
         "methods": [
-          "get"
+          "post"
         ]
       },
       "permissions": [
@@ -2893,6 +2946,47 @@
         }
       ]
     },
+    "DefaultBuiltInFunction": {
+      "source": {
+        "object": "default_with_function_table",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "DefaultBuiltInFunction",
+          "plural": "DefaultBuiltInFunctions"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "current_date",
+                  "next_date"
+                ]
+              }
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
     "PublisherNF": {
       "source": {
         "object": "publishers",
@@ -3084,40 +3178,6 @@
           ]
         }
       }
-    },
-    "DefaultBuiltInFunction": {
-      "source": {
-        "object": "default_with_function_table",
-        "type": "table"
-      },
-      "graphql": {
-        "enabled": true
-      },
-      "rest": {
-        "enabled": true
-      },
-      "permissions": [
-        {
-          "role": "anonymous",
-          "actions": [
-            {
-              "action": "create",
-              "fields": {
-                "include": [
-                  "*"
-                ],
-                "exclude": [
-                  "current_date",
-                  "next_date"
-                ]
-              }
-            },
-            "read",
-            "update",
-            "delete"
-          ]
-        }
-      ]
     },
     "AuthorNF": {
       "source": {

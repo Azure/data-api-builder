@@ -1288,7 +1288,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (dbResultSetRowForCurrentEntity is not null && dbResultSetRowForCurrentEntity.Columns.Count == 0)
                 {
                     // For GraphQL, insert operation corresponds to Create action.
-                    throw new DataApiBuilderException(message: "Could not insert row with given values.",
+                    throw new DataApiBuilderException(message: $"Could not insert row with given values for entity: {entityName}",
                                                       statusCode: HttpStatusCode.Forbidden,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
                 }

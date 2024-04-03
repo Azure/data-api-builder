@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     fromClause = pathConfig.JoinStatement;
                                     predicates = filterClause?.Expression.Accept(new ODataASTCosmosVisitor(pathConfig.Alias));
 
-                                    existQuery = GetExistQueryForCosmos(fromClause, predicates);
+                                    existQuery = CosmosQueryBuilder.BuildExistsQueryForCosmos(fromClause, predicates);
                                 }
                                 else
                                 {
@@ -134,29 +134,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Generate Cosmos DB Query for the given fromClause and predicates.
-        /// </summary>
-        /// <param name="fromClause"></param>
-        /// <param name="predicates"></param>
-        /// <returns></returns>
-        private static string GetExistQueryForCosmos(string? fromClause, string? predicates)
-        {
-            string? existQuery = $"EXISTS " +
-                                $"(SELECT VALUE 1 " +
-                                    $"FROM {fromClause} ";
-            if (predicates is not null)
-            {
-                existQuery += $"WHERE {predicates})";
-            }
-            else
-            {
-                existQuery += ")";
-            }
-
-            return existQuery;
-        }
-
-        /// <summary>
         /// Processes the filter clauses for the given elemental operation.
         /// </summary>
         /// <param name="context"></param>
@@ -168,7 +145,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="entityDBObject"></param>
         /// <param name="postProcessCallback"></param>
         /// <returns></returns>
-        private static List<FilterClause> ProcessFilter(HttpContext context,
+        private static List<FilterClause> ProcessFilter(
+            HttpContext context,
             IAuthorizationResolver authorizationResolver,
             ISqlMetadataProvider sqlMetadataProvider,
             string clientRoleHeader,

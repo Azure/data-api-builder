@@ -110,21 +110,18 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             foreach (IDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
             {
-                if (typeDefinition is ObjectTypeDefinitionNode node)
+                if (typeDefinition is ObjectTypeDefinitionNode node && node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
                 {
-                    if (node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
-                    {
-                        string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
+                    string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
 
-                        EntityWithJoins.Add(
-                            modelName,
-                            new List<EntityDbPolicyCosmosModel>
-                            {
-                                new (Path: GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
-                            });
+                    EntityWithJoins.Add(
+                        modelName,
+                        new List<EntityDbPolicyCosmosModel>
+                        {
+                            new (Path: GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
+                        });
 
-                        ProcessSchema(node.Fields, schemaDefinitions, GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
-                    }
+                    ProcessSchema(node.Fields, schemaDefinitions, GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
                 }
             }
         }
@@ -167,7 +164,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     alias = $"table{tableCounter.Next()}";
                 }
 
-                EntityDbPolicyCosmosModel currentEntity = new(Path: currentPath,
+                EntityDbPolicyCosmosModel currentEntity = new(
+                            Path: currentPath,
                             EntityName: entityType,
                             ColumnName: field.Name.Value,
                             Alias: alias);
@@ -198,11 +196,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 }
 
                 // If the field is an array type, we need to create a table alias which will be used when creating JOINs to that table.
-                ProcessSchema(fields: schemaDocument[entityType].Fields,
-                                schemaDocument: schemaDocument,
-                                currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
-                                tableCounter: tableCounter,
-                                previousEntity: isArrayType ? currentEntity : null);
+                ProcessSchema(
+                    fields: schemaDocument[entityType].Fields,
+                    schemaDocument: schemaDocument,
+                    currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
+                    tableCounter: tableCounter,
+                    previousEntity: isArrayType ? currentEntity : null);
             }
         }
 

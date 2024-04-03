@@ -215,5 +215,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return query;
         }
+
+        /// <summary>
+        /// Generate Cosmos DB Query for the given fromClause and predicates.
+        /// </summary>
+        /// <param name="fromClause"></param>
+        /// <param name="predicates"></param>
+        /// <returns></returns>
+        public static string BuildExistsQueryForCosmos(string? fromClause, string? predicates)
+        {
+            string? existQuery = $"EXISTS " +
+                                $"(SELECT VALUE 1 " +
+                                    $"FROM {fromClause} ";
+            if (!string.IsNullOrEmpty(predicates))
+            {
+                existQuery += $"WHERE {predicates})";
+            }
+            else
+            {
+                existQuery += ")";
+            }
+
+            return existQuery;
+        }
     }
 }

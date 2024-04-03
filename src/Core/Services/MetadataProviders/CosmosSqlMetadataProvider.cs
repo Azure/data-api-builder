@@ -133,7 +133,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// Once container is found, it will traverse the fields and inner fields to get the paths for each entity.
         /// Following steps are implemented here:
         /// 1. If the entity is not in the runtime config, skip it.
-        /// 2. If the field is an array type, we need to add an alias to the table because we need to a JOIN to the same table.
+        /// 2. If the field is an array type, we need to create a table alias which will be used when creating JOINs to that table.
         /// 3. Create a new EntityDbPolicyCosmosModel object and add it to the EntityWithJoins dictionary.
         /// 4. Check if we get previous entity with join information, if yes append it to the current entity also
         /// 5. Recursively call this function, to process the schema

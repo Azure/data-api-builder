@@ -174,21 +174,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new ArgumentNullException(nameof(operand));
             }
 
-            Column? c;
-            string? s;
-            Predicate? p;
+            Column? column;
+            string? stringType;
+            Predicate? predicate;
             BaseQueryStructure? sqlQueryStructure;
-            if ((c = operand.AsColumn()) != null)
+            if ((column = operand.AsColumn()) != null)
             {
-                return Build(c);
+                return Build(column);
             }
-            else if ((s = operand.AsString()) != null)
+            else if ((stringType = operand.AsString()) != null)
             {
-                return s;
+                return stringType;
             }
-            else if ((p = operand.AsPredicate()) != null)
+            else if ((predicate = operand.AsPredicate()) != null)
             {
-                return Build(p);
+                return Build(predicate);
             }
             else if ((sqlQueryStructure = operand.AsCosmosQueryStructure()) is not null
                         && sqlQueryStructure is CosmosExistsQueryStructure cosmosExistsQueryStructure)

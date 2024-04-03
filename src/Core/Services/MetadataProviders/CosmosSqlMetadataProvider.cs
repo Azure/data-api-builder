@@ -97,17 +97,62 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <summary>
         /// Parse the schema to get the entity paths for prefixes.
         /// It will collect all the paths for each entity and its field, starting from the container model.
+        ///
+        /// e.g. If we have the following schema:
+        ///     type Planet @model(name:""PlanetAlias"") {
+        ///         id : ID!,
+        ///         name : String,
+        ///         character: Character,
+        ///         stars: [Star],
+        ///         sun: Star
+        ///     }
+        ///     
+        ///     type Star {
+        ///         id : ID,
+        ///         name : String
+        ///     }
+        ///
+        ///     type Character {
+        ///         id : ID,
+        ///         name : String,
+        ///         type: String,
+        ///         homePlanet: Int,
+        ///         primaryFunction: String,
+        ///         star: Star
+        ///     }
+        /// It would generate the following EntityWithJoins dictionary:
+        /// KEY: PlanetAlias
+        /// VALUE:
+        /// a) Path = c, EntityName = PlanetAlias
+        ///
+        /// KEY: Star
+        /// VALUE:
+        /// a) Path = c, ColumnName = stars , EntityName = Star, Alias = table0, JoinStatement = table0 IN c.stars
+        /// b) Path = c , ColumnName = sun, EntityName = Star
+        /// c) Path = c.character, ColumnName = star , EntityName = Star
+        ///
+        /// KEY: Character
+        /// VALUE:
+        /// a) Path = c, ColumnName = character , EntityName = Character
+        ///
+        /// EntityWithJoins dictionary indicates the paths for each entity. There "Planet" has one path i.e. "c" on the other hand Star has 3 paths.with one join statement.
+        /// This information is getting used to resolve DB Policy and generate cosmos DB sql query conditions for them.
         /// </summary>
         private void ParseSchemaGraphQLFieldsForJoins()
         {
             IncrementingInteger tableCounter = new();
 
             Dictionary<string, ObjectTypeDefinitionNode> schemaDefinitions = new();
+
+            // Step1: Collect all the schema definitions in a dictionary for easy lookup of the corresponding fields
             foreach (ObjectTypeDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
             {
                 schemaDefinitions.Add(typeDefinition.Name.Value, typeDefinition);
             }
 
+            // Step2:
+            // a) Traverse the schema to find the container model
+            // b) Once it is found, start collecting all the paths for each entity and its field.
             foreach (IDefinitionNode typeDefinition in GraphQLSchemaRoot.Definitions)
             {
                 if (typeDefinition is ObjectTypeDefinitionNode node && node.Directives.Any(a => a.Name.Value == ModelDirectiveType.DirectiveName))
@@ -131,14 +176,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// Following steps are implemented here:
         /// 1. If the entity is not in the runtime config, skip it.
         /// 2. If the field is an array type, we need to create a table alias which will be used when creating JOINs to that table.
-        /// 3. Create a new EntityDbPolicyCosmosModel object and add it to the EntityWithJoins dictionary.
+        /// 3. Create a new EntityDbPolicyCosmosModel object with all the entity related information and add it to the EntityWithJoins dictionary.
         /// 4. Check if we get previous entity with join information, if yes append it to the current entity also
         /// 5. Recursively call this function, to process the schema
         /// </summary>
         /// <param name="fields"></param>
         /// <param name="schemaDocument"></param>
         /// <param name="currentPath"></param>
-        /// <param name="previousEntity"></param>
+        /// <param name="previousEntity">indicates the parent entity for which we are processing the schema.</param>
         private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,

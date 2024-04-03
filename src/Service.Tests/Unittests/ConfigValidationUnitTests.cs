@@ -436,21 +436,16 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// And the foreignKey pair between source and target is not defined in the database as well.
         /// Also verify that after adding foreignKeyPair in the Database, no exception is thrown.
         /// </summary>
-        [DataRow(null, null, null, DisplayName = "both source and targetFields are null")]
         [DataTestMethod]
-        public void TestRelationshipWithNoLinkingObjectAndEitherSourceOrTargetFieldIsNull(
-            string[] sourceFields,
-            string[] targetFields,
-            string linkingObject
-        )
+        public void TestRelationshipWithNoLinkingObjectAndEitherSourceOrTargetFieldIsNull()
         {
             // Creating an EntityMap with two sample entity
             Dictionary<string, Entity> entityMap = GetSampleEntityMap(
                 sourceEntity: "SampleEntity1",
                 targetEntity: "SampleEntity2",
-                sourceFields: sourceFields,
-                targetFields: targetFields,
-                linkingObject: linkingObject,
+                sourceFields: null,
+                targetFields: null,
+                linkingObject: null,
                 linkingSourceFields: null,
                 linkingTargetFields: null
             );

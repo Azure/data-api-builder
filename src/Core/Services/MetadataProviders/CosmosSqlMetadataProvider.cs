@@ -197,7 +197,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     }
                 }
 
-                // If the field is an array type, we need to add an alias to the table because we need to a JOIN to the same table
+                // If the field is an array type, we need to create a table alias which will be used when creating JOINs to that table.
                 ProcessSchema(fields: schemaDocument[entityType].Fields,
                                 schemaDocument: schemaDocument,
                                 currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",

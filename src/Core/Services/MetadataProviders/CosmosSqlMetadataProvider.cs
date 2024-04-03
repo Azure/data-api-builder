@@ -162,7 +162,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 bool isArrayType = field.Type is ListTypeNode;
                 if (isArrayType)
                 {
-                    // Since, we don't have query structure here.
+                    // Since we don't have query structure here,
                     // we are going to generate alias and use this counter to generate unique alias for each table at later stage.
                     alias = $"table{tableCounter.Next()}";
                 }

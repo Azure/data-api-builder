@@ -58,7 +58,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public List<Predicate> Predicates { get; }
 
         /// <summary>
-        /// Used for parsing GraphQl filter arguments.
+        /// Used for parsing GraphQL filter arguments.
         /// </summary>
         public GQLFilterParser GraphQLFilterParser { get; protected set; }
 

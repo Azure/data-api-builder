@@ -157,7 +157,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// It process the filter clauses for the given elemental operation.
+        /// Processes the filter clauses for the given elemental operation.
         /// </summary>
         /// <param name="context"></param>
         /// <param name="authorizationResolver"></param>

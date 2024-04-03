@@ -9,7 +9,7 @@ param (
 # Download and save the ChilliCream License 1.0 from ChilliCream/graphql-platform GitHub repo
 $chiliCreamLicenseSavePath = "$BuildArtifactStagingDir/chillicreamlicense.txt"
 $chiliCreamLicenseMetadataURL = "https://raw.githubusercontent.com/ChilliCream/graphql-platform/main/website/src/basic/licensing/chillicream-license.md"
-Invoke-WebRequest $chiliCreamLicenseMetadataURL -UseBasicParsing |
+Invoke-WebRequest -Uri $chiliCreamLicenseMetadataURL -UseBasicParsing |
  Select-Object -ExpandProperty Content |
  Out-File $chiliCreamLicenseSavePath
 

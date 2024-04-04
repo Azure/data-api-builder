@@ -1,12 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
-[DebuggerDisplay("Target:({TargetEntity})")]
 public record EntityRelationship(
     Cardinality Cardinality,
     [property: JsonPropertyName("target.entity")] string TargetEntity,

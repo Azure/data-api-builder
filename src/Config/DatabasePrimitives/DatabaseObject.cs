@@ -274,10 +274,14 @@ public class ColumnDefinition
 [DebuggerDisplay("Relationship: {RelationshipName} ReferencingDbTable = {Pair.ReferencingDbTable.FullName} (Count = {ReferencingColumns.Count}), ReferencedDbTable = {Pair.ReferencedDbTable.FullName} (Count = {ReferencedColumns.Count})")]
 public class ForeignKeyDefinition
 {
-    public FkDefSource FkSource { get; set; } = FkDefSource.Config;
+    public ForeignKeyDefinitionSource FkSource { get; set; } = ForeignKeyDefinitionSource.Config;
     public string SourceEntityName { get; set; } = string.Empty;
     public RelationshipRole ReferencingEntityRole { get; set; } = RelationshipRole.None;
     public RelationshipRole ReferencedEntityRole { get; set; } = RelationshipRole.None;
+
+    /// <summary>
+    /// When the ForeignKeyDefinition is created from the config, the relationship name is the key in the config.
+    /// </summary>
     public string RelationshipName { get; set; } = string.Empty;
 
     /// <summary>

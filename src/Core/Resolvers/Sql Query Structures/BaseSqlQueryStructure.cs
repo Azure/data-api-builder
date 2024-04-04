@@ -150,87 +150,63 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// valid foreign key definition. It is guaranteed at least one fk definition
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
         /// </summary>
-        /// <param name="relationshipName">Name of the relationship as represented in config file. The GraphQL
-        /// field referencing a nested entity has the same name as the relationship.</param>
+        /// <param name="fkLookupKey">{entityName, relationshipName} used to lookup foreign key metadata.</param>
         /// <param name="targetEntityName">Entity name as in config file for the related entity.</param>
         /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
         /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
-        public void AddJoinPredicatesForRelatedEntity(
-            string relationshipName,
+        public void AddJoinPredicatesForRelationship(
+            EntityRelationshipKey fkLookupKey,
             string targetEntityName,
             string relatedSourceAlias,
             BaseSqlQueryStructure subQuery)
         {
-            EntityRelationshipKey currentEntityRelationshipKey = new(EntityName, relationshipName);
-            SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
-            SourceDefinition relatedEntitySourceDefinition = MetadataProvider.GetSourceDefinition(targetEntityName);
-            if (MetadataProvider.RelationshipToFkDefinitions.TryGetValue(key: currentEntityRelationshipKey, out ForeignKeyDefinition? fkDef))
+            if (string.Equals(fkLookupKey.EntityName, targetEntityName))
             {
-                if (fkDef.ReferencedEntityRole is RelationshipRole.Linking)
-                {
-                    Console.WriteLine("weird scenario. Look into this. Why would referenced table ever be linking entity?");
-                }
+                AddJoinPredicatesForSelfJoinedEntity(
+                    fkLookupKey: fkLookupKey,
+                    relatedSourceAlias: relatedSourceAlias,
+                    subQuery: subQuery);
+            }
+            else
+            {
+                AddJoinPredicatesForRelatedEntity(
+                    targetEntityName: targetEntityName,
+                    relatedSourceAlias: relatedSourceAlias,
+                    subQuery: subQuery);
+            }
+        }
 
-                if (fkDef.ReferencingEntityRole is RelationshipRole.Linking)
-                {
-                    // Case when the linking object is the referencing table
-                    DatabaseObject linkingTableDbObject = fkDef.Pair.ReferencingDbTable;
-                    if (!_associativeTableAndAliases.TryGetValue(
-                            linkingTableDbObject,
-                            out string? linkingTableAlias))
-                    {
-                        // this is the first fk definition found for this associative table.
-                        // create an alias for it and store for later lookup.
-                        linkingTableAlias = CreateTableAlias();
-                        _associativeTableAndAliases.Add(linkingTableDbObject, linkingTableAlias);
-                    }
-                    else
-                    {
-                        Console.WriteLine("conundrum. We can do something if we know this case hits?");
-                    }
-
-                    if (relatedEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(
-                        targetEntityName,
-                        out RelationshipMetadata? relationshipMetadata)
-                        && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
-                            EntityName,
-                            out List<ForeignKeyDefinition>? foreignKeyDefinitions))
-                    {
-                        ForeignKeyDefinition? fkdef2 = foreignKeyDefinitions
-                            .Where(fkDefEntry => !fkDefEntry.Pair.ReferencedDbTable.Equals(DatabaseObject)).First();
-                        if (fkdef2 is not null)
-                        {
-                            subQuery.Joins.Add(new SqlJoinStructure(
-                                linkingTableDbObject,
-                                linkingTableAlias,
-                                CreateJoinPredicates(
-                                    linkingTableAlias,
-                                    fkdef2.ReferencingColumns,
-                                    relatedSourceAlias,
-                                    fkdef2.ReferencedColumns).ToList()));
-                        }
-
-                        subQuery.Predicates.AddRange(CreateJoinPredicates(
-                            linkingTableAlias,
-                            fkDef.ReferencingColumns,
-                            SourceAlias,
-                            fkDef.ReferencedColumns));
-                    }
-                    //LinkingTableProcessing(targetEntityName, relatedSourceAlias, subQuery);
-                }
-                else
-                {
-                    subQuery.Predicates.AddRange(
+        /// <summary>
+        /// Process self-joining entity relationship. Excludes support for processing
+        /// self-joining relationships in GraphQL query filters (nested filter entities).
+        /// </summary>
+        /// <param name="fkLookupKey">{entityName, relationshipName} used to lookup foreign key metadata.</param>
+        /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
+        /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private void AddJoinPredicatesForSelfJoinedEntity(
+            EntityRelationshipKey fkLookupKey,
+            string relatedSourceAlias,
+            BaseSqlQueryStructure subQuery)
+        {
+            if (MetadataProvider.RelationshipToFkDefinitions.TryGetValue(key: fkLookupKey, out ForeignKeyDefinition? fkDef))
+            {
+                subQuery.Predicates.AddRange(
                         CreateJoinPredicates(
                             leftTableAlias: relatedSourceAlias, //target
                             leftColumnNames: fkDef.ResolveTargetColumns(),
                             rightTableAlias: SourceAlias, //source
                             rightColumnNames: fkDef.ResolveSourceColumns()));
-                }
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Could not find relationship between self-joined entity: {EntityName}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
         }
 
-        private Dictionary<DatabaseObject, string> _associativeTableAndAliases = new();
         /// <summary>
         /// Based on the relationship metadata involving referenced and
         /// referencing columns of a foreign key, add the join predicates
@@ -242,32 +218,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="targetEntityName">Entity name as in config file for the related entity.</param>
         /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
         /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
-        private void LinkingTableProcessing(
+        public void AddJoinPredicatesForRelatedEntity(
             string targetEntityName,
             string relatedSourceAlias,
             BaseSqlQueryStructure subQuery)
         {
             SourceDefinition sourceDefinition = GetUnderlyingSourceDefinition();
+            DatabaseObject relatedEntityDbObject = MetadataProvider.EntityToDatabaseObject[targetEntityName];
             SourceDefinition relatedEntitySourceDefinition = MetadataProvider.GetSourceDefinition(targetEntityName);
-
             if (// Search for the foreign key information either in the source or target entity.
-                 sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
-                     EntityName,
-                     out RelationshipMetadata? relationshipMetadata)
-                 && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
-                     targetEntityName,
-                     out List<ForeignKeyDefinition>? foreignKeyDefinitions)
-                 || relatedEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(
-                     targetEntityName,
-                     out relationshipMetadata)
-                 && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
-                     EntityName,
-                     out foreignKeyDefinitions))
+                sourceDefinition.SourceEntityRelationshipMap.TryGetValue(
+                    EntityName,
+                    out RelationshipMetadata? relationshipMetadata)
+                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
+                    targetEntityName,
+                    out List<ForeignKeyDefinition>? foreignKeyDefinitions)
+                || relatedEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(
+                    targetEntityName, out relationshipMetadata)
+                && relationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(
+                    EntityName,
+                    out foreignKeyDefinitions))
             {
                 Dictionary<DatabaseObject, string> associativeTableAndAliases = new();
-                // For One-One and One-Many, not all fk definitions would be valid
-                // but at least 1 will be.
-                // Identify the side of the relationship first, then check if it's valid
+                // For One-One and One-Many, not all fk definitions are valid
+                // and at least 1 will be.
+                // Identify the side of the relationship first, then check if its valid
                 // by ensuring the referencing and referenced column count > 0
                 // before adding the predicates.
                 foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
@@ -275,6 +250,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // First identify which side of the relationship, this fk definition
                     // is looking at.
                     if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(DatabaseObject))
+                    {
+                        // Case where fk in parent entity references the nested entity.
+                        // Verify this is a valid fk definition before adding the join predicate.
+                        if (foreignKeyDefinition.ReferencingColumns.Count > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                SourceAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                relatedSourceAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(relatedEntityDbObject))
+                    {
+                        // Case where fk in nested entity references the parent entity.
+                        if (foreignKeyDefinition.ReferencingColumns.Count > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count > 0)
+                        {
+                            subQuery.Predicates.AddRange(CreateJoinPredicates(
+                                relatedSourceAlias,
+                                foreignKeyDefinition.ReferencingColumns,
+                                SourceAlias,
+                                foreignKeyDefinition.ReferencedColumns));
+                        }
+                    }
+                    else
                     {
                         DatabaseObject associativeTableDbObject =
                             foreignKeyDefinition.Pair.ReferencingDbTable;

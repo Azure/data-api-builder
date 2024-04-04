@@ -3,7 +3,10 @@
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
 
-public enum FkDefSource
+/// <summary>
+/// Identifies the source of the foreign key definition.
+/// </summary>
+public enum ForeignKeyDefinitionSource
 {
     Config,
     DatabaseSchema

@@ -925,7 +925,6 @@ public class RuntimeConfigValidator : IConfigValidator
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                     }
 
-                    // Validation to ensure that if linking source fields exist that source fields exist as well.
                     if (relationship.LinkingSourceFields is not null && relationship.SourceFields is null)
                     {
                         // Validation to ensure that if linking source fields exist that source fields exist as well.

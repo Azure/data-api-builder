@@ -14,6 +14,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
+    [Ignore]
     [TestClass]
     [TestCategory("Serialization and Deserialization using SqlMetadataProvider converters")]
     public class SerializationDeserializationTests

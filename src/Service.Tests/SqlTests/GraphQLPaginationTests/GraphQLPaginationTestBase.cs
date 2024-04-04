@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         /// without providing any parameters
         /// </summary>
         [TestMethod]
-        public async Task RequestNoParamFullConnection()
+        public async Task RequestMaxUsingNegativeOne()
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{

@@ -9,14 +9,14 @@ param (
 # Download and save the ChilliCream License 1.0 from ChilliCream/graphql-platform GitHub repo
 $chiliCreamLicenseSavePath = "$BuildArtifactStagingDir/chillicreamlicense.txt"
 $chiliCreamLicenseMetadataURL = "https://raw.githubusercontent.com/ChilliCream/graphql-platform/main/website/src/basic/licensing/chillicream-license.md"
-Invoke-WebRequest $chiliCreamLicenseMetadataURL `
-| Select-Object -ExpandProperty Content `
-| Out-File $chiliCreamLicenseSavePath
+Invoke-WebRequest $chiliCreamLicenseMetadataURL -UseBasicParsing |
+ Select-Object -ExpandProperty Content |
+ Out-File $chiliCreamLicenseSavePath
 
 # Download and save the Microsoft.Data.SqlClient.SNI.runtime license
 $sqlClientSNILicenseSavePath = "$BuildArtifactStagingDir/sqlclient_sni_runtime.txt"
 $sqlClientSNILicenseMetadataURL = "https://www.nuget.org/packages/Microsoft.Data.SqlClient.SNI.runtime/5.0.1/License"
-$pageContent = Invoke-WebRequest $sqlClientSNILicenseMetadataURL
+$pageContent = Invoke-WebRequest $sqlClientSNILicenseMetadataURL -UseBasicParsing
 
 # Regular expression with three capture groups.
 # Capture Group 1: HTML tag which indicates start of license text

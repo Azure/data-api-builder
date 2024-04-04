@@ -147,7 +147,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
                 MaxItemCount = GetPaginationLimit(RuntimeConfigProvider, (int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME]!);
-                
+
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 

@@ -744,7 +744,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Validates that a proper nextLink is created for FindMany requests which do not
-        /// restrict results with query parameters. 
+        /// restrict results with query parameters. Engine default paging mechanisms are used
+        /// when > 100 records will be present in result set.
+        /// expectedAfterQueryString starts with ?$, and not &$, because it is the only query parameter.
         /// </summary>
         [TestMethod]
         public async Task FindTest_NoQueryParams_PaginationNextLink()
@@ -752,7 +754,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$first=1",
+                queryString: string.Empty,
                 entityNameOrPath: _integrationPaginationEntityName,
                 sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink)),
                 expectedAfterQueryString: $"?$after={after}",
@@ -1584,7 +1586,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         {
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: "?$first=0",
+                queryString: "?$first=100001",
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,

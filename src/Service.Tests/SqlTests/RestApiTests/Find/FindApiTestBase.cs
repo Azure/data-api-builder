@@ -744,9 +744,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
 
         /// <summary>
         /// Validates that a proper nextLink is created for FindMany requests which do not
-        /// restrict results with query parameters. Engine default paging mechanisms are used
-        /// when > 100 records will be present in result set.
-        /// expectedAfterQueryString starts with ?$, and not &$, because it is the only query parameter.
+        /// restrict results with query parameters. 
         /// </summary>
         [TestMethod]
         public async Task FindTest_NoQueryParams_PaginationNextLink()
@@ -754,11 +752,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
-                queryString: string.Empty,
+                queryString: "?$first=1",
                 entityNameOrPath: _integrationPaginationEntityName,
                 sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink)),
                 expectedAfterQueryString: $"?$after={after}",
                 paginated: true
+            );
+        }
+
+        /// <summary>
+        /// Validates that a proper nextLink is created for FindMany requests which do not
+        /// restrict results with query parameters. Engine default paging mechanisms are used
+        /// when > 100 records will be present in result set.
+        /// expectedAfterQueryString starts with ?$, and not &$, because it is the only query parameter.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTest_Negative1QueryParams_PaginationNextLink()
+        {
+            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}}]");
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=-1",
+                entityNameOrPath: _integrationPaginationEntityName,
+                sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink))
             );
         }
 
@@ -1554,6 +1570,25 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
                 expectedErrorMessage: "Invalid number of items requested, $first must be an integer greater than 0. Actual value: 0",
+                expectedStatusCode: HttpStatusCode.BadRequest
+            );
+        }
+
+        /// <summary>
+        /// Tests the REST Api for Find operation using $first=100001
+        /// to request > max records of 100000 records, which should throw a DataApiBuilder
+        /// Exception.
+        /// </summary>
+        [TestMethod]
+        public async Task FindTestWithMaxExceededSingleKeyPagination()
+        {
+            await SetupAndRunRestApiTest(
+                primaryKeyRoute: string.Empty,
+                queryString: "?$first=0",
+                entityNameOrPath: _integrationEntityName,
+                sqlQuery: string.Empty,
+                exceptionExpected: true,
+                expectedErrorMessage: "Invalid number of items requested, first argument must be either -1 or a positive number within the max page size limit of 100000. Actual value: 100001",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

@@ -31,6 +31,7 @@ public record Entity
     public Dictionary<string, string>? Mappings { get; init; }
     public Dictionary<string, EntityRelationship>? Relationships { get; init; }
     public EntityCacheOptions? Cache { get; init; }
+    public int? PageLimit { get; init; }
 
     [JsonIgnore]
     public bool IsLinkingEntity { get; init; }
@@ -44,7 +45,8 @@ public record Entity
         Dictionary<string, string>? Mappings,
         Dictionary<string, EntityRelationship>? Relationships,
         EntityCacheOptions? Cache = null,
-        bool IsLinkingEntity = false)
+        bool IsLinkingEntity = false,
+        int? PageLimit = null)
     {
         this.Source = Source;
         this.GraphQL = GraphQL;
@@ -54,6 +56,7 @@ public record Entity
         this.Relationships = Relationships;
         this.Cache = Cache;
         this.IsLinkingEntity = IsLinkingEntity;
+        this.PageLimit = PageLimit;
     }
 
     /// <summary>

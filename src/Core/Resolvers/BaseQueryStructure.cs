@@ -1,10 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Net;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
@@ -180,6 +184,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         internal static IObjectField ExtractItemsSchemaField(IObjectField connectionSchemaField)
         {
             return GraphQLUtils.UnderlyingGraphQLEntityType(connectionSchemaField.Type).Fields[QueryBuilder.PAGINATION_FIELD_NAME];
+        }
+
+        internal static int GetPaginationLimit(RuntimeConfigProvider runtimeConfigProvider, int? userInputValue)
+        {
+            runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+            RuntimeOptions? runtimeOptions = runtimeConfig?.Runtime;
+            int defaultPageSize;
+            int maxPageSize;
+            if (runtimeOptions is not null && runtimeOptions.Pagination is not null)
+            {
+                defaultPageSize = (int)runtimeOptions.Pagination.DefaultPageSize!;
+                maxPageSize = (int)runtimeOptions.Pagination.MaxPageSize!;
+            }
+            else
+            {
+                defaultPageSize = PaginationOptions.DEFAULT_PAGE_SIZE;
+                maxPageSize = PaginationOptions.MAX_PAGE_SIZE;
+            }
+
+            if (userInputValue is not null)
+            {
+                if (userInputValue < -1 || userInputValue == 0 || userInputValue > maxPageSize)
+                {
+                    throw new DataApiBuilderException(
+                    message: $"Invalid number of items requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be either -1 or a positive number within the max page size limit of {maxPageSize}. Actual value: {userInputValue}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+                else
+                {
+                    return (int)(userInputValue == -1 ? maxPageSize : userInputValue);
+                }
+            }
+            else
+            {
+                return defaultPageSize;
+            }
         }
     }
 }

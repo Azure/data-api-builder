@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -29,6 +30,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
+
+        public RuntimeConfigProvider RuntimeConfigProvider { get; internal set; }
         // Order of the join matters
         public Stack<CosmosJoinStructure>? Joins { get; internal set; }
 
@@ -43,6 +46,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public CosmosQueryStructure(
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
+            RuntimeConfigProvider provider,
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
@@ -52,6 +56,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _context = context;
             SourceAlias = _containerAlias;
             DatabaseObject.Name = _containerAlias;
+            RuntimeConfigProvider = provider;
             Init(parameters);
         }
 
@@ -110,7 +115,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
-
             if (IsPaginated)
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
@@ -142,7 +146,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                MaxItemCount = (int?)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                MaxItemCount = GetPaginationLimit(RuntimeConfigProvider, (int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME]!);
+                
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }
 

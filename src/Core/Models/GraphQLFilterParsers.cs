@@ -334,6 +334,7 @@ public class GQLFilterParser
             new(
                 context: ctx,
                 parameters: subParameters,
+                provider: _configProvider,
                 metadataProvider: metadataProvider,
                 authorizationResolver: queryStructure.AuthorizationResolver,
                 gQLFilterParser: this,

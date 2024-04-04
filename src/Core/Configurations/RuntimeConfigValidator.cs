@@ -835,28 +835,34 @@ public class RuntimeConfigValidator : IConfigValidator
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
-                // Validation to ensure that if source fields exist, target fields exist as well.
-                if (relationship.SourceFields is not null && relationship.TargetFields is null)
+                // Linking object is null and therefore we have either a many to one or a one to many relationship. These relationships
+                // must be validated separately from many to many relationships. In one to many and many to one relationships, source
+                // fields and target fields need to match since they define the relationship between the two entities in its entirely.
+                // If both of these sets of fields are null, foreign key information will be used to define the relationship instead.
+                // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships
+                if (relationship.LinkingObject is null)
                 {
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Entity: {entityName} has source fields that are not null, but target fields that are null.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                }
+                    // Validation to ensure that if source fields exist, target fields exist as well.
+                    if (relationship.SourceFields is not null && relationship.TargetFields is null)
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has source fields that are not null, but target fields that are null.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
 
-                // Validation to ensure that if target fields exist, source fields exist as well.
-                if (relationship.TargetFields is not null && relationship.SourceFields is null)
-                {
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Entity: {entityName} has target fields that are not null, but source fields that are null.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                }
+                    // Validation to ensure that if target fields exist, source fields exist as well.
+                    if (relationship.TargetFields is not null && relationship.SourceFields is null)
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has target fields that are not null, but source fields that are null.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
 
-                if (relationship.SourceFields is not null && relationship.TargetFields is not null)
-                {
-                    // Validation to ensure that if target and source fields exist, that they have the same number of fields.
-                    if (relationship.SourceFields.Length != relationship.TargetFields.Length)
+                    // In one:many or many:one relationships when both source and target are non null their size must match.
+                    if ((relationship.SourceFields is not null && relationship.TargetFields is not null) &&
+                        relationship.SourceFields.Length != relationship.TargetFields.Length)
                     {
                         HandleOrRecordException(new DataApiBuilderException(
                             message: $"Entity: {entityName} has {relationship.SourceFields.Length} source fields defined, " +
@@ -864,7 +870,11 @@ public class RuntimeConfigValidator : IConfigValidator
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                     }
+                }
 
+                // In all kinds of relationships, if sourceFields are included they must be valid columns in the backend.
+                if (relationship.SourceFields is not null)
+                {
                     foreach (string sourceField in relationship.SourceFields)
                     {
                         // Validation to ensure that entities have valid columns matching their source fields.
@@ -877,7 +887,11 @@ public class RuntimeConfigValidator : IConfigValidator
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                         }
                     }
+                }
 
+                // In all kinds of relationships, if targetFields are included they must be valid columns in the backend.
+                if (relationship.TargetFields is not null)
+                {
                     foreach (string targetField in relationship.TargetFields)
                     {
                         if (!sqlMetadataProvider.TryGetBackingColumn(relationship.TargetEntity, targetField, out _))
@@ -893,36 +907,82 @@ public class RuntimeConfigValidator : IConfigValidator
                     }
                 }
 
-                if (relationship.LinkingSourceFields is not null && relationship.LinkingTargetFields is null)
+                // Linking object exists and we therefore have a many to many relationship. Validation here differs from one to many and many to one in that
+                // the source and target fields are now only indirectly related through the linking object. Therefore, it is the source and linkingSource
+                // along with the target and linkingTarget fields that must match, respectively. Source and linkingSource fields provide the relationship
+                // from the source entity to the linkingObject while target and linkingTarget fields provide the relationship from the target entity to the
+                // linkingObject.
+                // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships#many-to-many-relationship
+                if (relationship.LinkingObject is not null)
                 {
-                    // Validation to ensure that if linking source fields exist that linking target fields exist as well.
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Entity: {entityName} has a relationship: {relationshipName} with linking source fields that are not null, " +
-                            $"but linking target fields that are null.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                }
-
-                if (relationship.LinkingTargetFields is not null && relationship.LinkingSourceFields is null)
-                {
-                    // Validation to ensure that if linking target fields exist that linking source fields exist as well.
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Entity: {entityName} has a relationship: {relationshipName} with linking target fields that are not null, " +
-                            $"but linking source fields that are null.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                }
-
-                if (relationship.LinkingSourceFields is not null && relationship.LinkingTargetFields is not null)
-                {
-                    if (relationship.LinkingSourceFields.Length != relationship.LinkingTargetFields.Length)
+                    if (relationship.SourceFields is not null && relationship.LinkingSourceFields is null)
                     {
-                        // Validation to ensure that if linking source and linking target fields exist, that they have the same number of fields. 
+                        // Validation to ensure that if source fields exist that linking source fields exist as well.
                         HandleOrRecordException(new DataApiBuilderException(
-                            message: $"Entity: {entityName} has {relationship.LinkingSourceFields.Length} linking source fields defined, " +
-                                $"but {relationship.LinkingTargetFields.Length} linking target fields defined.",
+                            message: $"Entity: {entityName} has a many to many relationship: {relationshipName} with source fields that are not null, " +
+                                $"but linking source fields that are null.",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+
+                    // Validation to ensure that if linking source fields exist that source fields exist as well.
+                    if (relationship.LinkingSourceFields is not null && relationship.SourceFields is null)
+                    {
+                        // Validation to ensure that if linking source fields exist that source fields exist as well.
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has a many to many relationship: {relationshipName} with linking source fields that are not null, " +
+                                $"but source fields that are null.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+
+                    if (relationship.TargetFields is not null && relationship.LinkingTargetFields is null)
+                    {
+                        // Validation to ensure that if target fields exist that linking target fields exist as well.
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has a many to many relationship: {relationshipName} with target fields that are not null, " +
+                                $"but linking target fields that are null.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+
+                    // Validation to ensure that if linking target fields exist that targets fields exist as well.
+                    if (relationship.LinkingTargetFields is not null && relationship.TargetFields is null)
+                    {
+                        // Validation to ensure that if linking source fields exist that source fields exist as well.
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has a many to many relationship: {relationshipName} with linking target fields that are not null, " +
+                                $"but target fields that are null.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+
+                    // When both source and linkingSource fields exist for a many to many relationship their size must match.
+                    if (relationship.SourceFields is not null && relationship.LinkingSourceFields is not null)
+                    {
+                        if (relationship.SourceFields.Length != relationship.LinkingSourceFields.Length)
+                        {
+                            // Validation to ensure that if source and linking source fields exist, that they have the same number of fields. 
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a many to many relationship: {relationshipName} with {relationship.SourceFields.Length} " +
+                                    $"source fields defined, but {relationship.LinkingSourceFields.Length} linking source fields defined.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        }
+                    }
+
+                    // When both target and linkingTarget fields exist for a many to many relationship their size must match.
+                    if (relationship.TargetFields is not null && relationship.LinkingTargetFields is not null)
+                    {
+                        if (relationship.TargetFields.Length != relationship.LinkingTargetFields.Length)
+                        {
+                            // Validation to ensure that if source and linking source fields exist, that they have the same number of fields. 
+                            HandleOrRecordException(new DataApiBuilderException(
+                                message: $"Entity: {entityName} has a many to many relationship: {relationshipName} with {relationship.TargetFields.Length} " +
+                                    $"target fields defined, but {relationship.LinkingTargetFields.Length} linking target fields defined.",
+                                statusCode: HttpStatusCode.ServiceUnavailable,
+                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                        }
                     }
                 }
 

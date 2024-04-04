@@ -50,7 +50,7 @@ public record PaginationOptions
 
         if (MaxPageSize is not null)
         {
-            this.MaxPageSize = MaxPageSize;
+            this.MaxPageSize = MaxPageSize == -1 ? Int32.MaxValue : MaxPageSize;
             UserProvidedMaxPageSize = true;
         }
         else

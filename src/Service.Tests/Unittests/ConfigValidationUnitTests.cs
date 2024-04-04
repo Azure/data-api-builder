@@ -337,11 +337,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to check that an exception is thrown when LinkingObject was provided
+        /// Test method to check that an exception is thrown in a many to many relationship (LinkingObject was provided)
         /// while linkingSourceFields and sourceFields are null, or targetFields and linkingTargetFields are null,
         /// and also the relationship is not defined in the database through foreign keys on the missing side of
-        /// fields in the config for the many to many relationship.
-        /// Further verify that after adding foreignKeyPair in the Database, no exception is thrown. This is because
+        /// fields in the config for the many to many relationship. That means if source and linking source fields are
+        /// missing that the foreign key information does not exist in the database for source entity to linking object,
+        /// and if target and linking target fields are missing that the foreign key information does not exist in the
+        /// database for the target entity to linking object.
+        /// Further verify that after adding said foreignKeyPair in the Database, no exception is thrown. This is because
         /// once we have that foreign key information we can complete that side of the many to many relationship
         /// from that foreign key.
         /// </summary>
@@ -436,12 +439,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to check that an exception is thrown when LinkingObject is null
-        /// and SourceFields and TargetFields are null in the config.
-        /// And the foreignKey pair between source and target is not defined in the database as well.
-        /// Also verify that after adding foreignKeyPair in the Database, no exception is thrown.
+        /// Test method to check that an exception is thrown when the relationship is one to many
+        /// or many to one (determined by the linking object being null), while both SourceFields
+        /// and TargetFields are null in the config, and the foreignKey pair between source and target
+        /// is not defined in the database as well.
+        /// Also verify that after adding foreignKeyPair between the source and target entities in the Database,
+        /// no exception is thrown.
         /// </summary>
-        [DataTestMethod]
+        [TestMethod]
         public void TestRelationshipWithNoLinkingObjectAndEitherSourceOrTargetFieldIsNull()
         {
             // Creating an EntityMap with two sample entity

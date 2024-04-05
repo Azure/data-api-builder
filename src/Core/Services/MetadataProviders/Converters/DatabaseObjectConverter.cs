@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
         }
 
         /// <summary>
-        /// Changes the AssemblyQualified to deseried format
+        /// Changes the Type.AssemblyQualifiedName to desired format
         /// we cannot use the FullName as during deserialization it throws exception as object not found.
         /// </summary>
         private static string GetTypeNameFromType(Type type)

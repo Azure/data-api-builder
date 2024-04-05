@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
             // "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
             // we donot need version or culture or publickeytoken for serialization or deserialization, we need the first two parts.
 
-            string assemblyQualifiedName  = type.AssemblyQualifiedName!;
+            string assemblyQualifiedName = type.AssemblyQualifiedName!;
             string[] parts = assemblyQualifiedName.Split(',');
 
             // typename would be : "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config"

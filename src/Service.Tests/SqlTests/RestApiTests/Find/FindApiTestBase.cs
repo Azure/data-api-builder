@@ -1570,7 +1570,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 entityNameOrPath: _integrationEntityName,
                 sqlQuery: string.Empty,
                 exceptionExpected: true,
-                expectedErrorMessage: "Invalid number of items requested, $first must be an integer greater than 0. Actual value: 0",
+                expectedErrorMessage: "Invalid number of items requested, $first must be -1 or an integer greater than 0. Actual value: 0",
                 expectedStatusCode: HttpStatusCode.BadRequest
             );
         }

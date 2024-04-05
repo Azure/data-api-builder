@@ -27,35 +27,35 @@ public record PaginationOptions
     /// The default page size for pagination.
     /// </summary>
     [JsonPropertyName("default-page-size")]
-    public int? DefaultPageSize { get; init; } = null;
+    public uint? DefaultPageSize { get; init; } = null;
 
     /// <summary>
     /// The max page size for pagination.
     /// </summary>
     [JsonPropertyName("max-page-size")]
-    public int? MaxPageSize { get; init; } = null;
+    public uint? MaxPageSize { get; init; } = null;
 
     [JsonConstructor]
     public PaginationOptions(int? DefaultPageSize = null, int? MaxPageSize = null)
     {
+        if (MaxPageSize is not null)
+        {
+            this.MaxPageSize = MaxPageSize == -1 ? UInt32.MaxValue : (uint)MaxPageSize;
+            UserProvidedMaxPageSize = true;
+        }
+        else
+        {
+            this.MaxPageSize = MAX_PAGE_SIZE;
+        }
+
         if (DefaultPageSize is not null)
         {
-            this.DefaultPageSize = DefaultPageSize;
+            this.DefaultPageSize = DefaultPageSize == -1 ? (uint)this.MaxPageSize : (uint)DefaultPageSize;
             UserProvidedDefaultPageSize = true;
         }
         else
         {
             this.DefaultPageSize = DEFAULT_PAGE_SIZE;
-        }
-
-        if (MaxPageSize is not null)
-        {
-            this.MaxPageSize = MaxPageSize == -1 ? Int32.MaxValue : MaxPageSize;
-            UserProvidedMaxPageSize = true;
-        }
-        else
-        {
-            this.MaxPageSize = MaxPageSize;
         }
     }
 

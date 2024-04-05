@@ -6,6 +6,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
@@ -577,12 +578,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="jsonResult">Results plus one extra record if more exist.</param>
         /// <param name="first">Client provided limit if one exists, otherwise 0.</param>
+        /// <param name="Default">Default limit if none provided.</param>
         /// <returns>Bool representing if more records are available.</returns>
-        public static bool HasNext(JsonElement jsonResult, uint? first)
+        public static bool HasNext(JsonElement jsonResult, int? first, uint defaultPageSize = PaginationOptions.DEFAULT_PAGE_SIZE, uint maxPageSize = PaginationOptions.MAX_PAGE_SIZE )
         {
-            // When first is 0 we use default limit of 100, otherwise we use first
+            // When first is null we use default limit from runtime config, otherwise we use first
             uint numRecords = (uint)jsonResult.GetArrayLength();
-            uint? limit = first is not null ? first : 100;
+            first = first is not null ? first : (int)defaultPageSize;
+            uint? limit = first == -1 ? maxPageSize : (uint)first;
             return numRecords > limit;
         }
 

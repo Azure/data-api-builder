@@ -769,14 +769,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// expectedAfterQueryString starts with ?$, and not &$, because it is the only query parameter.
         /// </summary>
         [TestMethod]
-        public async Task FindTest_Negative1QueryParams_PaginationNextLink()
+        public async Task FindTest_Negative1QueryParams_Pagination()
         {
-            string after = SqlPaginationUtil.Base64Encode($"[{{\"EntityName\":\"Bookmarks\",\"FieldName\":\"id\",\"FieldValue\":100,\"Direction\":0}}]");
             await SetupAndRunRestApiTest(
                 primaryKeyRoute: string.Empty,
                 queryString: "?$first=-1",
                 entityNameOrPath: _integrationPaginationEntityName,
-                sqlQuery: GetQuery(nameof(FindTest_NoQueryParams_PaginationNextLink))
+                sqlQuery: GetQuery(nameof(FindTest_Negative1QueryParams_Pagination))
             );
         }
 

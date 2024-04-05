@@ -1573,7 +1573,7 @@ query {
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(first: -1) {
+                books(first: -2) {
                     items {
                         id
                         title

@@ -163,10 +163,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                         modelName,
                         new List<EntityDbPolicyCosmosModel>
                         {
-                            new (Path: GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
+                            new (Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
                         });
 
-                    ProcessSchema(node.Fields, schemaDefinitions, GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
+                    ProcessSchema(node.Fields, schemaDefinitions, CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
                 }
             }
         }

@@ -20,7 +20,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class CosmosQueryStructure : BaseQueryStructure
     {
         private readonly IMiddlewareContext _context;
-        private readonly string _containerAlias = GraphQLNaming.COSMOSDB_CONTAINER_DEFAULT_ALIAS;
+
+        /// <summary>
+        /// For any CosmosDB Query, the default alias for the container is 'c'
+        /// </summary>
+        public const string COSMOSDB_CONTAINER_DEFAULT_ALIAS = "c";
+
+        private readonly string _containerAlias = COSMOSDB_CONTAINER_DEFAULT_ALIAS;
         public IncrementingInteger TableCounter { get; internal set; } = new();
 
         public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }

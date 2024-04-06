@@ -57,10 +57,15 @@ namespace Azure.DataApiBuilder.Core.Parsers
                 EdmEntityType edmEntity = new(DEFAULT_NAMESPACE, typeDefinition.Name.Value);
                 foreach (FieldDefinitionNode field in typeDefinition.Fields)
                 {
-                    edmEntity.AddStructuralProperty(field.Name.Value, EdmPrimitiveTypeKind.String, false);
+                    edmEntity.AddStructuralProperty(
+                        name: field.Name.Value,
+                        type: TypeHelper.GetEdmPrimitiveTypeFromITypeNode(field.Type),
+                        isNullable: !field.Type.IsNonNullType());
                 }
 
-                container.AddEntitySet(name: typeDefinition.Name.Value, edmEntity);
+                container.AddEntitySet(
+                    name: typeDefinition.Name.Value,
+                    elementType: edmEntity);
             }
 
             _model.AddElement(container);

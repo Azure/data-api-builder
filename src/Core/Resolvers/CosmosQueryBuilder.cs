@@ -219,9 +219,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Generate Cosmos DB Query for the given fromClause and predicates.
         /// </summary>
-        /// <param name="fromClause"></param>
-        /// <param name="predicates"></param>
-        /// <returns></returns>
+        /// <param name="fromClause">Use to generate FROM part in sql along with table and JOINS</param>
+        /// <param name="predicates">Query Conditions</param>
+        /// <returns>CosmosDB Exist Query</returns>
         public static string BuildExistsQueryForCosmos(string? fromClause, string? predicates)
         {
             string? existQuery = $"EXISTS " +

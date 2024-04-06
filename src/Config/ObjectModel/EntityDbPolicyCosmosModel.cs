@@ -4,13 +4,14 @@
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
     /// <summary>
-    /// It contains Entity information along with Pre-Generated JOIN statements for all the entities.
+    /// It contains Entity information along with Pre-Generated JOIN statements for all the entities using configured DB policy.
     /// So that, it can be used for generating CosmosDB SQL queries.
     /// </summary>
     public record EntityDbPolicyCosmosModel
     {
         /// <summary>
         /// Path to the given entity with "." delimiter, it will be used as prefix while generating conditions for CosmosDB SQL queries.
+        /// e.g. c.stars, c.earth.type
         /// </summary>
         public string Path { get; }
 
@@ -21,6 +22,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
 
         /// <summary>
         /// If entity is of array type then we would have a generated alias of the entity
+        /// e.g table0, table1 etc
         /// </summary>
         public string? Alias { get; }
 
@@ -30,7 +32,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
         public string? EntityName { get; }
 
         /// <summary>
-        /// Pre-generated JOIN statement for the entity
+        /// Pre-generated (If define DB policies are available and entity type is array) JOIN statement for the entity
         /// </summary>
         public string? JoinStatement { get; set; }
 

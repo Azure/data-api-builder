@@ -898,11 +898,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         /// <summary>
+        /// For "item-level-permission-role" role, DB policies are defined. This test confirms that all the DB policies are considered.
+        /// For the reference, Below conditions are applied for an Entity in Db Config file.
         /// MoonAdditionalAttributes (array inside moon object which is an array in container): "@item.name eq 'moonattr0'"
         /// Earth(object in object): "@item.type eq 'earth0'"
         /// AdditionalAttribute (array in container): "@item.type eq 'volcano0'"
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task TestQueryFilterFieldAuth_Only_AuthorizedArrayItem()
         {

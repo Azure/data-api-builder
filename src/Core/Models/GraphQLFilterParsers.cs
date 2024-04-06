@@ -284,7 +284,9 @@ public class GQLFilterParser
     /// <param name="columnName">Current Column Name</param>
     /// <param name="entityType">Current Entity Type</param>
     /// <param name="predicates">The predicates parsed so far.</param>
-    /// <param name="queryStructure">The query structure of the entity being filtered.</param>
+    /// <param name="queryStructure">The query structure of the entity being filtered, it would be modified to contain EXIST predicates</param>
+    /// <param name="metadataProvider"> Cosmos Metadata Provider, to get metadata information for a given entity </param>
+    /// <exception cref="DataApiBuilderException">
     private void HandleNestedFilterForCosmos(
         IMiddlewareContext ctx,
         IInputField filterField,

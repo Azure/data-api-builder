@@ -134,17 +134,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Processes the filter clauses for the given elemental operation.
+        /// Read the DB policy from the config file and process it to generate OData Filter Clause.
+        /// Here, we are processing the DB policy for each elemental operation and then calling the postProcessCallback.
+        /// PostProcessCallback is a callback function which can be used to generate filter clause according to specific database.
         /// </summary>
-        /// <param name="context"></param>
-        /// <param name="authorizationResolver"></param>
-        /// <param name="sqlMetadataProvider"></param>
-        /// <param name="clientRoleHeader"></param>
-        /// <param name="elementalOperations"></param>
-        /// <param name="entityName"></param>
-        /// <param name="entityDBObject"></param>
-        /// <param name="postProcessCallback"></param>
-        /// <returns></returns>
+        /// <param name="context">HttpContext, provides information related to http request</param>
+        /// <param name="authorizationResolver">Required to read DB policy from config file</param>
+        /// <param name="sqlMetadataProvider">Metadata Provider</param>
+        /// <param name="clientRoleHeader">User Role</param>
+        /// <param name="elementalOperations">Operation to be made <a cref="EntityActionOperation"></a></param>
+        /// <param name="entityName"> Entity Name</param>
+        /// <param name="entityDBObject">Contains entity information.</param>
+        /// <param name="postProcessCallback">Call back to be called after DB policy information is fetched.</param>
+        /// <returns>OData Filter Clause</returns>
         private static List<FilterClause> ProcessFilter(
             HttpContext context,
             IAuthorizationResolver authorizationResolver,

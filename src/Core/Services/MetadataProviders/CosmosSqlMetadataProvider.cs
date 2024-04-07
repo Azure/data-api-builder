@@ -159,12 +159,20 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 {
                     string modelName = GraphQLNaming.ObjectTypeToEntityName(node);
 
-                    EntityWithJoins.Add(
-                        modelName,
-                        new List<EntityDbPolicyCosmosModel>
-                        {
-                            new (Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
-                        });
+                    if (EntityWithJoins.TryGetValue(modelName, out List<EntityDbPolicyCosmosModel>? entityWithJoins))
+                    {
+                        entityWithJoins.Add(new(Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName));
+                    }
+                    else
+                    {
+                        EntityWithJoins.Add(
+                           modelName,
+                           new List<EntityDbPolicyCosmosModel>
+                           {
+                                new (Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
+                           });
+                    }
+                   
 
                     ProcessSchema(node.Fields, schemaDefinitions, CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
                 }

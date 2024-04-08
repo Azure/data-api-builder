@@ -493,5 +493,206 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
 
             SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
         }
+
+        [TestMethod]
+        public async Task MultipleCreateMutationWithManyToOneRelationshipDefinedInConfigFile()
+        {
+            string expectedResponse = @"{
+                                          ""id"": 5001,
+                                          ""title"": ""Book #1"",
+                                          ""publisher_id"": 5001,
+                                          ""publishers"": {
+                                          ""id"": 5001,
+                                          ""name"": ""Publisher #1""
+                                            }
+                                        }";
+
+            await MultipleCreateMutationWithManyToOneRelationshipDefinedInConfigFile(expectedResponse);
+        }
+
+        [TestMethod]
+        public async Task MultipleCreateMutationWithOneToManyRelationshipDefinedInConfigFile()
+        {
+            string expectedResponse = @"{
+                                          ""id"": 5001,
+                                          ""title"": ""Book #1"",
+                                          ""publisher_id"": 1234,
+                                          ""reviews"": {
+                                            ""items"": [
+                                              {
+                                                ""book_id"": 5001,
+                                                ""id"": 5001,
+                                                ""content"": ""Book #1 - Review #1""
+                                              },
+                                              {
+                                                ""book_id"": 5001,
+                                                ""id"": 5002,
+                                                ""content"": ""Book #1 - Review #2""
+                                              }
+                                            ]
+                                          }
+                                        }";
+
+            await MultipleCreateMutationWithOneToManyRelationshipDefinedInConfigFile(expectedResponse);
+        }
+
+        [TestMethod]
+        public async Task MultipleCreateMutationWithManyToManyRelationshipDefinedInConfigFile()
+        {
+            string expectedResponse = @"{
+                                          ""id"": 5001,
+                                          ""title"": ""Book #1"",
+                                          ""publisher_id"": 1234,
+                                          ""authors"": {
+                                            ""items"": [
+                                              {
+                                                ""id"": 5001,
+                                                ""name"": ""Author #1"",
+                                                ""birthdate"": ""2000-01-01""
+                                              },
+                                              {
+                                                ""id"": 5002,
+                                                ""name"": ""Author #2"",
+                                                ""birthdate"": ""2000-02-03""
+                                              }
+                                            ]
+                                          }
+                                        }";
+
+            await MultipleCreateMutationWithManyToManyRelationshipDefinedInConfigFile(expectedResponse);
+        }
+
+        [TestMethod]
+        public async Task MultipleCreateMutationWithAllRelationshipTypesDefinedInConfigFile()
+        {
+            string expectedResponse = @"{
+                                            ""id"": 5001,
+                                            ""title"": ""Book #1"",
+                                            ""publishers"": {
+                                            ""id"": 5001,
+                                            ""name"": ""Publisher #1""
+                                            },
+                                            ""reviews"": {
+                                            ""items"": [
+                                                {
+                                                ""book_id"": 5001,
+                                                ""id"": 5001,
+                                                ""content"": ""Book #1 - Review #1"",
+                                                ""website_users"": {
+                                                    ""id"": 5001,
+                                                    ""username"": ""WebsiteUser #1""
+                                                }
+                                                },
+                                                {
+                                                ""book_id"": 5001,
+                                                ""id"": 5002,
+                                                ""content"": ""Book #1 - Review #2"",
+                                                ""website_users"": {
+                                                    ""id"": 1,
+                                                    ""username"": ""George""
+                                                }
+                                                }
+                                            ]
+                                            },
+                                            ""authors"": {
+                                            ""items"": [
+                                                {
+                                                ""id"": 5001,
+                                                ""name"": ""Author #1"",
+                                                ""birthdate"": ""2000-02-01""
+                                                },
+                                                {
+                                                ""id"": 5002,
+                                                ""name"": ""Author #2"",
+                                                ""birthdate"": ""2000-01-02""
+                                                }
+                                            ]
+                                        }
+                                    }";
+
+            await MultipleCreateMutationWithAllRelationshipTypesDefinedInConfigFile(expectedResponse);
+        }
+
+        [TestMethod]
+        public async Task ManyTypeMultipleCreateMutationOperationRelationshipsDefinedInConfig()
+        {
+            string expectedResponse = @"{
+                                          ""items"": [
+                                            {
+                                              ""id"": 5001,
+                                              ""title"": ""Book #1"",
+                                              ""publisher_id"": 5001,
+                                              ""publishers"": {
+                                                ""id"": 5001,
+                                                ""name"": ""Publisher #1""
+                                              },
+                                              ""reviews"": {
+                                                ""items"": [
+                                                  {
+                                                    ""book_id"": 5001,
+                                                    ""id"": 5001,
+                                                    ""content"": ""Book #1 - Review #1"",
+                                                    ""website_users"": {
+                                                      ""id"": 5001,
+                                                      ""username"": ""Website user #1""
+                                                    }
+                                                  },
+                                                  {
+                                                    ""book_id"": 5001,
+                                                    ""id"": 5002,
+                                                    ""content"": ""Book #1 - Review #2"",
+                                                    ""website_users"": {
+                                                      ""id"": 4,
+                                                      ""username"": ""book_lover_95""
+                                                    }
+                                                  }
+                                                ]
+                                              },
+                                              ""authors"": {
+                                                ""items"": [
+                                                  {
+                                                    ""id"": 5001,
+                                                    ""name"": ""Author #1"",
+                                                    ""birthdate"": ""2000-01-02""
+                                                  },
+                                                  {
+                                                    ""id"": 5002,
+                                                    ""name"": ""Author #2"",
+                                                    ""birthdate"": ""2001-02-03""
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            {
+                                              ""id"": 5002,
+                                              ""title"": ""Book #2"",
+                                              ""publisher_id"": 1234,
+                                              ""publishers"": {
+                                                ""id"": 1234,
+                                                ""name"": ""Big Company""
+                                              },
+                                              ""reviews"": {
+                                                ""items"": []
+                                              },
+                                              ""authors"": {
+                                                ""items"": [
+                                                  {
+                                                    ""id"": 5003,
+                                                    ""name"": ""Author #3"",
+                                                    ""birthdate"": ""2000-01-02""
+                                                  },
+                                                  {
+                                                    ""id"": 5004,
+                                                    ""name"": ""Author #4"",
+                                                    ""birthdate"": ""2001-02-03""
+                                                  }
+                                                ]
+                                              }
+                                            }
+                                          ]
+                                        }";
+
+            await ManyTypeMultipleCreateMutationOperationRelationshipsDefinedInConfig(expectedResponse);
+        }
     }
 }

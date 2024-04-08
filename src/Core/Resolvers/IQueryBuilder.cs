@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Builds the database query for the follow-up query performed as part of a multiple create mutation operation.
         /// </summary>
-        public string BuildQueryForMultipleCreateOperation(SqlQueryStructure structure);
+        public string BuildQueryForMultipleCreateOperation(SqlQueryStructure structure) => throw new NotImplementedException();
 
         /// <summary>
         /// Builds the query specific to the target database for the given

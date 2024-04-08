@@ -293,6 +293,54 @@
         }
       }
     },
+    "Publisher_MM": {
+      "source": {
+        "object": "publishers_mm",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Publisher_MM",
+          "plural": "Publishers_MM"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "books_mm": {
+          "cardinality": "many",
+          "target.entity": "Book_MM",
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "publisher_id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
     "Stock": {
       "source": {
         "object": "stocks",
@@ -928,6 +976,83 @@
         }
       }
     },
+    "Book_MM": {
+      "source": {
+        "object": "books_mm",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "book_mm",
+          "plural": "books_mm"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "publishers": {
+          "cardinality": "one",
+          "target.entity": "Publisher_MM",
+          "source.fields": [
+            "publisher_id"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "reviews": {
+          "cardinality": "many",
+          "target.entity": "Review_MM",
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "book_id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "authors": {
+          "cardinality": "many",
+          "target.entity": "Author_MM",
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.object": "book_author_link_mm",
+          "linking.source.fields": [
+            "book_id"
+          ],
+          "linking.target.fields": [
+            "author_id"
+          ]
+        }
+      }
+    },
     "BookWebsitePlacement": {
       "source": {
         "object": "book_website_placements",
@@ -1038,6 +1163,59 @@
           "linking.object": "book_author_link",
           "linking.source.fields": [],
           "linking.target.fields": []
+        }
+      }
+    },
+    "Author_MM": {
+      "source": {
+        "object": "authors_mm",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "author_mm",
+          "plural": "authors_mm"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "many",
+          "target.entity": "Book_MM",
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.object": "book_author_link_mm",
+          "linking.source.fields": [
+            "author_id"
+          ],
+          "linking.target.fields": [
+            "book_id"
+          ]
         }
       }
     },
@@ -1161,6 +1339,66 @@
         "website_users": {
           "cardinality": "one",
           "target.entity": "WebsiteUser",
+          "source.fields": [
+            "websiteuser_id"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "Review_MM": {
+      "source": {
+        "object": "reviews_mm",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "review_mm",
+          "plural": "reviews_mm"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "books": {
+          "cardinality": "one",
+          "target.entity": "Book_MM",
+          "source.fields": [
+            "book_id"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "website_users": {
+          "cardinality": "one",
+          "target.entity": "WebsiteUser_MM",
           "source.fields": [
             "websiteuser_id"
           ],
@@ -1372,6 +1610,54 @@
         "reviews": {
           "cardinality": "many",
           "target.entity": "Review",
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "websiteuser_id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "WebsiteUser_MM": {
+      "source": {
+        "object": "website_users_mm",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "websiteuser_mm",
+          "plural": "websiteusers_mm"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "reviews": {
+          "cardinality": "many",
+          "target.entity": "Review_MM",
           "source.fields": [
             "id"
           ],

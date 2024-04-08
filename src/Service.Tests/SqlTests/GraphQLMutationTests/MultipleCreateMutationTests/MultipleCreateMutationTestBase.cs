@@ -13,7 +13,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
     public abstract class MultipleCreateMutationTestBase : SqlTestBase
     {
 
-        #region Positive Tests
+        #region Relationships defined through database metadata
 
         /// <summary>
         /// <code>Do: </code> Point create mutation with entities related through a N:1 relationship. Relationship is defined in the database layer using FK constraints.
@@ -229,6 +229,256 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         /// Correct linking of the newly created items are validated by querying all the relationship fields in the selection set and validating it against the expected response.
         /// </summary>
         public async Task ManyTypeMultipleCreateMutationOperation(string expectedResponse)
+        {
+            string graphQLMutationName = "createbooks";
+            string graphQLMutation = @"mutation {
+                                            createbooks(
+                                            items: [
+                                                {
+                                                title: ""Book #1""
+                                                publishers: { name: ""Publisher #1"" }
+                                                reviews: [
+                                                    {
+                                                    content: ""Book #1 - Review #1""
+                                                    website_users: { id: 5001, username: ""Website user #1"" }
+                                                    }
+                                                    { content: ""Book #1 - Review #2"", websiteuser_id: 4 }
+                                                ]
+                                                authors: [
+                                                    {
+                                                    name: ""Author #1""
+                                                    birthdate: ""2000-01-02""
+                                                    royalty_percentage: 50.0
+                                                    }
+                                                    {
+                                                    name: ""Author #2""
+                                                    birthdate: ""2001-02-03""
+                                                    royalty_percentage: 50.0
+                                                    }
+                                                ]
+                                                }
+                                                {
+                                                title: ""Book #2""
+                                                publisher_id: 1234
+                                                authors: [
+                                                    {
+                                                    name: ""Author #3""
+                                                    birthdate: ""2000-01-02""
+                                                    royalty_percentage: 65.0
+                                                    }
+                                                    {
+                                                    name: ""Author #4""
+                                                    birthdate: ""2001-02-03""
+                                                    royalty_percentage: 35.0
+                                                    }
+                                                ]
+                                                }
+                                            ]
+                                            ) {
+                                            items {
+                                                id
+                                                title
+                                                publisher_id
+                                                publishers {
+                                                id
+                                                name
+                                                }
+                                                reviews {
+                                                items {
+                                                    book_id
+                                                    id
+                                                    content
+                                                    website_users {
+                                                    id
+                                                    username
+                                                    }
+                                                }
+                                                }
+                                                authors {
+                                                items {
+                                                    id
+                                                    name
+                                                    birthdate
+                                                }
+                                                }
+                                            }
+                                            }
+                                        }
+                                        ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+        }
+
+        #endregion
+
+        #region Relationships defined through config file
+
+        /// <summary>
+        /// <code>Do: </code> Point create mutation with entities related through a N:1 relationship. Relationship is defined through the config file.
+        /// <code>Check: </code> Publisher_MM item is successfully created in the database. Book_MM item is created with the publisher_id pointing to the newly created publisher_mm item.
+        /// </summary>
+        public async Task MultipleCreateMutationWithManyToOneRelationshipDefinedInConfigFile(string expectedResponse)
+        {
+            string graphQLMutationName = "createbook_mm";
+            string graphQLMutation = @"mutation {
+                                        createbook_mm(
+                                        item: { title: ""Book #1"", publishers: { name: ""Publisher #1"" } }) {
+                                        id
+                                        title
+                                        publisher_id
+                                        publishers {
+                                            id
+                                            name
+                                        }
+                                        }
+                                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Point create mutation with entities related through a 1:N relationship. Relationship is defined through the config file.
+        /// <code>Check: </code> Book_MM item is successfully created in the database. Review_MM items are created with the book_id pointing to the newly created book_mm item.
+        /// </summary>
+        public async Task MultipleCreateMutationWithOneToManyRelationshipDefinedInConfigFile(string expectedResponse)
+        {
+            string graphQLMutationName = "createbook_mm";
+            string graphQLMutation = @"
+                mutation {
+                  createbook_mm(
+                    item: {
+                      title: ""Book #1""
+                      publisher_id: 1234
+                      reviews: [
+                        { content: ""Book #1 - Review #1"" }
+                        { content: ""Book #1 - Review #2"" }
+                      ]
+                    }
+                  ) {
+                    id
+                    title
+                    publisher_id
+                    reviews {
+                      items {
+                        book_id
+                        id
+                        content
+                      }
+                    }
+                  }
+                }
+            ";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do: </code> Point create mutation with entities related through a M:N relationship. Relationship is defined through the config file.
+        /// <code>Check: </code> Book_MM item is successfully created in the database. Author_MM items are successfully created in the database. The newly created Book_MM and Author_MM items are related using
+        /// creating entries in the linking table. This is verified by querying field in the selection set and validating the response.
+        /// </summary>
+        public async Task MultipleCreateMutationWithManyToManyRelationshipDefinedInConfigFile(string expectedResponse)
+        {
+            string graphQLMutationName = "createbook_mm";
+            string graphQLMutation = @"
+                    mutation {
+                        createbook_mm(
+                        item: {
+                            title: ""Book #1""
+                            publisher_id: 1234
+                            authors: [
+                            { birthdate: ""2000-01-01"", name: ""Author #1"" }
+                            { birthdate: ""2000-02-03"", name: ""Author #2"" }
+                            ]
+                        }
+                        ) {
+                        id
+                        title
+                        publisher_id
+                        authors {
+                            items {
+                            id
+                            name
+                            birthdate
+                            }
+                        }
+                        }
+                    }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code> Do: </code> Point multiple create mutation with entities related through 1:1, N:1, 1:N and M:N relationships, all in a single mutation request. All the relationships are defined
+        /// through the config file.
+        /// Also, the depth of this create mutation request = 2. Book_MM --> Review_MM --> WebsiteUser_MM.
+        /// <code> Check: </code> Records are successfully created in all the related entities. The created items are related as intended in the mutation request.
+        /// Correct linking of the newly created items are validated by querying all the relationship fields in the selection set and validating it against the expected response.
+        /// </summary>
+        public async Task MultipleCreateMutationWithAllRelationshipTypesDefinedInConfigFile(string expectedResponse)
+        {
+            string graphQLMutationName = "createbook_mm";
+            string graphQLMutation = @"mutation {
+                                          createbook_mm(
+                                            item: {
+                                              title: ""Book #1""
+                                              publishers: { name: ""Publisher #1"" }
+                                              reviews: [
+                                                {
+                                                  content: ""Book #1 - Review #1""
+                                                  website_users: { id: 5001, username: ""WebsiteUser #1"" }
+                                                }
+                                                { content: ""Book #1 - Review #2"", websiteuser_id: 1 }
+                                              ]
+                                              authors: [
+                                                { birthdate: ""2000-02-01"", name: ""Author #1"", royalty_percentage: 50.0 }
+                                                { birthdate: ""2000-01-02"", name: ""Author #2"", royalty_percentage: 50.0 }
+                                              ]
+                                            }
+                                          ) {
+                                            id
+                                            title
+                                            publishers {
+                                              id
+                                              name
+                                            }
+                                            reviews {
+                                              items {
+                                                book_id
+                                                id
+                                                content
+                                                website_users {
+                                                  id
+                                                  username
+                                                }
+                                              }
+                                            }
+                                            authors {
+                                              items {
+                                                id
+                                                name
+                                                birthdate
+                                              }
+                                            }
+                                          }
+                                        }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+        }
+
+        /// <summary>
+        /// <code>Do : </code> Many type multiple create mutation request with entities related through 1:1, N:1, 1:N and M:N relationships, all in a single mutation request. All the
+        /// relationships are defined through the config file.
+        /// Also, depth of this create mutation request = 2. Book --> Review --> WebsiteUser.
+        /// <code>Check : </code> Records are successfully created in all the related entities. The created items are related as intended in the mutation request.
+        /// Correct linking of the newly created items are validated by querying all the relationship fields in the selection set and validating it against the expected response.
+        /// </summary>
+        public async Task ManyTypeMultipleCreateMutationOperationRelationshipsDefinedInConfig(string expectedResponse)
         {
             string graphQLMutationName = "createbooks";
             string graphQLMutation = @"mutation {

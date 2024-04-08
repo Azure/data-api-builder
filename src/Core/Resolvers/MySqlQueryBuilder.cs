@@ -366,10 +366,5 @@ WHERE
         {
             throw new NotImplementedException();
         }
-
-        string IQueryBuilder.BuildQueryForMultipleCreateOperation(SqlQueryStructure structure)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

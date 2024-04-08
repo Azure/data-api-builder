@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">List of PKs for which the response Json have to be computed and returned. Each Pk is represented by a dictionary.</param>
         /// <param name="dataSourceName">DataSource name</param>
         /// <returns>Returns the json result and metadata object for the given list of PKs</returns>
-        public Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, List<IDictionary<string, object?>> parameters, string dataSourceName);
+        public Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, List<IDictionary<string, object?>> parameters, string dataSourceName) => throw new NotImplementedException();
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL and expecting a

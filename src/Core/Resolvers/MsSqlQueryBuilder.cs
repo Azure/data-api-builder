@@ -544,6 +544,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return query;
         }
-
     }
 }

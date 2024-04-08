@@ -115,9 +115,9 @@ public class DataApiBuilderException : Exception
         /// </summary>
         RelationshipNotFound,
         /// <summary>
-        /// Foreign Key value not found
+        /// Relationship Field's value not found
         /// </summary>
-        ForeignKeyNotFound
+        RelationshipFieldNotFound
     }
 
     public HttpStatusCode StatusCode { get; }

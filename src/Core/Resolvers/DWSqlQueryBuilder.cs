@@ -358,10 +358,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If at least one parameter added, remove trailing comma and space, else return empty string
             return parameterList.Length > 0 ? parameterList[..^2] : parameterList;
         }
-
-        string IQueryBuilder.BuildQueryForMultipleCreateOperation(SqlQueryStructure structure)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

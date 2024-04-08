@@ -94,7 +94,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// for all the entities involved in the mutation.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task ValidateAuthZCheckOnEntitiesForCreateOneMultipleMutations()
         {
             string createBookMutationName = "createbook";
@@ -131,7 +130,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// for all the entities involved in the mutation.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task ValidateAuthZCheckOnEntitiesForCreateMultipleMutations()
         {
             string createMultipleBooksMutationName = "createbooks";
@@ -174,7 +172,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// multiple-create mutation, the request will fail during authorization check.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task ValidateAuthZCheckOnColumnsForCreateOneMultipleMutations()
         {
             string createOneStockMutationName = "createStock";
@@ -316,7 +313,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// multiple-create mutation, the request will fail during authorization check.
         /// </summary>
         [TestMethod]
-        [Ignore]
         public async Task ValidateAuthZCheckOnColumnsForCreateMultipleMutations()
         {
             string createMultipleStockMutationName = "createStocks";

@@ -2451,7 +2451,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 Assert.IsNotNull(mutationResponse);
                 SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
-                                                            message: "Foreign Key value for  Entity: Book, Column : publisher_id not found");
+                                                            message: "Relationship Field value for Entity: Book, Column : publisher_id not found");
             }
         }
 

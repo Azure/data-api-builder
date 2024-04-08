@@ -277,6 +277,52 @@
       }
     },
     {
+      Publisher_MM: {
+        Source: {
+          Object: publishers_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: Publisher_MM,
+          Plural: Publishers_MM,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          books_mm: {
+            Cardinality: Many,
+            TargetEntity: Book_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              publisher_id
+            ]
+          }
+        }
+      }
+    },
+    {
       Stock: {
         Source: {
           Object: stocks,
@@ -873,6 +919,78 @@
       }
     },
     {
+      Book_MM: {
+        Source: {
+          Object: books_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: book_mm,
+          Plural: books_mm,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          authors: {
+            Cardinality: Many,
+            TargetEntity: Author_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              id
+            ],
+            LinkingObject: book_author_link_mm,
+            LinkingSourceFields: [
+              book_id
+            ],
+            LinkingTargetFields: [
+              author_id
+            ]
+          },
+          publishers: {
+            TargetEntity: Publisher_MM,
+            SourceFields: [
+              publisher_id
+            ],
+            TargetFields: [
+              id
+            ]
+          },
+          reviews: {
+            Cardinality: Many,
+            TargetEntity: Review_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              book_id
+            ]
+          }
+        }
+      }
+    },
+    {
       BookWebsitePlacement: {
         Source: {
           Object: book_website_placements,
@@ -971,6 +1089,59 @@
             Cardinality: Many,
             TargetEntity: Book,
             LinkingObject: book_author_link
+          }
+        }
+      }
+    },
+    {
+      Author_MM: {
+        Source: {
+          Object: authors_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: author_mm,
+          Plural: authors_mm,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          books: {
+            Cardinality: Many,
+            TargetEntity: Book_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              id
+            ],
+            LinkingObject: book_author_link_mm,
+            LinkingSourceFields: [
+              author_id
+            ],
+            LinkingTargetFields: [
+              book_id
+            ]
           }
         }
       }
@@ -1088,6 +1259,60 @@
           },
           website_users: {
             TargetEntity: WebsiteUser,
+            SourceFields: [
+              websiteuser_id
+            ],
+            TargetFields: [
+              id
+            ]
+          }
+        }
+      }
+    },
+    {
+      Review_MM: {
+        Source: {
+          Object: reviews_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: review_mm,
+          Plural: reviews_mm,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          books: {
+            TargetEntity: Book_MM,
+            SourceFields: [
+              book_id
+            ],
+            TargetFields: [
+              id
+            ]
+          },
+          website_users: {
+            TargetEntity: WebsiteUser_MM,
             SourceFields: [
               websiteuser_id
             ],
@@ -1292,6 +1517,52 @@
           reviews: {
             Cardinality: Many,
             TargetEntity: Review,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              websiteuser_id
+            ]
+          }
+        }
+      }
+    },
+    {
+      WebsiteUser_MM: {
+        Source: {
+          Object: website_users_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: websiteuser_mm,
+          Plural: websiteusers_mm,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          reviews: {
+            Cardinality: Many,
+            TargetEntity: Review_MM,
             SourceFields: [
               id
             ],

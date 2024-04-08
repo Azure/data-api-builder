@@ -172,7 +172,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                                 new (Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName)
                            });
                     }
-                   
 
                     ProcessSchema(node.Fields, schemaDefinitions, CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, tableCounter);
                 }

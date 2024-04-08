@@ -84,6 +84,9 @@
     <Content Include="DatabaseSchema-MySql.sql">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Unittests\DatabaseObjectSerializationDeserializationTests\DatabaseTableWithRelationships.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

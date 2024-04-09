@@ -1063,6 +1063,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         primaryKeysOfCreatedItemsInTopLevelEntity.Add(multipleCreateStructure.CurrentEntityPKs);
                     }
+
+                    idx++;
                 }
             }
             else
@@ -1122,11 +1124,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 1. Identifies the order of insertion into tables involed in the create mutation request.
+        /// 1. Identifies the order of insertion into tables involved in the create mutation request.
         /// 2. Builds and executes the necessary database queries to insert all the data into appropriate tables.
         /// </summary>
         /// <param name="context">Hotchocolate's context for the graphQL request.</param>
-        /// <param name="parameters">Mutation parameter argumentss</param>
+        /// <param name="parameters">Mutation parameter arguments</param>
         /// <param name="sqlMetadataProvider">SqlMetadataprovider for the given database type.</param>
         /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
         /// <param name="primaryKeysOfCreatedItem">Dictionary containing the PKs of the created items.</param>
@@ -1151,14 +1153,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // So, when the input parameters is of list type, we iterate over the list and run the logic for each element.
             if (multipleCreateStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
             {
-                List<IDictionary<string, object?>> inputParamList = (List<IDictionary<string, object?>>)multipleCreateStructure.InputMutParams;
+                List<IDictionary<string, object?>> parsedInputParamList = (List<IDictionary<string, object?>>)multipleCreateStructure.InputMutParams;
                 List<IValueNode> paramList = (List<IValueNode>)parameters;
                 int idx = 0;
 
-                foreach (IDictionary<string, object?> inputParam in inputParamList)
+                foreach (IDictionary<string, object?> parsedInputParam in parsedInputParamList)
                 {
-                    MultipleCreateStructure multipleCreateStrucutreForCurrentItem = new(multipleCreateStructure.EntityName, multipleCreateStructure.HigherLevelEntityName, multipleCreateStructure.HigherLevelEntityPKs, inputParam, multipleCreateStructure.IsLinkingTableInsertionRequired);
-                    Dictionary<string, Dictionary<string, object?>> newResultPks = new();
+                    MultipleCreateStructure multipleCreateStrucutreForCurrentItem = new(multipleCreateStructure.EntityName, multipleCreateStructure.HigherLevelEntityName, multipleCreateStructure.HigherLevelEntityPKs, parsedInputParam, multipleCreateStructure.IsLinkingTableInsertionRequired);
+                    Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItems = new();
                     IValueNode? nodeForCurrentInput = paramList[idx];
                     if (nodeForCurrentInput is null)
                     {
@@ -1167,31 +1169,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
-                    PerformDbInsertOperation(context, nodeForCurrentInput.Value, sqlMetadataProvider, multipleCreateStrucutreForCurrentItem, newResultPks);
+                    PerformDbInsertOperation(context, nodeForCurrentInput.Value, sqlMetadataProvider, multipleCreateStrucutreForCurrentItem, primaryKeysOfCreatedItems);
                     idx++;
                 }
             }
             else
             {
-                string entityName = multipleCreateStructure.EntityName;
-                Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
-
                 if (parameters is not List<ObjectFieldNode> parameterNodes)
                 {
-                    throw new DataApiBuilderException(message: "Error occured while processing the mutation request",
+                    throw new DataApiBuilderException(message: "Error occurred while processing the mutation request",
                                                       statusCode: HttpStatusCode.InternalServerError,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 }
 
-                // Dependency Entity refers to those entities that are to be inserted before the top level entities. PKs of these entites are required
+                string entityName = multipleCreateStructure.EntityName;
+                Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
+
+                // Referenced Entity refers to those entities that are to be inserted before the top level entity. PKs of referenced entities are required
                 // to be able to successfully create a record in the table backing the top level entity. 
-                // Dependent Entity refers to those entities that are to be inserted after the top level entities. These entities require the PK of the top
+                // Referencing Entity refers to those entities that are to be inserted after the top level entities. These entities require the PK of the top
                 // level entity.
+                // This method classifies the related entities (if present in the input request) into referencing and referenced entities and
+                // populates multipleCreateStructure.ReferencingEntities and multipleCreateStructure.ReferencedEntities respectively.
                 DetermineReferencedAndReferencingEntities(context, multipleCreateStructure.EntityName, multipleCreateStructure, sqlMetadataProvider, entity.Relationships, parameterNodes);
 
                 PopulateCurrentAndLinkingEntityParams(entityName, multipleCreateStructure, sqlMetadataProvider, entity.Relationships);
 
-                // Recurse for dependency entities
+                // Recurse for referenced entities
                 foreach (Tuple<string, object?> referencedEntity in multipleCreateStructure.ReferencedEntities)
                 {
                     MultipleCreateStructure ReferencedEntityMultipleCreateStructure = new(GetRelatedEntityNameInRelationship(entity, referencedEntity.Item1), entityName, multipleCreateStructure.CurrentEntityPKs, referencedEntity.Item2);
@@ -1211,7 +1215,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         DatabaseObject relatedEntityObject = sqlMetadataProvider.EntityToDatabaseObject[relatedEntityName];
                         string relatedEntityFullName = relatedEntityObject.FullName;
                         ForeignKeyDefinition fkDefinition = fkDefinitions[0];
-                        if (string.Equals(fkDefinition.Pair.ReferencingDbTable.FullName, entityFullName) && string.Equals(fkDefinition.Pair.ReferencedDbTable.FullName, relatedEntityFullName))
+                        if (string.Equals(fkDefinition.Pair.ReferencingDbTable.FullName, entityFullName, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(fkDefinition.Pair.ReferencedDbTable.FullName, relatedEntityFullName, StringComparison.OrdinalIgnoreCase))
                         {
                             int count = fkDefinition.ReferencingColumns.Count;
                             for (int i = 0; i < count; i++)
@@ -1407,7 +1412,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                 }
 
-                // Recurse for dependent entities
+                // Recurse for referencing entities
                 foreach (Tuple<string, object?> referencingEntity in multipleCreateStructure.ReferencingEntities)
                 {
                     string relatedEntityName = GetRelatedEntityNameInRelationship(entity, referencingEntity.Item1);

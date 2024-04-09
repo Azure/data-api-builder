@@ -121,7 +121,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 graphQLMutationName: createBookMutationName,
                 graphQLMutation: createOneBookMutation,
                 isAuthenticated: true,
-                clientRoleHeader: "authenticated"
+                clientRoleHeader: "authenticated",
+                expectedResult: ""
                 );
         }
 
@@ -160,7 +161,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 graphQLMutation: createMultipleBookMutation,
                 isAuthenticated: true,
                 clientRoleHeader: "authenticated",
-                expectedResult: "Expected item argument in mutation arguments."
+                expectedResult: ""
                 );
         }
 

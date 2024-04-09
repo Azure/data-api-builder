@@ -337,15 +337,15 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to check that an exception is thrown in a many to many relationship (LinkingObject was provided)
+        /// Test method to check that an exception is thrown in a many-many relationship (LinkingObject was provided)
         /// while linkingSourceFields and sourceFields are null, or targetFields and linkingTargetFields are null,
         /// and also the relationship is not defined in the database through foreign keys on the missing side of
-        /// fields in the config for the many to many relationship. That means if source and linking source fields are
+        /// fields in the config for the many-many relationship. That means if source and linking source fields are
         /// missing that the foreign key information does not exist in the database for source entity to linking object,
         /// and if target and linking target fields are missing that the foreign key information does not exist in the
         /// database for the target entity to linking object.
         /// Further verify that after adding said foreignKeyPair in the Database, no exception is thrown. This is because
-        /// once we have that foreign key information we can complete that side of the many to many relationship
+        /// once we have that foreign key information we can complete that side of the many-many relationship
         /// from that foreign key.
         /// </summary>
         [DataRow(null, null, new string[] { "targetFields" }, new string[] { "linkingTargetFields" }, "SampleEntity1",
@@ -439,8 +439,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Test method to check that an exception is thrown when the relationship is one to many
-        /// or many to one (determined by the linking object being null), while both SourceFields
+        /// Test method to check that an exception is thrown when the relationship is one-many
+        /// or many-one (determined by the linking object being null), while both SourceFields
         /// and TargetFields are null in the config, and the foreignKey pair between source and target
         /// is not defined in the database as well.
         /// Also verify that after adding foreignKeyPair between the source and target entities in the Database,
@@ -523,7 +523,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test method that ensures our validation code catches the cases where source and target fields do not match in some way
-        /// and the linking object is null, indicating we have a one to many or many to one relationship.
+        /// and the linking object is null, indicating we have a one-many or many-one relationship.
         /// Not matching can either be because one is null and the other is not, or because they have a different number of fields.
         /// </summary>
         /// <param name="sourceFields">List of strings representing the source fields.</param>
@@ -680,7 +680,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test method that ensures our validation code catches the cases where we have a linking object and therefore a
-        /// many to many relationship, and source and linking source or target and linking target fields do not match in some way.
+        /// many-many relationship, and source and linking source or target and linking target fields do not match in some way.
         /// This can either be because one is null and the other is not, or because they have a different number of fields.
         /// </summary>
         /// <param name="sourceFields">List of strings representing the source fields.</param>
@@ -695,52 +695,52 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             new string[] { "targetFields" },
             new string[] { "linkingTargetFields" },
             "SampleEntity2",
-            "Entity: SampleEntity1 has a many to many relationship: rname1 with linking source fields that are not null, " +
+            "Entity: SampleEntity1 has a many-many relationship: rname1 with linking source fields that are not null, " +
                 "but source fields that are null.",
-            DisplayName = "Linking source fields are non null, but source fields are null in a many to many relationship.")]
+            DisplayName = "Linking source fields are non null, but source fields are null in a many-many relationship.")]
         [DataRow(
             new string[] { "sourceFields" },
             null,
             new string[] { "targetFields" },
             new string[] { "linkingTargetFields" },
             "SampleEntity2",
-            "Entity: SampleEntity1 has a many to many relationship: rname1 with source fields that are not null, " +
+            "Entity: SampleEntity1 has a many-many relationship: rname1 with source fields that are not null, " +
                 "but linking source fields that are null.",
-            DisplayName = "Source fields are non null, but linking source fields are null in a many to many relationship.")]
+            DisplayName = "Source fields are non null, but linking source fields are null in a many-many relationship.")]
         [DataRow(
             new string[] { "sourceField" },
             new string[] { "linkingSourceFields" },
             null,
             new string[] { "linkingTargetFields" },
             "SampleEntity2",
-            "Entity: SampleEntity1 has a many to many relationship: rname1 with linking target fields that are not null, " +
+            "Entity: SampleEntity1 has a many-many relationship: rname1 with linking target fields that are not null, " +
                 "but target fields that are null.",
-            DisplayName = "Linking target fields are non null, but target fields are null in a many to many relationship.")]
+            DisplayName = "Linking target fields are non null, but target fields are null in a many-many relationship.")]
         [DataRow(
             new string[] { "sourceField" },
             new string[] { "linkingSourceFields" },
             new string[] { "targetFields" },
             null,
             "SampleEntity2",
-            "Entity: SampleEntity1 has a many to many relationship: rname1 with target fields that are not null, " +
+            "Entity: SampleEntity1 has a many-many relationship: rname1 with target fields that are not null, " +
                 "but linking target fields that are null.",
-            DisplayName = "Target fields are non null, but linking target fields are null in a many to many relationship.")]
+            DisplayName = "Target fields are non null, but linking target fields are null in a many-many relationship.")]
         [DataRow(
             new string[] { "1", "2" },
             new string[] { "A", "B", "C" },
             new string[] { "targetFields" },
             new string[] { "linkingTargetFields" },
             "SampleEntity2",
-            "Entity: SampleEntity1 has a many to many relationship: rname1 with 2 source fields defined, but 3 linking source fields defined.",
-            DisplayName = "Source fields and linking source fields are different length in a many to many relationship.")]
+            "Entity: SampleEntity1 has a many-many relationship: rname1 with 2 source fields defined, but 3 linking source fields defined.",
+            DisplayName = "Source fields and linking source fields are different length in a many-many relationship.")]
         [DataRow(
             new string[] { "sourceFields" },
             new string[] { "linkingSourceFields" },
             new string[] { "A", "B", "C" },
             new string[] { "1", "2" },
             "SampleEntity2",
-            "Entity: SampleEntity1 has a many to many relationship: rname1 with 3 target fields defined, but 2 linking target fields defined.",
-            DisplayName = "Target fields and linking target fields are different length in a many to many relationship.")]
+            "Entity: SampleEntity1 has a many-many relationship: rname1 with 3 target fields defined, but 2 linking target fields defined.",
+            DisplayName = "Target fields and linking target fields are different length in a many-many relationship.")]
         [DataTestMethod]
         public void TestRelationshipWithoutLinkingSourceAndTargetFieldsMatching(
             string[] sourceFields,

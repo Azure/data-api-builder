@@ -45,8 +45,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
             // Add TypeName property in DatabaseObject object that we are serializing based on its type. (DatabaseTable, DatabaseView)
             // We add this property to differentiate between them in the dictionary. This extra property gets used in deserialization above.
             // for example if object is DatabaseTable then we need to add
-            // "TypeName": "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
-            writer.WriteString(TYPE_NAME, value.GetType().AssemblyQualifiedName);
+            // "TypeName": "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config",
+            writer.WriteString(TYPE_NAME, GetTypeNameFromType(value.GetType()));
 
             // Add other properties of DatabaseObject
             foreach (PropertyInfo prop in value.GetType().GetProperties())
@@ -74,6 +74,24 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters
             }
 
             return type;
+        }
+
+        /// <summary>
+        /// Changes the Type.AssemblyQualifiedName to desired format
+        /// we cannot use the FullName as during deserialization it throws exception as object not found.
+        /// </summary>
+        private static string GetTypeNameFromType(Type type)
+        {
+            // AssemblyQualifiedName for the type looks like :
+            // "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+            // we donot need version or culture or publickeytoken for serialization or deserialization, we need the first two parts.
+
+            string assemblyQualifiedName = type.AssemblyQualifiedName!;
+            string[] parts = assemblyQualifiedName.Split(',');
+
+            // typename would be : "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config"
+            string typeName = $"{parts[0]},{parts[1]}";
+            return typeName;
         }
     }
 }

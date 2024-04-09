@@ -96,6 +96,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutation(context, parameters, entityName, mutationOperation);
 
+            // Multiple create mutation request is validated to ensure that the request is valid semantically.
             string inputArgumentName = IsPointMutation(context) ? MutationBuilder.ITEM_INPUT_ARGUMENT_NAME : MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
             if (parameters.TryGetValue(inputArgumentName, out object? param) && mutationOperation is EntityActionOperation.Create)
             {
@@ -1242,7 +1243,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                         title: "book #1",
         ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
         ///                         publishers: { name: "Macmillan publishers" },
-        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.6 }]
         ///                     })
         ///                 {
         ///                     id
@@ -1253,13 +1254,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                         title: "book #1",
         ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
         ///                         publishers: { name: "Macmillan publishers" },
-        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.9 }]
         ///                     },
         ///                     {
         ///                         title: "book #2",
         ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
         ///                         publishers: { name: "Pearson Education" },
-        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", author_name: "William Shakespeare" }]
+        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", royal_percentage: 8.2  }]
         ///                     }])
         ///                 {
         ///                     items{

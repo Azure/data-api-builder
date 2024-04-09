@@ -211,14 +211,15 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Helper method to get the Foreign Key definition in the object definition of the source entity which relates it
-        /// with the target entity. In the Foreign key definition, the referencing entity acts as the referencing table and the
-        /// referenced entity acts as the referenced table.
+        /// with the target entity. In the Foreign key definition, the table backing the referencing entity acts as the referencing table
+        /// and the table backing the referenced entity acts as the referenced table.
         /// </summary>
         /// <param name="sourceEntityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>
         /// <param name="referencedEntityName">Referenced entity name.</param>
         /// <param name="referencingEntityName">Referencing entity name.</param>
-        /// <returns></returns>
+        /// <param name="foreignKeyDefinition">Stores the required foreign key definition from the referencing to referenced entity.</param>
+        /// <returns>true when the foreign key definition is successfully determined.</returns>
         /// <example>
         /// For a 1:N relationship between Publisher: Book entity defined in Publisher entity's config:
         /// sourceEntityName: Publisher (The entity in whose config the relationship is defined)
@@ -226,10 +227,11 @@ namespace Azure.DataApiBuilder.Core.Services
         /// referencingEntityName: Book (Entity holding foreign key reference)
         /// referencedEntityName: Publisher (Entity being referenced by foreign key).
         /// </example>
-        public ForeignKeyDefinition GetFKDefinition(
+        public bool TryGetFKDefinition(
             string sourceEntityName,
             string targetEntityName,
             string referencingEntityName,
-            string referencedEntityName) => throw new NotImplementedException();
+            string referencedEntityName,
+            [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition) => throw new NotImplementedException();
     }
 }

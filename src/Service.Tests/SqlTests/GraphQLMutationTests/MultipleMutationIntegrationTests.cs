@@ -382,12 +382,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         [TestMethod]
         public async Task InvalidateRepeatedReferencingColumnToMultipleReferencedEntitiesInReferencingEntity()
         {
-            // The entity createUserProfile_RepeatedRelationshipColumnToTwoEntities acts as the referencing entity the two relationships:
-            // 1. UserProfile_RepeatedReferencingColumnToTwoEntities.userid = books.id
-            // 2. UserProfile_RepeatedReferencingColumnToTwoEntities.userid = publishers.id,
+            // The entity createUserProfile_RepeatedRelationshipColumnToTwoEntities acts as the referencing entity for the two relationships:
+            // 1. UserProfile_RepeatedReferencingColumnToTwoEntities.userid -> books.id
+            // 2. UserProfile_RepeatedReferencingColumnToTwoEntities.userid -> publishers.id,
             // due to which we have two sources of truth for the column userid - books.id, publishers.id
             // which causes ambiguity as to what value should be assigned to the createUserProfile_RepeatedRelationshipColumnToTwoEntities.userid
-            // field after performing insertion in the referenced UserProfile entity.
+            // field after performing insertion in the two referenced entities, i.e. Book and Publisher.
             string createUserRepeatedRelationshipColumn = "createUserProfile_RepeatedReferencingColumnToTwoEntities";
             string createUserRepeatedRelationshipColumnMutation =
                 @"mutation {

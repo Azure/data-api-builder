@@ -1785,7 +1785,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
                         // 
-                        // Scenario 1: When a FK constraint is defined between source and target entities
+                        // Scenario 1: When a FK constraint is defined between source and target entities in the database.
                         // In this case, there will be exactly one ForeignKeyDefinition with the right pair of Referencing and Referenced tables. 
                         // Scenario 2: When no FK constraint is defined between source and target entities, but the relationship fields are configured through config file
                         // In this case, two entries will be created. 
@@ -1821,9 +1821,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 if (PairToFkDefinition is not null &&
                     PairToFkDefinition.TryGetValue(fKDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredFKDefinition))
                 {
-                    // Being here indicates that we inferred an FK constraint for the current FK.
+                    // Being here indicates that we inferred an FK constraint for the current foreign key definition.
                     // The count of referencing and referenced columns being > 0 indicates that source.fields and target.fields 
-                    // have been specified in the config file. In this scenario, higher precedence is given to the fields configured through the config file. So, the existing FK definition is retained as is.   
+                    // have been specified in the config file.
+                    // In this scenario, higher precedence is given to the fields configured through the config file. So, the existing FK definition is retained as is.
                     if (fKDefinitionToTarget.ReferencingColumns.Count > 0 && fKDefinitionToTarget.ReferencedColumns.Count > 0)
                     {
                         validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
@@ -1837,19 +1838,18 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else
                 {
-                    // This code block adds FK definitions between source and target entities when there is no FK constraint defined
-                    // in the database, either from source->target or target->source entities.
-
-                    // Being here indicates that we did not find an FK constraint in the database for the current FK definition.
+                    // This code block adds FK definitions between source and target entities when DAB hasn't yet identified an FK constraint.
+                    //
+                    // Being here indicates that we haven't yet found an FK constraint in the database for the current FK definition.
                     // But this does not indicate absence of an FK constraint between the source, target entities yet.
                     // This may happen when an FK constraint exists between two tables, but in an order opposite to the order
                     // of referencing and referenced tables present in the current FK definition. This happens because for a relationship
-                    // with right cardinality as 1, we add FK definitons from both source->target and target->source to the source entity's definition.
+                    // with right cardinality as 1, we add FK definitions from both source->target and target->source to the source entity's definition.
                     // because at that point we don't know if the relationship is an N:1 relationship or a 1:1 relationship.
                     // So here, we need to remove the wrong FK definition for:
                     // 1. N:1 relationships,
                     // 2. 1:1 relationships where an FK constraint exists only from source->target or target->source but not both.
-
+                    //
                     // E.g. for a relationship between Book-Publisher entities with cardinality 1, we would have added a Foreign key definition
                     // from Book->Publisher and Publisher->Book to Book's source definition earlier.
                     // Since it is an N:1 relationship, it might have been the case that the current FK definition had
@@ -1857,13 +1857,15 @@ namespace Azure.DataApiBuilder.Core.Services
                     // we did not find any FK constraint. But an FK constraint does exist where 'books' is the referencing table
                     // while the 'publishers' is the referenced table.
                     // (The definition for that constraint would be taken care of while adding database FKs above.)
-
+                    //
                     // So, before concluding that there is no FK constraint between the source, target entities, we need
                     // to confirm absence of FK constraint from source->target and target->source tables.
                     RelationShipPair inverseFKPair = new(fKDefinitionToTarget.Pair.ReferencedDbTable, fKDefinitionToTarget.Pair.ReferencingDbTable);
 
                     // Add FK definition to the set of validated FKs only if no FK constraint is defined for the source and target entities
                     // in the database, either from source -> target or target -> source.
+                    // When a foreign key constraint is not identified using inverseFKPair and fKDefinitionToTarget.Pair, it means that
+                    // the FK constraint is only defined in the runtime config file.
                     if (PairToFkDefinition is not null && !PairToFkDefinition.ContainsKey(inverseFKPair))
                     {
                         validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);

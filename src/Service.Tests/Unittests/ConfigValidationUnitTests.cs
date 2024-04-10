@@ -533,7 +533,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             DisplayName = "Linking object is null and sourceFields exist but targetFields are null.")]
         [DataRow(null, new[] { "targetFields" }, "Entity: SampleEntity1 has a relationship: rname1, which has source and target fields where one is null and the other is not.",
             DisplayName = "Linking object is null and targetFields exist but sourceFields are null")]
-        [DataRow(new[] { "A", "B", "C" }, new[] { "1", "2" }, "Entity: SampleEntity1 has a relationship: rname1, which 3 source fields defined, but 2 target fields defined.",
+        [DataRow(new[] { "A", "B", "C" }, new[] { "1", "2" }, "Entity: SampleEntity1 has a relationship: rname1, which has 3 source fields defined, but 2 target fields defined.",
             DisplayName = "Linking object is null and sourceFields and targetFields have different length.")]
         [DataTestMethod]
         public void TestRelationshipWithoutSourceAndTargetFieldsMatching(
@@ -695,7 +695,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             new string[] { "targetFields" },
             new string[] { "linkingTargetFields" },
             "SampleEntity2",
-            "Entity: Entity: SampleEntity1 has a many-many relationship: rname1, which has source and associated linking " +
+            "Entity: SampleEntity1 has a many-many relationship: rname1, which has source and associated linking " +
                 "fields where one is null and the other is not.",
             DisplayName = "Linking source fields are non null, but source fields are null in a many-many relationship.")]
         [DataRow(
@@ -704,7 +704,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             new string[] { "targetFields" },
             new string[] { "linkingTargetFields" },
             "SampleEntity2",
-            "Entity: Entity: SampleEntity1 has a many-many relationship: rname1, which has source and associated linking " +
+            "Entity: SampleEntity1 has a many-many relationship: rname1, which has source and associated linking " +
                 "fields where one is null and the other is not.",
             DisplayName = "Source fields are non null, but linking source fields are null in a many-many relationship.")]
         [DataRow(
@@ -713,7 +713,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             null,
             new string[] { "linkingTargetFields" },
             "SampleEntity2",
-            "Entity: Entity: SampleEntity1 has a many-many relationship: rname1, which has target and associated linking " +
+            "Entity: SampleEntity1 has a many-many relationship: rname1, which has target and associated linking " +
                 "fields where one is null and the other is not.",
             DisplayName = "Linking target fields are non null, but target fields are null in a many-many relationship.")]
         [DataRow(
@@ -722,7 +722,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             new string[] { "targetFields" },
             null,
             "SampleEntity2",
-            "Entity: Entity: SampleEntity1 has a many-many relationship: rname1, which has target and associated linking " +
+            "Entity: SampleEntity1 has a many-many relationship: rname1, which has target and associated linking " +
                 "fields where one is null and the other is not.",
             DisplayName = "Target fields are non null, but linking target fields are null in a many-many relationship.")]
         [DataRow(

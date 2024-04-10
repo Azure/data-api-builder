@@ -2258,10 +2258,10 @@
             Cardinality: Many,
             TargetEntity: AuthorNF,
             SourceFields: [
-               id
+              id
             ],
             TargetFields: [
-               id
+              id
             ],
             LinkingObject: book_author_link,
             LinkingSourceFields: [

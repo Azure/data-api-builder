@@ -11,16 +11,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         /// <summary>
         /// Field to indicate whehter a record needs to created in the linking table after
         /// creating a record in the table backing the current entity.
+        /// Linking table and consequently this field is applicable only for M:N relationship type.
         /// </summary>
         public bool IsLinkingTableInsertionRequired;
 
         /// <summary>
-        /// Entities that need to be inserted before the current entity. Current entity references these entites and needs the PKs to construct its INSERT SQL statement.
+        /// Entities that need to be inserted before the current entity. Current entity references these entites and needs the values of referenced columns to construct its INSERT SQL statement.
         /// </summary>
         public List<Tuple<string, object?>> ReferencedEntities;
 
         /// <summary>
-        /// Entities that need to be inserted after the current entity. Current entity is referenced by these entities and PKs of the current entity needs to be passed to
+        /// Entities that need to be inserted after the current entity. Current entity is referenced by these entities and the values of referenced columns needs to be passed to
         /// these entities to construct the INSERT SQL statement.
         /// </summary>
         public List<Tuple<string, object?>> ReferencingEntities;
@@ -47,6 +48,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
 
         /// <summary>
         /// PK of the record created in the table backing the immediate higher level entity.
+        /// This gets utilized by entities referencing the current entity.
         /// </summary>
         public Dictionary<string, object?>? HigherLevelEntityPKs;
 
@@ -71,10 +73,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
             InputMutParams = inputMutParams;
             HigherLevelEntityName = higherLevelEntityName;
             HigherLevelEntityPKs = higherLevelEntityPKs;
-            IsLinkingTableInsertionRequired = isLinkingTableInsertionRequired;
-
+            
             ReferencedEntities = new();
             ReferencingEntities = new();
+
+            IsLinkingTableInsertionRequired = isLinkingTableInsertionRequired;
             if (IsLinkingTableInsertionRequired)
             {
                 LinkingTableParams = new Dictionary<string, object?>();

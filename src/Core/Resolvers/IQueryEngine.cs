@@ -24,6 +24,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Executes the given IMiddlewareContext of the GraphQL query and expecting a list of Jsons back.
+        /// This method accepts a list of PKs for which to construct and return the response.
         /// </summary>
         /// <param name="context">IMiddleware context of the GraphQL query</param>
         /// <param name="parameters">List of PKs for which the response Json have to be computed and returned. Each Pk is represented by a dictionary.</param>

@@ -161,7 +161,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         }
                     }
                     // This code block contains logic for handling multiple create mutation operations.
-                    else if (mutationOperation is EntityActionOperation.Create && sqlMetadataProvider.IsMultipleCreateOperationEnabled())
+                    else if (mutationOperation is EntityActionOperation.Create && _runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled())
                     {
                         bool isPointMutation = IsPointMutation(context);
 
@@ -987,6 +987,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // List of Primary keys of the created records in the top level entity.
             // Each dictionary in the list corresponds to the PKs of a single record.
+            // For point multiple create operation, only one entry will be present.
             List<IDictionary<string, object?>> primaryKeysOfCreatedItemsInTopLevelEntity = new();
 
             if (multipleInputType)
@@ -1003,7 +1004,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
                 {
-                    throw new DataApiBuilderException(message: "Mutation Request should contain a valid item field",
+                    throw new DataApiBuilderException(message: $"Mutation Request should contain the expected argument: {fieldName} in the input",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -1059,6 +1060,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
 
                     PerformDbInsertOperation(context, fieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure, primaryKeysOfCreatedItem);
+
+                    // Ideally the CurrentEntityPKs should not be null. CurrentEntityPKs being null indicates that the create operation
+                    // has failed and that will result an exception being thrown.
+                    // This condition just acts as a guard against having to deal with null values in selection set resolution.
                     if (multipleCreateStructure.CurrentEntityPKs is not null)
                     {
                         primaryKeysOfCreatedItemsInTopLevelEntity.Add(multipleCreateStructure.CurrentEntityPKs);
@@ -1097,7 +1102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
                 {
-                    throw new DataApiBuilderException(message: "Mutation Request should contain a valid item field",
+                    throw new DataApiBuilderException(message: $"Mutation Request should contain the expected argument: {fieldName} in the input",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -1107,7 +1112,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate but acts as a guard against using any other types with "item" field
                 if (param is not List<ObjectFieldNode> paramList)
                 {
-                    throw new DataApiBuilderException(message: "Unsupported type used with 'items' field in the create mutation input",
+                    throw new DataApiBuilderException(message: "Unsupported type used with 'item' field in the create mutation input",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -1205,6 +1210,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 SourceDefinition currentEntitySourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
                 DatabaseObject entityObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
+
                 string entityFullName = entityObject.FullName;
 
                 // Populate the relationship fields values for the current entity.
@@ -1334,11 +1340,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         string referencingColumnName = fkDefinition.ReferencingColumns[i];
                         string referencedColumnName = fkDefinition.ReferencedColumns[i];
 
-                        if (multipleCreateStructure.LinkingTableParams.ContainsKey(referencingColumnName))
-                        {
-                            continue;
-                        }
-
                         multipleCreateStructure.LinkingTableParams.Add(referencingColumnName, multipleCreateStructure.CurrentEntityPKs![referencedColumnName]);
                     }
 
@@ -1354,12 +1355,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         string referencingColumnName = fkDefinition.ReferencingColumns[i];
                         string referencedColumnName = fkDefinition.ReferencedColumns[i];
-
-                        if (multipleCreateStructure.LinkingTableParams.ContainsKey(referencingColumnName))
-                        {
-                            continue;
-                        }
-
                         multipleCreateStructure.LinkingTableParams.Add(referencingColumnName, multipleCreateStructure.HigherLevelEntityPKs![referencedColumnName]);
                     }
 
@@ -1416,7 +1411,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (Tuple<string, object?> referencingEntity in multipleCreateStructure.ReferencingEntities)
                 {
                     string relatedEntityName = GetRelatedEntityNameInRelationship(entity, referencingEntity.Item1);
-                    MultipleCreateStructure referencingEntityMultipleCreateStructure = new(relatedEntityName, entityName, multipleCreateStructure.CurrentEntityPKs, referencingEntity.Item2, IsManyToManyRelationship(entity, referencingEntity.Item1));
+                    MultipleCreateStructure referencingEntityMultipleCreateStructure = new(relatedEntityName, entityName, multipleCreateStructure.CurrentEntityPKs, referencingEntity.Item2, GraphQLUtils.IsMToNRelationship(entity, referencingEntity.Item1));
                     IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencingEntity.Item1);
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingEntityMultipleCreateStructure, primaryKeysOfCreatedItem);
                 }
@@ -1450,21 +1445,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
             }
 
-        }
-
-        /// <summary>
-        /// Helper method to determine whether the relationship is a M:N relationship.
-        /// </summary>
-        /// <param name="entity">Entity </param>
-        /// <param name="relationshipName">Name of the relationship</param>
-        /// <returns>True/False indicating whther a record should be created in the linking table</returns>
-        public static bool IsManyToManyRelationship(Entity entity, string relationshipName)
-        {
-            return entity is not null &&
-                   entity.Relationships is not null &&
-                   entity.Relationships[relationshipName] is not null &&
-                   entity.Relationships[relationshipName].Cardinality is Cardinality.Many &&
-                   entity.Relationships[relationshipName].LinkingObject is not null;
         }
 
         /// <summary>

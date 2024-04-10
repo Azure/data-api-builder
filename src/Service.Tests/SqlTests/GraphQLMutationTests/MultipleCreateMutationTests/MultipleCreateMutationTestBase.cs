@@ -480,9 +480,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         /// </summary>
         public async Task ManyTypeMultipleCreateMutationOperationRelationshipsDefinedInConfig(string expectedResponse)
         {
-            string graphQLMutationName = "createbooks";
+            string graphQLMutationName = "createbooks_mm";
             string graphQLMutation = @"mutation {
-                                            createbooks(
+                                            createbooks_mm(
                                             items: [
                                                 {
                                                 title: ""Book #1""

@@ -135,9 +135,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             GQLFilterParser gQLFilterParser,
             IncrementingInteger counter,
             string entityName = "")
-            // This constructor simply forwards to the more general constructor
-            // that is used to create GraphQL queries. We give it some values
-            // that make sense for the outermost query.
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,

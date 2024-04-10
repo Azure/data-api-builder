@@ -378,10 +378,5 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         {
             throw new NotImplementedException();
         }
-
-        bool ISqlMetadataProvider.IsMultipleCreateOperationEnabled()
-        {
-            return _runtimeConfig.IsMultipleCreateOperationEnabled();
-        }
     }
 }

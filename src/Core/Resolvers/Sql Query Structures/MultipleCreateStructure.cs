@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
             InputMutParams = inputMutParams;
             HigherLevelEntityName = higherLevelEntityName;
             HigherLevelEntityPKs = higherLevelEntityPKs;
-            
+
             ReferencedEntities = new();
             ReferencingEntities = new();
 

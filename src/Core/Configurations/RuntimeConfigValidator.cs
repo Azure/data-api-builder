@@ -841,7 +841,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 // Linking object is null and therefore we have a many-one or a one-many relationship. These relationships
                 // must be validated separately from many-many relationships. In one-many and many-one relationships, the count
                 // of source and target fields need to match, or if one is null the other must be as well.
-                // If both of these sets of fields are null, foreign key information, inferred from the database metadata
+                // If both of these sets of fields are null, foreign key information, inferred from the database metadata,
                 // will be used to define the relationship.
                 // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships
                 if (string.IsNullOrWhiteSpace(relationship.LinkingObject))
@@ -932,7 +932,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         fieldType: "target",
                         entityName: entityName,
                         relationshipName: relationshipName);
-                    ;               }
+                }
 
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.
                 DatabaseObject? sourceObject, targetObject;
@@ -1088,7 +1088,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="relationshipName">Name of the relationship.</param>
     private void ValidateFieldsAndAssociatedLinkingFields(string[]? fields, string[]? linkingFields, string fieldType, string entityName, string relationshipName)
     {
-        // Validation to ensure that if fields exist then linking fields exist as well.
+        // Validation to ensure that fields and linkingFields are either both null or both non null.
         if (fields is null ^ linkingFields is null)
         {
             HandleOrRecordException(new DataApiBuilderException(

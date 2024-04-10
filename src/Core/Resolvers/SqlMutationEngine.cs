@@ -1014,7 +1014,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate. But, this acts as a guard against other types with "items" field.
                 if (param is not List<IValueNode> paramList)
                 {
-                    throw new DataApiBuilderException(message: "Unsupported type used with 'items' field in the create mutation input",
+                    throw new DataApiBuilderException(message: $"Unsupported type used with {fieldName} in the create mutation input",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -1112,7 +1112,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate but acts as a guard against using any other types with "item" field
                 if (param is not List<ObjectFieldNode> paramList)
                 {
-                    throw new DataApiBuilderException(message: "Unsupported type used with 'item' field in the create mutation input",
+                    throw new DataApiBuilderException(message: $"Unsupported type used with {fieldName} in the create mutation input",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

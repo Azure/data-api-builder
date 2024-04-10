@@ -606,14 +606,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(
             new[] { "noBackingColumn" },
             new[] { "backingColumn" },
-            "Entity: SampleEntity1 has a relationship: rname1 with source field: noBackingColumn " +
-                "that does not exist as a column in SampleEntity1.",
+            "Entity: SampleEntity1 has a relationship: rname1 with source fields: noBackingColumn " +
+                "that do not exist as a column in SampleEntity1.",
             DisplayName = "sourceField does not exist as valid backing column in source entity.")]
         [DataRow(
             new[] { "backingColumn" },
             new[] { "noBackingColumn" },
-            "Entity: SampleEntity1 has a relationship: rname1 with target field: noBackingColumn " +
-                "that does not exist as a column in target entity: SampleEntity2.",
+            "Entity: SampleEntity1 has a relationship: rname1 with target fields: noBackingColumn " +
+                "that do not exist as a column in target entity: SampleEntity2.",
             DisplayName = "targetField does not exist as valid backing column in target entity.")]
         [DataTestMethod]
         public void TestRelationshipWithoutSourceAndTargetFieldsAsValidBackingColumns(

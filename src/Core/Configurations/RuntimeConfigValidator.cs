@@ -887,7 +887,6 @@ public class RuntimeConfigValidator : IConfigValidator
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                             invalidColumns.Clear();
                         }
-                        
                     }
                 }
 
@@ -921,8 +920,8 @@ public class RuntimeConfigValidator : IConfigValidator
                 // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships#many-to-many-relationship
                 if (!string.IsNullOrWhiteSpace(relationship.LinkingObject))
                 {
-                    ValidateFields(relationship.SourceFields, relationship.LinkingSourceFields, "source", entityName, relationshipName);
-                    ValidateFields(relationship.TargetFields, relationship.LinkingTargetFields, "target", entityName, relationshipName);
+                    ValidateFieldsAndAssociatedLinkingFields(relationship.SourceFields, relationship.LinkingSourceFields, "source", entityName, relationshipName);
+                    ValidateFieldsAndAssociatedLinkingFields(relationship.TargetFields, relationship.LinkingTargetFields, "target", entityName, relationshipName);
 ;               }
 
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.
@@ -1077,7 +1076,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="fieldType">The type of fields, either source or target.</param>
     /// <param name="entityName">Name of the entity that holds the relationship.</param>
     /// <param name="relationshipName">Name of the relationship.</param>
-    private void ValidateFields(string[]? fields, string[]? linkingFields, string fieldType, string entityName, string relationshipName)
+    private void ValidateFieldsAndAssociatedLinkingFields(string[]? fields, string[]? linkingFields, string fieldType, string entityName, string relationshipName)
     {
         // Validation to ensure that if fields exist then linking fields exist as well.
         if (fields is null ^ linkingFields is null)

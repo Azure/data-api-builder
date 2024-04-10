@@ -920,9 +920,19 @@ public class RuntimeConfigValidator : IConfigValidator
                 // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships#many-to-many-relationship
                 if (!string.IsNullOrWhiteSpace(relationship.LinkingObject))
                 {
-                    ValidateFieldsAndAssociatedLinkingFields(relationship.SourceFields, relationship.LinkingSourceFields, "source", entityName, relationshipName);
-                    ValidateFieldsAndAssociatedLinkingFields(relationship.TargetFields, relationship.LinkingTargetFields, "target", entityName, relationshipName);
-;               }
+                    ValidateFieldsAndAssociatedLinkingFields(
+                        fields: relationship.SourceFields,
+                        linkingFields: relationship.LinkingSourceFields,
+                        fieldType: "source",
+                        entityName: entityName,
+                        relationshipName: relationshipName);
+                    ValidateFieldsAndAssociatedLinkingFields(
+                        fields: relationship.SourceFields,
+                        linkingFields: relationship.LinkingSourceFields,
+                        fieldType: "target",
+                        entityName: entityName,
+                        relationshipName: relationshipName);
+                    ;               }
 
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.
                 DatabaseObject? sourceObject, targetObject;

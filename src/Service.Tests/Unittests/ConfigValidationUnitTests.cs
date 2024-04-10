@@ -529,9 +529,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="sourceFields">List of strings representing the source fields.</param>
         /// <param name="targetFields">List of strings representing the target fields.</param>
         /// <param name="expectedExceptionMessage">The error message we expect from validation.</param>
-        [DataRow(new[] { "sourceFields" }, null, "Entity: SampleEntity1 has source fields that are not null, but target fields that are null.",
+        [DataRow(new[] { "sourceFields" }, null, "Entity: SampleEntity1 has relationship: rname1, which has source and target fields where one is null and the other is not.",
             DisplayName = "Linking object is null and sourceFields exist but targetFields are null.")]
-        [DataRow(null, new[] { "targetFields" }, "Entity: SampleEntity1 has target fields that are not null, but source fields that are null.",
+        [DataRow(null, new[] { "targetFields" }, "Entity: SampleEntity1 has relationship: rname1, which has source and target fields where one is null and the other is not.",
             DisplayName = "Linking object is null and targetFields exist but sourceFields are null")]
         [DataRow(new[] { "A", "B", "C" }, new[] { "1", "2" }, "Entity: SampleEntity1 has 3 source fields defined, but 2 target fields defined.",
             DisplayName = "Linking object is null and sourceFields and targetFields have different length.")]

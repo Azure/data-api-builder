@@ -64,7 +64,7 @@ update Book --config "dab-config.PostgreSql.json" --permissions "authenticated:c
 update Book --config "dab-config.PostgreSql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.PostgreSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update Book --config "dab-config.PostgreSql.json" --relationship reviews --target.entity Review --cardinality many
-update Book --config "dab-config.PostgreSql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update Book --config "dab-config.PostgreSql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id" --relationship.fields "id:id"
 update Book --config "dab-config.PostgreSql.json" --map "id:id,title:title"
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:create,delete"
 update Book --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:update" --fields.include "*"
@@ -150,7 +150,7 @@ update BookNF --config "dab-config.PostgreSql.json" --permissions "TestNestedFil
 update BookNF --config "dab-config.PostgreSql.json" --relationship publishers --target.entity PublisherNF --cardinality one
 update BookNF --config "dab-config.PostgreSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update BookNF --config "dab-config.PostgreSql.json" --relationship reviews --target.entity Review --cardinality many
-update BookNF --config "dab-config.PostgreSql.json" --relationship authors --target.entity AuthorNF --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update BookNF --config "dab-config.PostgreSql.json" --relationship authors --target.entity AuthorNF --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id" --relationship.fields "id:id"
 update BookNF --config "dab-config.PostgreSql.json" --map "id:id,title:title"
 update Comic --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterManyOne_ColumnForbidden:read"
 update Comic --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterManyOne_EntityReadForbidden:read"

@@ -928,7 +928,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         relationshipName: relationshipName);
                     ValidateFieldsAndAssociatedLinkingFields(
                         fields: relationship.SourceFields,
-                        linkingFields: relationship.LinkingSourceFields,
+                        linkingFields: relationship.LinkingTargetFields,
                         fieldType: "target",
                         entityName: entityName,
                         relationshipName: relationshipName);

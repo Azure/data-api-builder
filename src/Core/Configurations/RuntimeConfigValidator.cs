@@ -923,7 +923,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 {
                     ValidateFields(relationship.SourceFields, relationship.LinkingSourceFields, "source", entityName, relationshipName);
                     ValidateFields(relationship.TargetFields, relationship.LinkingTargetFields, "target", entityName, relationshipName);
-;                }
+;               }
 
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.
                 DatabaseObject? sourceObject, targetObject;

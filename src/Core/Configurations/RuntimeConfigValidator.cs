@@ -1083,7 +1083,7 @@ public class RuntimeConfigValidator : IConfigValidator
         if (fields is null ^ linkingFields is null)
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Entity: {entityName} has a many_many relationship: {relationshipName}, which has {fieldType} and associated linking fields " +
+                message: $"Entity: {entityName} has a many-many relationship: {relationshipName}, which has {fieldType} and associated linking fields " +
                     $"where one is null and the other is not.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
@@ -1093,7 +1093,7 @@ public class RuntimeConfigValidator : IConfigValidator
         if (fields is not null && linkingFields is not null && fields.Length != linkingFields.Length)
         {
             HandleOrRecordException(new DataApiBuilderException(
-                message: $"Entity: {entityName} has a many to many relationship: {relationshipName} with {fields.Length} " +
+                message: $"Entity: {entityName} has a many-many relationship: {relationshipName} with {fields.Length} " +
                     $"{fieldType} fields defined, but {linkingFields.Length} linking {fieldType} fields defined.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));

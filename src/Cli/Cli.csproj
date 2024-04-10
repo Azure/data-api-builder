@@ -6,7 +6,6 @@
     <RootNamespace>Cli</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PackAsTool>true</PackAsTool>
     <ToolCommandName>dab</ToolCommandName>
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <OutputPath>$(BaseOutputPath)\cli</OutputPath>

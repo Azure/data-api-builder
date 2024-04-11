@@ -1060,9 +1060,9 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <summary>
     /// This helper function validates that the fields it is provided exist as backing columns
     /// in the database. It collects all invalid fields and then combines them into a single exception
-    /// along with the entity name, relationship name, and field type for clarity. Invalid columns are
-    /// provided to this function because it can be called many times while looping through all of
-    /// the entities, and this minimizes the potential impact on space since garbage collection is
+    /// along with the entity name, relationship name, and field type for clarity. The list which aggregates
+    /// the invalid columns are provided to this function because it can be called many times while looping
+    /// through all of the entities, and this minimizes the potential impact on space since garbage collection is
     /// non-deterministic.
     /// </summary>
     /// <param name="fields">List of the fields to validate.</param>

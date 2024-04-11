@@ -348,9 +348,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// once we have that foreign key information we can complete that side of the many-many relationship
         /// from that foreign key.
         /// </summary>
-        [DataRow(null, null, new string[] { "targetFields" }, new string[] { "linkingTargetFields" }, "SampleEntity1",
+        [DataRow(null, null, new string[] { "targetField" }, new string[] { "linkingTargetField" }, "SampleEntity1",
             DisplayName = "sourceFields and LinkingSourceFields are null")]
-        [DataRow(new string[] { "sourceFields" }, new string[] { "linkingSourceFields" }, null, null, "SampleEntity2",
+        [DataRow(new string[] { "sourceField" }, new string[] { "linkingSourceField" }, null, null, "SampleEntity2",
             DisplayName = "targetFields and LinkingTargetFields are null")]
         [DataTestMethod]
         public void TestRelationshipWithLinkingObjectNotHavingRequiredFields(
@@ -597,7 +597,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// This test methods ensures that our validation code catches the case where the listed source or target fields
+        /// This test method ensures that our validation code catches the case where the listed source or target fields
         /// are not valid backing columns in either the source or target entity respectively.
         /// </summary>
         /// <param name="sourceFields">List of strings representing the source fields.</param>

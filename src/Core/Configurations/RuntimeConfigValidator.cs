@@ -791,7 +791,8 @@ public class RuntimeConfigValidator : IConfigValidator
     public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
     {
         _logger.LogInformation("Validating entity relationships.");
-        // To avoid creating many lists of invalid columns we instantiate before loops.
+
+        // To avoid creating many lists of invalid columns we instantiate before looping through entities.
         // List.Clear() is O(1) so clearing the list, for re-use, inside of the loops is fine.
         List<string> invalidColumns = new();
 
@@ -871,45 +872,25 @@ public class RuntimeConfigValidator : IConfigValidator
                 // In all kinds of relationships, if sourceFields are included they must be valid columns in the backend.
                 if (relationship.SourceFields is not null)
                 {
-                    foreach (string sourceField in relationship.SourceFields)
-                    {
-                        if (!sqlMetadataProvider.TryGetBackingColumn(entityName, sourceField, out _))
-                        {
-                            invalidColumns.Add(sourceField);
-                        }
-
-                        if (invalidColumns.Count > 0)
-                        {
-                            HandleOrRecordException(new DataApiBuilderException(
-                                message: $"Entity: {entityName} has a relationship: {relationshipName} with source fields: {string.Join(",", invalidColumns)} that " +
-                                    $"do not exist as columns in {entityName}.",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                            invalidColumns.Clear();
-                        }
-                    }
+                    ValidateFieldsAsBackingColumns(
+                        fields: relationship.SourceFields,
+                        invalidColumns: invalidColumns,
+                        fieldType: "source",
+                        entityName: entityName,
+                        relationshipName: relationshipName,
+                        sqlMetadataProvider: sqlMetadataProvider);
                 }
 
                 // In all kinds of relationships, if targetFields are included they must be valid columns in the backend.
                 if (relationship.TargetFields is not null)
                 {
-                    foreach (string targetField in relationship.TargetFields)
-                    {
-                        if (!sqlMetadataProvider.TryGetBackingColumn(relationship.TargetEntity, targetField, out _))
-                        {
-                            invalidColumns.Add(targetField);
-                        }
-
-                        if (invalidColumns.Count > 0)
-                        {
-                            HandleOrRecordException(new DataApiBuilderException(
-                                message: $"Entity: {entityName} has a relationship: {relationshipName} with target fields: {string.Join(",", invalidColumns)} that " +
-                                    $"do not exist as columns in target entity: {relationship.TargetEntity}.",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                            invalidColumns.Clear();
-                        }
-                    }
+                    ValidateFieldsAsBackingColumns(
+                        fields: relationship.TargetFields,
+                        invalidColumns: invalidColumns,
+                        fieldType: "source",
+                        entityName: entityName,
+                        relationshipName: relationshipName,
+                        sqlMetadataProvider: sqlMetadataProvider);
                 }
 
                 // Linking object exists and we therefore have a many-many relationship. Validation here differs from one-many and many-one in that
@@ -1074,6 +1055,43 @@ public class RuntimeConfigValidator : IConfigValidator
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// This helper function validates that the fields it is provided exist as backing columns
+    /// in the database. It collects all invalid fields and then combines them into a single exception
+    /// along with the entity name, relationship name, and field type for clarity. Invalid columns are
+    /// provided to this function because it can be called many times while looping through all of
+    /// the entities, and this minimizes the potential impact on space since garbage collection is
+    /// non-deterministic.
+    /// </summary>
+    /// <param name="fields">List of the fields to validate.</param>
+    private void ValidateFieldsAsBackingColumns(
+        string[] fields,
+        List<string> invalidColumns,
+        string fieldType,
+        string entityName,
+        string relationshipName,
+        ISqlMetadataProvider sqlMetadataProvider)
+    {
+        invalidColumns.Clear();
+        foreach (string field in fields)
+        {
+            if (!sqlMetadataProvider.TryGetBackingColumn(entityName, field, out _))
+            {
+                invalidColumns.Add(field);
+            }
+        }
+
+        if (invalidColumns.Count > 0)
+        {
+            HandleOrRecordException(new DataApiBuilderException(
+                message: $"Entity: {entityName} has a relationship: {relationshipName} with {fieldType} fields: {string.Join(",", invalidColumns)} that " +
+                    $"do not exist as columns in {entityName}.",
+                statusCode: HttpStatusCode.ServiceUnavailable,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+        }
+
     }
 
     /// <summary>

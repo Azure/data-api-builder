@@ -1066,6 +1066,12 @@ public class RuntimeConfigValidator : IConfigValidator
     /// non-deterministic.
     /// </summary>
     /// <param name="fields">List of the fields to validate.</param>
+    /// <param name="invalidColumns">List in which to aggregate the invalid columns.</param>
+    /// <param name="fieldType">The type of fields we are validating.</param>
+    /// <param name="entityName">The name of the entity.</param>
+    /// <param name="relationshipName">The name of the relationship.</param>
+    /// <param name="sqlMetadataProvider">The sqlMetadataProvider which holds the mapping to check if fields are valid columns.</param>
+
     private void ValidateFieldsAsBackingColumns(
         string[] fields,
         List<string> invalidColumns,

@@ -24,8 +24,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Queries
         public const string ORDER_BY_FIELD_NAME = "orderBy";
         public const string PARTITION_KEY_FIELD_NAME = "_partitionKeyValue";
         public const string ID_FIELD_NAME = "id";
-        public const int MAX_PAGE_LIMIT = 1000;
-        public const int DEFAULT_PAGE_LIMIT = 100;
 
         /// <summary>
         /// Creates a DocumentNode containing FieldDefinitionNodes representing the FindByPK and FindAll queries

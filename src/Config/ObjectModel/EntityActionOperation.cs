@@ -28,5 +28,7 @@ public enum EntityActionOperation
     UpsertIncremental, UpdateIncremental,
 
     // Only valid operation for stored procedures
-    Execute
+    Execute,
+
+    Patch
 }

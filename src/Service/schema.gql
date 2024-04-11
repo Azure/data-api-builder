@@ -1,0 +1,68 @@
+type Character @model(name:"Character") {
+    id : ID,
+    name : String,
+    type: String,
+    homePlanet: Int,
+    primaryFunction: String,
+    star: Star
+}
+
+type Planet @model {
+    id : ID!,
+    name : String,
+    character: Character,
+    age : Int,
+    dimension : String,
+    earth: Earth,
+    tags: [String!],
+    stars: [Star],
+    additionalAttributes: [AdditionalAttribute],
+    moons: [Moon],
+    suns: [Sun]
+}
+
+type Star @model(name:"StarAlias") {
+    id : ID,
+    name : String,
+    tag: Tag
+}
+
+type Tag @model(name:"TagAlias") {
+    id : ID,
+    name : String
+}
+
+type Moon @model(name:"Moon") @authorize(policy: "Crater") {
+    id : ID,
+    name : String,
+    details : String,
+    moonAdditionalAttributes: [MoonAdditionalAttribute]
+}
+
+type Earth @model(name:"Earth") {
+    id : ID,
+    name : String,
+    type: String @authorize(roles: ["authenticated"])
+}
+
+type Sun @model(name:"Sun") {
+    id : ID,
+    name : String
+}
+
+type AdditionalAttribute @model(name:"AdditionalAttribute") {
+    id : ID,
+    name : String
+}
+
+type MoonAdditionalAttribute @model(name:"MoonAdditionalAttribute") {
+    id : ID,
+    name : String,
+    moreAttributes: [MoreAttribute!]
+}
+
+type MoreAttribute @model(name:"MoreAttrAlias") {
+    id : ID,
+    name : String,
+    type: String @authorize(roles: ["authenticated"])
+}

@@ -821,7 +821,8 @@ public class AuthorizationResolver : IAuthorizationResolver
             { EntityActionOperation.Create, new List<string>()},
             { EntityActionOperation.Read, new List<string>()},
             { EntityActionOperation.Update, new List<string>()},
-            { EntityActionOperation.Delete, new List<string>()}
+            { EntityActionOperation.Delete, new List<string>()},
+            { EntityActionOperation.Patch, new List<string>()}
         };
     }
 

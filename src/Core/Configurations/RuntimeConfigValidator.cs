@@ -1071,7 +1071,6 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="entityName">The name of the entity.</param>
     /// <param name="relationshipName">The name of the relationship.</param>
     /// <param name="sqlMetadataProvider">The sqlMetadataProvider which holds the mapping to check if fields are valid columns.</param>
-
     private void ValidateFieldsAsBackingColumns(
         string[] fields,
         List<string> invalidColumns,

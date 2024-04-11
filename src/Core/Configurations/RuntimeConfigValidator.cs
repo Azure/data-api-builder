@@ -887,7 +887,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     ValidateFieldsAsBackingColumns(
                         fields: relationship.TargetFields,
                         invalidColumns: invalidColumns,
-                        fieldType: "source",
+                        fieldType: "target",
                         entityName: entityName,
                         relationshipName: relationshipName,
                         sqlMetadataProvider: sqlMetadataProvider);

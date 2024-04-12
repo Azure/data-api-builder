@@ -752,7 +752,6 @@ mutation {{
         name
     }}
 }}";
-
             JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
 
             // Validate results

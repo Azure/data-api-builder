@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
@@ -24,8 +23,14 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
         /// <returns>true if the field is allowed, false if it is not.</returns>
         private static bool FieldAllowedOnUpdateInput(FieldDefinitionNode field, DatabaseType databaseType, IEnumerable<HotChocolate.Language.IHasName> definitions, EntityActionOperation operation)
         {
+            HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
+
             // For patch operation, do not include ID field in the input type
-            if (operation == EntityActionOperation.Patch && field.Type.NamedType().Name.Value == "ID")
+            if (definition is not null &&
+                definition is ObjectTypeDefinitionNode objectType1 &&
+                IsModelType(objectType1) &&
+                operation == EntityActionOperation.Patch &&
+                field.Type.NamedType().Name.Value == "ID")
             {
                 return false;
             }
@@ -40,7 +45,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 return false;
             }
 
-            HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
             // When updating, you don't need to provide the data for nested models, but you will for other nested types
             // For cosmos, allow updating nested objects
             if (definition is not null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)

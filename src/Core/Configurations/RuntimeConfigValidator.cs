@@ -82,7 +82,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateAuthenticationOptions(runtimeConfig);
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
         ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
-        ValidatePaginationOptions(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.
@@ -133,28 +132,6 @@ public class RuntimeConfigValidator : IConfigValidator
             {
                 HandleOrRecordException(new DataApiBuilderException(
                     message: "Application Insights connection string cannot be null or empty if enabled.",
-                    statusCode: HttpStatusCode.ServiceUnavailable,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-            }
-        }
-    }
-
-    /// <summary>
-    /// Validating pagination options in the runtime config.
-    /// </summary>
-    public void ValidatePaginationOptions(RuntimeConfig runtimeConfig)
-    {
-        if (runtimeConfig.Runtime is not null && runtimeConfig.Runtime.Pagination is not null)
-        {
-            PaginationOptions paginationOptions = runtimeConfig.Runtime.Pagination;
-            if (paginationOptions.DefaultPageSize < -1 ||
-                paginationOptions.DefaultPageSize == 0 ||
-                paginationOptions.MaxPageSize < -1 ||
-                paginationOptions.MaxPageSize == 0 ||
-                paginationOptions.DefaultPageSize > paginationOptions.MaxPageSize)
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                    message: "Pagination options invalid. Page size arguments cannot be 0, < -1 and default page size cannot be greater than max page size",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }

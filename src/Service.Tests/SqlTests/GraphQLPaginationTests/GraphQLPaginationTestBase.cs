@@ -66,7 +66,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
         /// <summary>
         /// Request a full connection object {items, after, hasNextPage}
-        /// without providing any parameters
+        /// using a negative one for the first parameter.
+        /// This should return max items as we use -1 to allow user to get max allowed page size.
         /// </summary>
         [TestMethod]
         public async Task RequestMaxUsingNegativeOne()
@@ -83,6 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 }
             }";
 
+            // this resultset represents all books in the db.
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
             string expected = @"{
               ""items"": [

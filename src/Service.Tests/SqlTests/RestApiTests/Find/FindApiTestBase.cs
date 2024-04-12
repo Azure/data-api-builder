@@ -763,10 +763,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         }
 
         /// <summary>
-        /// Validates that a proper nextLink is created for FindMany requests which do not
-        /// restrict results with query parameters. Engine default paging mechanisms are used
-        /// when > 100 records will be present in result set.
-        /// expectedAfterQueryString starts with ?$, and not &$, because it is the only query parameter.
+        /// Validates that when first is set to -1, we return the maximum records
+        /// as specified by max page size. In this case, the expected result is that
+        /// all the records are returned from the db.
         /// </summary>
         [TestMethod]
         public async Task FindTest_Negative1QueryParams_Pagination()
@@ -1578,7 +1577,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
         /// <summary>
         /// Tests the REST Api for Find operation using $first=100001
         /// to request > max records of 100000 records, which should throw a DataApiBuilder
-        /// Exception.
+        /// Exception. This test depends on max page size configuration in runtimeconfig.
         /// </summary>
         [TestMethod]
         public async Task FindTestWithMaxExceededSingleKeyPagination()

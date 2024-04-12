@@ -1568,6 +1568,10 @@ query {
 
         #region Negative Tests
 
+        /// <summary>
+        /// This test checks the failure on providing invalid nfirst parameter in graphQL Query.
+        /// We only allow -1 or positive integers for first parameter.-1 means max page size.
+        /// </summary>
         [TestMethod]
         public virtual async Task TestInvalidFirstParamQuery()
         {

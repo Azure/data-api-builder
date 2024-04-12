@@ -471,4 +471,14 @@ public record RuntimeConfig
                Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null &&
                Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
     }
+
+    public uint DefaultPageSize()
+    {
+        return Runtime?.Pagination?.DefaultPageSize ?? PaginationOptions.DEFAULT_PAGE_SIZE;
+    }
+
+    public uint MaxPageSize()
+    {
+        return Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
+    }
 }

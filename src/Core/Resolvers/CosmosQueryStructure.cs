@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
-        public int? MaxItemCount { get; internal set; }
+        public uint? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
 
@@ -146,7 +146,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                MaxItemCount = GetPaginationLimit(RuntimeConfigProvider, (int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME]!);
+                MaxItemCount = RuntimeConfigProvider.GetPaginationLimit((int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME]!);
 
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }

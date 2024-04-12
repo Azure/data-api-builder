@@ -1190,22 +1190,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string entityName = multipleCreateStructure.EntityName;
                 Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
 
-                // Referenced Entity refers to those entities that are to be inserted before the top level entity. PKs of referenced entities are required
-                // to be able to successfully create a record in the table backing the top level entity. 
-                // Referencing Entity refers to those entities that are to be inserted after the top level entities. These entities require the PK of the top
-                // level entity.
-                // This method classifies the related entities (if present in the input request) into referencing and referenced entities and
-                // populates multipleCreateStructure.ReferencingEntities and multipleCreateStructure.ReferencedEntities respectively.
-                DetermineReferencedAndReferencingEntities(context, multipleCreateStructure.EntityName, multipleCreateStructure, sqlMetadataProvider, entity.Relationships, parameterNodes);
+                // Classifiy the relationship fields (if present in the input request) into referencing and referenced relationships and
+                // populate multipleCreateStructure.ReferencingRelationships and multipleCreateStructure.ReferencedRelationships respectively.
+                DetermineReferencedAndReferencingRelationships(context, multipleCreateStructure.EntityName, multipleCreateStructure, sqlMetadataProvider, entity.Relationships, parameterNodes);
 
                 PopulateCurrentAndLinkingEntityParams(entityName, multipleCreateStructure, sqlMetadataProvider, entity.Relationships);
 
-                // Recurse for referenced entities
-                foreach (Tuple<string, object?> referencedEntity in multipleCreateStructure.ReferencedEntities)
+                // Process referenced relationships
+                foreach (Tuple<string, object?> referencedRelationship in multipleCreateStructure.ReferencedRelationships)
                 {
-                    MultipleCreateStructure ReferencedEntityMultipleCreateStructure = new(GetRelatedEntityNameInRelationship(entity, referencedEntity.Item1), entityName, multipleCreateStructure.CurrentEntityPKs, referencedEntity.Item2);
-                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencedEntity.Item1);
-                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, ReferencedEntityMultipleCreateStructure, primaryKeysOfCreatedItem);
+                    MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(GetRelatedEntityNameInRelationship(entity, referencedRelationship.Item1), entityName, multipleCreateStructure.CurrentEntityPKs, referencedRelationship.Item2);
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencedRelationship.Item1);
+                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure, primaryKeysOfCreatedItem);
                 }
 
                 SourceDefinition currentEntitySourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
@@ -1437,13 +1433,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                 }
 
-                // Recurse for referencing entities
-                foreach (Tuple<string, object?> referencingEntity in multipleCreateStructure.ReferencingEntities)
+                // Process referencing relationships
+                foreach (Tuple<string, object?> referencingRelationship in multipleCreateStructure.ReferencingRelationships)
                 {
-                    string relatedEntityName = GetRelatedEntityNameInRelationship(entity, referencingEntity.Item1);
-                    MultipleCreateStructure referencingEntityMultipleCreateStructure = new(relatedEntityName, entityName, multipleCreateStructure.CurrentEntityPKs, referencingEntity.Item2, GraphQLUtils.IsMToNRelationship(entity, referencingEntity.Item1));
-                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencingEntity.Item1);
-                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingEntityMultipleCreateStructure, primaryKeysOfCreatedItem);
+                    string relatedEntityName = GetRelatedEntityNameInRelationship(entity, referencingRelationship.Item1);
+                    MultipleCreateStructure referencingRelationshipMultipleCreateStructure = new(relatedEntityName, entityName, multipleCreateStructure.CurrentEntityPKs, referencingRelationship.Item2, GraphQLUtils.IsMToNRelationship(entity, referencingRelationship.Item1));
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencingRelationship.Item1);
+                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, primaryKeysOfCreatedItem);
                 }
             }
         }
@@ -1507,12 +1503,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
         /// <param name="topLevelEntityRelationships">Relationship metadata of the source entity</param>
         /// <param name="sourceEntityFields">Field object nodes of the source entity</param>
-        private static void DetermineReferencedAndReferencingEntities(IMiddlewareContext context,
-                                                                      string entityName,
-                                                                      MultipleCreateStructure multipleCreateStructure,
-                                                                      ISqlMetadataProvider sqlMetadataProvider,
-                                                                      Dictionary<string, EntityRelationship>? topLevelEntityRelationships,
-                                                                      List<ObjectFieldNode> sourceEntityFields)
+        private static void DetermineReferencedAndReferencingRelationships(IMiddlewareContext context,
+                                                                           string entityName,
+                                                                           MultipleCreateStructure multipleCreateStructure,
+                                                                           ISqlMetadataProvider sqlMetadataProvider,
+                                                                           Dictionary<string, EntityRelationship>? topLevelEntityRelationships,
+                                                                           List<ObjectFieldNode> sourceEntityFields)
         {
 
             if (topLevelEntityRelationships is null)
@@ -1541,7 +1537,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // Hence, the target entity is added as a referencing entity.
                     if (entityRelationship.LinkingObject is not null)
                     {
-                        multipleCreateStructure.ReferencingEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                        multipleCreateStructure.ReferencingRelationships.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
                         continue;
                     }
 
@@ -1559,11 +1555,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     if (string.Equals(entityName, referencingEntityName, StringComparison.OrdinalIgnoreCase))
                     {
-                        multipleCreateStructure.ReferencedEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                        multipleCreateStructure.ReferencedRelationships.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
                     }
                     else
                     {
-                        multipleCreateStructure.ReferencingEntities.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
+                        multipleCreateStructure.ReferencingRelationships.Add(new Tuple<string, object?>(inputParam.Key, inputParam.Value) { });
                     }
                 }
             }

@@ -16,15 +16,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         public bool IsLinkingTableInsertionRequired;
 
         /// <summary>
-        /// Entities that need to be inserted before the current entity. Current entity references these entites and needs the values of referenced columns to construct its INSERT SQL statement.
+        /// Relationships that need to be processed before the current entity. Current entity references these entites and needs the values of referenced columns to construct its INSERT SQL statement.
         /// </summary>
-        public List<Tuple<string, object?>> ReferencedEntities;
+        public List<Tuple<string, object?>> ReferencedRelationships;
 
         /// <summary>
-        /// Entities that need to be inserted after the current entity. Current entity is referenced by these entities and the values of referenced columns needs to be passed to
+        /// Relationships that need to be processed after the current entity. Current entity is referenced by these entities and the values of referenced columns needs to be passed to
         /// these entities to construct the INSERT SQL statement.
         /// </summary>
-        public List<Tuple<string, object?>> ReferencingEntities;
+        public List<Tuple<string, object?>> ReferencingRelationships;
 
         /// <summary>
         /// Fields belonging to the current entity.
@@ -74,8 +74,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
             HigherLevelEntityName = higherLevelEntityName;
             HigherLevelEntityPKs = higherLevelEntityPKs;
 
-            ReferencedEntities = new();
-            ReferencingEntities = new();
+            ReferencedRelationships = new();
+            ReferencingRelationships = new();
 
             IsLinkingTableInsertionRequired = isLinkingTableInsertionRequired;
             if (IsLinkingTableInsertionRequired)

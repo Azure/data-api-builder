@@ -154,7 +154,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 paginationOptions.DefaultPageSize > paginationOptions.MaxPageSize)
             {
                 HandleOrRecordException(new DataApiBuilderException(
-                    message: "Pagination options invalid. Page size arguments cannot be 0, < -1 and default page size cannot be greater than max page size",
+                    message: "Pagination options invalid. Page size arguments cannot be 0 or less than -1. The default page size cannot be greater than max page size",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }

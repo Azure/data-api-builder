@@ -208,7 +208,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (userInputValue < -1 || userInputValue == 0 || userInputValue > maxPageSize)
                 {
                     throw new DataApiBuilderException(
-                    message: $"Invalid number of items requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be either -1 or a positive number within the max page size limit of {maxPageSize}. Actual value: {userInputValue}",
+                    message: $"Invalid page size requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be either -1 or a positive number within the max page size limit of {maxPageSize}. Actual value: {userInputValue}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

@@ -102,7 +102,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                                           }
                                         }";
 
-            await MultipleCreateMutationWithManyToManyRelationship(expectedResponse);
+            string linkingTableDbValidationQuery = @"SELECT [book_id], [author_id], [royalty_percentage]
+                                                     FROM [dbo].[book_author_link] 
+                                                     WHERE [dbo].[book_author_link].[book_id] = 5001 AND ([dbo].[book_author_link].[author_id] = 5001 OR [dbo].[book_author_link].[author_id] = 5002) 
+                                                     ORDER BY [dbo].[book_author_link].[book_id], [dbo].[book_author_link].[author_id] ASC FOR JSON PATH, INCLUDE_NULL_VALUES;";
+
+            string expectedResponseFromLinkingTable = @"[{""book_id"":5001,""author_id"":5001,""royalty_percentage"":50.0},{""book_id"":5001,""author_id"":5002,""royalty_percentage"":50.0}]";
+
+            await MultipleCreateMutationWithManyToManyRelationship(expectedResponse, linkingTableDbValidationQuery, expectedResponseFromLinkingTable);
         }
 
         [TestMethod]
@@ -174,7 +181,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                                         }
                                     }";
 
-            await MultipleCreateMutationWithAllRelationshipTypes(expectedResponse);
+            string linkingTableDbValidationQuery = @"SELECT [book_id], [author_id], [royalty_percentage]
+                                                     FROM [dbo].[book_author_link] 
+                                                     WHERE [dbo].[book_author_link].[book_id] = 5001 AND ([dbo].[book_author_link].[author_id] = 5001 OR [dbo].[book_author_link].[author_id] = 5002) 
+                                                     ORDER BY [dbo].[book_author_link].[book_id], [dbo].[book_author_link].[author_id] ASC FOR JSON PATH, INCLUDE_NULL_VALUES;";
+
+            string expectedResponseFromLinkingTable = @"[{""book_id"":5001,""author_id"":5001,""royalty_percentage"":50.0},{""book_id"":5001,""author_id"":5002,""royalty_percentage"":50.0}]";
+
+            await MultipleCreateMutationWithAllRelationshipTypes(expectedResponse, linkingTableDbValidationQuery, expectedResponseFromLinkingTable);
         }
 
         [TestMethod]
@@ -256,7 +270,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                                           ]
                                         }";
 
-            await ManyTypeMultipleCreateMutationOperation(expectedResponse);
+            string linkingTableDbValidationQuery = @"SELECT [book_id], [author_id], [royalty_percentage] FROM [dbo].[book_author_link] 
+                                                    WHERE ( [dbo].[book_author_link].[book_id] = 5001 AND ([dbo].[book_author_link].[author_id] = 5001 OR [dbo].[book_author_link].[author_id] = 5002)) 
+                                                        OR ([dbo].[book_author_link].[book_id] = 5002 AND ([dbo].[book_author_link].[author_id] = 5003 OR [dbo].[book_author_link].[author_id] = 5004))
+                                                    ORDER BY [dbo].[book_author_link].[book_id] ASC FOR JSON PATH, INCLUDE_NULL_VALUES;";
+
+            string expectedResponseFromLinkingTable = @"[{""book_id"":5001,""author_id"":5001,""royalty_percentage"":50.0},{""book_id"":5001,""author_id"":5002,""royalty_percentage"":50.0},{""book_id"":5002,""author_id"":5003,""royalty_percentage"":65.0},{""book_id"":5002,""author_id"":5004,""royalty_percentage"":35.0}]";
+
+            await ManyTypeMultipleCreateMutationOperation(expectedResponse, linkingTableDbValidationQuery, expectedResponseFromLinkingTable);
         }
 
         /// <summary>
@@ -559,7 +580,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                                           }
                                         }";
 
-            await MultipleCreateMutationWithManyToManyRelationshipDefinedInConfigFile(expectedResponse);
+            string linkingTableDbValidationQuery = @"SELECT [book_id], [author_id], [royalty_percentage]
+                                                     FROM [dbo].[book_author_link_mm] 
+                                                     WHERE [dbo].[book_author_link_mm].[book_id] = 5001 AND ([dbo].[book_author_link_mm].[author_id] = 5001 OR [dbo].[book_author_link_mm].[author_id] = 5002) 
+                                                     ORDER BY [dbo].[book_author_link_mm].[book_id], [dbo].[book_author_link_mm].[author_id] ASC FOR JSON PATH, INCLUDE_NULL_VALUES;";
+
+            string expectedResponseFromLinkingTable = @"[{""book_id"":5001,""author_id"":5001,""royalty_percentage"":50.0},{""book_id"":5001,""author_id"":5002,""royalty_percentage"":50.0}]";
+
+            await MultipleCreateMutationWithManyToManyRelationshipDefinedInConfigFile(expectedResponse, linkingTableDbValidationQuery, expectedResponseFromLinkingTable);
         }
 
         [TestMethod]
@@ -610,7 +638,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                                         }
                                     }";
 
-            await MultipleCreateMutationWithAllRelationshipTypesDefinedInConfigFile(expectedResponse);
+            string linkingTableDbValidationQuery = @"SELECT [book_id], [author_id], [royalty_percentage]
+                                                     FROM [dbo].[book_author_link_mm] 
+                                                     WHERE [dbo].[book_author_link_mm].[book_id] = 5001 AND ([dbo].[book_author_link_mm].[author_id] = 5001 OR [dbo].[book_author_link_mm].[author_id] = 5002) 
+                                                     ORDER BY [dbo].[book_author_link_mm].[book_id], [dbo].[book_author_link_mm].[author_id] ASC FOR JSON PATH, INCLUDE_NULL_VALUES;";
+
+            string expectedResponseFromLinkingTable = @"[{""book_id"":5001,""author_id"":5001,""royalty_percentage"":50.0},{""book_id"":5001,""author_id"":5002,""royalty_percentage"":50.0}]";
+
+            await MultipleCreateMutationWithAllRelationshipTypesDefinedInConfigFile(expectedResponse, linkingTableDbValidationQuery, expectedResponseFromLinkingTable);
         }
 
         [TestMethod]
@@ -692,7 +727,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                                           ]
                                         }";
 
-            await ManyTypeMultipleCreateMutationOperationRelationshipsDefinedInConfig(expectedResponse);
+            string linkingTableDbValidationQuery = @"SELECT [book_id], [author_id], [royalty_percentage] FROM [dbo].[book_author_link_mm] 
+                                                    WHERE ( [dbo].[book_author_link_mm].[book_id] = 5001 AND ([dbo].[book_author_link_mm].[author_id] = 5001 OR [dbo].[book_author_link_mm].[author_id] = 5002)) 
+                                                        OR ([dbo].[book_author_link_mm].[book_id] = 5002 AND ([dbo].[book_author_link_mm].[author_id] = 5003 OR [dbo].[book_author_link_mm].[author_id] = 5004))
+                                                    ORDER BY [dbo].[book_author_link_mm].[book_id] ASC FOR JSON PATH, INCLUDE_NULL_VALUES;";
+
+            string expectedResponseFromLinkingTable = @"[{""book_id"":5001,""author_id"":5001,""royalty_percentage"":50.0},{""book_id"":5001,""author_id"":5002,""royalty_percentage"":50.0},{""book_id"":5002,""author_id"":5003,""royalty_percentage"":65.0},{""book_id"":5002,""author_id"":5004,""royalty_percentage"":35.0}]";
+
+            await ManyTypeMultipleCreateMutationOperationRelationshipsDefinedInConfig(expectedResponse, linkingTableDbValidationQuery, expectedResponseFromLinkingTable);
         }
     }
 }

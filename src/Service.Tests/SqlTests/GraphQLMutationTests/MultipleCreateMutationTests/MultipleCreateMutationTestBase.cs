@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         /// <code>Check: </code> Book item is successfully created in the database. Author items are successfully created in the database. The newly created Book and Author items are related using
         /// creating entries in the linking table. This is verified by querying field in the selection set and validating the response.
         /// </summary>
-        public async Task MultipleCreateMutationWithManyToManyRelationship(string expectedResponse)
+        public async Task MultipleCreateMutationWithManyToManyRelationship(string expectedResponse, string linkingTableDbValidationQuery, string expectedResponseFromLinkingTable)
         {
             string graphQLMutationName = "createbook";
             string graphQLMutation = @"
@@ -94,8 +94,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                             title: ""Book #1""
                             publisher_id: 1234
                             authors: [
-                            { birthdate: ""2000-01-01"", name: ""Author #1"" }
-                            { birthdate: ""2000-02-03"", name: ""Author #2"" }
+                            { birthdate: ""2000-01-01"", name: ""Author #1"", royalty_percentage: 50.0 }
+                            { birthdate: ""2000-02-03"", name: ""Author #2"", royalty_percentage: 50.0 }
                             ]
                         }
                         ) {
@@ -114,6 +114,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+
+            // Validate that the records are created in the linking table
+            string actualResponseFromLinkingTable = await GetDatabaseResultAsync(linkingTableDbValidationQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponseFromLinkingTable, actualResponseFromLinkingTable);
         }
 
         /// <summary>
@@ -168,7 +172,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         /// <code> Check: </code> Records are successfully created in all the related entities. The created items are related as intended in the mutation request.
         /// Correct linking of the newly created items are validated by querying all the relationship fields in the selection set and validating it against the expected response.
         /// </summary>
-        public async Task MultipleCreateMutationWithAllRelationshipTypes(string expectedResponse)
+        public async Task MultipleCreateMutationWithAllRelationshipTypes(string expectedResponse, string linkingTableDbValidationQuery, string expectedResponseFromLinkingTable)
         {
             string graphQLMutationName = "createbook";
             string graphQLMutation = @"mutation {
@@ -218,6 +222,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+
+            // Validate that the records are created in the linking table
+            string actualResponseFromLinkingTable = await GetDatabaseResultAsync(linkingTableDbValidationQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponseFromLinkingTable, actualResponseFromLinkingTable);
         }
 
         /// <summary>
@@ -228,7 +236,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         /// <code>Check : </code> Records are successfully created in all the related entities. The created items are related as intended in the mutation request.
         /// Correct linking of the newly created items are validated by querying all the relationship fields in the selection set and validating it against the expected response.
         /// </summary>
-        public async Task ManyTypeMultipleCreateMutationOperation(string expectedResponse)
+        public async Task ManyTypeMultipleCreateMutationOperation(string expectedResponse, string linkingTableDbValidationQuery, string expectedResponseFromLinkingTable)
         {
             string graphQLMutationName = "createbooks";
             string graphQLMutation = @"mutation {
@@ -308,6 +316,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+
+            // Validate that the records are created in the linking table
+            string actualResponseFromLinkingTable = await GetDatabaseResultAsync(linkingTableDbValidationQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponseFromLinkingTable, actualResponseFromLinkingTable);
         }
 
         #endregion
@@ -380,7 +392,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         /// <code>Check: </code> Book_MM item is successfully created in the database. Author_MM items are successfully created in the database. The newly created Book_MM and Author_MM items are related using
         /// creating entries in the linking table. This is verified by querying field in the selection set and validating the response.
         /// </summary>
-        public async Task MultipleCreateMutationWithManyToManyRelationshipDefinedInConfigFile(string expectedResponse)
+        public async Task MultipleCreateMutationWithManyToManyRelationshipDefinedInConfigFile(string expectedResponse, string linkingTableDbValidationQuery, string expectedResponseFromLinkingTable)
         {
             string graphQLMutationName = "createbook_mm";
             string graphQLMutation = @"
@@ -390,8 +402,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                             title: ""Book #1""
                             publisher_id: 1234
                             authors: [
-                            { birthdate: ""2000-01-01"", name: ""Author #1"" }
-                            { birthdate: ""2000-02-03"", name: ""Author #2"" }
+                            { birthdate: ""2000-01-01"", name: ""Author #1"", royalty_percentage: 50.0 }
+                            { birthdate: ""2000-02-03"", name: ""Author #2"", royalty_percentage: 50.0 }
                             ]
                         }
                         ) {
@@ -410,6 +422,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+
+            // Validate that the records are created in the linking table
+            string actualResponseFromLinkingTable = await GetDatabaseResultAsync(linkingTableDbValidationQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponseFromLinkingTable, actualResponseFromLinkingTable);
         }
 
         /// <summary>
@@ -419,7 +435,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         /// <code> Check: </code> Records are successfully created in all the related entities. The created items are related as intended in the mutation request.
         /// Correct linking of the newly created items are validated by querying all the relationship fields in the selection set and validating it against the expected response.
         /// </summary>
-        public async Task MultipleCreateMutationWithAllRelationshipTypesDefinedInConfigFile(string expectedResponse)
+        public async Task MultipleCreateMutationWithAllRelationshipTypesDefinedInConfigFile(string expectedResponse, string linkingTableDbValidationQuery, string expectedResponseFromLinkingTable)
         {
             string graphQLMutationName = "createbook_mm";
             string graphQLMutation = @"mutation {
@@ -469,6 +485,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+
+            // Validate that the records are created in the linking table
+            string actualResponseFromLinkingTable = await GetDatabaseResultAsync(linkingTableDbValidationQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponseFromLinkingTable, actualResponseFromLinkingTable);
         }
 
         /// <summary>
@@ -478,7 +498,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         /// <code>Check : </code> Records are successfully created in all the related entities. The created items are related as intended in the mutation request.
         /// Correct linking of the newly created items are validated by querying all the relationship fields in the selection set and validating it against the expected response.
         /// </summary>
-        public async Task ManyTypeMultipleCreateMutationOperationRelationshipsDefinedInConfig(string expectedResponse)
+        public async Task ManyTypeMultipleCreateMutationOperationRelationshipsDefinedInConfig(string expectedResponse, string linkingTableDbValidationQuery, string expectedResponseFromLinkingTable)
         {
             string graphQLMutationName = "createbooks_mm";
             string graphQLMutation = @"mutation {
@@ -558,6 +578,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true);
             SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+
+            // Validate that the records are created in the linking table
+            string actualResponseFromLinkingTable = await GetDatabaseResultAsync(linkingTableDbValidationQuery);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponseFromLinkingTable, actualResponseFromLinkingTable);
         }
 
         #endregion

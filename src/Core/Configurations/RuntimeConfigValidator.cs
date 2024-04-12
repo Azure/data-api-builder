@@ -16,6 +16,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
+using Microsoft.VisualBasic.FileIO;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -872,27 +873,39 @@ public class RuntimeConfigValidator : IConfigValidator
                 // In all kinds of relationships, if sourceFields are included they must be valid columns in the backend.
                 if (relationship.SourceFields is not null)
                 {
-                    ValidateFieldsAsBackingColumns(
+                    GetFieldsNotBackedByColumnsInDB(
                         fields: relationship.SourceFields,
                         invalidColumns: invalidColumns,
-                        fieldType: "source",
                         entityName: entityName,
-                        relationshipName: relationshipName,
-                        entityWithFieldsName: entityName,
                         sqlMetadataProvider: sqlMetadataProvider);
+
+                    if (invalidColumns.Count > 0)
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has a relationship: {relationshipName} with target fields: {string.Join(",", invalidColumns)} that " +
+                                $"do not exist as columns in entity: {entityName}.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
                 }
 
                 // In all kinds of relationships, if targetFields are included they must be valid columns in the backend.
                 if (relationship.TargetFields is not null)
                 {
-                    ValidateFieldsAsBackingColumns(
+                    GetFieldsNotBackedByColumnsInDB(
                         fields: relationship.TargetFields,
                         invalidColumns: invalidColumns,
-                        fieldType: "target",
-                        entityName: entityName,
-                        relationshipName: relationshipName,
-                        entityWithFieldsName: relationship.TargetEntity,
+                        entityName: relationship.TargetEntity,
                         sqlMetadataProvider: sqlMetadataProvider);
+
+                    if (invalidColumns.Count > 0)
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has a relationship: {relationshipName} with target fields: {string.Join(",", invalidColumns)} that " +
+                                $"do not exist as columns in entity: {relationship.TargetEntity}.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
                 }
 
                 // Linking object exists and we therefore have a many-many relationship. Validation here differs from one-many and many-one in that
@@ -1060,27 +1073,17 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// This helper function validates that the fields it is provided exist as backing columns
-    /// in the database. It collects all invalid fields and then combines them into a single exception
-    /// along with the entity name, relationship name, and field type for clarity. The list which aggregates
-    /// the invalid columns are provided to this function because it can be called many times while looping
-    /// through all of the entities, and this minimizes the potential impact on space since garbage collection is
-    /// non-deterministic.
+    /// This helper funtion returns a list of fields that do not exist in the backing DB
+    /// associated with the provided entity.
     /// </summary>
-    /// <param name="invalidColumns">List in which to aggregate the invalid columns.</param>
-    /// <param name="fields">List of the fields to validate.</param>
-    /// <param name="fieldType">The type of fields we are validating.</param>
-    /// <param name="entityName">The name of the entity that has the relationship.</param>
-    /// <param name="relationshipName">The name of the relationship.</param>
-    /// <param name="entityWithFieldsName">The name of the entity that has the fields being validated.</param>
-    /// <param name="sqlMetadataProvider">The sqlMetadataProvider which holds the mapping to check if fields are valid columns.</param>
-    private void ValidateFieldsAsBackingColumns(
+    /// <param name="invalidColumns">List in which to aggregate the invalid fields.</param>
+    /// <param name="fields">List of the fields to check for existence in backing DB.</param>
+    /// <param name="entityName">The name of the entity that we check for backing columns.</param>
+    /// <param name="sqlMetadataProvider">The sqlMetadataProvider used to lookup if the fields are valid columns in DB.</param>
+    private static List<string> GetFieldsNotBackedByColumnsInDB(
         List<string> invalidColumns,
         string[] fields,
-        string fieldType,
         string entityName,
-        string relationshipName,
-        string entityWithFieldsName,
         ISqlMetadataProvider sqlMetadataProvider)
     {
         invalidColumns.Clear();
@@ -1092,14 +1095,7 @@ public class RuntimeConfigValidator : IConfigValidator
             }
         }
 
-        if (invalidColumns.Count > 0)
-        {
-            HandleOrRecordException(new DataApiBuilderException(
-                message: $"Entity: {entityName} has a relationship: {relationshipName} with {fieldType} fields: {string.Join(",", invalidColumns)} that " +
-                    $"do not exist as columns in entity: {entityWithFieldsName}.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-        }
+        return invalidColumns;
 
     }
 

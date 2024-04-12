@@ -805,8 +805,12 @@
         "authors": {
           "cardinality": "many",
           "target.entity": "Author",
-          "source.fields": [],
-          "target.fields": [],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.object": "book_author_link",
           "linking.source.fields": [
             "book_id"

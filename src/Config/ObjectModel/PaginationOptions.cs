@@ -43,7 +43,7 @@ public record PaginationOptions
         if (MaxPageSize is not null)
         {
             ValidatePageSize((int)MaxPageSize);
-            this.MaxPageSize = MaxPageSize == -1 ? UInt32.MaxValue : (uint)MaxPageSize;
+            this.MaxPageSize = MaxPageSize == -1 ? Int32.MaxValue : (uint)MaxPageSize;
             UserProvidedMaxPageSize = true;
         }
         else
@@ -101,7 +101,7 @@ public record PaginationOptions
 
     private static void ValidatePageSize(int pageSize)
     {
-        if (pageSize < -1 || pageSize == 0 || (uint)pageSize > Int32.MaxValue)
+        if (pageSize < -1 || pageSize == 0 || pageSize > Int32.MaxValue)
         {
             throw new DataApiBuilderException(
                 message: "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",

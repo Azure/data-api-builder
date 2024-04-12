@@ -288,19 +288,8 @@ public class RuntimeConfigProvider
     public uint GetPaginationLimit(int? first)
     {
         this.TryGetConfig(out RuntimeConfig? runtimeConfig);
-        RuntimeOptions? runtimeOptions = runtimeConfig?.Runtime;
-        uint defaultPageSize;
-        uint maxPageSize;
-        if (runtimeOptions is not null && runtimeOptions.Pagination is not null)
-        {
-            defaultPageSize = (uint)runtimeOptions.Pagination.DefaultPageSize!;
-            maxPageSize = (uint)runtimeOptions.Pagination.MaxPageSize!;
-        }
-        else
-        {
-            defaultPageSize = PaginationOptions.DEFAULT_PAGE_SIZE;
-            maxPageSize = PaginationOptions.MAX_PAGE_SIZE;
-        }
+        uint defaultPageSize = runtimeConfig!.DefaultPageSize();
+        uint maxPageSize = runtimeConfig.MaxPageSize();
 
         if (first is not null)
         {

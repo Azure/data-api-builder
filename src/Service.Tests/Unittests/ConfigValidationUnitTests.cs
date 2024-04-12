@@ -2179,6 +2179,67 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 $"Config does not have a cosmos datasource and member {nameof(runtimeConfig.CosmosDataSourceUsed)} must be marked as false.");
         }
 
+        /// <summary>
+        /// Test to validate pagination options.
+        /// </summary>
+        /// <param name="exceptionExpected">Should there be an exception.</param>
+        /// <param name="defaultPageSize">default page size to go into config.</param>
+        /// <param name="maxPageSize">max page size to go into config.</param>
+        /// <param name="expectedExceptionMessage">expected exception message in case there is exception.</param>
+        /// <param name="expectedDefaultPageSize">expected default page size from config.</param>
+        /// <param name="expectedMaxPageSize">expected max page size from config.</param>
+        [DataTestMethod]
+        [DataRow(false, null, null, "", (int)PaginationOptions.DEFAULT_PAGE_SIZE, (int)PaginationOptions.MAX_PAGE_SIZE,
+            DisplayName = "MaxPageSize should be 100,000 and DefaultPageSize should be 100 when no value provided in config.")]
+        [DataRow(false, 1000, 10000, "", 1000, 10000,
+            DisplayName = "Valid inputs of MaxPageSize and DefaultPageSize must be accepted and set in the config.")]
+        [DataRow(false, -1, 10000, "", 10000, 10000,
+            DisplayName = "DefaultPageSize should be the same as MaxPageSize when input is -1")]
+        [DataRow(false, 100, -1, "", 100, Int32.MaxValue,
+            DisplayName = "MaxPageSize should be UInt32.MaxValue when input is -1")]
+        [DataRow(true, 100, -3, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
+            DisplayName = "MaxPageSize cannot be negative")]
+        [DataRow(true, -3, 100, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
+            DisplayName = "DefaultPageSize cannot be negative")]
+        [DataRow(true, 100, 0, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
+            DisplayName = "MaxPageSize cannot be 0")]
+        [DataRow(true, 0, 100, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
+            DisplayName = "DefaultPageSize cannot be 0")]
+        [DataRow(true, 101, 100, "Pagination options invalid. The default page size cannot be greater than max page size",
+            DisplayName = "DefaultPageSize cannot be greater than MaxPageSize")]
+        public void ValidatePaginationOptionsInConfig(
+            bool exceptionExpected,
+            int? defaultPageSize,
+            int? maxPageSize,
+            string expectedExceptionMessage,
+            int? expectedDefaultPageSize = null,
+            int? expectedMaxPageSize = null)
+        {
+            try
+            {
+                RuntimeConfig runtimeConfig = new(
+                    Schema: "UnitTestSchema",
+                    DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                    Runtime: new(
+                        Rest: new(),
+                        GraphQL: new(),
+                        Host: new(Cors: null, Authentication: null),
+                        Pagination: new PaginationOptions(defaultPageSize, maxPageSize)
+                    ),
+                    Entities: new(new Dictionary<string, Entity>()));
+
+                Assert.AreEqual((uint)expectedDefaultPageSize, runtimeConfig.DefaultPageSize());
+                Assert.AreEqual((uint)expectedMaxPageSize, runtimeConfig.MaxPageSize());
+            }
+            catch (DataApiBuilderException dabException)
+            {
+                Assert.IsTrue(exceptionExpected);
+                Assert.AreEqual(expectedExceptionMessage, dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
+        }
+
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();

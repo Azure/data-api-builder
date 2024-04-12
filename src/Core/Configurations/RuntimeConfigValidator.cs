@@ -16,7 +16,6 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualBasic.FileIO;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -882,7 +881,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     if (invalidColumns.Count > 0)
                     {
                         HandleOrRecordException(new DataApiBuilderException(
-                            message: $"Entity: {entityName} has a relationship: {relationshipName} with target fields: {string.Join(",", invalidColumns)} that " +
+                            message: $"Entity: {entityName} has a relationship: {relationshipName} with source fields: {string.Join(",", invalidColumns)} that " +
                                 $"do not exist as columns in entity: {entityName}.",
                             statusCode: HttpStatusCode.ServiceUnavailable,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));

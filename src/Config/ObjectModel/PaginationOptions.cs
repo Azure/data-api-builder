@@ -65,7 +65,7 @@ public record PaginationOptions
         if (this.DefaultPageSize > this.MaxPageSize)
         {
             throw new DataApiBuilderException(
-                message: "Pagination options invalid. Page size arguments cannot be 0, < -1, exceed max int value and default page size cannot be greater than max page size",
+                message: "Pagination options invalid. The default page size cannot be greater than max page size",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
@@ -104,7 +104,7 @@ public record PaginationOptions
         if (pageSize < -1 || pageSize == 0 || (uint)pageSize > Int32.MaxValue)
         {
             throw new DataApiBuilderException(
-                message: "Pagination options invalid. Page size arguments cannot be 0, < -1, exceed max int value and default page size cannot be greater than max page size",
+                message: "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }

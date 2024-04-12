@@ -878,6 +878,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         fieldType: "source",
                         entityName: entityName,
                         relationshipName: relationshipName,
+                        entityWithFieldsName: entityName,
                         sqlMetadataProvider: sqlMetadataProvider);
                 }
 
@@ -890,6 +891,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         fieldType: "target",
                         entityName: entityName,
                         relationshipName: relationshipName,
+                        entityWithFieldsName: relationship.TargetEntity,
                         sqlMetadataProvider: sqlMetadataProvider);
                 }
 
@@ -1065,18 +1067,20 @@ public class RuntimeConfigValidator : IConfigValidator
     /// through all of the entities, and this minimizes the potential impact on space since garbage collection is
     /// non-deterministic.
     /// </summary>
-    /// <param name="fields">List of the fields to validate.</param>
     /// <param name="invalidColumns">List in which to aggregate the invalid columns.</param>
+    /// <param name="fields">List of the fields to validate.</param>
     /// <param name="fieldType">The type of fields we are validating.</param>
-    /// <param name="entityName">The name of the entity.</param>
+    /// <param name="entityName">The name of the entity that has the relationship.</param>
     /// <param name="relationshipName">The name of the relationship.</param>
+    /// <param name="entityWithFieldsName">The name of the entity that has the fields being validated.</param>
     /// <param name="sqlMetadataProvider">The sqlMetadataProvider which holds the mapping to check if fields are valid columns.</param>
     private void ValidateFieldsAsBackingColumns(
-        string[] fields,
         List<string> invalidColumns,
+        string[] fields,
         string fieldType,
         string entityName,
         string relationshipName,
+        string entityWithFieldsName,
         ISqlMetadataProvider sqlMetadataProvider)
     {
         invalidColumns.Clear();
@@ -1092,7 +1096,7 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             HandleOrRecordException(new DataApiBuilderException(
                 message: $"Entity: {entityName} has a relationship: {relationshipName} with {fieldType} fields: {string.Join(",", invalidColumns)} that " +
-                    $"do not exist as columns in {entityName}.",
+                    $"do not exist as columns in entity: {entityWithFieldsName}.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
         }

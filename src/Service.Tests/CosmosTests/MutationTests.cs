@@ -729,6 +729,70 @@ type Planet @model(name:""Planet"") {
             }
         }
 
+        [TestMethod]
+        public async Task CanPatchItemWithoutVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
+
+            const string newName = "new_name";
+            mutation = $@"
+mutation {{
+    patchPlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
+        id
+        name
+    }}
+}}";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
+
+            // Validate results
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreNotEqual(name, response.GetProperty("name").GetString());
+        }
+
+        [TestMethod]
+        public async Task CanPatchItemWithVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name"
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
+    patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+     }
+}";
+            var update = new
+            {
+                name = "new_name",
+                stars = new[] { new { id = "TestStar" } }
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+
+            // Validate results
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreNotEqual(input.name, response.GetProperty("name").GetString());
+        }
+
         /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>

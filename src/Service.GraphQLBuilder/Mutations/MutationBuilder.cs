@@ -183,6 +183,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             databaseType,
                             returnEntityName,
                             rolesAllowedForMutation,
+                            EntityActionOperation.Patch,
                             operationNamePrefix: "patch"));
                          break;
                     default:
@@ -224,6 +225,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 string s when s.StartsWith(EntityActionOperation.Execute.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Execute,
                 string s when s.StartsWith(EntityActionOperation.Create.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Create,
                 string s when s.StartsWith(EntityActionOperation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.UpdateGraphQL,
+                string s when s.StartsWith(EntityActionOperation.Patch.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Patch,
                 _ => EntityActionOperation.Delete
             };
         }

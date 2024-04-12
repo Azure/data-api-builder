@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Setup dependencies and requirements for custom middleware.
         /// </summary>
-        /// <param name="next">Reference to next middleware in the request pipeline.</param>
+        /// <param name="next">Reference to next                                          middleware in the request pipeline.</param>
         /// <param name="runtimeConfigurationProvider">Runtime configuration provider.</param>
         public PathRewriteMiddleware(RequestDelegate next, RuntimeConfigProvider runtimeConfigurationProvider)
         {

@@ -70,6 +70,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
                 EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
                 EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
+                EntityActionOperation.Patch => await HandlePatchAsync(queryArgs, container),
                 _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
             };
 
@@ -117,6 +118,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: mutationOperation, inputArgumentKeys),
                 EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
                                                      // to perform the delete operation on the entity to reach this point.
+                EntityActionOperation.Patch =>
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: EntityActionOperation.Patch, inputArgumentKeys),
                 _ => throw new DataApiBuilderException(
                                         message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
                                         statusCode: HttpStatusCode.BadRequest,
@@ -231,6 +234,74 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else
             {
                 return await container.ReplaceItemAsync<JObject>(input, id, new PartitionKey(partitionKey), new ItemRequestOptions());
+            }
+        }
+
+        private static async Task<ItemResponse<JObject>> HandlePatchAsync(IDictionary<string, object?> queryArgs, Container container)
+        {
+            string? partitionKey = null;
+            string? id = null;
+
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
+            {
+                id = idObj?.ToString();
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new InvalidDataException("id field is mandatory");
+            }
+
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
+            {
+                partitionKey = partitionKeyObj?.ToString();
+            }
+
+            if (string.IsNullOrEmpty(partitionKey))
+            {
+                throw new InvalidDataException("Partition Key field is mandatory");
+            }
+
+            object? item = queryArgs[MutationBuilder.ITEM_INPUT_ARGUMENT_NAME];
+
+            JObject? input;
+            // Variables were provided to the mutation
+            if (item is Dictionary<string, object?>)
+            {
+                input = (JObject?)ParseVariableInputItem(item);
+            }
+            else
+            {
+                // An inline argument was set
+                input = (JObject?)ParseInlineInputItem(item);
+            }
+
+            if (input is null)
+            {
+                throw new InvalidDataException("Input Item field is invalid");
+            }
+            else
+            {
+                List<PatchOperation> patchOperations = new();
+                GeneratePatchOperations(input, "", patchOperations);
+
+                // Refer https://learn.microsoft.com/en-us/azure/cosmos-db/partial-document-update for more details on patch operations
+                return await container.PatchItemAsync<JObject>(id, new PartitionKey(partitionKey), patchOperations, new PatchItemRequestOptions());
+            }
+        }
+
+        private static void GeneratePatchOperations(JObject jObject, string currentPath, List<PatchOperation> patchOperations)
+        {
+            foreach (JProperty property in jObject.Properties())
+            {
+                string newPath = currentPath + "/" + property.Name;
+                patchOperations.Add(PatchOperation.Set(newPath, property.Value.ToString()));
+
+                if (property.Value.Type != JTokenType.Array && property.Value.Type == JTokenType.Object)
+                {
+                    // Skip generating JPaths for array-type properties
+                    GeneratePatchOperations((JObject)property.Value, newPath, patchOperations);
+                }
             }
         }
 

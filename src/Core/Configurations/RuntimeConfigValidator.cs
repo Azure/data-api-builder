@@ -356,12 +356,14 @@ public class RuntimeConfigValidator : IConfigValidator
                 string createMutationName = $"create{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
                 string updateMutationName = $"update{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
                 string deleteMutationName = $"delete{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
+                string patchMutationName = $"patch{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
 
                 if (!graphQLOperationNames.Add(pkQueryName)
                     || !graphQLOperationNames.Add(listQueryName)
                     || !graphQLOperationNames.Add(createMutationName)
                     || !graphQLOperationNames.Add(updateMutationName)
-                    || !graphQLOperationNames.Add(deleteMutationName))
+                    || !graphQLOperationNames.Add(deleteMutationName)
+                    || !graphQLOperationNames.Add(patchMutationName))
                 {
                     containsDuplicateOperationNames = true;
                 }

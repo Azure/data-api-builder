@@ -44,17 +44,11 @@
 
 
     <ItemGroup>
+        <Watch Remove="dab-config.CosmosDb_NoSql.json" />
         <Watch Remove="dab-config.json" />
         <Watch Remove="dab-config.MsSql.json" />
         <Watch Remove="dab-config.MySql.json" />
         <Watch Remove="dab-config.PostgreSql.json" />
-    </ItemGroup>
-
-
-    <ItemGroup>
-      <Content Include="schema.gql">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Content>
     </ItemGroup>
 
 
@@ -101,12 +95,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Azure.DataApiBuilder.Core.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Update="dab-config.CosmosDb_NoSql.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 </Project>

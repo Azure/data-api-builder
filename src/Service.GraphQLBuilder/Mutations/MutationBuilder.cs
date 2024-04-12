@@ -151,14 +151,40 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         mutationFields.AddRange(createMutationNodes);
                         break;
                     case EntityActionOperation.Update:
-                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));
+                        mutationFields.Add(UpdateMutationBuilder.Build(
+                            name,
+                            inputs,
+                            objectTypeDefinitionNode,
+                            root,
+                            entities,
+                            dbEntityName,
+                            databaseType,
+                            returnEntityName,
+                            rolesAllowedForMutation));
                         break;
                     case EntityActionOperation.Delete:
-                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entities[dbEntityName], dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));
+                        mutationFields.Add(DeleteMutationBuilder.Build(
+                            name,
+                            objectTypeDefinitionNode,
+                            entities[dbEntityName],
+                            dbEntityName,
+                            databaseType,
+                            returnEntityName,
+                            rolesAllowedForMutation));
                         break;
                     case EntityActionOperation.Patch:
-                        mutationFields.Add(PatchMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));
-                        break;
+                        mutationFields.Add(UpdateMutationBuilder.Build(
+                            name,
+                            inputs,
+                            objectTypeDefinitionNode,
+                            root,
+                            entities,
+                            dbEntityName,
+                            databaseType,
+                            returnEntityName,
+                            rolesAllowedForMutation,
+                            operationNamePrefix: "patch"));
+                         break;
                     default:
                         throw new ArgumentOutOfRangeException(paramName: "action", message: "Invalid argument value provided.");
                 }

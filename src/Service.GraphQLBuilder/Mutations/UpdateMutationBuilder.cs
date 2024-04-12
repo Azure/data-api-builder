@@ -197,7 +197,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string dbEntityName,
             DatabaseType databaseType,
             string returnEntityName,
-            IEnumerable<string>? rolesAllowedForMutation = null)
+            IEnumerable<string>? rolesAllowedForMutation = null,
+            string operationNamePrefix = "update")
         {
             InputObjectTypeDefinitionNode input = GenerateUpdateInputType(
                 inputs,
@@ -251,7 +252,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string singularName = GetDefinedSingularName(name.Value, entities[dbEntityName]);
             return new(
                 location: null,
-                new NameNode($"update{singularName}"),
+                new NameNode($"{operationNamePrefix}{singularName}"),
                 new StringValueNode($"Updates a {singularName}"),
                 inputValues,
                 new NamedTypeNode(returnEntityName),

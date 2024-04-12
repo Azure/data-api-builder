@@ -772,6 +772,12 @@
           authors: {
             Cardinality: Many,
             TargetEntity: Author,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              id
+            ],
             LinkingObject: book_author_link,
             LinkingSourceFields: [
               book_id
@@ -2251,6 +2257,12 @@
           authors: {
             Cardinality: Many,
             TargetEntity: AuthorNF,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              id
+            ],
             LinkingObject: book_author_link,
             LinkingSourceFields: [
               book_id

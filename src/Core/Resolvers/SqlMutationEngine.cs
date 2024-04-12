@@ -1230,11 +1230,30 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 string referencingColumnName = fkDefinition.ReferencingColumns[i];
                                 string referencedColumnName = fkDefinition.ReferencedColumns[i];
 
+                                // Relationship field is provided in the input request.
+                                // Ex: createbook(item: { title: "Book title", publlisher_id: 1234 })
+                                // In this example, a new Publisher item is not created rather an existing Publisher item is linked.
+                                // Here, the input request contains the relationship field.
                                 if (multipleCreateStructure.CurrentEntityParams!.ContainsKey(referencingColumnName))
                                 {
                                     continue;
                                 }
 
+                                // Populates the relationship fields of the referenced entities that are the same level.
+                                // Ex: createbook(item: {
+                                //         title: "Book Title",
+                                //         referenced_relationship_1: {
+                                //             ...
+                                //         }
+                                //         referenced_relationship_2: {
+                                //             ...
+                                //         }
+                                //     }){
+                                //       ...
+                                //     }
+                                // In this example, before creating the Book item, referenced_relationship_1 item and referenced_relationship_2 items will be created.
+                                // The referencing fields of those referenced entities will be populated in primaryKeysOfCreatedItem.
+                                // So, a lookup is performed on primaryKeysOfCreatedItem to check if the referencing fields are present. If so they are populated.
                                 if (primaryKeysOfCreatedItem.TryGetValue(relatedEntityName, out Dictionary<string, object?>? relatedEntityPKs)
                                      && relatedEntityPKs is not null
                                      && relatedEntityPKs.TryGetValue(referencedColumnName, out object? relatedEntityPKValue)
@@ -1242,6 +1261,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 {
                                     multipleCreateStructure.CurrentEntityParams.Add(referencingColumnName, relatedEntityPKValue);
                                 }
+
+                                // A current entity could be referencing an entity from a higher level in the mutation request.
+                                // Ex: createbook(item: {
+                                //         title: "Book Title",
+                                //         publisher_id: 1234,
+                                //         reviews: [
+                                //          {
+                                //              content: "Review #1"
+                                //           }
+                                //         ]
+                                //      }){
+                                //          ...
+                                //      }
+                                // In this example, when creating the Review item, the relationship field from Book is necessary. The referencing field
+                                // from Book item will be present in multipleCreateStructure.HigherLevelEntityPKs.
+                                // So, the referencing field is looked up in multipleCreateStructure.HigherLevelEntityPKs and if found, it is populated in multipleCreateStructure.CurrentEntityParams.
                                 else if (multipleCreateStructure.HigherLevelEntityPKs is not null
                                      && multipleCreateStructure.HigherLevelEntityPKs.TryGetValue(referencedColumnName, out object? pkValue)
                                      && pkValue is not null)
@@ -1330,33 +1365,36 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         multipleCreateStructure.LinkingTableParams = new Dictionary<string, object?>();
                     }
 
-                    // Add higher level entity PKs
+                    // Consider the mutation request:
+                    // mutation{
+                    //     createbook(item: {
+                    //         title: "Book Title",
+                    //         publisher_id: 1234,
+                    //         authors: [
+                    //             {...} ,
+                    //             {...}
+                    //         ]
+                    //      }) {
+                    //          ...
+                    //      }
+                    // There exists two relationships for a linking table.
+                    // 1. Relationship between the higher level entity (Book) and the linking table.
+                    // 2. Relationship between the current entity (Author) and the linking table.
+                    // To construct the insert database query for the linking table, relationship fields from both the
+                    // relationships are required. 
+
+                    // Populate Current entity's relationship fields
                     List<ForeignKeyDefinition> foreignKeyDefinitions = relationshipData!.TargetEntityToFkDefinitionMap[multipleCreateStructure.HigherLevelEntityName];
                     ForeignKeyDefinition fkDefinition = foreignKeyDefinitions[0];
+                    PopulateReferencingFieldsForLinkingEntity(multipleCreateStructure, fkDefinition, multipleCreateStructure.CurrentEntityPKs!);
 
-                    int countOfReferencingColumns = fkDefinition.ReferencingColumns.Count;
-                    for (int i = 0; i < countOfReferencingColumns; i++)
-                    {
-                        string referencingColumnName = fkDefinition.ReferencingColumns[i];
-                        string referencedColumnName = fkDefinition.ReferencedColumns[i];
+                    // Populate Higher level entity's relationship fields.
+                    SourceDefinition higherLevelEntitySourceDefinition = sqlMetadataProvider.GetSourceDefinition(multipleCreateStructure.HigherLevelEntityName);
+                    RelationshipMetadata higherLevelEntityRelationshipMetadata = higherLevelEntitySourceDefinition.SourceEntityRelationshipMap[multipleCreateStructure.HigherLevelEntityName];
 
-                        multipleCreateStructure.LinkingTableParams.Add(referencingColumnName, multipleCreateStructure.CurrentEntityPKs![referencedColumnName]);
-                    }
-
-                    // Add current entity PKs
-                    SourceDefinition higherLevelEntityRelationshipMetadata = sqlMetadataProvider.GetSourceDefinition(multipleCreateStructure.HigherLevelEntityName);
-                    RelationshipMetadata relationshipMetadata2 = higherLevelEntityRelationshipMetadata.SourceEntityRelationshipMap[multipleCreateStructure.HigherLevelEntityName];
-
-                    foreignKeyDefinitions = relationshipMetadata2.TargetEntityToFkDefinitionMap[entityName];
+                    foreignKeyDefinitions = higherLevelEntityRelationshipMetadata.TargetEntityToFkDefinitionMap[entityName];
                     fkDefinition = foreignKeyDefinitions[0];
-
-                    countOfReferencingColumns = fkDefinition.ReferencingColumns.Count;
-                    for (int i = 0; i < countOfReferencingColumns; i++)
-                    {
-                        string referencingColumnName = fkDefinition.ReferencingColumns[i];
-                        string referencedColumnName = fkDefinition.ReferencedColumns[i];
-                        multipleCreateStructure.LinkingTableParams.Add(referencingColumnName, multipleCreateStructure.HigherLevelEntityPKs![referencedColumnName]);
-                    }
+                    PopulateReferencingFieldsForLinkingEntity(multipleCreateStructure, fkDefinition, multipleCreateStructure.HigherLevelEntityPKs!);
 
                     SqlInsertStructure linkingEntitySqlInsertStructure = new(GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName),
                                                                             sqlMetadataProvider,
@@ -1366,7 +1404,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                                             GetHttpContext(),
                                                                             isLinkingEntity: true);
 
-                    string linkingTableQueryString = queryBuilder.Build(linkingEntitySqlInsertStructure);
+                    string linkingTableInsertQueryString = queryBuilder.Build(linkingEntitySqlInsertStructure);
                     SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName));
 
                     List<string> linkingTablePkColumns = new();
@@ -1380,7 +1418,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     Dictionary<string, DbConnectionParam> linkingTableQueryParams = linkingEntitySqlInsertStructure.Parameters;
                     dbResultSetForLinkingEntity = queryExecutor.ExecuteQuery(
-                                                                  linkingTableQueryString,
+                                                                  linkingTableInsertQueryString,
                                                                   linkingTableQueryParams,
                                                                   queryExecutor.ExtractResultSetFromDbDataReader,
                                                                   GetHttpContext(),
@@ -1389,19 +1427,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     dbResultSetRowForLinkingEntity = dbResultSetForLinkingEntity is not null ? (dbResultSetForLinkingEntity.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
 
-                    if (dbResultSetRowForLinkingEntity is not null && dbResultSetRowForLinkingEntity.Columns.Count == 0)
+                    if (dbResultSetRowForLinkingEntity is null || (dbResultSetRowForLinkingEntity is not null && dbResultSetRowForLinkingEntity.Columns.Count == 0))
                     {
                         // For GraphQL, insert operation corresponds to Create action.
                         throw new DataApiBuilderException(
                             message: "Could not insert row with given values.",
-                            statusCode: HttpStatusCode.Forbidden,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
-                    }
-
-                    if (dbResultSetRowForLinkingEntity is null)
-                    {
-                        throw new DataApiBuilderException(
-                            message: "No data returned back from database.",
                             statusCode: HttpStatusCode.InternalServerError,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                     }
@@ -1415,6 +1445,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencingEntity.Item1);
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingEntityMultipleCreateStructure, primaryKeysOfCreatedItem);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Helper method to populate the linking table referencing fields.
+        /// </summary>
+        /// <param name="fkDefinition">Foreign Key metadata constructed during engine start-up</param>
+        /// <param name="multipleCreateStructure">Wrapper object assisting with the multiple create operation.</param>
+        /// <param name="computedRelationshipFields">Relationship fields obtained as a result of creation of current or higher level entity item.</param>
+        private static void PopulateReferencingFieldsForLinkingEntity(MultipleCreateStructure multipleCreateStructure, ForeignKeyDefinition fkDefinition, Dictionary<string, object?>? computedRelationshipFields)
+        {
+            if (computedRelationshipFields is null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < fkDefinition.ReferencingColumns.Count; i++)
+            {
+                string referencingColumnName = fkDefinition.ReferencingColumns[i];
+                string referencedColumnName = fkDefinition.ReferencedColumns[i];
+                multipleCreateStructure.LinkingTableParams!.Add(referencingColumnName, computedRelationshipFields[referencedColumnName]);
             }
         }
 

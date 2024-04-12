@@ -1073,14 +1073,16 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// This helper funtion returns a list of fields that do not exist in the backing DB
-    /// associated with the provided entity.
+    /// This helper function checks if the elements of fields exist as valid backing columns
+    /// in the DB associated with the provided entity name. Those fields that do not exist
+    /// as valid backing columns are added to the provided list of string invalidColumns. This
+    /// works because C# is pass by reference for referenced class types.
     /// </summary>
     /// <param name="invalidColumns">List in which to aggregate the invalid fields.</param>
     /// <param name="fields">List of the fields to check for existence in backing DB.</param>
     /// <param name="entityName">The name of the entity that we check for backing columns.</param>
     /// <param name="sqlMetadataProvider">The sqlMetadataProvider used to lookup if the fields are valid columns in DB.</param>
-    private static List<string> GetFieldsNotBackedByColumnsInDB(
+    private static void GetFieldsNotBackedByColumnsInDB(
         List<string> invalidColumns,
         string[] fields,
         string entityName,
@@ -1094,9 +1096,6 @@ public class RuntimeConfigValidator : IConfigValidator
                 invalidColumns.Add(field);
             }
         }
-
-        return invalidColumns;
-
     }
 
     /// <summary>

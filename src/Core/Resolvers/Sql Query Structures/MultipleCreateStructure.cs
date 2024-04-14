@@ -47,12 +47,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         public string EntityName;
 
         /// <summary>
-        /// PK of the record created in the table backing the immediate higher level entity.
-        /// This gets utilized by entities referencing the current entity.
-        /// </summary>
-        public Dictionary<string, object?>? HigherLevelEntityPKs;
-
-        /// <summary>
         /// Name of the immediate higher level entity.
         /// </summary>
         public string HigherLevelEntityName;
@@ -65,14 +59,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         public MultipleCreateStructure(
                string entityName,
                string higherLevelEntityName,
-               Dictionary<string, object?>? higherLevelEntityPKs,
                object? inputMutParams = null,
                bool isLinkingTableInsertionRequired = false)
         {
             EntityName = entityName;
             InputMutParams = inputMutParams;
             HigherLevelEntityName = higherLevelEntityName;
-            HigherLevelEntityPKs = higherLevelEntityPKs;
 
             ReferencedRelationships = new();
             ReferencingRelationships = new();

@@ -1133,8 +1133,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">Mutation parameter arguments</param>
         /// <param name="sqlMetadataProvider">SqlMetadataprovider for the given database type.</param>
         /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
-        /// <param name="primaryKeysOfCreatedItem">Dictionary containing the PKs of the created items.</param>
-
         private void PerformDbInsertOperation(
             IMiddlewareContext context,
             object? parameters,
@@ -1378,6 +1376,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
+        /// <summary>
+        /// Helper method to extract the primary key fields from all the fields of the entity.
+        /// </summary>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="entityFields">All the fields belonging to the entity</param>
+        /// <returns>Primary Key fields</returns>
         private static Dictionary<string, object?> FetchPrimaryKeyFields(ISqlMetadataProvider sqlMetadataProvider, string entityName, Dictionary<string, object?> entityFields)
         {
             Dictionary<string, object?> pkFields = new();
@@ -1400,12 +1405,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Helper method to populate the linking table referencing fields.
         /// </summary>
-        /// <param name="sqlMetadataProvider"></param>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
         /// <param name="fkDefinition">Foreign Key metadata constructed during engine start-up</param>
         /// <param name="multipleCreateStructure">Wrapper object assisting with the multiple create operation.</param>
         /// <param name="computedRelationshipFields">Relationship fields obtained as a result of creation of current or higher level entity item.</param>
-        /// <param name="isLinkingTable"></param>
-        /// <param name="entityName"></param>
+        /// <param name="isLinkingTable">Indicates whether referencing fields are populated for a linking entity.</param>
+        /// <param name="entityName">Name of the entity.</param>
         private static void PopulateReferencingFields(ISqlMetadataProvider sqlMetadataProvider, MultipleCreateStructure multipleCreateStructure, ForeignKeyDefinition fkDefinition, Dictionary<string, object?>? computedRelationshipFields, bool isLinkingTable, string? entityName = null)
         {
             if (computedRelationshipFields is null)

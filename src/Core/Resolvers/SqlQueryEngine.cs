@@ -92,6 +92,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Executes the given IMiddlewareContext of the GraphQL query and
+        /// expecting a single Json and its related pagination metadata back.
+        /// This method is used for the selection set resolution of multiple create mutation operation.
+        /// </summary>
+        /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
+        /// <param name="parameters">PKs of the created items</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if empty</param>
         public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, List<IDictionary<string, object?>> parameters, string dataSourceName)
         {
 

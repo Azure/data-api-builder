@@ -327,6 +327,66 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         #region Relationships defined through config file
 
         /// <summary>
+        /// <code>Do: </code> Point create mutation with entities related through a 1:1 relationship. Relationship is defined through the config file.
+        /// <code>Check: </code> createUser_NonAutogenRelationshipColumn and UserProfile_NonAutogenRelationshipColumn items are successfully created in the database. UserProfile_NonAutogenRelationshipColumn item is created and linked in the database.
+        /// </summary>
+        public async Task MultipleCreateMutationWithOneToOneRelationshipDefinedInConfigFile(string expectedResponse1, string expectedResponse2)
+        {
+            // Point create mutation request with the related entity acting as referencing entity.
+            string graphQLMutationName = "createUser_NonAutogenRelationshipColumn";
+            string graphQLMutation1 = @"mutation {
+                  createUser_NonAutogenRelationshipColumn(
+                    item: {
+                      username: ""DAB""
+                      email: ""dab@microsoft.com""
+                      UserProfile_NonAutogenRelationshipColumn: {
+                        profilepictureurl: ""dab/profilepicture""
+                        userid: 10
+                      }
+                    }
+                  ) {
+                    userid
+                    username
+                    email
+                    UserProfile_NonAutogenRelationshipColumn {
+                      profileid
+                      userid
+                      username
+                      profilepictureurl
+                    }
+                  }
+                }";
+
+            JsonElement actualResponse1 = await ExecuteGraphQLRequestAsync(graphQLMutation1, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse1, actualResponse1.ToString());
+
+            // Point create mutation request with the top level entity acting as referencing entity.
+            string graphQLMutation2 = @"mutation{
+                                              createUser_NonAutogenRelationshipColumn(item: {
+                                                email: ""dab@microsoft.com"",
+                                                UserProfile_NonAutogenRelationshipColumn: {
+                                                  profilepictureurl: ""dab/profilepicture"",
+                                                  userid: 10,
+                                                  username: ""DAB2""
+                                                }
+                                              }){
+                                                 userid
+                                                 username
+                                                 email
+                                                 UserProfile_NonAutogenRelationshipColumn{
+                                                  profileid
+                                                  username
+                                                  userid
+                                                  profilepictureurl
+                                                 }
+                                              }
+                                            }";
+
+            JsonElement actualResponse2 = await ExecuteGraphQLRequestAsync(graphQLMutation2, graphQLMutationName, isAuthenticated: true);
+            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse2, actualResponse2.ToString());
+        }
+
+        /// <summary>
         /// <code>Do: </code> Point create mutation with entities related through a N:1 relationship. Relationship is defined through the config file.
         /// <code>Check: </code> Publisher_MM item is successfully created in the database. Book_MM item is created with the publisher_id pointing to the newly created publisher_mm item.
         /// </summary>

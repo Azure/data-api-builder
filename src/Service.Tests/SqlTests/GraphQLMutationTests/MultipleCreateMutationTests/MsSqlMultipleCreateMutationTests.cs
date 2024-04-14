@@ -516,6 +516,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         }
 
         [TestMethod]
+        public async Task MultipleCreateMutationWithOneToOneRelationshipDefinedInConfigFile()
+        {
+            string expectedResponse1 = @"{
+                                          ""userid"": 3,
+                                          ""username"": ""DAB"",
+                                          ""email"": ""dab@microsoft.com"",
+                                          ""UserProfile_NonAutogenRelationshipColumn"": {
+                                            ""profileid"": 3,
+                                            ""userid"": 10,
+                                            ""username"": ""DAB"",
+                                            ""profilepictureurl"": ""dab/profilepicture""
+                                          }
+                                        }";
+
+            string expectedResponse2 = @"{
+                                          ""userid"": 4,
+                                          ""username"": ""DAB2"",
+                                          ""email"": ""dab@microsoft.com"",
+                                          ""UserProfile_NonAutogenRelationshipColumn"": {
+                                            ""profileid"": 4,
+                                            ""userid"": 10,
+                                            ""username"": ""DAB2"",
+                                            ""profilepictureurl"": ""dab/profilepicture""
+                                          }
+                                        }";
+
+            await MultipleCreateMutationWithOneToOneRelationshipDefinedInConfigFile(expectedResponse1, expectedResponse2);
+        }
+
+        [TestMethod]
         public async Task MultipleCreateMutationWithManyToOneRelationshipDefinedInConfigFile()
         {
             string expectedResponse = @"{

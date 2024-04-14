@@ -1337,7 +1337,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         // For GraphQL, insert operation corresponds to Create action.
                         throw new DataApiBuilderException(
-                            message: "Could not insert row with given values.",
+                            message: $"Could not insert row with given values in the linking table",
                             statusCode: HttpStatusCode.InternalServerError,
                             subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                     }

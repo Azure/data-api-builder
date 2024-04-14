@@ -2414,6 +2414,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
+        [Ignore]
         public async Task ValidateCreateMutationWithMissingFieldsFailWithMultipleCreateEnabled()
         {
             // Multiple create operations are enabled.

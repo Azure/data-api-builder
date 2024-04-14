@@ -785,7 +785,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
                 stars = new[] { new { id = "TestStar" } }
             };
 
-            JsonElement response = await ExecuteGraphQLRequestAsync("updatePlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
 
             // Validate results
             Assert.AreEqual(newName, response.GetProperty("name").GetString());

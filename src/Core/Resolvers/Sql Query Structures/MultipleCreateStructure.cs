@@ -29,12 +29,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         /// <summary>
         /// Fields belonging to the current entity.
         /// </summary>
-        public IDictionary<string, object?>? CurrentEntityParams;
+        public IDictionary<string, object?> CurrentEntityParams;
 
         /// <summary>
         /// Fields belonging to the linking table.
         /// </summary>
-        public IDictionary<string, object?>? LinkingTableParams;
+        public IDictionary<string, object?> LinkingTableParams;
 
         /// <summary>
         /// PK of the record created in the table backing the current entity. 
@@ -76,6 +76,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
 
             ReferencedRelationships = new();
             ReferencingRelationships = new();
+            CurrentEntityParams = new Dictionary<string, object?>();
+            LinkingTableParams = new Dictionary<string, object?>();
 
             IsLinkingTableInsertionRequired = isLinkingTableInsertionRequired;
             if (IsLinkingTableInsertionRequired)

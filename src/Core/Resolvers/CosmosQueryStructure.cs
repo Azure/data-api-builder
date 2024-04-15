@@ -147,8 +147,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
-                MaxItemCount = runtimeConfig?.GetPaginationLimit((int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME]!);
+                object? firstArgument = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+
+                if (firstArgument is not null)
+                {
+                    RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+                    MaxItemCount = runtimeConfig?.GetPaginationLimit((int)firstArgument);
+                }
 
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }

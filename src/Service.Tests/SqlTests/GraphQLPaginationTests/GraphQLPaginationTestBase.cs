@@ -975,7 +975,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         }
 
         /// <summary>
-        /// Request an invalid number of entries for a pagination page
+        /// Request an invalid number of entries for a pagination page.
+        /// Default max page size of config is 100000. Requesting 100001 entries, should lead to an error.
         /// </summary>
         [TestMethod]
         public async Task RequestInvalidMaxSize()

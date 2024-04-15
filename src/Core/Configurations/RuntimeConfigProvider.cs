@@ -296,7 +296,7 @@ public class RuntimeConfigProvider
             if (first < -1 || first == 0 || first > maxPageSize)
             {
                 throw new DataApiBuilderException(
-                message: $"Invalid number of items requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be either -1 or a positive number within the max page size limit of {maxPageSize}. Actual value: {first}",
+                message: $"Invalid number of items requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be either -1 or a positive integer within the max page size limit of {maxPageSize}. Actual value: {first}",
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }

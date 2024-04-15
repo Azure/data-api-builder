@@ -109,5 +109,4 @@ public record PaginationOptions
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
     }
-
 }

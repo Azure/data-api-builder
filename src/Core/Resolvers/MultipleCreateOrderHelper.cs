@@ -22,17 +22,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Given a source and target entity with their metadata and request input data,
         /// returns the referencing entity's name for the pair of (source, target) entities.
+        ///
+        /// When visualized as a graphQL mutation request, 
+        ///   Source entity refers to the top level entity
+        ///   Target entity refers to the related entity.
+        ///   
         /// This method handles the logic to determine the referencing entity for relationships from (source, target) with cardinalities:
         /// 1. 1:N - Target entity is the referencing entity
         /// 2. N:1 - Source entity is the referencing entity
         /// 3. 1:1 - Determined based on foreign key constraint/request input data.
         /// </summary>
         /// <param name="context">GraphQL request context.</param>
+        /// <param name="relationshipName">Configured relationship name in the config file b/w source and target entity.</param>
         /// <param name="sourceEntityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>
         /// <param name="metadataProvider">Metadata provider.</param>
         /// <param name="columnDataInSourceBody">Column name/value for backing columns present in the request input for the source entity.</param>
         /// <param name="targetNodeValue">Input GraphQL value for target node (could be an object or array).</param>
+        /// <param name="nestingLevel">Nesting level of the entity in the mutation request.</param>
         public static string GetReferencingEntityName(
             IMiddlewareContext context,
             string relationshipName,
@@ -50,7 +57,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw new DataApiBuilderException(
                     message: $"Could not determine definition for source: {sourceEntityName} and target: {targetEntityName} entities for " +
                     $"relationship: {relationshipName} at level: {nestingLevel}",
-                    statusCode: HttpStatusCode.NotFound,
+                    statusCode: HttpStatusCode.InternalServerError,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
@@ -87,7 +94,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to determine the referencing entity from a pair of (source, target) entities based on the metadata collected during startup.
+        /// Helper method to determine the referencing entity from a pair of (source, target) entities based on the foreign key metadata collected during startup.
         /// The method successfully determines the referencing entity if the relationship between the (source, target) entities is defined in the database
         /// via a Foreign Key constraint.
         /// </summary>
@@ -95,7 +102,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="targetEntityName">Target entity name.</param>
         /// <param name="sourceDbObject">Database object for source entity.</param>
         /// <param name="referencingEntityName">Stores the determined referencing entity name to be returned to the caller.</param>
-        /// <returns>True when the referencing entity name can be determined based on the foreign key constraint defined in the database),
+        /// <returns>True when the referencing entity name can be determined based on the foreign key constraint defined in the database;
         /// else false.</returns>
         private static bool TryDetermineReferencingEntityBasedOnEntityRelationshipMetadata(
             string sourceEntityName,
@@ -105,6 +112,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
             SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+
             List<ForeignKeyDefinition> targetEntityForeignKeys = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
             HashSet<string> referencingEntityNames = new();
 
@@ -139,14 +147,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Helper method to determine the referencing entity from a pair of (source, target) entities for which the relationship is defined in the config,
-        /// but no relationship exists in the database. In such a case, we rely on the request input data for the source and target entities to determine the referencing entity.
+        /// but no FK constraint exists in the database. In such a case, we rely on the request input data for the source and target entities to determine the referencing entity.
         /// </summary>
+        /// <param name="relationshipName">Configured relationship name in the config file b/w source and target entity.</param>
         /// <param name="sourceEntityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>
         /// <param name="sourceDbObject">Database object for source entity.</param>
         /// <param name="targetDbObject">Database object for target entity.</param>
         /// <param name="columnDataInSourceBody">Column name/value for backing columns present in the request input for the source entity.</param>
         /// <param name="columnDataInTargetBody">Column name/value for backing columns present in the request input for the target entity.</param>
+        /// <param name="nestingLevel">Nesting level of the entity in the mutation request.</param>
         /// <returns>Name of the referencing entity.</returns>
         /// <exception cref="DataApiBuilderException">Thrown when:
         /// 1. Either the provided input data for source/target entities is insufficient.

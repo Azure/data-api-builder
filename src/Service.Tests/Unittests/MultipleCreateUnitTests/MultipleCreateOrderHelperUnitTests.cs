@@ -77,6 +77,21 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         public void ValidateDeterministicReferencingEntityForNonAutogenRelationshipColumns()
         {
             // Test 1: The value for relationship field 'username' is present in the input for the source entity.
+            //
+            // The complete graphQL mutation looks as follows:
+            //  mutation{
+            //          createUser_NonAutogenRelationshipColumn(item: {
+            //            username: "DAB",
+            //            email: "dab@microsoft.com",
+            //            UserProfile_NonAutogenRelationshipColumn: {
+            //              profilepictureurl: "dab/profilepicture",
+            //              userid: 10
+            //            }
+            //          }){
+            //            <selection_set>   
+            //          }
+            //      }
+
             IMiddlewareContext context = SetupMiddlewareContext();
             string sourceEntityName = "User_NonAutogenRelationshipColumn";
             string targetEntityName = "UserProfile";
@@ -99,6 +114,9 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             // Get the referencing entity name. Since the source entity contained the value for relationship field,
             // it act as the referenced entity, and the target entity act as the referencing entity.
+            // To provide users with a more helpful message in case of an exception, in addition to other relevant info,
+            // the nesting level is also returned to quicky identify the level in the input request where error has occurred.
+            // Since, in this test, there is only one level of nesting, the nestingLevel param is set to 1.
             string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(
                 relationshipName: "UserProfile_NonAutogenRelationshipColumn",
                 context: context,
@@ -112,6 +130,20 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             // Test 2: The value for relationship field 'username' is present in the input for the target entity.
             // Setup column input in source entity.
+            //
+            // The complete graphQL mutation looks as follows:
+            //  mutation{
+            //          createUser_NonAutogenRelationshipColumn(item: {
+            //            email: "dab@microsoft.com",
+            //            UserProfile_NonAutogenRelationshipColumn: {
+            //              profilepictureurl: "dab/profilepicture",
+            //              userid: 10,
+            //              username: "DAB"
+            //            }
+            //          }){
+            //            <selection_set>   
+            //          }
+            //      }
             columnDataInSourceBody = new()
             {
                 { "email", new StringValueNode("dab@microsoft.com") }

@@ -19,7 +19,7 @@ public enum EntityActionOperation
     Delete, Read,
 
     // cosmosdb_nosql operations
-    Upsert, Create,
+    Upsert, Create, Patch,
 
     // Sql operations
     Insert, Update, UpdateGraphQL,
@@ -28,7 +28,5 @@ public enum EntityActionOperation
     UpsertIncremental, UpdateIncremental,
 
     // Only valid operation for stored procedures
-    Execute,
-
-    Patch
+    Execute
 }

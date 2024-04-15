@@ -803,7 +803,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// Creates new key value map of
     /// Key: operationType
     /// Value: Collection of role names.
-    /// There are only five possible operations
+    /// There are only six possible operations
     /// </summary>
     /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
     private static Dictionary<EntityActionOperation, List<string>> CreateOperationToRoleMap(EntitySourceType? sourceType)

@@ -318,6 +318,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// create mutation name: createBook
     /// update mutation name: updateBook
     /// delete mutation name: deleteBook
+    /// patch mutation name: patchBook
     /// </summary>
     /// <param name="entityCollection">Entity definitions</param>
     /// <exception cref="DataApiBuilderException"></exception>
@@ -345,7 +346,7 @@ public class RuntimeConfigValidator : IConfigValidator
             }
             else
             {
-                // For entities (table/view) that have graphQL exposed, two queries and three mutations would be generated.
+                // For entities (table/view) that have graphQL exposed, two queries and four mutations would be generated.
                 // Primary Key Query: For fetching an item using its primary key.
                 // List Query: To fetch a paginated list of items.
                 // Query names for both these queries are determined.

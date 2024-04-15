@@ -481,4 +481,35 @@ public record RuntimeConfig
     {
         return Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
     }
+
+    /// <summary>
+    /// Get the pagination limit from the runtime configuration.
+    /// </summary>
+    /// <param name="first">The pagination input from the user. Example: $first=10</param>
+    /// <returns></returns>
+    /// <exception cref="DataApiBuilderException"></exception>
+    public uint GetPaginationLimit(int? first)
+    {
+        uint defaultPageSize = this.DefaultPageSize();
+        uint maxPageSize = this.MaxPageSize();
+
+        if (first is not null)
+        {
+            if (first < -1 || first == 0 || first > maxPageSize)
+            {
+                throw new DataApiBuilderException(
+                message: $"Invalid number of items requested, {nameof(first)} argument must be either -1 or a positive number within the max page size limit of {maxPageSize}. Actual value: {first}",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+            else
+            {
+                return (first == -1 ? maxPageSize : (uint)first);
+            }
+        }
+        else
+        {
+            return defaultPageSize;
+        }
+    }
 }

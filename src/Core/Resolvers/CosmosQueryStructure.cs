@@ -4,6 +4,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
@@ -146,7 +147,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                MaxItemCount = RuntimeConfigProvider.GetPaginationLimit((int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME]!);
+                RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+                MaxItemCount = runtimeConfig?.GetPaginationLimit((int)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME]!);
 
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
             }

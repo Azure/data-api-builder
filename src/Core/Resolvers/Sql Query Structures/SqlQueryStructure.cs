@@ -192,7 +192,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             AddColumnsForEndCursor();
-            _limit = runtimeConfigProvider.GetPaginationLimit((int?)context.First) + 1;
+            runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+            _limit = runtimeConfig?.GetPaginationLimit((int?)context.First) + 1;
 
             ParametrizeColumns();
         }
@@ -336,7 +337,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (firstObject != null)
                 {
-                    _limit = runtimeConfigProvider.GetPaginationLimit((int)firstObject);
+                    runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+                    _limit = runtimeConfig?.GetPaginationLimit((int)firstObject);
                 }
             }
 

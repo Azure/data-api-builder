@@ -9,7 +9,6 @@ using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -277,38 +276,6 @@ public class RuntimeConfigProvider
         }
 
         return false;
-    }
-
-    /// <summary>
-    /// Get the pagination limit from the runtime configuration.
-    /// </summary>
-    /// <param name="first">The pagination input from the user. Example: $first=10</param>
-    /// <returns></returns>
-    /// <exception cref="DataApiBuilderException"></exception>
-    public uint GetPaginationLimit(int? first)
-    {
-        this.TryGetConfig(out RuntimeConfig? runtimeConfig);
-        uint defaultPageSize = runtimeConfig!.DefaultPageSize();
-        uint maxPageSize = runtimeConfig.MaxPageSize();
-
-        if (first is not null)
-        {
-            if (first < -1 || first == 0 || first > maxPageSize)
-            {
-                throw new DataApiBuilderException(
-                message: $"Invalid number of items requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be either -1 or a positive number within the max page size limit of {maxPageSize}. Actual value: {first}",
-                statusCode: HttpStatusCode.BadRequest,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-            }
-            else
-            {
-                return (first == -1 ? maxPageSize : (uint)first);
-            }
-        }
-        else
-        {
-            return defaultPageSize;
-        }
     }
 
     private async Task<bool> InvokeConfigLoadedHandlersAsync()

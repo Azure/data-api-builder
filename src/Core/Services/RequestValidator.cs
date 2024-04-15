@@ -542,13 +542,13 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Helper method checks the $first query param
-        /// to be sure that it can parse to a uint > 0
+        /// to be sure that it can parse to a int > 0 or -1.
         /// </summary>
         /// <param name="first">String representing value associated with $first</param>
-        /// <returns>uint > 0 representing $first</returns>
+        /// <returns>int > 0 or int == -1 representing $first</returns>
         public static int CheckFirstValidity(string first)
         {
-            if (!int.TryParse(first, out int firstAsInt) || firstAsInt == 0)
+            if (!int.TryParse(first, out int firstAsInt) || firstAsInt == 0 || firstAsInt < -1)
             {
                 throw new DataApiBuilderException(
                         message: $"Invalid number of items requested, $first must be -1 or an integer greater than 0. Actual value: {first}",

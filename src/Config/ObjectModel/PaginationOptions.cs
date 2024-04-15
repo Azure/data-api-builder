@@ -29,13 +29,13 @@ public record PaginationOptions
     /// The default page size for pagination.
     /// </summary>
     [JsonPropertyName("default-page-size")]
-    public uint? DefaultPageSize { get; init; } = null;
+    public int? DefaultPageSize { get; init; } = null;
 
     /// <summary>
     /// The max page size for pagination.
     /// </summary>
     [JsonPropertyName("max-page-size")]
-    public uint? MaxPageSize { get; init; } = null;
+    public int? MaxPageSize { get; init; } = null;
 
     [JsonConstructor]
     public PaginationOptions(int? DefaultPageSize = null, int? MaxPageSize = null)
@@ -43,23 +43,23 @@ public record PaginationOptions
         if (MaxPageSize is not null)
         {
             ValidatePageSize((int)MaxPageSize);
-            this.MaxPageSize = MaxPageSize == -1 ? Int32.MaxValue : (uint)MaxPageSize;
+            this.MaxPageSize = MaxPageSize == -1 ? Int32.MaxValue : (int)MaxPageSize;
             UserProvidedMaxPageSize = true;
         }
         else
         {
-            this.MaxPageSize = MAX_PAGE_SIZE;
+            this.MaxPageSize = (int)MAX_PAGE_SIZE;
         }
 
         if (DefaultPageSize is not null)
         {
             ValidatePageSize((int)DefaultPageSize);
-            this.DefaultPageSize = DefaultPageSize == -1 ? (uint)this.MaxPageSize : (uint)DefaultPageSize;
+            this.DefaultPageSize = DefaultPageSize == -1 ? (int)this.MaxPageSize : (int)DefaultPageSize;
             UserProvidedDefaultPageSize = true;
         }
         else
         {
-            this.DefaultPageSize = DEFAULT_PAGE_SIZE;
+            this.DefaultPageSize = (int)DEFAULT_PAGE_SIZE;
         }
 
         if (this.DefaultPageSize > this.MaxPageSize)

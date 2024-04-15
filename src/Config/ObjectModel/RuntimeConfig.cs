@@ -474,12 +474,12 @@ public record RuntimeConfig
 
     public uint DefaultPageSize()
     {
-        return Runtime?.Pagination?.DefaultPageSize ?? PaginationOptions.DEFAULT_PAGE_SIZE;
+        return (uint?)Runtime?.Pagination?.DefaultPageSize ?? PaginationOptions.DEFAULT_PAGE_SIZE;
     }
 
     public uint MaxPageSize()
     {
-        return Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
+        return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
     }
 
     /// <summary>

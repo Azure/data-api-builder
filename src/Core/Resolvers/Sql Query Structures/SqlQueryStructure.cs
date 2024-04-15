@@ -330,15 +330,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IsListQuery = outputType.IsListType();
             }
 
-            if (IsListQuery && queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
+            if (IsListQuery)
             {
-                // parse first parameter for all list queries
-                object? firstObject = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
-
-                if (firstObject != null)
+                runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+                if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
                 {
-                    runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
-                    _limit = runtimeConfig?.GetPaginationLimit((int)firstObject);
+                    // parse first parameter for all list queries
+                    object? firstObject = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                    _limit = runtimeConfig?.GetPaginationLimit((int?)firstObject);
+                }
+                else
+                {
+                    // if first is not passed, we should use the default page size.
+                    _limit = runtimeConfig?.DefaultPageSize();
                 }
             }
 

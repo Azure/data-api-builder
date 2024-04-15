@@ -69,6 +69,9 @@
             },
             {
               "action": "delete"
+            },
+            {
+              "action": "patch"
             }
           ]
         },

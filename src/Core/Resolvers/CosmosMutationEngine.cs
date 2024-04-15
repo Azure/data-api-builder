@@ -113,11 +113,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             bool isAuthorized = mutationOperation switch
             {
                 EntityActionOperation.UpdateGraphQL =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: EntityActionOperation.Update, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName,
+                        roleName: clientRole,
+                        operation: EntityActionOperation.Update,
+                        columns: inputArgumentKeys),
                 EntityActionOperation.Patch =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: EntityActionOperation.Patch, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName,
+                        roleName: clientRole,
+                        operation: EntityActionOperation.Patch,
+                        columns: inputArgumentKeys),
                 EntityActionOperation.Create =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: mutationOperation, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName,
+                        roleName: clientRole,
+                        operation: mutationOperation,
+                        columns: inputArgumentKeys),
                 EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
                                                      // to perform the delete operation on the entity to reach this point.
                _ => throw new DataApiBuilderException(

@@ -2364,6 +2364,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Test to validate pagination options.
+        /// NOTE: Changing the default values of default page size and max page size would be a breaking change.
         /// </summary>
         /// <param name="exceptionExpected">Should there be an exception.</param>
         /// <param name="defaultPageSize">default page size to go into config.</param>
@@ -2377,9 +2378,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow(false, 1000, 10000, "", 1000, 10000,
             DisplayName = "Valid inputs of MaxPageSize and DefaultPageSize must be accepted and set in the config.")]
         [DataRow(false, -1, 10000, "", 10000, 10000,
-            DisplayName = "DefaultPageSize should be the same as MaxPageSize when input is -1")]
+            DisplayName = "DefaultPageSize should be the same as MaxPageSize when DefaultPageSize is -1 in config.")]
         [DataRow(false, 100, -1, "", 100, Int32.MaxValue,
-            DisplayName = "MaxPageSize should be UInt32.MaxValue when input is -1")]
+            DisplayName = "MaxPageSize should be assigned UInt32.MaxValue when MaxPageSize is -1 in config.")]
         [DataRow(true, 100, -3, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
             DisplayName = "MaxPageSize cannot be negative")]
         [DataRow(true, -3, 100, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",

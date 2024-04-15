@@ -65,14 +65,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName = metadataProvider.GetEntityName(graphQLType);
             AuthorizeMutation(context, queryArgs, entityName, resolver.OperationType);
 
-            ItemResponse<JObject>? response = resolver.OperationType switch
+            JObject result;
+            if (resolver.OperationType == EntityActionOperation.Patch)
             {
-                EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
-                EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
-                EntityActionOperation.Patch => await HandlePatchAsync(queryArgs, container),
-                _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
-            };
+                result = await HandlePatchAsync(queryArgs, container);
+            }
+            else
+            {
+                ItemResponse<JObject>? response = resolver.OperationType switch
+                {
+                    EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                    EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
+                    EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
+                    _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
+                };
+
+                result = response.Resource;
+            }
 
             string roleName = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
 
@@ -89,7 +98,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }
 
-            return response.Resource;
+            return result;
         }
 
         /// <inheritdoc/>
@@ -246,7 +255,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
         }
 
-        private static async Task<ItemResponse<JObject>> HandlePatchAsync(IDictionary<string, object?> queryArgs, Container container)
+        /// <summary>
+        /// Refer https://learn.microsoft.com/en-us/azure/cosmos-db/partial-document-update for more details on patch operations
+        /// </summary>
+        /// <param name="queryArgs"></param>
+        /// <param name="container"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidDataException"></exception>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private static async Task<JObject> HandlePatchAsync(IDictionary<string, object?> queryArgs, Container container)
         {
             string? partitionKey = null;
             string? id = null;
@@ -294,31 +311,34 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<PatchOperation> patchOperations = new();
             GeneratePatchOperations(input, "", patchOperations);
 
-            ItemResponse<JObject>? updatedItemToReturn = null;
+            int patchOperationsLimit = 10;
+            if (patchOperations.Count <= 10)
+            {
+                return (await container.PatchItemAsync<JObject>(id, new PartitionKey(partitionKey), patchOperations)).Resource;
+            }
 
             // maximum 10 patch operations can be applied in a single patch request,
             // Hence dividing into multiple patch request, if it is requested for more than 10 item at a time.
-            int patchOperationsLimit = 10;
-            for (int i = 0; i < patchOperations.Count; i += patchOperationsLimit)
+            TransactionalBatch batch = container.CreateTransactionalBatch(new PartitionKey(partitionKey));
+            int numberOfBatches = -1;
+            for (int counter = 0; counter < patchOperations.Count; counter += patchOperationsLimit)
             {
                 // Get next 10 patch operations from the list
-                List<PatchOperation> chunk = patchOperations.GetRange(i, Math.Min(10, patchOperations.Count - i));
-
-                // Refer https://learn.microsoft.com/en-us/azure/cosmos-db/partial-document-update for more details on patch operations
-                updatedItemToReturn = await container.PatchItemAsync<JObject>(id,
-                    new PartitionKey(partitionKey),
-                    chunk);
+                List<PatchOperation> chunk = patchOperations.GetRange(counter, Math.Min(10, patchOperations.Count - counter));
+                batch = batch.PatchItem(id, chunk);
+                numberOfBatches++;
             }
 
-            if (updatedItemToReturn is null)
+            TransactionalBatchResponse response = await batch.ExecuteAsync();
+            if (!response.IsSuccessStatusCode)
             {
                 throw new DataApiBuilderException(
-                        message: "Failed to update the item",
+                        message: "Failed to patch the item",
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
             }
 
-            return updatedItemToReturn;
+            return response.GetOperationResultAtIndex<JObject>(numberOfBatches).Resource;
        }
 
         /// <summary>

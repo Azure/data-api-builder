@@ -139,6 +139,9 @@
             },
             {
               "action": "delete"
+            },
+            {
+              "action": "patch"
             }
           ]
         },
@@ -181,6 +184,9 @@
             },
             {
               "action": "delete"
+            },
+            {
+              "action": "patch"
             }
           ]
         },
@@ -232,6 +238,9 @@
             },
             {
               "action": "delete"
+            },
+            {
+              "action": "patch"
             }
           ]
         }
@@ -266,6 +275,9 @@
             },
             {
               "action": "delete"
+            },
+            {
+              "action": "patch"
             }
           ]
         },

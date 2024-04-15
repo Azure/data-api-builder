@@ -3,16 +3,11 @@
 
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
-using Azure.DataApiBuilder.Service.GraphQLBuilder.CustomScalars;
 using HotChocolate.Language;
-using HotChocolate.Types.NodaTime;
 using Microsoft.OData.Edm;
-using NodaTime.Text;
-using Polly;
 
 namespace Azure.DataApiBuilder.Core.Services
 {

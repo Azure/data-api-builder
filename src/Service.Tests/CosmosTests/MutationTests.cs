@@ -794,7 +794,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
         }
 
         [TestMethod]
-        public async Task CanPatchMoreThan10ItemWithVariables()
+        public async Task CanPatchMoreThan10AttributesInAnItemWithVariables()
         {
             string roleName = AuthorizationType.Authenticated.ToString();
             string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);

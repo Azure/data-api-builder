@@ -143,19 +143,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
 
+            RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+
             // first and after will not be part of query parameters. They will be going into headers instead.
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
                 object? firstArgument = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
-
-                if (firstArgument is not null)
-                {
-                    RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
-                    MaxItemCount = runtimeConfig?.GetPaginationLimit((int)firstArgument);
-                }
+                MaxItemCount = runtimeConfig?.GetPaginationLimit((int?)firstArgument);
 
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
+            }
+            else
+            {
+                // set max item count to default value.
+                MaxItemCount = runtimeConfig?.DefaultPageSize();
             }
 
             if (queryParams.ContainsKey(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME))

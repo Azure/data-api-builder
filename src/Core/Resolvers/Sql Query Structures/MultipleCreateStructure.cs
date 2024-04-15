@@ -37,9 +37,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         public IDictionary<string, object?> LinkingTableParams;
 
         /// <summary>
-        /// PK of the record created in the table backing the current entity. 
+        /// Values in the record created in the table backing the current entity. 
         /// </summary>
-        public Dictionary<string, object?>? CurrentEntityPKs;
+        public Dictionary<string, object?>? CurrentEntityCreatedValues;
 
         /// <summary>
         /// Entity name for which this wrapper is created.

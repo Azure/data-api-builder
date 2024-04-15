@@ -1061,12 +1061,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     PerformDbInsertOperation(context, fieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure);
 
-                    // Ideally the CurrentEntityPKs should not be null. CurrentEntityPKs being null indicates that the create operation
+                    // Ideally the CurrentEntityCreatedValues should not be null. CurrentEntityCreatedValues being null indicates that the create operation
                     // has failed and that will result an exception being thrown.
                     // This condition just acts as a guard against having to deal with null values in selection set resolution.
-                    if (multipleCreateStructure.CurrentEntityPKs is not null)
+                    if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
                     {
-                        primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFields(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityPKs));
+                        primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFields(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
                     }
 
                     idx++;
@@ -1116,9 +1116,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 PerformDbInsertOperation(context, paramList, sqlMetadataProvider, multipleCreateStructure);
 
-                if (multipleCreateStructure.CurrentEntityPKs is not null)
+                if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
                 {
-                    primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFields(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityPKs));
+                    primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFields(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
                 }
             }
 
@@ -1210,7 +1210,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     currentEntityRelationshipMetadata!.TargetEntityToFkDefinitionMap.TryGetValue(relatedEntityName, out List<ForeignKeyDefinition>? foreignKeyDefinitions);
                     ForeignKeyDefinition foreignKeyDefinition = foreignKeyDefinitions![0];
-                    PopulateReferencingFields(sqlMetadataProvider, multipleCreateStructure, foreignKeyDefinition, referencedRelationshipMultipleCreateStructure.CurrentEntityPKs, isLinkingTable: false, entityName: relatedEntityName);
+                    PopulateReferencingFields(sqlMetadataProvider, multipleCreateStructure, foreignKeyDefinition, referencedRelationshipMultipleCreateStructure.CurrentEntityCreatedValues, isLinkingTable: false, entityName: relatedEntityName);
                 }
 
                 DatabaseObject entityObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
@@ -1266,8 +1266,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                 }
 
-                Dictionary<string, object?> insertedValues = dbResultSetRowForCurrentEntity.Columns;
-                multipleCreateStructure.CurrentEntityPKs = insertedValues;
+                multipleCreateStructure.CurrentEntityCreatedValues = dbResultSetRowForCurrentEntity.Columns;
 
                 //Perform an insertion in the linking table if required
                 if (multipleCreateStructure.IsLinkingTableInsertionRequired)
@@ -1298,7 +1297,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // Populate Current entity's relationship fields
                     List<ForeignKeyDefinition> foreignKeyDefinitions = currentEntityRelationshipMetadata!.TargetEntityToFkDefinitionMap[multipleCreateStructure.HigherLevelEntityName];
                     ForeignKeyDefinition fkDefinition = foreignKeyDefinitions[0];
-                    PopulateReferencingFields(sqlMetadataProvider, multipleCreateStructure, fkDefinition, multipleCreateStructure.CurrentEntityPKs, isLinkingTable: true);
+                    PopulateReferencingFields(sqlMetadataProvider, multipleCreateStructure, fkDefinition, multipleCreateStructure.CurrentEntityCreatedValues, isLinkingTable: true);
 
                     SqlInsertStructure linkingEntitySqlInsertStructure = new(GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName),
                                                                             sqlMetadataProvider,
@@ -1363,11 +1362,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                         if (referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired)
                         {
-                            PopulateReferencingFields(sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, referencingEntityFKDefinition, multipleCreateStructure.CurrentEntityPKs, isLinkingTable: true, entityName);
+                            PopulateReferencingFields(sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, referencingEntityFKDefinition, multipleCreateStructure.CurrentEntityCreatedValues, isLinkingTable: true, entityName);
                         }
                         else
                         {
-                            PopulateReferencingFields(sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, referencingEntityFKDefinition, multipleCreateStructure.CurrentEntityPKs, isLinkingTable: false, entityName);
+                            PopulateReferencingFields(sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, referencingEntityFKDefinition, multipleCreateStructure.CurrentEntityCreatedValues, isLinkingTable: false, entityName);
                         }
                     }
 

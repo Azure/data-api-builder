@@ -11,12 +11,12 @@ using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLUtils;
 
 namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
-    public static class UpdateMutationBuilder
+    public static class UpdateAndPatchMutationBuilder
     {
         public const string INPUT_ARGUMENT_NAME = "item";
 
         /// <summary>
-        /// This method is used to determine if a field is allowed to be sent from the client in a Update mutation (eg, id field is not settable during update).
+        /// This method is used to determine if a field is allowed to be sent from the client in a Update/Patch mutation (eg, id field is not settable during update).
         /// </summary>
         /// <param name="field">Field to check</param>
         /// <param name="definitions">The other named types in the schema</param>
@@ -26,11 +26,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
 
             // For patch operation, do not include ID field in the input type
-            if (definition is not null &&
-                definition is ObjectTypeDefinitionNode objectType1 &&
-                IsModelType(objectType1) &&
+            if (definition is not null && definition is ObjectTypeDefinitionNode objectTypeDefinitionNode &&
+                IsModelType(objectTypeDefinitionNode) &&
                 operation == EntityActionOperation.Patch &&
-                field.Type.NamedType().Name.Value == "ID")
+                field.Name.Value == "id")
             {
                 return false;
             }
@@ -267,11 +266,11 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string singularName = GetDefinedSingularName(name.Value, entities[dbEntityName]);
             return new(
                 location: null,
-                new NameNode($"{operationNamePrefix}{singularName}"),
-                new StringValueNode($"Updates a {singularName}"),
-                inputValues,
-                new NamedTypeNode(returnEntityName),
-                fieldDefinitionNodeDirectives
+                name: new NameNode($"{operationNamePrefix}{singularName}"),
+                description: new StringValueNode($"Updates a {singularName}"),
+                arguments: inputValues,
+                type: new NamedTypeNode(returnEntityName),
+                directives: fieldDefinitionNodeDirectives
             );
         }
     }

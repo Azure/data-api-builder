@@ -151,7 +151,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         mutationFields.AddRange(createMutationNodes);
                         break;
                     case EntityActionOperation.Update:
-                        mutationFields.Add(UpdateMutationBuilder.Build(
+                        mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
                             name,
                             inputs,
                             objectTypeDefinitionNode,
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             rolesAllowedForMutation));
                         break;
                     case EntityActionOperation.Patch:
-                        mutationFields.Add(UpdateMutationBuilder.Build(
+                        mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
                             name,
                             inputs,
                             objectTypeDefinitionNode,

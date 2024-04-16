@@ -209,7 +209,7 @@
         }
       ]
     },
-    "Tag": {
+    "TagAlias": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -275,9 +275,6 @@
             },
             {
               "action": "delete"
-            },
-            {
-              "action": "patch"
             }
           ]
         },
@@ -295,6 +292,9 @@
             },
             {
               "action": "delete"
+            },
+            {
+              "action": "patch"
             }
           ]
         }

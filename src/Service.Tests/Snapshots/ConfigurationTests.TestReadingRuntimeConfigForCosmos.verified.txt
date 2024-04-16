@@ -63,6 +63,9 @@
               },
               {
                 Action: Delete
+              },
+              {
+                Action: Patch
               }
             ]
           },
@@ -130,6 +133,9 @@
               },
               {
                 Action: Delete
+              },
+              {
+                Action: Patch
               }
             ]
           },
@@ -172,6 +178,9 @@
               },
               {
                 Action: Delete
+              },
+              {
+                Action: Patch
               }
             ]
           },
@@ -223,6 +232,9 @@
               },
               {
                 Action: Delete
+              },
+              {
+                Action: Patch
               }
             ]
           }
@@ -274,6 +286,9 @@
               },
               {
                 Action: Delete
+              },
+              {
+                Action: Patch
               }
             ]
           }

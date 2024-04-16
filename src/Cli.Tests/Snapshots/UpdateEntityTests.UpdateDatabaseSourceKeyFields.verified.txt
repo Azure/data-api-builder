@@ -56,6 +56,9 @@
               },
               {
                 Action: Delete
+              },
+              {
+                Action: Patch
               }
             ]
           }

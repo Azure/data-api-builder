@@ -314,10 +314,8 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// This function identifies the value type and converts that data in return.
+        /// This function identifies is the value type is primitive or not.
         /// </summary>
-        /// <param name="node"></param>
-        /// <returns>Identify the value type and convert that data in return</returns>
         public static bool IsPrimitiveType(SyntaxKind kind)
         {
             return (kind is SyntaxKind.IntValue) ||

@@ -1441,7 +1441,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
 
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection));
+            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(isCosmosDbSource: false, new(entityCollection));
         }
 
         /// <summary>
@@ -1495,11 +1495,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <param name="entityName">Entity name to construct the expected exception message</param>
-        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName)
+        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName, bool isCosmosDbUsed = false)
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-               action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection)));
+               action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(isCosmosDbUsed, new(entityCollection)));
 
             Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);

@@ -70,9 +70,6 @@
               },
               {
                 Action: Update
-              },
-              {
-                Action: Patch
               }
             ]
           }

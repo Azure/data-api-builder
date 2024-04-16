@@ -91,7 +91,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
             if (runtimeConfig.IsGraphQLEnabled)
             {
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.CosmosDataSourceUsed, runtimeConfig.Entities);
             }
         }
     }
@@ -322,7 +322,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     /// <param name="entityCollection">Entity definitions</param>
     /// <exception cref="DataApiBuilderException"></exception>
-    public void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(RuntimeEntities entityCollection)
+    public void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(bool isCosmosDbSource, RuntimeEntities entityCollection)
     {
         HashSet<string> graphQLOperationNames = new();
 
@@ -364,7 +364,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     || !graphQLOperationNames.Add(createMutationName)
                     || !graphQLOperationNames.Add(updateMutationName)
                     || !graphQLOperationNames.Add(deleteMutationName)
-                    || !graphQLOperationNames.Add(patchMutationName))
+                    || (isCosmosDbSource && !graphQLOperationNames.Add(patchMutationName)))
                 {
                     containsDuplicateOperationNames = true;
                 }
@@ -686,7 +686,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
                         // If we have reached this point, it means that we don't have any invalid
                         // data type in actions. However we need to ensure that the actionOp is valid.
-                        if (!IsValidPermissionAction(actionOp, entity, entityName))
+                        if (!IsValidPermissionAction(runtimeConfig.CosmosDataSourceUsed, actionOp, entity, entityName))
                         {
                             throw GetInvalidActionException(entityName, roleName, actionOp.ToString());
                         }
@@ -747,7 +747,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 if (entity.Source.Type is EntitySourceType.StoredProcedure)
                 {
                     if ((operationsList.Count > 1)
-                        || (operationsList.Count is 1 && !IsValidPermissionAction(operationsList[0], entity, entityName)))
+                        || (operationsList.Count is 1 && !IsValidPermissionAction(runtimeConfig.CosmosDataSourceUsed, operationsList[0], entity, entityName)))
                     {
                         HandleOrRecordException(new DataApiBuilderException(
                             message: $"Invalid Operations for Entity: {entityName}. " +
@@ -1291,7 +1291,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// <param name="entity">Used to identify entity's representative object type.</param>
     /// <param name="entityName">Used to supplement error messages.</param>
     /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-    private bool IsValidPermissionAction(EntityActionOperation action, Entity entity, string entityName)
+    private bool IsValidPermissionAction(bool isCosmosDataSource, EntityActionOperation action, Entity entity, string entityName)
     {
         if (entity.Source.Type is EntitySourceType.StoredProcedure)
         {
@@ -1313,6 +1313,11 @@ public class RuntimeConfigValidator : IConfigValidator
                     message: $"Invalid operation for Entity: {entityName}. The 'execute' operation can only be configured for entities backed by stored procedures.",
                     statusCode: HttpStatusCode.ServiceUnavailable,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            if(isCosmosDataSource)
+            {
+                return action is EntityActionOperation.All || EntityAction.ValidPermissionOperationsForCosmos.Contains(action);
             }
 
             return action is EntityActionOperation.All || EntityAction.ValidPermissionOperations.Contains(action);

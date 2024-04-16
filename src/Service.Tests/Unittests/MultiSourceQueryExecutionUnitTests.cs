@@ -4,16 +4,19 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Claims;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.Services;
@@ -25,14 +28,11 @@ using HotChocolate.Execution.Processing;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Azure.DataApiBuilder.Core.Authorization;
-using Azure.DataApiBuilder.Config.DatabasePrimitives;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
 
             // Setup REST Service
-            RestService restService = new (
+            RestService restService = new(
                 queryEngineFactory.Object,
                 mutationEngineFactory.Object,
                 metadataProviderFactory.Object,

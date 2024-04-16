@@ -1078,9 +1078,9 @@ public class RuntimeConfigValidator : IConfigValidator
     /// works because C# is pass by reference for referenced class types.
     /// </summary>
     /// <param name="invalidColumns">List in which to aggregate the invalid fields.</param>
-    /// <param name="fields">List of the fields to check for existence in backing DB.</param>
+    /// <param name="fields">List of the backing fields to check for existence in backing DB.</param>
     /// <param name="entityName">The name of the entity that we check for backing columns.</param>
-    /// <param name="sqlMetadataProvider">The sqlMetadataProvider used to lookup if the fields are valid columns in DB.</param>
+    /// <param name="sqlMetadataProvider">The sqlMetadataProvider used to lookup if the backing fields are valid columns in DB.</param>
     private static void GetFieldsNotBackedByColumnsInDB(
         List<string> invalidColumns,
         string[] fields,
@@ -1090,7 +1090,9 @@ public class RuntimeConfigValidator : IConfigValidator
         invalidColumns.Clear();
         foreach (string field in fields)
         {
-            if (!sqlMetadataProvider.TryGetBackingColumn(entityName, field, out _))
+            // We call this function because the keyset are the backing columns
+            // which is what want to validate.
+            if (!sqlMetadataProvider.TryGetExposedColumnName(entityName, field, out _))
             {
                 invalidColumns.Add(field);
             }

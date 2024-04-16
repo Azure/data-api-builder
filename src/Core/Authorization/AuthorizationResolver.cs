@@ -821,7 +821,7 @@ public class AuthorizationResolver : IAuthorizationResolver
             };
         }
 
-        Dictionary<EntityActionOperation, List<string>> operationMap = new ()
+        Dictionary<EntityActionOperation, List<string>> operationMap = new()
         {
             { EntityActionOperation.Create, new List<string>()},
             { EntityActionOperation.Read, new List<string>()},
@@ -830,7 +830,7 @@ public class AuthorizationResolver : IAuthorizationResolver
         };
 
         // Patch operation is supported only for NOSQL databases i.e. CosmosDB
-        if(isCosmosDataSource)
+        if (isCosmosDataSource)
         {
             operationMap.Add(EntityActionOperation.Patch, new List<string>());
         }

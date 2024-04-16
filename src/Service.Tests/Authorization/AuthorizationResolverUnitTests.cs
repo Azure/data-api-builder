@@ -891,7 +891,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 );
             AuthorizationResolver authZResolver = AuthorizationHelpers.InitAuthorizationResolver(runtimeConfig);
 
-            List<EntityActionOperation> operations = AuthorizationResolver.GetAllOperationsForObjectType(runtimeConfig.CosmosDataSourceUsed,operation, EntitySourceType.Table).ToList();
+            List<EntityActionOperation> operations = AuthorizationResolver.GetAllOperationsForObjectType(runtimeConfig.CosmosDataSourceUsed, operation, EntitySourceType.Table).ToList();
 
             foreach (EntityActionOperation testOperation in operations)
             {

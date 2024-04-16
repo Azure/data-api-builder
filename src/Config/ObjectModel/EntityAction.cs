@@ -11,7 +11,7 @@ public record EntityAction(EntityActionOperation Action, EntityActionFields? Fie
         EntityActionOperation.Update,
         EntityActionOperation.Delete,
         EntityActionOperation.Patch };
-    
+
     public static readonly HashSet<EntityActionOperation> ValidPermissionOperations = new() {
         EntityActionOperation.Create,
         EntityActionOperation.Read,

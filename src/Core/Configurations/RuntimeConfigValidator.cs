@@ -1315,7 +1315,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
-            if(isCosmosDataSource)
+            if (isCosmosDataSource)
             {
                 return action is EntityActionOperation.All || EntityAction.ValidPermissionOperationsForCosmos.Contains(action);
             }

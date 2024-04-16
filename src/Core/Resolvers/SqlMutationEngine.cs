@@ -1202,7 +1202,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure);
 
                     currentEntityRelationshipMetadata!.TargetEntityToFkDefinitionMap.TryGetValue(relatedEntityName, out List<ForeignKeyDefinition>? foreignKeyDefinitions);
-                    ForeignKeyDefinition foreignKeyDefinition = foreignKeyDefinitions![0];
+                    ForeignKeyDefinition foreignKeyDefinition = FetchValidForeignKeyDefinition(sqlMetadataProvider: sqlMetadataProvider,
+                                                                                               foreignKeyDefinitions: foreignKeyDefinitions!,
+                                                                                               referencingEntityName: entityName,
+                                                                                               referencedEntityName: relatedEntityName,
+                                                                                               isMToNRelationship: false);
                     PopulateReferencingFields(sqlMetadataProvider: sqlMetadataProvider,
                                               multipleCreateStructure: multipleCreateStructure,
                                               fkDefinition: foreignKeyDefinition,
@@ -1278,7 +1282,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         && currentEntityRelationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(relatedEntityName, out List<ForeignKeyDefinition>? referencingEntityFKDefinitions)
                         && !referencingEntityFKDefinitions.IsNullOrEmpty())
                     {
-                        ForeignKeyDefinition referencingEntityFKDefinition = referencingEntityFKDefinitions[0];
+                        ForeignKeyDefinition referencingEntityFKDefinition = FetchValidForeignKeyDefinition(sqlMetadataProvider: sqlMetadataProvider,
+                                                                                                            foreignKeyDefinitions: referencingEntityFKDefinitions,
+                                                                                                            referencingEntityName: relatedEntityName,
+                                                                                                            referencedEntityName: entityName,
+                                                                                                            isMToNRelationship: referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired);
 
                         if (referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired)
                         {
@@ -1388,6 +1396,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return dbResultSetRow.Columns;
+        }
+
+        /// <summary>
+        /// Identifies and returns the foreign key definition with the right combination of
+        /// referencing and referenced entity names.
+        /// </summary>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="foreignKeyDefinitions">List of foreign key definitions</param>
+        /// <param name="referencingEntityName">Referencing entity name</param>
+        /// <param name="referencedEntityName">Referenced entity name</param>
+        /// <param name="isMToNRelationship">Indicates whether the relationship is M:N</param>
+        /// <returns>Valid forrign key definition with the right referencing and referencing entities</returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private static ForeignKeyDefinition FetchValidForeignKeyDefinition(ISqlMetadataProvider sqlMetadataProvider, List<ForeignKeyDefinition> foreignKeyDefinitions, string referencingEntityName, string referencedEntityName, bool isMToNRelationship)
+        {
+            string referencedTableFullName = sqlMetadataProvider.EntityToDatabaseObject[referencedEntityName].FullName;
+            string referencingTableFullName = sqlMetadataProvider.EntityToDatabaseObject[referencingEntityName].FullName;
+
+            foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
+            {
+                // For a M:N relationship, the referncing table is always the linking table.
+                // So, the referenced table is the only table that needs to be checked.
+                if (isMToNRelationship)
+                {
+                    if (string.Equals(referencedTableFullName, foreignKeyDefinition.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return foreignKeyDefinition;
+                    }
+                }
+                else
+                {
+                    if (string.Equals(referencingTableFullName, foreignKeyDefinition.Pair.ReferencingDbTable.FullName, StringComparison.OrdinalIgnoreCase)
+                   && string.Equals(referencedTableFullName, foreignKeyDefinition.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return foreignKeyDefinition;
+                    }
+                }
+            }
+
+            throw new DataApiBuilderException(message: $"Foreign Key Definition does not exist with referencing entity: {referencingEntityName} and referenced entity: {referencedEntityName}",
+                                              statusCode: HttpStatusCode.InternalServerError,
+                                              subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+
         }
 
         /// <summary>

@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName, IsMultipleCreateOperationEnabled);
                         AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
                         AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
-                        if(databaseTypes[dbEntityName] is DatabaseType.CosmosDB_NoSQL)
+                        if (databaseTypes[dbEntityName] is DatabaseType.CosmosDB_NoSQL)
                         {
                             AddMutations(dbEntityName, operation: EntityActionOperation.Patch, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
                         }
@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             rolesAllowedForMutation,
                             EntityActionOperation.Patch,
                             operationNamePrefix: "patch"));
-                         break;
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException(paramName: "action", message: "Invalid argument value provided.");
                 }

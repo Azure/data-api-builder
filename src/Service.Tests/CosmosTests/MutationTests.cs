@@ -19,7 +19,6 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -817,7 +816,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
                     name = "characterName",
                     type = "characterType",
                     homePlanet = 1,
-                    star = new {
+                    star = new
+                    {
                         id = "starId",
                         name = "starName",
                         tag = new
@@ -829,7 +829,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
                 },
                 age = 10,
                 dimension = "my dimension",
-                tags = new[] { "tag1", "tag2", "tag3"},
+                tags = new[] { "tag1", "tag2", "tag3" },
                 stars = new[]
                 {
                     new { id = "TestStar1" },
@@ -964,8 +964,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
                 clientRoleHeader: roleName);
 
             // This information should be same as original input
-            Assert.AreEqual(patchResponse.GetProperty("id").GetString(),input.id);
-            Assert.AreEqual(patchResponse.GetProperty("age").GetInt32(), input.age); 
+            Assert.AreEqual(patchResponse.GetProperty("id").GetString(), input.id);
+            Assert.AreEqual(patchResponse.GetProperty("age").GetInt32(), input.age);
             Assert.AreEqual(patchResponse.GetProperty("dimension").GetString(), input.dimension);
             Assert.AreEqual(patchResponse.GetProperty("suns").ToString(), JsonConvert.SerializeObject(input.suns));
             // Asserting updated information

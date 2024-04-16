@@ -138,11 +138,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         columns: inputArgumentKeys),
                 EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
                                                      // to perform the delete operation on the entity to reach this point.
-               _ => throw new DataApiBuilderException(
-                                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
-                                        statusCode: HttpStatusCode.BadRequest,
-                                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                                        ),
+                _ => throw new DataApiBuilderException(
+                                         message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
+                                         statusCode: HttpStatusCode.BadRequest,
+                                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                                         ),
             };
             if (!isAuthorized)
             {
@@ -339,7 +339,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             return response.GetOperationResultAtIndex<JObject>(numberOfBatches).Resource;
-       }
+        }
 
         /// <summary>
         /// This method generates the patch operations for the input JObject by traversing the JObject recursively.
@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach (JProperty property in jObject.Properties())
             {
                 string newPath = currentPath + "/" + property.Name;
-               
+
                 if (property.Value.Type != JTokenType.Array && property.Value.Type == JTokenType.Object)
                 {
                     // Skip generating JPaths for array-type properties

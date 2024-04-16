@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             if (IsBuiltInType(field.Type))
             {
                 // For patch operation, do not include ID field in the input type
-                if (IsModelType(parentNode)  && databaseType is DatabaseType.CosmosDB_NoSQL && operation == EntityActionOperation.Patch)
+                if (IsModelType(parentNode) && databaseType is DatabaseType.CosmosDB_NoSQL && operation == EntityActionOperation.Patch)
                 {
                     return field.Name.Value != QueryBuilder.ID_FIELD_NAME;
                 }
@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             return new(
                 location: null,
                 f.Name,
-                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(operation,name.Value)}"),
+                new StringValueNode($"Input for field {f.Name} on type {GenerateInputTypeName(operation, name.Value)}"),
                 /// There is a difference between CosmosDb for NoSql and relational databases on generating required simple field types for update mutations.
                 /// Cosmos is calling replace item whereas for sql is doing incremental update.
                 /// That's why sql allows nullable update input fields even for non-nullable simple fields. 

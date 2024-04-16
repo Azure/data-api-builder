@@ -12,6 +12,8 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.Services;
@@ -21,11 +23,16 @@ using HotChocolate;
 using HotChocolate.Execution;
 using HotChocolate.Execution.Processing;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
+using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
@@ -41,6 +48,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 }
             }";
 
+        private const string DATASOURCENAME1 = "db1";
+        private const string DATASOURCENAME2 = "db2";
+        private const string ENTITYNAME1 = "Clients";
+        private const string ENTITYNAME2 = "Customers";
+        private const string QUERYNAME1 = "clients_by_pk";
+        private const string QUERYNAME2 = "customers_by_pk";
+
         /// <summary>
         /// Validates successful execution of a query against multiple sources.
         /// 1. Tries to use a built schema to execute a query against multiple sources.
@@ -52,46 +66,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         [TestMethod]
         public async Task TestMultiSourceQuery()
         {
-            string dataSourceName1 = "db1";
-            string dataSourceName2 = "db2";
-            string entityName1 = "Clients";
-            string entityName2 = "Customers";
-            string queryName1 = "clients_by_pk";
-            string queryName2 = "customers_by_pk";
-
-            // Set up mock config where we have two entities both mapping to different data sources.
-            Dictionary<string, Entity> entities = new()
-            {
-                { entityName1, GraphQLTestHelpers.GenerateEmptyEntity() },
-                { entityName2, GraphQLTestHelpers.GenerateEmptyEntity() }
-            };
-
-            Dictionary<string, DataSource> dataSourceNameToDataSource = new()
-            {
-                { dataSourceName1, new(DatabaseType.MySQL, "Server =<>;Database=<>;User=xyz;Password=xxx", new())},
-                { dataSourceName2, new(DatabaseType.CosmosDB_NoSQL, "Server =<>;Database=<>;User=xyz;Password=xxx", new()) }
-            };
-
-            Dictionary<string, string> entityNameToDataSourceName = new()
-            {
-                { entityName1, dataSourceName1 },
-                { entityName2, dataSourceName2 }
-            };
-
-            RuntimeConfig mockConfig1 = new(
-               Schema: "",
-               DataSource: new(DatabaseType.MySQL, "Server =<>;Database=<>;User=xyz;Password=xxx", new()),
-               Runtime: new(
-                   Rest: new(),
-                   GraphQL: new(),
-                   // use prod mode to avoid having to mock config file watcher
-                   Host: new(Cors: null, Authentication: null, HostMode.Production)
-               ),
-               DefaultDataSourceName: dataSourceName1,
-               DataSourceNameToDataSource: dataSourceNameToDataSource,
-               EntityNameToDataSourceName: entityNameToDataSourceName,
-               Entities: new(entities)
-               );
+            RuntimeConfig mockConfig1 = GenerateMockRuntimeConfigForMultiDbScenario();
 
             // Creating mock query engine to return a result for request to respective entities
             // Attempting to validate that in multi-db scenario request is routed to use the correct query engine.
@@ -105,10 +80,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Tuple<JsonDocument, IMetadata> mockReturn2 = new(document2, PaginationMetadata.MakeEmptyPaginationMetadata());
 
             Mock<IQueryEngine> sqlQueryEngine = new();
-            sqlQueryEngine.Setup(x => x.ExecuteAsync(It.IsAny<IMiddlewareContext>(), It.IsAny<IDictionary<string, object>>(), dataSourceName1)).Returns(Task.FromResult(mockReturn1));
+            sqlQueryEngine.Setup(x => x.ExecuteAsync(It.IsAny<IMiddlewareContext>(), It.IsAny<IDictionary<string, object>>(), DATASOURCENAME1)).Returns(Task.FromResult(mockReturn1));
 
             Mock<IQueryEngine> cosmosQueryEngine = new();
-            cosmosQueryEngine.Setup(x => x.ExecuteAsync(It.IsAny<IMiddlewareContext>(), It.IsAny<IDictionary<string, object>>(), dataSourceName2)).Returns(Task.FromResult(mockReturn2));
+            cosmosQueryEngine.Setup(x => x.ExecuteAsync(It.IsAny<IMiddlewareContext>(), It.IsAny<IDictionary<string, object>>(), DATASOURCENAME2)).Returns(Task.FromResult(mockReturn2));
 
             Mock<IQueryEngineFactory> queryEngineFactory = new();
             queryEngineFactory.Setup(x => x.GetQueryEngine(DatabaseType.MySQL)).Returns(sqlQueryEngine.Object);
@@ -146,15 +121,105 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             QueryResult queryResult = (QueryResult)result;
             Assert.IsNotNull(queryResult.Data, "Data should be returned for multisource query.");
             IReadOnlyDictionary<string, object> data = queryResult.Data;
-            Assert.IsTrue(data.TryGetValue(queryName1, out object queryNode1), $"Query node for {queryName1} should have data populated.");
-            Assert.IsTrue(data.TryGetValue(queryName2, out object queryNode2), $"Query node for {queryName2} should have data populated.");
+            Assert.IsTrue(data.TryGetValue(QUERYNAME1, out object queryNode1), $"Query node for {QUERYNAME1} should have data populated.");
+            Assert.IsTrue(data.TryGetValue(QUERYNAME2, out object queryNode2), $"Query node for {QUERYNAME2} should have data populated.");
 
             ResultMap queryMap1 = (ResultMap)queryNode1;
             ResultMap queryMap2 = (ResultMap)queryNode2;
 
             // validate that the data returend for the queries we did matches the moq data we set up for the respective query engines.
-            Assert.AreEqual("db1", queryMap1[0].Value, $"Data returned for {queryName1} is incorrect for multi-source query");
-            Assert.AreEqual("db2", queryMap2[0].Value, $"Data returned for {queryName2} is incorrect for multi-source query");
+            Assert.AreEqual("db1", queryMap1[0].Value, $"Data returned for {QUERYNAME1} is incorrect for multi-source query");
+            Assert.AreEqual("db2", queryMap2[0].Value, $"Data returned for {QUERYNAME2} is incorrect for multi-source query");
+        }
+
+        [TestMethod]
+        public async Task TestMultiSourceQueryRest()
+        {
+            RuntimeConfig mockConfig1 = GenerateMockRuntimeConfigForMultiDbScenario();
+
+            // Creating mock query engine to return a result for request to respective entities
+            // Attempting to validate that in multi-db scenario request is routed to use the correct query engine.
+            string jsonResult = "[{\"FirstName\": \"db1\"}]";
+            string jsonResult2 = "[{\"Name\":\"db2\"}]";
+
+            JsonDocument document1 = JsonDocument.Parse(jsonResult);
+            JsonDocument document2 = JsonDocument.Parse(jsonResult2);
+
+            Mock<IQueryEngine> sqlQueryEngine = new();
+            sqlQueryEngine.Setup(x => x.ExecuteAsync(It.IsAny<FindRequestContext>())).Returns(Task.FromResult(document1));
+
+            Mock<IQueryEngine> cosmosQueryEngine = new();
+            cosmosQueryEngine.Setup(x => x.ExecuteAsync(It.IsAny<FindRequestContext>())).Returns(Task.FromResult(document2));
+
+            Mock<IQueryEngineFactory> queryEngineFactory = new();
+            queryEngineFactory.Setup(x => x.GetQueryEngine(DatabaseType.MySQL)).Returns(sqlQueryEngine.Object);
+            queryEngineFactory.Setup(x => x.GetQueryEngine(DatabaseType.CosmosDB_NoSQL)).Returns(cosmosQueryEngine.Object);
+
+            Mock<IMutationEngineFactory> mutationEngineFactory = new();
+
+            Mock<RuntimeConfigLoader> mockLoader = new(null);
+            mockLoader.Setup(x => x.TryLoadKnownConfig(out mockConfig1, It.IsAny<bool>(), It.IsAny<string>())).Returns(true);
+
+            RuntimeConfigProvider provider = new(mockLoader.Object);
+
+            Mock<IMetadataProviderFactory> metadataProviderFactory = new();
+            Mock<ISqlMetadataProvider> sqlMetadataProviderDb1 = new();
+            Mock<ISqlMetadataProvider> sqlMetadataProviderDb2 = new();
+            Mock<ILogger<AuthorizationResolver>> authLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            Mock<IAuthorizationService> authorizationService = new();
+            Mock<DatabaseObject> databaseObject1 = new();
+            Mock<DatabaseObject> databaseObject2 = new();
+            Dictionary<string, DatabaseObject> databaseObjects1 = new()
+            {
+                { ENTITYNAME1, databaseObject1.Object }
+            };
+            Dictionary<string, DatabaseObject> databaseObjects2 = new()
+            {
+                { ENTITYNAME2, databaseObject2.Object }
+            };
+            DefaultHttpContext context = new();
+            httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);
+            AuthorizationResolver authorizationResolver = new(provider, metadataProviderFactory.Object);
+
+            string outParam;
+            Dictionary<string, string> _pathToEntityMock = new() { { ENTITYNAME1, ENTITYNAME1 }, { ENTITYNAME2, ENTITYNAME2 } };
+
+            sqlMetadataProviderDb1.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
+            sqlMetadataProviderDb2.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam))
+                               .Callback(new metaDataCallback((string entityPath, out string entity) => _ = _pathToEntityMock.TryGetValue(entityPath, out entity)))
+                               .Returns((string entityPath, out string entity) => _pathToEntityMock.TryGetValue(entityPath, out entity));
+            sqlMetadataProviderDb1.Setup(x => x.EntityToDatabaseObject).Returns(databaseObjects1);
+            sqlMetadataProviderDb2.Setup(x => x.EntityToDatabaseObject).Returns(databaseObjects2);
+            sqlMetadataProviderDb1.Setup(x => x.GetLinkingEntities()).Returns(new Dictionary<string, Entity>());
+            sqlMetadataProviderDb2.Setup(x => x.GetLinkingEntities()).Returns(new Dictionary<string, Entity>());
+            sqlMetadataProviderDb1.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.MySQL);
+            sqlMetadataProviderDb2.Setup(x => x.GetDatabaseType()).Returns(DatabaseType.CosmosDB_NoSQL);
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(DATASOURCENAME1)).Returns(sqlMetadataProviderDb1.Object);
+            metadataProviderFactory.Setup(x => x.GetMetadataProvider(DATASOURCENAME2)).Returns(sqlMetadataProviderDb2.Object);
+            authorizationService.Setup(x => x.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<object>(), It.IsAny<IEnumerable<IAuthorizationRequirement>>())).Returns(Task.FromResult(AuthorizationResult.Success()));
+            RequestValidator requestValidator = new(metadataProviderFactory.Object, provider);
+
+            // Setup REST Service
+            RestService restService = new (
+                queryEngineFactory.Object,
+                mutationEngineFactory.Object,
+                metadataProviderFactory.Object,
+                httpContextAccessor.Object,
+                authorizationService.Object,
+                provider,
+                requestValidator);
+
+            // client is mapped as belonging to the sql data source.
+            // customer is mapped as belonging to the cosmos data source.
+            await restService.ExecuteAsync(ENTITYNAME1, EntityActionOperation.Read, null);
+
+            Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should be invoked for multi-source query as entity belongs to sql db.");
+            Assert.AreEqual(0, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should not be invoked for multi-source query as entity belongs to sql db.");
+
+            IActionResult result = await restService.ExecuteAsync(ENTITYNAME2, EntityActionOperation.Read, null);
+            Assert.AreEqual(1, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should be invoked for multi-source query as entity belongs to cosmos db.");
+            Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should not be invoked again for multi-source query as entity2 belongs to cosmos db.");
         }
 
         /// <summary>
@@ -215,5 +280,56 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             await msSqlQueryExecutor.SetManagedIdentityAccessTokenIfAnyAsync(conn, string.Empty);
             Assert.AreEqual(expected: db1AccessToken, actual: conn.AccessToken, "Data source connection failed to be set with default access token when source name provided is empty.");
         }
+
+        private static RuntimeConfig GenerateMockRuntimeConfigForMultiDbScenario()
+        {
+            // Set up mock config where we have two entities both mapping to different data sources.
+            Dictionary<string, Entity> entities = new()
+            {
+                { ENTITYNAME1, GraphQLTestHelpers.GenerateEmptyEntity() },
+                { ENTITYNAME2, GraphQLTestHelpers.GenerateEmptyEntity() }
+            };
+
+            Dictionary<string, DataSource> dataSourceNameToDataSource = new()
+            {
+                { DATASOURCENAME1, new(DatabaseType.MySQL, "Server =<>;Database=<>;User=xyz;Password=xxx", new())},
+                { DATASOURCENAME2, new(DatabaseType.CosmosDB_NoSQL, "Server =<>;Database=<>;User=xyz;Password=xxx", new()) }
+            };
+
+            Dictionary<string, string> entityNameToDataSourceName = new()
+            {
+                { ENTITYNAME1, DATASOURCENAME1 },
+                { ENTITYNAME2, DATASOURCENAME2 }
+            };
+
+            RuntimeConfig mockConfig1 = new(
+               Schema: "",
+               DataSource: new(DatabaseType.MySQL, "Server =<>;Database=<>;User=xyz;Password=xxx", new()),
+               Runtime: new(
+                   Rest: new(),
+                   GraphQL: new(),
+                   // use prod mode to avoid having to mock config file watcher
+                   Host: new(Cors: null, Authentication: null, HostMode.Production)
+               ),
+               DefaultDataSourceName: DATASOURCENAME1,
+               DataSourceNameToDataSource: dataSourceNameToDataSource,
+               EntityNameToDataSourceName: entityNameToDataSourceName,
+               Entities: new(entities)
+               );
+
+            return mockConfig1;
+        }
+
+        /// <summary>
+        /// Needed for the callback that is required
+        /// to make use of out parameter with mocking.
+        /// Without use of delegate the out param will
+        /// not be populated with the correct value.
+        /// This delegate is for the callback used
+        /// with the mocked MetadataProvider.
+        /// </summary>
+        /// <param name="entityPath">The entity path.</param>
+        /// <param name="entity">Name of entity.</param>
+        delegate void metaDataCallback(string entityPath, out string entity);
     }
 }

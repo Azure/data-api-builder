@@ -991,6 +991,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // For point multiple create operation, only one entry will be present.
             List<IDictionary<string, object?>> primaryKeysOfCreatedItemsInTopLevelEntity = new();
 
+            if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
+            {
+                throw new DataApiBuilderException(message: $"Mutation Request should contain the expected argument: {fieldName} in the input",
+                                                  statusCode: HttpStatusCode.BadRequest,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
             if (multipleInputType)
             {
                 int idx = 0;
@@ -1002,13 +1009,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // 2. Object type input fields: Key - Value pair of relationship name and a dictionary of parameters (takes place for 1:1, N:1 relationship types)
                 // 3. List type input fields: key -Value pair of relationship name and a list of dictionary of parameters (takes place for 1:N, M:N relationship types) 
                 List<IDictionary<string, object?>> parsedInputList = (List<IDictionary<string, object?>>)parsedInputParams;
-
-                if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
-                {
-                    throw new DataApiBuilderException(message: $"Mutation Request should contain the expected argument: {fieldName} in the input",
-                                                      statusCode: HttpStatusCode.BadRequest,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
 
                 // For many type multiple create operation, the "parameters" dictionary is a key pair of <"items", List<IValueNode>>.
                 // The value field got using the key "items" cannot be of any other type.
@@ -1093,17 +1093,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // publishers   Dictionary<name, Bloomsbury> 
                 IDictionary<string, object?> parsedInput = (IDictionary<string, object?>)parsedInputParams;
 
-                MultipleCreateStructure multipleCreateStructure = new(entityName: entityName,
-                                                                    higherLevelEntityName: entityName,
-                                                                    inputMutParams: parsedInput);
-
-                if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
-                {
-                    throw new DataApiBuilderException(message: $"Mutation Request should contain the expected argument: {fieldName} in the input",
-                                                      statusCode: HttpStatusCode.BadRequest,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
-
                 // For point multiple create operation, the "parameters" dictionary is a key pair of <"item", List<ObjectFieldNode>>.
                 // The value field got using the key "item" cannot be of any other type.
                 // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate but acts as a guard against using any other types with "item" field
@@ -1113,6 +1102,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
+
+                MultipleCreateStructure multipleCreateStructure = new(entityName: entityName,
+                                                                      higherLevelEntityName: entityName,
+                                                                      inputMutParams: parsedInput);
 
                 PerformDbInsertOperation(context, paramList, sqlMetadataProvider, multipleCreateStructure);
 
@@ -1218,60 +1211,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                               entityName: relatedEntityName);
                 }
 
-                DatabaseObject entityObject = sqlMetadataProvider.EntityToDatabaseObject[entityName];
-                string entityFullName = entityObject.FullName;
-
-                SqlInsertStructure sqlInsertStructureForCurrentEntity = new(entityName,
-                                                                            sqlMetadataProvider,
-                                                                            _authorizationResolver,
-                                                                            _gQLFilterParser,
-                                                                            multipleCreateStructure.CurrentEntityParams!,
-                                                                            GetHttpContext());
-
-                IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
-                IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
-                string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
-                string queryString = queryBuilder.Build(sqlInsertStructureForCurrentEntity);
-                Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructureForCurrentEntity.Parameters;
-
-                DbResultSet? dbResultSetForCurrentEntity;
-                DbResultSetRow? dbResultSetRowForCurrentEntity;
-
-                List<string> exposedColumnNames = new();
-                foreach (string columnName in currentEntitySourceDefinition.Columns.Keys)
-                {
-                    if (sqlMetadataProvider.TryGetExposedColumnName(entityName, columnName, out string? exposedColumnName) && !string.IsNullOrWhiteSpace(exposedColumnName))
-                    {
-                        exposedColumnNames.Add(exposedColumnName);
-                    }
-                }
-
-                dbResultSetForCurrentEntity = queryExecutor.ExecuteQuery(queryString,
-                                                                         queryParameters,
-                                                                         queryExecutor.ExtractResultSetFromDbDataReader,
-                                                                         GetHttpContext(),
-                                                                         exposedColumnNames,
-                                                                         dataSourceName);
-
-                dbResultSetRowForCurrentEntity = dbResultSetForCurrentEntity is not null ? (dbResultSetForCurrentEntity.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
-
-                if (dbResultSetRowForCurrentEntity is not null && dbResultSetRowForCurrentEntity.Columns.Count == 0)
-                {
-                    // For GraphQL, insert operation corresponds to Create action.
-                    throw new DataApiBuilderException(message: $"Could not insert row with given values for entity: {entityName}",
-                                                      statusCode: HttpStatusCode.Forbidden,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
-                }
-
-                if (dbResultSetRowForCurrentEntity is null)
-                {
-                    throw new DataApiBuilderException(
-                        message: "No data returned back from database.",
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
-                }
-
-                multipleCreateStructure.CurrentEntityCreatedValues = dbResultSetRowForCurrentEntity.Columns;
+                multipleCreateStructure.CurrentEntityCreatedValues = BuildAndExecuteInsertDbQueries(sqlMetadataProvider: sqlMetadataProvider,
+                                                                                                    entityName: entityName,
+                                                                                                    higherLevelEntityName: entityName,
+                                                                                                    parameters: multipleCreateStructure.CurrentEntityParams!,
+                                                                                                    sourceDefinition: currentEntitySourceDefinition,
+                                                                                                    isLinkingEntity: false);
 
                 //Perform an insertion in the linking table if required
                 if (multipleCreateStructure.IsLinkingTableInsertionRequired)
@@ -1304,45 +1249,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     ForeignKeyDefinition fkDefinition = foreignKeyDefinitions[0];
                     PopulateReferencingFields(sqlMetadataProvider, multipleCreateStructure, fkDefinition, multipleCreateStructure.CurrentEntityCreatedValues, isLinkingTable: true);
 
-                    SqlInsertStructure linkingEntitySqlInsertStructure = new(GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName),
-                                                                             sqlMetadataProvider,
-                                                                             _authorizationResolver,
-                                                                             _gQLFilterParser,
-                                                                             multipleCreateStructure.LinkingTableParams!,
-                                                                             GetHttpContext(),
-                                                                             isLinkingEntity: true);
+                    string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName);
+                    SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(linkingEntityName);
 
-                    string linkingTableInsertQueryString = queryBuilder.Build(linkingEntitySqlInsertStructure);
-                    SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName));
-
-                    List<string> linkingTablePkColumns = new();
-                    foreach (string primaryKey in linkingTableSourceDefinition.PrimaryKey)
-                    {
-                        linkingTablePkColumns.Add(primaryKey);
-                    }
-
-                    DbResultSet? dbResultSetForLinkingEntity;
-                    DbResultSetRow? dbResultSetRowForLinkingEntity;
-
-                    Dictionary<string, DbConnectionParam> linkingTableQueryParams = linkingEntitySqlInsertStructure.Parameters;
-                    dbResultSetForLinkingEntity = queryExecutor.ExecuteQuery(
-                                                                  linkingTableInsertQueryString,
-                                                                  linkingTableQueryParams,
-                                                                  queryExecutor.ExtractResultSetFromDbDataReader,
-                                                                  GetHttpContext(),
-                                                                  linkingTablePkColumns,
-                                                                  dataSourceName);
-
-                    dbResultSetRowForLinkingEntity = dbResultSetForLinkingEntity is not null ? (dbResultSetForLinkingEntity.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
-
-                    if (dbResultSetRowForLinkingEntity is null || (dbResultSetRowForLinkingEntity is not null && dbResultSetRowForLinkingEntity.Columns.Count == 0))
-                    {
-                        // For GraphQL, insert operation corresponds to Create action.
-                        throw new DataApiBuilderException(
-                            message: $"Could not insert row with given values in the linking table",
-                            statusCode: HttpStatusCode.InternalServerError,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
-                    }
+                    _ = BuildAndExecuteInsertDbQueries(sqlMetadataProvider: sqlMetadataProvider,
+                                                       entityName: linkingEntityName,
+                                                       higherLevelEntityName: entityName,
+                                                       parameters: multipleCreateStructure.LinkingTableParams!,
+                                                       sourceDefinition: linkingTableSourceDefinition,
+                                                       isLinkingEntity: true);
                 }
 
                 // Process referencing relationships
@@ -1388,6 +1303,91 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingRelationshipMultipleCreateStructure);
                 }
             }
+        }
+
+        /// <summary>
+        /// Builds and executes the insert database query necessary for creating an item in the table
+        /// the entity.
+        /// </summary>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="entityName">Current entity name</param>
+        /// <param name="higherLevelEntityName">Higher level entity name</param>
+        /// <param name="parameters">Dictionary containing the data ncessary to create a record in the table</param>
+        /// <param name="sourceDefinition">Entity's source definition object</param>
+        /// <param name="isLinkingEntity">Indicates whether the entity is a linking entity</param>
+        /// <returns>Created record in the database as a dictionary</returns>
+        private Dictionary<string, object?> BuildAndExecuteInsertDbQueries(ISqlMetadataProvider sqlMetadataProvider,
+                                                                           string entityName,
+                                                                           string higherLevelEntityName,
+                                                                           IDictionary<string, object?> parameters,
+                                                                           SourceDefinition sourceDefinition,
+                                                                           bool isLinkingEntity)
+        {
+            SqlInsertStructure sqlInsertStructure = new(entityName: entityName,
+                                                        sqlMetadataProvider: sqlMetadataProvider,
+                                                        authorizationResolver: _authorizationResolver,
+                                                        gQLFilterParser: _gQLFilterParser,
+                                                        mutationParams: parameters,
+                                                        httpContext: GetHttpContext(),
+                                                        isLinkingEntity: isLinkingEntity);
+
+            IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
+            IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
+
+            // When the entity is a linking entity, the higher level entity's name is used to get the
+            // datasource name. Otherwise, the entity's name is used.
+            string dataSourceName = isLinkingEntity ? _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(higherLevelEntityName)
+                                                    : _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            string queryString = queryBuilder.Build(sqlInsertStructure);
+            Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructure.Parameters;
+
+            List<string> exposedColumnNames = new();
+            foreach (string columnName in sourceDefinition.Columns.Keys)
+            {
+                if (sqlMetadataProvider.TryGetExposedColumnName(entityName, columnName, out string? exposedColumnName) && !string.IsNullOrWhiteSpace(exposedColumnName))
+                {
+                    exposedColumnNames.Add(exposedColumnName);
+                }
+            }
+
+            DbResultSet? dbResultSet;
+            DbResultSetRow? dbResultSetRow;
+
+            dbResultSet = queryExecutor.ExecuteQuery(queryString,
+                                                     queryParameters,
+                                                     queryExecutor.ExtractResultSetFromDbDataReader,
+                                                     GetHttpContext(),
+                                                     exposedColumnNames,
+                                                     dataSourceName);
+
+            dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
+
+            if (dbResultSetRow is null || dbResultSetRow.Columns.Count == 0)
+            {
+                if (isLinkingEntity)
+                {
+                    throw new DataApiBuilderException(message: $"Could not insert row with given values in the linking table",
+                                                      statusCode: HttpStatusCode.InternalServerError,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                }
+                else
+                {
+                    if (dbResultSetRow is null)
+                    {
+                        throw new DataApiBuilderException(message: "No data returned back from database.",
+                                                          statusCode: HttpStatusCode.InternalServerError,
+                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(message: $"Could not insert row with given values for entity: {entityName}",
+                                                          statusCode: HttpStatusCode.Forbidden,
+                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                    }
+                }
+            }
+
+            return dbResultSetRow.Columns;
         }
 
         /// <summary>

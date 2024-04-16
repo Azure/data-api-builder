@@ -315,6 +315,7 @@ public class GQLFilterParser
         CosmosExistsQueryStructure existsQuery = new(
             ctx,
             new Dictionary<string, object?>(),
+            _configProvider,
             metadataProvider,
             queryStructure.AuthorizationResolver,
             this,

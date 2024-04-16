@@ -1568,12 +1568,16 @@ query {
 
         #region Negative Tests
 
+        /// <summary>
+        /// This test checks the failure on providing invalid first parameter in graphQL Query.
+        /// We only allow -1 or positive integers for first parameter.-1 means max page size.
+        /// </summary>
         [TestMethod]
         public virtual async Task TestInvalidFirstParamQuery()
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(first: -1) {
+                books(first: -2) {
                     items {
                         id
                         title

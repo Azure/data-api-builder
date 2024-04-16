@@ -66,6 +66,94 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
         /// <summary>
         /// Request a full connection object {items, after, hasNextPage}
+        /// using a negative one for the first parameter.
+        /// This should return max items as we use -1 to allow user to get max allowed page size.
+        /// </summary>
+        [TestMethod]
+        public async Task RequestMaxUsingNegativeOne()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books (first: -1) {
+                    items {
+                        id
+                        title
+                    }
+                    endCursor
+                    hasNextPage
+                }
+            }";
+
+            // this resultset represents all books in the db.
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = @"{
+              ""items"": [
+                {
+                  ""id"": 1,
+                  ""title"": ""Awesome book""
+                },
+                {
+                  ""id"": 2,
+                  ""title"": ""Also Awesome book""
+                },
+                {
+                  ""id"": 3,
+                  ""title"": ""Great wall of china explained""
+                },
+                {
+                  ""id"": 4,
+                  ""title"": ""US history in a nutshell""
+                },
+                {
+                  ""id"": 5,
+                  ""title"": ""Chernobyl Diaries""
+                },
+                {
+                  ""id"": 6,
+                  ""title"": ""The Palace Door""
+                },
+                {
+                  ""id"": 7,
+                  ""title"": ""The Groovy Bar""
+                },
+                {
+                  ""id"": 8,
+                  ""title"": ""Time to Eat""
+                },
+                {
+                  ""id"": 9,
+                  ""title"": ""Policy-Test-01""
+                },
+                {
+                  ""id"": 10,
+                  ""title"": ""Policy-Test-02""
+                },
+                {
+                  ""id"": 11,
+                  ""title"": ""Policy-Test-04""
+                },
+                {
+                  ""id"": 12,
+                  ""title"": ""Time to Eat 2""
+                },
+                {
+                  ""id"": 13,
+                  ""title"": ""Before Sunrise""
+                },
+                {
+                  ""id"": 14,
+                  ""title"": ""Before Sunset""
+                }
+              ],
+              ""endCursor"": null,
+              ""hasNextPage"": false
+            }";
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.ToString());
+        }
+
+        /// <summary>
+        /// Request a full connection object {items, after, hasNextPage}
         /// without providing any parameters
         /// </summary>
         [TestMethod]
@@ -856,7 +944,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(first: -1) {
+                books(first: -2) {
                     items {
                         id
                     }
@@ -876,6 +964,26 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
                 books(first: 0) {
+                    items {
+                        id
+                    }
+                }
+            }";
+
+            JsonElement result = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            SqlTestHelper.TestForErrorInGraphQLResponse(result.ToString(), statusCode: $"{DataApiBuilderException.SubStatusCodes.BadRequest}");
+        }
+
+        /// <summary>
+        /// Request an invalid number of entries for a pagination page.
+        /// Default max page size of config is 100000. Requesting 100001 entries, should lead to an error.
+        /// </summary>
+        [TestMethod]
+        public async Task RequestInvalidMaxSize()
+        {
+            string graphQLQueryName = "books";
+            string graphQLQuery = @"{
+                books(first: 100001) {
                     items {
                         id
                     }

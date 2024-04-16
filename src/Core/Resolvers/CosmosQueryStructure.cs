@@ -5,6 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -36,9 +37,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
-        public int? MaxItemCount { get; internal set; }
+        public uint? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
+
+        public RuntimeConfigProvider RuntimeConfigProvider { get; internal set; }
 
         public string GetTableAlias()
         {
@@ -48,6 +51,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public CosmosQueryStructure(
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
+            RuntimeConfigProvider provider,
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
@@ -58,6 +62,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             _context = context;
             SourceAlias = _containerAlias;
             DatabaseObject.Name = _containerAlias;
+            RuntimeConfigProvider = provider;
             Init(parameters);
         }
 
@@ -116,7 +121,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
-
             if (IsPaginated)
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
@@ -155,12 +159,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     (CosmosSqlMetadataProvider)MetadataProvider);
             }
 
+            RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
             // first and after will not be part of query parameters. They will be going into headers instead.
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                MaxItemCount = (int?)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                object? firstArgument = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                MaxItemCount = runtimeConfig?.GetPaginationLimit((int?)firstArgument);
+
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
+            }
+            else
+            {
+                // set max item count to default value.
+                MaxItemCount = runtimeConfig?.DefaultPageSize();
             }
 
             if (queryParams.ContainsKey(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME))

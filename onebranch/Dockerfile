@@ -3,7 +3,7 @@
 #
 # Version values referenced from https://hub.docker.com/_/microsoft-dotnet-aspnet
 # dotnet/sdk and dotnet/aspnet required to build working container.
-FROM mcr.microsoft.com/dotnet/sdk:6.0-cbl-mariner2.0. AS build
+FROM mcr.microsoft.com/dotnet/sdk:6.0-cbl-mariner2.0 AS build
 WORKDIR /src
 FROM mcr.microsoft.com/dotnet/aspnet:6.0-cbl-mariner2.0 AS runtime
 

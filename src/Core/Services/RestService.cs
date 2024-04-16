@@ -212,17 +212,18 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
         {
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
-            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(context.EntityName);
 
             if (context is FindRequestContext findRequestContext)
             {
                 using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
-                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
+                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
+                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
             }
             else if (context is StoredProcedureRequestContext storedProcedureRequestContext)
             {
-                return await queryEngine.ExecuteAsync(storedProcedureRequestContext, defaultDataSourceName);
+                return await queryEngine.ExecuteAsync(storedProcedureRequestContext, dataSourceName);
             }
             else
             {
@@ -237,10 +238,10 @@ namespace Azure.DataApiBuilder.Core.Services
         private Task<IActionResult?> DispatchMutation(RestRequestContext context, DatabaseType databaseType)
         {
             IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(databaseType);
-            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(context.EntityName);
             return context switch
             {
-                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, defaultDataSourceName),
+                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, dataSourceName),
                 _ => mutationEngine.ExecuteAsync(context)
             };
         }

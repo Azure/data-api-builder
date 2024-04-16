@@ -18,6 +18,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
@@ -793,6 +794,11 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
             Assert.AreNotEqual(input.name, response.GetProperty("name").GetString());
         }
 
+        /// <summary>
+        ///  Patch Operation has limitation of executing/patching only 10 attributes at a time, internally which is 10 patch operation.
+        ///  In DAB, we are supporting multiple patch operations in a single patch operation by executing them in a Transactional Batch.
+        /// </summary>
+        /// <returns></returns>
         [TestMethod]
         public async Task CanPatchMoreThan10AttributesInAnItemWithVariables()
         {
@@ -821,6 +827,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
                         }
                     }
                 },
+                age = 10,
+                dimension = "my dimension",
                 tags = new[] { "tag1", "tag2", "tag3"},
                 stars = new[]
                 {
@@ -843,6 +851,11 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
                             new { id = "moonAdditionalAttributes3" },
                             new { id = "moonAdditionalAttributes4" }
                         } }
+                },
+                suns = new[]
+                {
+                    new { id = "TestSun1" },
+                    new { id = "TestSun2" },
                 }
             };
 
@@ -855,6 +868,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
     patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
         id
         name
+        age
+        dimension
         character
         {
             id
@@ -884,6 +899,10 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
             {
                 id
             }
+        }
+        suns
+        {
+            id
         }
     }
 }";
@@ -944,14 +963,17 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
                 authToken: authToken,
                 clientRoleHeader: roleName);
 
-            JObject updateItemWithId = JObject.FromObject(update);
-            updateItemWithId.Add("id", id);
-
-            // Validate results
-            Assert.IsTrue(
-                JToken.DeepEquals(
-                    JToken.Parse(patchResponse.ToString()),
-                    JToken.Parse(updateItemWithId.ToString())));
+            // This information should be same as original input
+            Assert.AreEqual(patchResponse.GetProperty("id").GetString(),input.id);
+            Assert.AreEqual(patchResponse.GetProperty("age").GetInt32(), input.age); 
+            Assert.AreEqual(patchResponse.GetProperty("dimension").GetString(), input.dimension);
+            Assert.AreEqual(patchResponse.GetProperty("suns").ToString(), JsonConvert.SerializeObject(input.suns));
+            // Asserting updated information
+            Assert.AreEqual(patchResponse.GetProperty("name").GetString(), update.name);
+            Assert.AreEqual(patchResponse.GetProperty("character").ToString(), JsonConvert.SerializeObject(update.character));
+            Assert.AreEqual(patchResponse.GetProperty("tags").ToString(), JsonConvert.SerializeObject(update.tags));
+            Assert.AreEqual(patchResponse.GetProperty("stars").ToString(), JsonConvert.SerializeObject(update.stars));
+            Assert.AreEqual(patchResponse.GetProperty("moons").ToString(), JsonConvert.SerializeObject(update.moons));
         }
 
         /// <summary>

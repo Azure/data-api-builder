@@ -4,20 +4,30 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class CosmosQueryStructure : BaseQueryStructure
     {
         private readonly IMiddlewareContext _context;
-        private readonly string _containerAlias = "c";
+
+        /// <summary>
+        /// For any CosmosDB Query, the default alias for the container is 'c'
+        /// </summary>
+        public const string COSMOSDB_CONTAINER_DEFAULT_ALIAS = "c";
+
+        private readonly string _containerAlias = COSMOSDB_CONTAINER_DEFAULT_ALIAS;
+        public IncrementingInteger TableCounter { get; internal set; } = new();
 
         public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
 
@@ -29,16 +39,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public int? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
-        // Order of the join matters
-        public Stack<CosmosJoinStructure>? Joins { get; internal set; }
 
-        /// <summary>
-        /// A simple class that is used to hold the information about joins that
-        /// are part of a Cosmos query.
-        /// <summary>
-        /// <param name="DbObject">The name of the database object containing table metadata like joined tables.</param>
-        /// <param name="TableAlias">The alias of the table that is joined with.</param>
-        public record CosmosJoinStructure(DatabaseObject DbObject, string TableAlias);
+        public string GetTableAlias()
+        {
+            return $"table{TableCounter.Next()}";
+        }
 
         public CosmosQueryStructure(
             IMiddlewareContext context,
@@ -46,8 +51,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IncrementingInteger? counter = null)
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, entityName: string.Empty, counter: counter)
+            IncrementingInteger? counter = null,
+            List<Predicate>? predicates = null)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates: predicates, entityName: string.Empty, counter: counter)
         {
             _context = context;
             SourceAlias = _containerAlias;
@@ -136,6 +142,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 EntityName = entityName;
                 Database = MetadataProvider.GetSchemaName(entityName);
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
+            }
+
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(_context);
+            if (httpContext is not null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    EntityActionOperation.Read,
+                    this,
+                    httpContext,
+                    AuthorizationResolver,
+                    (CosmosSqlMetadataProvider)MetadataProvider);
             }
 
             // first and after will not be part of query parameters. They will be going into headers instead.

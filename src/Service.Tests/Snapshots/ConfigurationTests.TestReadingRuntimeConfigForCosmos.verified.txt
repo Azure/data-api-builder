@@ -31,7 +31,7 @@
   },
   Entities: [
     {
-      Planet: {
+      PlanetAlias: {
         Source: {
           Object: graphqldb.planet
         },
@@ -90,6 +90,14 @@
                 Action: Read
               }
             ]
+          },
+          {
+            Role: item-level-permission-role,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
           }
         ]
       }
@@ -124,12 +132,20 @@
                 Action: Delete
               }
             ]
+          },
+          {
+            Role: item-level-permission-role,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
           }
         ]
       }
     },
     {
-      StarAlias: {
+      Star: {
         Source: {
           Object: graphqldb.planet
         },
@@ -180,7 +196,7 @@
       }
     },
     {
-      TagAlias: {
+      Tag: {
         Source: {
           Object: graphqldb.planet
         },
@@ -272,6 +288,287 @@
         GraphQL: {
           Singular: Earth,
           Plural: Earths,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: field-mutation-with-read-permission,
+            Actions: [
+              {
+                Action: Read
+              }
+            ]
+          },
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    *
+                  ],
+                  Include: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: limited-read-role,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id,
+                    type
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            Role: item-level-permission-role,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {
+                  Database: @item.type eq 'earth0'
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      Sun: {
+        Source: {
+          Object: graphqldb.planet
+        },
+        GraphQL: {
+          Singular: Sun,
+          Plural: Suns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Create
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      AdditionalAttribute: {
+        Source: {
+          Object: graphqldb.planet
+        },
+        GraphQL: {
+          Singular: AdditionalAttribute,
+          Plural: AdditionalAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: item-level-permission-role,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {
+                  Database: @item.name eq 'volcano0'
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      MoonAdditionalAttribute: {
+        Source: {
+          Object: graphqldb.planet
+        },
+        GraphQL: {
+          Singular: MoonAdditionalAttribute,
+          Plural: MoonAdditionalAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: item-level-permission-role,
+            Actions: [
+              {
+                Action: Read,
+                Policy: {
+                  Database: @item.name eq 'moonattr0'
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      MoreAttribute: {
+        Source: {
+          Object: graphqldb.planet
+        },
+        GraphQL: {
+          Singular: MoreAttribute,
+          Plural: MoreAttributes,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: false
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: Update,
+                Fields: {
+                  Exclude: [
+                    *
+                  ]
+                }
+              },
+              {
+                Action: Read,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id
+                  ]
+                }
+              },
+              {
+                Action: Create,
+                Fields: {
+                  Exclude: [
+                    name
+                  ],
+                  Include: [
+                    id
+                  ]
+                }
+              },
+              {
+                Action: Delete
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: Create
+              },
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      PlanetAgain: {
+        Source: {
+          Object: graphqldb.newcontainer
+        },
+        GraphQL: {
+          Singular: PlanetAgain,
+          Plural: PlanetAgains,
           Enabled: true
         },
         Rest: {
@@ -420,105 +717,13 @@
       }
     },
     {
-      Sun: {
+      InvalidAuthModel: {
         Source: {
-          Object: graphqldb.planet
+          Object: graphqldb.invalidAuthModelContainer
         },
         GraphQL: {
-          Singular: Sun,
-          Plural: Suns,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: false
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: Read,
-                Fields: {
-                  Exclude: [
-                    name
-                  ],
-                  Include: [
-                    *
-                  ]
-                }
-              },
-              {
-                Action: Create
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      AdditionalAttribute: {
-        Source: {
-          Object: graphqldb.planet
-        },
-        GraphQL: {
-          Singular: AdditionalAttribute,
-          Plural: AdditionalAttributes,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: false
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: *
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      MoonAdditionalAttribute: {
-        Source: {
-          Object: graphqldb.planet
-        },
-        GraphQL: {
-          Singular: MoonAdditionalAttribute,
-          Plural: MoonAdditionalAttributes,
-          Enabled: true
-        },
-        Rest: {
-          Enabled: false
-        },
-        Permissions: [
-          {
-            Role: anonymous,
-            Actions: [
-              {
-                Action: *
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      MoreAttrAlias: {
-        Source: {
-          Object: graphqldb.planet
-        },
-        GraphQL: {
-          Singular: MoreAttribute,
-          Plural: MoreAttributes,
+          Singular: InvalidAuthModel,
+          Plural: InvalidAuthModels,
           Enabled: true
         },
         Rest: {

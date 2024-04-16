@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
@@ -30,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// The DatabaseObject associated with the entity, represents the
-        /// databse object to be queried.
+        /// database object to be queried.
         /// </summary>
         public DatabaseObject DatabaseObject { get; protected set; } = null!;
 
@@ -57,7 +58,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public List<Predicate> Predicates { get; }
 
         /// <summary>
-        /// Used for parsing graphql filter arguments.
+        /// Used for parsing GraphQL filter arguments.
         /// </summary>
         public GQLFilterParser GraphQLFilterParser { get; protected set; }
 
@@ -66,6 +67,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// authorization policies to requests.
         /// </summary>
         public IAuthorizationResolver AuthorizationResolver { get; }
+
+        /// <summary>
+        /// DbPolicyPredicates is a string that represents the filter portion of our query
+        /// in the WHERE Clause added by virtue of the database policy.
+        /// </summary>
+        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
 
         public const string PARAM_NAME_PREFIX = "@";
 

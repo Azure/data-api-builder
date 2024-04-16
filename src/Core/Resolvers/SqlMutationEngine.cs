@@ -1403,7 +1403,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
             foreach (string primaryKey in sourceDefinition.PrimaryKey)
             {
-                if (sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name) && !string.IsNullOrWhiteSpace(name))
+                if (sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name))
                 {
                     if (entityFields.TryGetValue(name, out object? value))
                     {

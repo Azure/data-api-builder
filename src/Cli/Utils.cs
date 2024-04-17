@@ -87,7 +87,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType? sourceType)
+        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType? sourceType, bool isCosmosDbUsed)
         {
             Dictionary<EntityActionOperation, EntityAction> result = new();
             foreach (EntityAction operation in operations)
@@ -97,7 +97,7 @@ namespace Cli
                 {
                     HashSet<EntityActionOperation> resolvedOperations = sourceType is EntitySourceType.StoredProcedure ?
                         EntityAction.ValidStoredProcedurePermissionOperations :
-                        EntityAction.ValidPermissionOperations;
+                        isCosmosDbUsed ? EntityAction.ValidPermissionOperationsForCosmos : EntityAction.ValidPermissionOperations;
                     // Expand wildcard to all valid operations (except execute)
                     foreach (EntityActionOperation validOp in resolvedOperations)
                     {
@@ -220,7 +220,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations, EntitySourceType? sourceType)
+        public static bool VerifyOperations(string[] operations, EntitySourceType? sourceType, bool isCosmosDbUsed)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
@@ -246,6 +246,11 @@ namespace Cli
                     if (op is EntityActionOperation.All)
                     {
                         containsWildcardOperation = true;
+                    }
+                    else if (isCosmosDbUsed && !EntityAction.ValidPermissionOperationsForCosmos.Contains((EntityActionOperation)op))
+                    {
+                        _logger.LogError("Invalid actions found in --permissions for Cosmos DB");
+                        return false;
                     }
                     else if (!isStoredProcedure && !EntityAction.ValidPermissionOperations.Contains((EntityActionOperation)op))
                     {

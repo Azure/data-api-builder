@@ -168,7 +168,7 @@ public class UtilsTests
         EntitySourceType entitySourceType,
         bool isSuccess)
     {
-        Assert.AreEqual(isSuccess, VerifyOperations(operations, entitySourceType));
+        Assert.AreEqual(isSuccess, VerifyOperations(operations, entitySourceType, false));
     }
 
     /// <summary>

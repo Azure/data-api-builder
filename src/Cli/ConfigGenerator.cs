@@ -374,7 +374,12 @@ namespace Cli
             EntityActionPolicy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
-            EntityPermission[]? permissionSettings = ParsePermission(options.Permissions, policy, field, source.Type);
+            EntityPermission[]? permissionSettings = ParsePermission(
+                options.Permissions,
+                policy,
+                field,
+                source.Type,
+                initialRuntimeConfig.CosmosDataSourceUsed);
             if (permissionSettings is null)
             {
                 _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
@@ -522,7 +527,8 @@ namespace Cli
             IEnumerable<string> permissions,
             EntityActionPolicy? policy,
             EntityActionFields? fields,
-            EntitySourceType? sourceType)
+            EntitySourceType? sourceType,
+            bool isCosmosDbUsed)
         {
             // Getting Role and Operations from permission string
             string? role, operations;
@@ -533,7 +539,7 @@ namespace Cli
             }
 
             // Check if provided operations are valid
-            if (!VerifyOperations(operations!.Split(","), sourceType))
+            if (!VerifyOperations(operations!.Split(","), sourceType, isCosmosDbUsed))
             {
                 return null;
             }
@@ -648,7 +654,13 @@ namespace Cli
             if (options.Permissions is not null && options.Permissions.Any())
             {
                 // Get the Updated Permission Settings
-                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields, updatedSourceType);
+                updatedPermissions = GetUpdatedPermissionSettings(
+                    entity,
+                    options.Permissions,
+                    updatedPolicy,
+                    updatedFields,
+                    updatedSourceType,
+                    initialConfig.CosmosDataSourceUsed);
 
                 if (updatedPermissions is null)
                 {
@@ -739,7 +751,8 @@ namespace Cli
                                                                         IEnumerable<string> permissions,
                                                                         EntityActionPolicy? policy,
                                                                         EntityActionFields? fields,
-                                                                        EntitySourceType? sourceType)
+                                                                        EntitySourceType? sourceType,
+                                                                        bool isCosmosDbUsed)
         {
 
             // Parse role and operations from the permissions string
@@ -755,7 +768,7 @@ namespace Cli
 
             // Verifies that the list of operations declared are valid for the specified sourceType.
             // Example: Stored-procedure can only have 1 operation.
-            if (!VerifyOperations(newOperationArray, sourceType))
+            if (!VerifyOperations(newOperationArray, sourceType, isCosmosDbUsed))
             {
                 return null;
             }
@@ -781,7 +794,7 @@ namespace Cli
                     else
                     {
                         // User didn't use WILDCARD, and wants to update some of the operations.
-                        IDictionary<EntityActionOperation, EntityAction> existingOperations = ConvertOperationArrayToIEnumerable(permission.Actions, entityToUpdate.Source.Type);
+                        IDictionary<EntityActionOperation, EntityAction> existingOperations = ConvertOperationArrayToIEnumerable(permission.Actions, entityToUpdate.Source.Type, isCosmosDbUsed);
 
                         // Merge existing operations with new operations
                         EntityAction[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);

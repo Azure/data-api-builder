@@ -1061,7 +1061,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    PerformDbInsertOperation(context, fieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure);
+                    PerformDbInsertOperation(context, fieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
 
                     // Ideally the CurrentEntityCreatedValues should not be null. CurrentEntityCreatedValues being null indicates that the create operation
                     // has failed and that will result in an exception being thrown.
@@ -1110,7 +1110,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     higherLevelEntityName: entityName,
                     inputMutParams: parsedInput);
 
-                PerformDbInsertOperation(context, paramList, sqlMetadataProvider, multipleCreateStructure);
+                PerformDbInsertOperation(context, paramList, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
 
                 if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
                 {
@@ -1129,11 +1129,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">Mutation parameter arguments</param>
         /// <param name="sqlMetadataProvider">SqlMetadataprovider for the given database type.</param>
         /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request</param>
         private void PerformDbInsertOperation(
             IMiddlewareContext context,
             object? parameters,
             ISqlMetadataProvider sqlMetadataProvider,
-            MultipleCreateStructure multipleCreateStructure)
+            MultipleCreateStructure multipleCreateStructure,
+            int nestingLevel)
         {
 
             if (multipleCreateStructure.InputMutParams is null || parameters is null)
@@ -1172,7 +1174,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                     }
 
-                    PerformDbInsertOperation(context, nodeForCurrentInput.Value, sqlMetadataProvider, multipleCreateStrucutreForCurrentItem);
+                    PerformDbInsertOperation(context, nodeForCurrentInput.Value, sqlMetadataProvider, multipleCreateStrucutreForCurrentItem, nestingLevel);
                     idx++;
                 }
             }
@@ -1202,7 +1204,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string relatedEntityName = GraphQLUtils.GetRelatedEntityNameInRelationship(entity, entityName, relationshipName);
                     MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(entityName: relatedEntityName, higherLevelEntityName: entityName, inputMutParams: relationshipFieldValue);
                     IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, relationshipName);
-                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure);
+                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure, nestingLevel + 1);
 
                     if (sqlMetadataProvider.TryGetFKDefinition(
                                                     sourceEntityName: entityName,
@@ -1228,7 +1230,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                                           higherLevelEntityName: entityName,
                                                                           parameters: multipleCreateStructure.CurrentEntityParams!,
                                                                           sourceDefinition: currentEntitySourceDefinition,
-                                                                          isLinkingEntity: false);
+                                                                          isLinkingEntity: false,
+                                                                          nestingLevel: nestingLevel);
 
                 //Perform an insertion in the linking table if required
                 if (multipleCreateStructure.IsLinkingTableInsertionRequired)
@@ -1270,7 +1273,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             higherLevelEntityName: entityName,
                             parameters: multipleCreateStructure.LinkingTableParams!,
                             sourceDefinition: linkingTableSourceDefinition,
-                            isLinkingEntity: true);
+                            isLinkingEntity: true,
+                            nestingLevel: nestingLevel);
                 }
 
                 // Process referencing relationships
@@ -1304,7 +1308,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             entityName: entityName);
                     }
 
-                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingRelationshipMultipleCreateStructure);
+                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, nestingLevel + 1);
                 }
             }
         }
@@ -1319,13 +1323,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">Dictionary containing the data ncessary to create a record in the table</param>
         /// <param name="sourceDefinition">Entity's source definition object</param>
         /// <param name="isLinkingEntity">Indicates whether the entity is a linking entity</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request</param>
         /// <returns>Created record in the database as a dictionary</returns>
         private Dictionary<string, object?> BuildAndExecuteInsertDbQueries(ISqlMetadataProvider sqlMetadataProvider,
                                                                            string entityName,
                                                                            string higherLevelEntityName,
                                                                            IDictionary<string, object?> parameters,
                                                                            SourceDefinition sourceDefinition,
-                                                                           bool isLinkingEntity)
+                                                                           bool isLinkingEntity,
+                                                                           int nestingLevel)
         {
             SqlInsertStructure sqlInsertStructure = new(
                                                      entityName: entityName,
@@ -1366,7 +1372,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (isLinkingEntity)
                 {
-                    throw new DataApiBuilderException(message: $"Could not insert row with given values in the linking table",
+                    throw new DataApiBuilderException(message: $"Could not insert row with given values in the linking table joining entities: {entityName} and {higherLevelEntityName} at nesting level : {nestingLevel}",
                                                       statusCode: HttpStatusCode.InternalServerError,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                 }
@@ -1380,7 +1386,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                     else
                     {
-                        throw new DataApiBuilderException(message: $"Could not insert row with given values for entity: {entityName}",
+                        throw new DataApiBuilderException(message: $"Could not insert row with given values for entity: {entityName} at nesting level : {nestingLevel}",
                                                           statusCode: HttpStatusCode.Forbidden,
                                                           subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
                     }

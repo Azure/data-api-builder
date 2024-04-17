@@ -282,7 +282,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         public async Task PointMultipleCreateFailsDueToCreatePolicyViolationAtTopLevelEntity()
         {
 
-            string expectedErrorMessage = "Could not insert row with given values for entity: Book";
+            string expectedErrorMessage = "Could not insert row with given values for entity: Book at nesting level : 0";
 
             // Validate that no book item is created
             string bookDbQuery = @"
@@ -307,7 +307,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         public async Task PointMultipleCreateFailsDueToCreatePolicyViolationAtRelatedEntity()
         {
 
-            string expectedErrorMessage = "Could not insert row with given values for entity: Publisher";
+            string expectedErrorMessage = "Could not insert row with given values for entity: Publisher at nesting level : 1";
 
             string bookDbQuery = @"
                 SELECT *
@@ -330,7 +330,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
         public async Task ManyTypeMultipleCreateFailsDueToCreatePolicyFailure()
         {
 
-            string expectedErrorMessage = "Could not insert row with given values for entity: Book";
+            string expectedErrorMessage = "Could not insert row with given values for entity: Book at nesting level : 0";
 
             string bookDbQuery = @"
                 SELECT *

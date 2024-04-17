@@ -59,10 +59,9 @@ query{
 ";
         public static readonly string MoonWithInvalidAuthorizationPolicy = @"
 query ($id: ID, $partitionKeyValue: String) {
-    moon_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue){
+    invalidAuthModel_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue){
         id
         name
-        details
     }
 }";
         private static List<string> _idList;
@@ -103,7 +102,7 @@ query ($id: ID, $partitionKeyValue: String) {
             string id = _idList[0];
             string clientRoleHeader = AuthorizationType.Authenticated.ToString();
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "moon_by_pk",
+                queryName: "invalidAuthModel_by_pk",
                 query: MoonWithInvalidAuthorizationPolicy,
                 variables: new() { { "id", id }, { "partitionKeyValue", id } },
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
@@ -307,11 +306,11 @@ query {{
             string id = _idList[0];
             string query = @$"
 query {{
-    star_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
+    planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("star_by_pk", query);
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query);
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());

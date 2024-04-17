@@ -30,10 +30,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests;
 public class TestBase
 {
     internal const string DATABASE_NAME = "graphqldb";
-    // Intentionally removed name attibute from Planet model to test scenario where the 'name' attribute
+    // Intentionally removed name attribute from Planet model to test scenario where the 'name' attribute
     // is not explicitly added in the schema
     internal const string GRAPHQL_SCHEMA = @"
-type Character @model(name:""Character"") {
+type Character {
     id : ID,
     name : String,
     type: String,
@@ -42,7 +42,7 @@ type Character @model(name:""Character"") {
     star: Star
 }
 
-type Planet @model {
+type Planet @model(name:""PlanetAlias"") {
     id : ID!,
     name : String,
     character: Character,
@@ -56,51 +56,64 @@ type Planet @model {
     suns: [Sun]
 }
 
-type Star @model(name:""StarAlias"") {
+type Star {
     id : ID,
     name : String,
     tag: Tag
 }
 
-type Tag @model(name:""TagAlias"") {
+type Tag {
     id : ID,
     name : String
 }
 
-type Moon @model(name:""Moon"") @authorize(policy: ""Crater"") {
+type Moon {
     id : ID,
     name : String,
     details : String,
     moonAdditionalAttributes: [MoonAdditionalAttribute]
 }
 
-type Earth @model(name:""Earth"") {
+type Earth {
     id : ID,
     name : String,
     type: String @authorize(roles: [""authenticated""])
 }
 
-type Sun @model(name:""Sun"") {
+type Sun {
     id : ID,
     name : String
 }
 
-type AdditionalAttribute @model(name:""AdditionalAttribute"") {
+type AdditionalAttribute {
     id : ID,
-    name : String
+    name : String,
+    type: String
 }
 
-type MoonAdditionalAttribute @model(name:""MoonAdditionalAttribute"") {
+type MoonAdditionalAttribute {
     id : ID,
     name : String,
     moreAttributes: [MoreAttribute!]
 }
 
-type MoreAttribute @model(name:""MoreAttrAlias"") {
+type MoreAttribute {
     id : ID,
     name : String,
     type: String @authorize(roles: [""authenticated""])
-}";
+}
+
+type InvalidAuthModel @model @authorize(policy: ""Crater"") {
+    id : ID!,
+    name : String
+}
+
+type PlanetAgain @model {
+    id : ID,
+    name : String,
+    type: String @authorize(roles: [""authenticated""])
+}
+";
 
     private static string[] _planets = { "Earth", "Mars", "Jupiter", "Tatooine", "Endor", "Dagobah", "Hoth", "Bespin", "Spec%ial" };
 

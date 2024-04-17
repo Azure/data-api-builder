@@ -429,7 +429,7 @@ public class AuthorizationResolver : IAuthorizationResolver
             return new List<EntityActionOperation> { EntityActionOperation.Execute };
         }
 
-        if (databaseType == DatabaseType.CosmosDB_NoSQL)
+        if (databaseType is DatabaseType.CosmosDB_NoSQL)
         {
             return operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperationsForCosmos : new List<EntityActionOperation> { operation };
         }
@@ -830,7 +830,7 @@ public class AuthorizationResolver : IAuthorizationResolver
         };
 
         // Patch operation is supported only for NOSQL databases i.e. CosmosDB
-        if (databaseType == DatabaseType.CosmosDB_NoSQL)
+        if (databaseType is DatabaseType.CosmosDB_NoSQL)
         {
             operationMap.Add(EntityActionOperation.Patch, new List<string>());
         }

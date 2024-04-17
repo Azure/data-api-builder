@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 /// There is a difference between CosmosDb for NoSql and relational databases on generating required simple field types for update mutations.
                 /// Cosmos is calling replace item whereas for sql is doing incremental update.
                 /// That's why sql allows nullable update input fields even for non-nullable simple fields. 
-                (databaseType == DatabaseType.CosmosDB_NoSQL && operation != EntityActionOperation.Patch) ? f.Type : f.Type.NullableType(),
+                (databaseType is DatabaseType.CosmosDB_NoSQL && operation != EntityActionOperation.Patch) ? f.Type : f.Type.NullableType(),
                 defaultValue: null,
                 new List<DirectiveNode>()
             );

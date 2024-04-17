@@ -364,7 +364,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     || !graphQLOperationNames.Add(createMutationName)
                     || !graphQLOperationNames.Add(updateMutationName)
                     || !graphQLOperationNames.Add(deleteMutationName)
-                    || ((databaseType == DatabaseType.CosmosDB_NoSQL) && !graphQLOperationNames.Add(patchMutationName)))
+                    || ((databaseType is DatabaseType.CosmosDB_NoSQL) && !graphQLOperationNames.Add(patchMutationName)))
                 {
                     containsDuplicateOperationNames = true;
                 }
@@ -686,7 +686,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
                         // If we have reached this point, it means that we don't have any invalid
                         // data type in actions. However we need to ensure that the actionOp is valid.
-                        if (!IsValidPermissionAction(runtimeConfig.CosmosDataSourceUsed, actionOp, entity, entityName))
+                        if (!IsValidPermissionAction(runtimeConfig.DataSource.DatabaseType, actionOp, entity, entityName))
                         {
                             throw GetInvalidActionException(entityName, roleName, actionOp.ToString());
                         }
@@ -747,7 +747,7 @@ public class RuntimeConfigValidator : IConfigValidator
                 if (entity.Source.Type is EntitySourceType.StoredProcedure)
                 {
                     if ((operationsList.Count > 1)
-                        || (operationsList.Count is 1 && !IsValidPermissionAction(runtimeConfig.CosmosDataSourceUsed, operationsList[0], entity, entityName)))
+                        || (operationsList.Count is 1 && !IsValidPermissionAction(runtimeConfig.DataSource.DatabaseType, operationsList[0], entity, entityName)))
                     {
                         HandleOrRecordException(new DataApiBuilderException(
                             message: $"Invalid Operations for Entity: {entityName}. " +
@@ -1287,11 +1287,12 @@ public class RuntimeConfigValidator : IConfigValidator
     /// Valid stored procedure  actions:
     /// - Execute
     /// </summary>
+    /// <param name="databaseType">Database Type</param>
     /// <param name="action">Compared against valid actions to determine validity.</param>
     /// <param name="entity">Used to identify entity's representative object type.</param>
     /// <param name="entityName">Used to supplement error messages.</param>
     /// <returns>Boolean value indicating whether the action is valid or not.</returns>
-    private bool IsValidPermissionAction(bool isCosmosDataSource, EntityActionOperation action, Entity entity, string entityName)
+    private bool IsValidPermissionAction(DatabaseType databaseType, EntityActionOperation action, Entity entity, string entityName)
     {
         if (entity.Source.Type is EntitySourceType.StoredProcedure)
         {
@@ -1315,7 +1316,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
 
-            if (isCosmosDataSource)
+            if (databaseType is DatabaseType.CosmosDB_NoSQL)
             {
                 return action is EntityActionOperation.All || EntityAction.ValidPermissionOperationsForCosmos.Contains(action);
             }

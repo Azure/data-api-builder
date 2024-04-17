@@ -97,7 +97,7 @@ namespace Cli
                 {
                     HashSet<EntityActionOperation> resolvedOperations = sourceType is EntitySourceType.StoredProcedure ?
                         EntityAction.ValidStoredProcedurePermissionOperations :
-                        (databaseType == DatabaseType.CosmosDB_NoSQL) ? EntityAction.ValidPermissionOperationsForCosmos : EntityAction.ValidPermissionOperations;
+                        (databaseType is DatabaseType.CosmosDB_NoSQL) ? EntityAction.ValidPermissionOperationsForCosmos : EntityAction.ValidPermissionOperations;
                     // Expand wildcard to all valid operations (except execute)
                     foreach (EntityActionOperation validOp in resolvedOperations)
                     {
@@ -247,7 +247,7 @@ namespace Cli
                     {
                         containsWildcardOperation = true;
                     }
-                    else if (databaseType == DatabaseType.CosmosDB_NoSQL && !isStoredProcedure && !EntityAction.ValidPermissionOperationsForCosmos.Contains((EntityActionOperation)op))
+                    else if (databaseType is DatabaseType.CosmosDB_NoSQL && !isStoredProcedure && !EntityAction.ValidPermissionOperationsForCosmos.Contains((EntityActionOperation)op))
                     {
                         _logger.LogError("Invalid actions found in --permissions for Cosmos DB");
                         return false;

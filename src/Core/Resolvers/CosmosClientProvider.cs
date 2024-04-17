@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return;
             }
 
-            IEnumerable<KeyValuePair<string, DataSource>> cosmosDb = configuration.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType == DatabaseType.CosmosDB_NoSQL);
+            IEnumerable<KeyValuePair<string, DataSource>> cosmosDb = configuration.GetDataSourceNamesToDataSourcesIterator().Where(x => x.Value.DatabaseType is DatabaseType.CosmosDB_NoSQL);
 
             foreach ((string dataSourceName, DataSource dataSource) in cosmosDb)
             {

@@ -1,9 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.MultipleCreateMutationTests
@@ -280,158 +278,61 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
             await ManyTypeMultipleCreateMutationOperation(expectedResponse, linkingTableDbValidationQuery, expectedResponseFromLinkingTable);
         }
 
-        /// <summary>
-        /// Point multiple create mutation request is executed with the role: role_multiple_create_policy_tester. This role has the following create policy defined on "Book" entity: "@item.title ne 'Test'"
-        /// Because this mutation tries to create a book with title "Test", it is expected to fail with a database policy violation error. The error message and status code are validated for accuracy.
-        /// </summary>
         [TestMethod]
         public async Task PointMultipleCreateFailsDueToCreatePolicyViolationAtTopLevelEntity()
         {
-            string graphQLMutationName = "createbook";
-            string graphQLMutation = @"mutation{
-                                          createbook(item:{
-                                            title: ""Test"",
-                                            publishers:{
-                                              name: ""Publisher #1""
-                                            }
-                                          }){
-                                            id
-                                            title
-                                            publishers{
-                                              id
-                                              name
-                                            }
-                                          }
-                                        }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, clientRoleHeader: "role_multiple_create_policy_tester");
 
             string expectedErrorMessage = "Could not insert row with given values for entity: Book";
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                response: actual.ToString(),
-                message: expectedErrorMessage,
-                statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure}"
-            );
-
             // Validate that no book item is created
-            string dbQuery = @"
+            string bookDbQuery = @"
                 SELECT *
                 FROM [books] AS [table0]
                 WHERE [table0].[id] = 5001
                 ORDER BY [id] asc
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
-            string dbResponse = await GetDatabaseResultAsync(dbQuery);
-            Assert.AreEqual("[]", dbResponse);
-
             // Validate that no publisher item is created
-            dbQuery = @"
+            string publisherDbQuery = @"
                 SELECT *
                 FROM [publishers] AS [table0]
                 WHERE [table0].[id] = 5001
                 ORDER BY [id] asc
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
-            dbResponse = await GetDatabaseResultAsync(dbQuery);
-            Assert.AreEqual("[]", dbResponse);
+
+            await PointMultipleCreateFailsDueToCreatePolicyViolationAtTopLevelEntity(expectedErrorMessage, bookDbQuery, publisherDbQuery);
         }
 
-        /// <summary>
-        /// Point multiple create mutation request is executed with the role: role_multiple_create_policy_tester. This role has the following create policy defined on "Publisher" entity: "@item.name ne 'Test'"
-        /// Because this mutation tries to create a publisher with title "Test" (along with creating a book item), it is expected to fail with a database policy violation error.
-        /// As a result of this mutation, no Book and Publisher item should be created.  
-        /// The error message and status code are validated for accuracy. Also, the database is queried to ensure that no new record got created.
-        /// </summary>
         [TestMethod]
         public async Task PointMultipleCreateFailsDueToCreatePolicyViolationAtRelatedEntity()
         {
-            string graphQLMutationName = "createbook";
-            string graphQLMutation = @"mutation{
-                                          createbook(item:{
-                                            title: ""Book #1"",
-                                            publishers:{
-                                              name: ""Test""
-                                            }
-                                          }){
-                                            id
-                                            title
-                                            publishers{
-                                              id
-                                              name
-                                            }
-                                          }
-                                        }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, clientRoleHeader: "role_multiple_create_policy_tester");
 
             string expectedErrorMessage = "Could not insert row with given values for entity: Publisher";
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                response: actual.ToString(),
-                message: expectedErrorMessage,
-                statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure}"
-            );
-
-            // Validate that no book item is created
-            string dbQuery = @"
+            string bookDbQuery = @"
                 SELECT *
                 FROM [books] AS [table0]
                 WHERE [table0].[id] = 5001
                 ORDER BY [id] asc
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
 
-            string dbResponse = await GetDatabaseResultAsync(dbQuery);
-            Assert.AreEqual("[]", dbResponse);
-
-            // Validate that no publisher item is created
-            dbQuery = @"
+            string publisherDbQuery = @"
                 SELECT *
                 FROM [publishers] AS [table0]
                 WHERE [table0].[id] = 5001
                 ORDER BY [id] asc
                 FOR JSON PATH, INCLUDE_NULL_VALUES";
-            dbResponse = await GetDatabaseResultAsync(dbQuery);
-            Assert.AreEqual("[]", dbResponse);
+
+            await PointMultipleCreateFailsDueToCreatePolicyViolationAtRelatedEntity(expectedErrorMessage, bookDbQuery, publisherDbQuery);
         }
 
-        /// <summary>
-        /// Many type multiple create mutation request is executed with the role: role_multiple_create_policy_tester. This role has the following create policy defined on "Book" entity: "@item.title ne 'Test'"
-        /// In this request, the second Book item in the input violates the create policy defined. Processing of that input item is expected to result in database policy violation error.
-        /// All the items created successfully prior to this fault input will also be rolled back. So, the end result is that no new items should be created. 
-        /// </summary>
         [TestMethod]
         public async Task ManyTypeMultipleCreateFailsDueToCreatePolicyFailure()
         {
-            string graphQLMutationName = "createbooks";
-            string graphQLMutation = @"mutation {
-                                          createbooks(
-                                            items: [
-                                              { title: ""Book #1"", publisher_id: 2345 }
-                                              { title: ""Test"", publisher_id: 2345 }
-                                            ]
-                                          ) {
-                                            items {
-                                              id
-                                              title
-                                              publishers {
-                                                id
-                                                name
-                                              }
-                                            }
-                                          }
-                                        }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, clientRoleHeader: "role_multiple_create_policy_tester");
 
             string expectedErrorMessage = "Could not insert row with given values for entity: Book";
 
-            SqlTestHelper.TestForErrorInGraphQLResponse(
-                response: actual.ToString(),
-                message: expectedErrorMessage,
-                statusCode: $"{DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure}");
-
-            // Validate that no book item is created
-            string dbQuery = @"
+            string bookDbQuery = @"
                 SELECT *
                 FROM [books] AS [table0]
                 WHERE [table0].[id] >= 5001
@@ -439,11 +340,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES";
 
-            string dbResponse = await GetDatabaseResultAsync(dbQuery);
-            Assert.AreEqual("[]", dbResponse);
-
-            // Validate that no publisher item is created
-            dbQuery = @"
+            string publisherDbQuery = @"
                 SELECT *
                 FROM [publishers] AS [table0]
                 WHERE [table0].[id] >= 5001
@@ -451,50 +348,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                 FOR JSON PATH,
                     INCLUDE_NULL_VALUES";
 
-            dbResponse = await GetDatabaseResultAsync(dbQuery);
-            Assert.AreEqual("[]", dbResponse);
+            await ManyTypeMultipleCreateFailsDueToCreatePolicyFailure(expectedErrorMessage, bookDbQuery, publisherDbQuery);
         }
 
-        /// <summary>
-        /// Point type multiple create mutation request is executed with the role: role_multiple_create_policy_tester. This role has the following create policy defined on "Reviews" entity: "@item.websiteuser_id ne 1".
-        /// In this request, the second Review item in the input violates the read policy defined. Hence, it is not to be returned in the response.
-        /// The returned response is validated against an expected response for correctness.
-        /// </summary>
         [TestMethod]
         public async Task PointMultipleCreateMutationWithReadPolicyViolationAtRelatedEntity()
         {
-            string graphQLMutationName = "createbook";
-            string graphQLMutation = @"mutation {
-                                          createbook(
-                                            item: {
-                                              title: ""Book #1""
-                                              publisher_id: 2345
-                                              reviews: [
-                                                {
-                                                  content: ""Review #1"",
-                                                  websiteuser_id: 4
-                                                }
-                                                { content: ""Review #2"",
-                                                  websiteuser_id: 1
-                                                }
-                                              ]
-                                            }
-                                          ) {
-                                            id
-                                            title
-                                            publisher_id
-                                            reviews {
-                                              items {
-                                                book_id
-                                                id
-                                                content
-                                                websiteuser_id
-                                              }
-                                            }
-                                          }
-                                        }";
-
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLMutation, graphQLMutationName, isAuthenticated: true, clientRoleHeader: "role_multiple_create_policy_tester");
 
             string expectedResponse = @"{
                                           ""id"": 5001,
@@ -512,7 +371,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests.Multi
                                           }
                                         }";
 
-            SqlTestHelper.PerformTestEqualJsonStrings(expectedResponse, actual.ToString());
+            await PointMultipleCreateMutationWithReadPolicyViolationAtRelatedEntity(expectedResponse);
         }
 
         [TestMethod]

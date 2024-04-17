@@ -1194,11 +1194,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 currentEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? currentEntityRelationshipMetadata);
 
                 // Process referenced relationships
-                foreach (Tuple<string, object?> referencedRelationship in multipleCreateStructure.ReferencedRelationships)
+                foreach ((string relationshipName, object? relationshipFieldValue) in multipleCreateStructure.ReferencedRelationships)
                 {
-                    string relatedEntityName = GraphQLUtils.GetRelatedEntityNameInRelationship(entity, entityName, referencedRelationship.Item1);
-                    MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(entityName: relatedEntityName, higherLevelEntityName: entityName, inputMutParams: referencedRelationship.Item2);
-                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencedRelationship.Item1);
+                    string relatedEntityName = GraphQLUtils.GetRelatedEntityNameInRelationship(entity, entityName, relationshipName);
+                    MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(entityName: relatedEntityName, higherLevelEntityName: entityName, inputMutParams: relationshipFieldValue);
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, relationshipName);
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure);
 
                     if (sqlMetadataProvider.TryGetFKDefinition(
@@ -1400,12 +1400,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
             foreach (string primaryKey in sourceDefinition.PrimaryKey)
             {
-                if (sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name))
+                if (sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name)
+                    && entityFields.TryGetValue(name, out object? value)
+                    && value != null)
                 {
-                    if (entityFields.TryGetValue(name, out object? value))
-                    {
-                        pkFields.Add(primaryKey, value);
-                    }
+                    pkFields.Add(primaryKey, value);
+                }
+                else
+                {
+                    throw new DataApiBuilderException(message: $"Primary key field {name} has null value but it is expected to have a non-null value",
+                                                      statusCode: HttpStatusCode.InternalServerError,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
                 }
             }
 

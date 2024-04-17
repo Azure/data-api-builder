@@ -379,7 +379,7 @@ namespace Cli
                 policy,
                 field,
                 source.Type,
-                initialRuntimeConfig.CosmosDataSourceUsed);
+                initialRuntimeConfig.DataSource.DatabaseType);
             if (permissionSettings is null)
             {
                 _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
@@ -528,7 +528,7 @@ namespace Cli
             EntityActionPolicy? policy,
             EntityActionFields? fields,
             EntitySourceType? sourceType,
-            bool isCosmosDbUsed)
+            DatabaseType databaseType)
         {
             // Getting Role and Operations from permission string
             string? role, operations;
@@ -539,7 +539,7 @@ namespace Cli
             }
 
             // Check if provided operations are valid
-            if (!VerifyOperations(operations!.Split(","), sourceType, isCosmosDbUsed))
+            if (!VerifyOperations(operations!.Split(","), sourceType, databaseType))
             {
                 return null;
             }
@@ -660,7 +660,7 @@ namespace Cli
                     updatedPolicy,
                     updatedFields,
                     updatedSourceType,
-                    initialConfig.CosmosDataSourceUsed);
+                    initialConfig.DataSource.DatabaseType);
 
                 if (updatedPermissions is null)
                 {
@@ -752,7 +752,7 @@ namespace Cli
                                                                         EntityActionPolicy? policy,
                                                                         EntityActionFields? fields,
                                                                         EntitySourceType? sourceType,
-                                                                        bool isCosmosDbUsed)
+                                                                        DatabaseType databaseType)
         {
 
             // Parse role and operations from the permissions string
@@ -768,7 +768,7 @@ namespace Cli
 
             // Verifies that the list of operations declared are valid for the specified sourceType.
             // Example: Stored-procedure can only have 1 operation.
-            if (!VerifyOperations(newOperationArray, sourceType, isCosmosDbUsed))
+            if (!VerifyOperations(newOperationArray, sourceType, databaseType))
             {
                 return null;
             }
@@ -794,7 +794,9 @@ namespace Cli
                     else
                     {
                         // User didn't use WILDCARD, and wants to update some of the operations.
-                        IDictionary<EntityActionOperation, EntityAction> existingOperations = ConvertOperationArrayToIEnumerable(permission.Actions, entityToUpdate.Source.Type, isCosmosDbUsed);
+                        IDictionary<EntityActionOperation, EntityAction> existingOperations
+                            = ConvertOperationArrayToIEnumerable(
+                                permission.Actions, entityToUpdate.Source.Type, databaseType);
 
                         // Merge existing operations with new operations
                         EntityAction[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);

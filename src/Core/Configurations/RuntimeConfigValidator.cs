@@ -91,7 +91,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
             if (runtimeConfig.IsGraphQLEnabled)
             {
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.CosmosDataSourceUsed, runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
             }
         }
     }
@@ -322,7 +322,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     /// <param name="entityCollection">Entity definitions</param>
     /// <exception cref="DataApiBuilderException"></exception>
-    public void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(bool isCosmosDbSource, RuntimeEntities entityCollection)
+    public void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(DatabaseType databaseType, RuntimeEntities entityCollection)
     {
         HashSet<string> graphQLOperationNames = new();
 
@@ -364,7 +364,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     || !graphQLOperationNames.Add(createMutationName)
                     || !graphQLOperationNames.Add(updateMutationName)
                     || !graphQLOperationNames.Add(deleteMutationName)
-                    || (isCosmosDbSource && !graphQLOperationNames.Add(patchMutationName)))
+                    || ((databaseType == DatabaseType.CosmosDB_NoSQL) && !graphQLOperationNames.Add(patchMutationName)))
                 {
                     containsDuplicateOperationNames = true;
                 }

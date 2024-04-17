@@ -1196,7 +1196,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Process referenced relationships
                 foreach (Tuple<string, object?> referencedRelationship in multipleCreateStructure.ReferencedRelationships)
                 {
-                    string relatedEntityName = GetRelatedEntityNameInRelationship(entity, referencedRelationship.Item1);
+                    string relatedEntityName = GraphQLUtils.GetRelatedEntityNameInRelationship(entity, entityName, referencedRelationship.Item1);
                     MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(entityName: relatedEntityName, higherLevelEntityName: entityName, inputMutParams: referencedRelationship.Item2);
                     IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencedRelationship.Item1);
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure);
@@ -1256,23 +1256,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName);
                     SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(linkingEntityName);
 
-                    _ = BuildAndExecuteInsertDbQueries(sqlMetadataProvider: sqlMetadataProvider,
-                                                       entityName: linkingEntityName,
-                                                       higherLevelEntityName: entityName,
-                                                       parameters: multipleCreateStructure.LinkingTableParams!,
-                                                       sourceDefinition: linkingTableSourceDefinition,
-                                                       isLinkingEntity: true);
+                    _ = BuildAndExecuteInsertDbQueries(
+                            sqlMetadataProvider: sqlMetadataProvider,
+                            entityName: linkingEntityName,
+                            higherLevelEntityName: entityName,
+                            parameters: multipleCreateStructure.LinkingTableParams!,
+                            sourceDefinition: linkingTableSourceDefinition,
+                            isLinkingEntity: true);
                 }
 
                 // Process referencing relationships
-                foreach (Tuple<string, object?> referencingRelationship in multipleCreateStructure.ReferencingRelationships)
+                foreach ((string relationshipFieldName, object? relationshipFieldValue) in multipleCreateStructure.ReferencingRelationships)
                 {
-                    string relatedEntityName = GetRelatedEntityNameInRelationship(entity, referencingRelationship.Item1);
+                    string relatedEntityName = GraphQLUtils.GetRelatedEntityNameInRelationship(entity, entityName, relationshipFieldName);
                     MultipleCreateStructure referencingRelationshipMultipleCreateStructure = new(entityName: relatedEntityName,
                                                                                                  higherLevelEntityName: entityName,
-                                                                                                 inputMutParams: referencingRelationship.Item2,
-                                                                                                 isLinkingTableInsertionRequired: GraphQLUtils.IsMToNRelationship(entity, referencingRelationship.Item1));
-                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencingRelationship.Item1);
+                                                                                                 inputMutParams: relationshipFieldValue,
+                                                                                                 isLinkingTableInsertionRequired: GraphQLUtils.IsMToNRelationship(entity, relationshipFieldName));
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, relationshipFieldName);
 
                     // Many-Many relationships are marked as Referencing relationships because the linking table insertion can happen only
                     // when records have been successfully created in both the entities involved in the relationship.
@@ -1282,30 +1283,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         && currentEntityRelationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(relatedEntityName, out List<ForeignKeyDefinition>? referencingEntityFKDefinitions)
                         && !referencingEntityFKDefinitions.IsNullOrEmpty())
                     {
-                        ForeignKeyDefinition referencingEntityFKDefinition = FetchValidForeignKeyDefinition(sqlMetadataProvider: sqlMetadataProvider,
-                                                                                                            foreignKeyDefinitions: referencingEntityFKDefinitions,
-                                                                                                            referencingEntityName: relatedEntityName,
-                                                                                                            referencedEntityName: entityName,
-                                                                                                            isMToNRelationship: referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired);
+                        ForeignKeyDefinition referencingEntityFKDefinition = FetchValidForeignKeyDefinition(
+                                                                                sqlMetadataProvider: sqlMetadataProvider,
+                                                                                foreignKeyDefinitions: referencingEntityFKDefinitions,
+                                                                                referencingEntityName: relatedEntityName,
+                                                                                referencedEntityName: entityName,
+                                                                                isMToNRelationship: referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired);
 
-                        if (referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired)
-                        {
-                            PopulateReferencingFields(sqlMetadataProvider: sqlMetadataProvider,
-                                                      multipleCreateStructure: referencingRelationshipMultipleCreateStructure,
-                                                      fkDefinition: referencingEntityFKDefinition,
-                                                      computedRelationshipFields: multipleCreateStructure.CurrentEntityCreatedValues,
-                                                      isLinkingTable: true,
-                                                      entityName: entityName);
-                        }
-                        else
-                        {
-                            PopulateReferencingFields(sqlMetadataProvider: sqlMetadataProvider,
-                                                      multipleCreateStructure: referencingRelationshipMultipleCreateStructure,
-                                                      fkDefinition: referencingEntityFKDefinition,
-                                                      computedRelationshipFields: multipleCreateStructure.CurrentEntityCreatedValues,
-                                                      isLinkingTable: false,
-                                                      entityName: entityName);
-                        }
+                        PopulateReferencingFields(
+                            sqlMetadataProvider: sqlMetadataProvider,
+                            multipleCreateStructure: referencingRelationshipMultipleCreateStructure,
+                            fkDefinition: referencingEntityFKDefinition,
+                            computedRelationshipFields: multipleCreateStructure.CurrentEntityCreatedValues,
+                            isLinkingTable: referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired,
+                            entityName: entityName);
                     }
 
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingRelationshipMultipleCreateStructure);
@@ -1331,13 +1322,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                                            SourceDefinition sourceDefinition,
                                                                            bool isLinkingEntity)
         {
-            SqlInsertStructure sqlInsertStructure = new(entityName: entityName,
-                                                        sqlMetadataProvider: sqlMetadataProvider,
-                                                        authorizationResolver: _authorizationResolver,
-                                                        gQLFilterParser: _gQLFilterParser,
-                                                        mutationParams: parameters,
-                                                        httpContext: GetHttpContext(),
-                                                        isLinkingEntity: isLinkingEntity);
+            SqlInsertStructure sqlInsertStructure = new(
+                                                     entityName: entityName,
+                                                     sqlMetadataProvider: sqlMetadataProvider,
+                                                     authorizationResolver: _authorizationResolver,
+                                                     gQLFilterParser: _gQLFilterParser,
+                                                     mutationParams: parameters,
+                                                     httpContext: GetHttpContext(),
+                                                     isLinkingEntity: isLinkingEntity);
 
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
@@ -1416,7 +1408,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
             {
-                // For a M:N relationship, the referncing table is always the linking table.
+                // For a M:N relationship, the referencing table is always the linking table.
                 // So, the referenced table is the only table that needs to be checked.
                 if (isMToNRelationship)
                 {
@@ -1467,7 +1459,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to populate the linking table referencing fields.
+        /// 
         /// </summary>
         /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
         /// <param name="fkDefinition">Foreign Key metadata constructed during engine start-up</param>
@@ -1494,8 +1486,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 else
                 {
                     if (entityName is not null
-                        && sqlMetadataProvider.TryGetExposedColumnName(entityName, referencedColumnName, out string? exposedColumnName)
-                        && !string.IsNullOrWhiteSpace(exposedColumnName))
+                        && sqlMetadataProvider.TryGetExposedColumnName(entityName, referencedColumnName, out string? exposedColumnName))
                     {
                         exposedReferencedColumnName = exposedColumnName;
                     }
@@ -1507,35 +1498,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     multipleCreateStructure.CurrentEntityParams![referencingColumnName] = computedRelationshipFields[exposedReferencedColumnName];
                 }
             }
-        }
-
-        /// <summary>
-        /// Helper method to get the name of the related entity for a given relationship name.
-        /// </summary>
-        /// <param name="entity">Entity object</param>
-        /// <param name="relationshipName">Name of the relationship</param>
-        /// <returns>Name of the related entity</returns>
-        public static string GetRelatedEntityNameInRelationship(Entity entity, string relationshipName)
-        {
-            if (entity.Relationships is null)
-            {
-                throw new DataApiBuilderException(message: "Entity has no relationships defined",
-                                                  statusCode: HttpStatusCode.InternalServerError,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-            }
-
-            if (entity.Relationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
-               && entityRelationship is not null)
-            {
-                return entityRelationship.TargetEntity;
-            }
-            else
-            {
-                throw new DataApiBuilderException(message: $"Entity does not have a relationship named {relationshipName}",
-                                                  statusCode: HttpStatusCode.InternalServerError,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
-            }
-
         }
 
         /// <summary>
@@ -1571,17 +1533,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             foreach ((string relationshipName, object? relationshipFieldValues) in (Dictionary<string, object?>)multipleCreateStructure.InputMutParams)
             {
-                if (topLevelEntityRelationships.ContainsKey(relationshipName))
-                {
-                    EntityRelationship entityRelationship = topLevelEntityRelationships[relationshipName];
-
+                if (topLevelEntityRelationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship) && entityRelationship is not null)
+                {   
                     // The linking object not being null indicates that the relationship is a many-to-many relationship.
                     // For M:N realtionship, new item(s) have to be created in the linking table in addition to the source and target tables.
                     // Creation of item(s) in the linking table is handled when processing the target entity.
                     // To be able to create item(s) in the linking table, PKs of the source and target items are required.
                     // Indirectly, the target entity depends on the PKs of the source entity.
                     // Hence, the target entity is added as a referencing entity.
-                    if (entityRelationship.LinkingObject is not null)
+                    if (! string.IsNullOrWhiteSpace(entityRelationship.LinkingObject))
                     {
                         multipleCreateStructure.ReferencingRelationships.Add(new Tuple<string, object?>(relationshipName, relationshipFieldValues) { });
                         continue;
@@ -1593,15 +1553,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     // In this function call, nestingLevel parameter is set as 0 which might not be accurate.
                     // However, it is irrelevant because nestingLevel is used only for logging error messages and we do not expect
-                    // any errors to occur here. All errors are expected to have caught during request validation.
-                    string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(context: context,
-                                                                                                      sourceEntityName: entityName,
-                                                                                                      targetEntityName: targetEntityName,
-                                                                                                      relationshipName: relationshipName,
-                                                                                                      metadataProvider: sqlMetadataProvider,
-                                                                                                      nestingLevel: 0,
-                                                                                                      columnDataInSourceBody: columnDataInSourceBody,
-                                                                                                      targetNodeValue: targetNode);
+                    // any errors to occur here. All errors are expected to be caught during request validation.
+                    string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(
+                                                                                    context: context,
+                                                                                    sourceEntityName: entityName,
+                                                                                    targetEntityName: targetEntityName,
+                                                                                    relationshipName: relationshipName,
+                                                                                    metadataProvider: sqlMetadataProvider,
+                                                                                    nestingLevel: 0,
+                                                                                    columnDataInSourceBody: columnDataInSourceBody,
+                                                                                    targetNodeValue: targetNode);
 
                     if (string.Equals(entityName, referencingEntityName, StringComparison.OrdinalIgnoreCase))
                     {
@@ -1616,7 +1577,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Helper method to that looks at the input fields of a given entity and classifies, populates the fields belonging to current entity and linking entity.
+        /// Helper method which traverses the input fields for a given record and populates the fields/values into the appropriate data structures
+        /// storing the field/values belonging to the current entity and the linking entity.
         /// Consider the below multiple create mutation request 
         /// mutation{
         /// createbook(item: {
@@ -1723,7 +1685,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (IValueNode input in inputList)
                 {
                     object? resultItem = GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, input.Value);
-
                     if (resultItem is not null)
                     {
                         resultList.Add((IDictionary<string, object?>)resultItem);

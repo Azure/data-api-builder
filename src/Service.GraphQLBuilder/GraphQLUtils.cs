@@ -405,12 +405,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <exception cref="ArgumentException"></exception>
         public static IValueNode GetFieldNodeForGivenFieldName(List<ObjectFieldNode> objectFieldNodes, string fieldName)
         {
-            foreach (ObjectFieldNode objectFieldNode in objectFieldNodes)
+            ObjectFieldNode? requiredFieldNode = objectFieldNodes.Where(fieldNode => fieldNode.Name.Value.Equals(fieldName)).FirstOrDefault();
+            if (requiredFieldNode != null)
             {
-                if (objectFieldNode.Name.Value == fieldName)
-                {
-                    return objectFieldNode.Value;
-                }
+                return requiredFieldNode.Value;
             }
 
             throw new ArgumentException($"The provided field {fieldName} does not exist.");
@@ -427,6 +425,34 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             return sourceEntity.Relationships is not null &&
                 sourceEntity.Relationships.TryGetValue(relationshipName, out EntityRelationship? relationshipInfo) &&
                 !string.IsNullOrWhiteSpace(relationshipInfo.LinkingObject);
+        }
+
+        /// <summary>
+        /// Helper method to get the name of the related entity for a given relationship name.
+        /// </summary>
+        /// <param name="entity">Entity object</param>
+        /// <param name="relationshipName">Name of the relationship</param>
+        /// <returns>Name of the related entity</returns>
+        public static string GetRelatedEntityNameInRelationship(Entity entity, string entityName, string relationshipName)
+        {
+            if (entity.Relationships is null)
+            {
+                throw new DataApiBuilderException(message: $"Entity {entityName} has no relationships defined",
+                                                  statusCode: HttpStatusCode.InternalServerError,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            if (entity.Relationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
+               && entityRelationship is not null)
+            {
+                return entityRelationship.TargetEntity;
+            }
+            else
+            {
+                throw new DataApiBuilderException(message: $"Entity {entityName} does not have a relationship named {relationshipName}",
+                                                  statusCode: HttpStatusCode.InternalServerError,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
+            }
         }
     }
 }

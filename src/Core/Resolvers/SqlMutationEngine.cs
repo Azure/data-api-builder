@@ -981,7 +981,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (parsedInputParams is null)
             {
-                throw new DataApiBuilderException(message: "The create mutation body cannot be null.",
+                throw new DataApiBuilderException(message: "The input for multiple create mutation operation cannot be null",
                                                   statusCode: HttpStatusCode.BadRequest,
                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
@@ -1007,12 +1007,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // The fields belonging to the inputobjecttype are converted to
                 // 1. Scalar input fields: Key - Value pair of field name and field value.
                 // 2. Object type input fields: Key - Value pair of relationship name and a dictionary of parameters (takes place for 1:1, N:1 relationship types)
-                // 3. List type input fields: key -Value pair of relationship name and a list of dictionary of parameters (takes place for 1:N, M:N relationship types) 
+                // 3. List type input fields: key - Value pair of relationship name and a list of dictionary of parameters (takes place for 1:N, M:N relationship types) 
                 List<IDictionary<string, object?>> parsedInputList = (List<IDictionary<string, object?>>)parsedInputParams;
 
                 // For many type multiple create operation, the "parameters" dictionary is a key pair of <"items", List<IValueNode>>.
                 // The value field got using the key "items" cannot be of any other type.
-                // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate. But, this acts as a guard against other types with "items" field.
+                // Ideally, this condition should never be hit, because such invalid cases should be caught by Hotchocolate.
+                // But, this acts as a guard against other types with "items" field.
                 if (param is not List<IValueNode> paramList)
                 {
                     throw new DataApiBuilderException(message: $"Unsupported type used with {fieldName} in the create mutation input",
@@ -1029,7 +1030,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 //                 },
                 //                 {
                 //                    title: "Educated",
-                //                    publishers: { name: "Random House"}    
+                //                    publishers: { name: "Random House"}
                 //                 }
                 //     ]){
                 //      items{
@@ -1039,15 +1040,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 //      }
                 //   }
                 // }
-                // For the above mutation request, in the parsedInputList, the 0th dictionary will correspond to the fields for the 0th element in the items array.  
+                // For the above mutation request, in the parsedInputList, the 0th dictionary will correspond to the fields for the 0th element in the items array.
                 // Likewise, 1st dictionary in the parsedInputList will correspond to the fields for the 1st element in the items array and so on.
                 // Each element in the items array is independent of any other element in the array. Therefore, the create operation for each element in the items array is independent of the other elements.
                 // So, parsedInputList is iterated and the create operation is performed for each element in the list.
                 foreach (IDictionary<string, object?> parsedInput in parsedInputList)
                 {
-                    MultipleCreateStructure multipleCreateStructure = new(entityName: entityName,
-                                                                          higherLevelEntityName: entityName,
-                                                                          inputMutParams: parsedInput);
+                    MultipleCreateStructure multipleCreateStructure = new(
+                        entityName: entityName,
+                        higherLevelEntityName: entityName,
+                        inputMutParams: parsedInput);
 
                     Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItem = new();
 
@@ -1055,15 +1057,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (fieldNodeForCurrentItem is null)
                     {
                         throw new DataApiBuilderException(message: "Error when processing the mutation request",
-                                                          statusCode: HttpStatusCode.InternalServerError,
-                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                                                          statusCode: HttpStatusCode.BadRequest,
+                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
                     PerformDbInsertOperation(context, fieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure);
 
                     // Ideally the CurrentEntityCreatedValues should not be null. CurrentEntityCreatedValues being null indicates that the create operation
-                    // has failed and that will result an exception being thrown.
-                    // This condition just acts as a guard against having to deal with null values in selection set resolution.
+                    // has failed and that will result in an exception being thrown.
+                    // This condition acts as a guard against having to deal with null values during selection set resolution.
                     if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
                     {
                         primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFieldValues(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
@@ -1083,14 +1085,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 //                }})
                 //  {
                 //     id
-                //     title 
-                //     publisher_id 
+                //     title
+                //     publisher_id
                 //  }
                 // For the above mutation request, the parsedInputParams will be a dictionary with the following key value pairs
                 //
                 // Key          Value
                 // title        Harry Potter and the Chamber of Secrets
-                // publishers   Dictionary<name, Bloomsbury> 
+                // publishers   Dictionary<name, Bloomsbury>
                 IDictionary<string, object?> parsedInput = (IDictionary<string, object?>)parsedInputParams;
 
                 // For point multiple create operation, the "parameters" dictionary is a key pair of <"item", List<ObjectFieldNode>>.
@@ -1103,9 +1105,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
-                MultipleCreateStructure multipleCreateStructure = new(entityName: entityName,
-                                                                      higherLevelEntityName: entityName,
-                                                                      inputMutParams: parsedInput);
+                MultipleCreateStructure multipleCreateStructure = new(
+                    entityName: entityName,
+                    higherLevelEntityName: entityName,
+                    inputMutParams: parsedInput);
 
                 PerformDbInsertOperation(context, paramList, sqlMetadataProvider, multipleCreateStructure);
 
@@ -1136,9 +1139,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (multipleCreateStructure.InputMutParams is null || parameters is null)
             {
                 throw new DataApiBuilderException(
-                        message: "Null input parameter is not acceptable",
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                        message: "The input for a multiple create mutation operation cannot be null.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // For One - Many and Many - Many relationship types, the entire logic needs to be run for each element of the input.
@@ -1661,7 +1664,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Dictionary<string, object?> result = new();
                 foreach (ObjectFieldNode node in nodes)
                 {
-
                     string name = node.Name.Value;
                     if (node.Value.Kind == SyntaxKind.ListValue)
                     {

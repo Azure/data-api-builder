@@ -1927,6 +1927,52 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
         }
+
+        /// <inheritdoc/>
+        public bool TryGetFKDefinition(
+            string sourceEntityName,
+            string targetEntityName,
+            string referencingEntityName,
+            string referencedEntityName,
+            [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition,
+            bool isMToNRelationship = false)
+        {
+            if (GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencingEntityName, out DatabaseObject? referencingDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencedEntityName, out DatabaseObject? referencedDbObject))
+            {
+                DatabaseTable referencingDbTable = (DatabaseTable)referencingDbObject;
+                DatabaseTable referencedDbTable = (DatabaseTable)referencedDbObject;
+                SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+                RelationShipPair referencingReferencedPair;
+                List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+
+                // At this point, we are sure that a valid foreign key definition would exist from the referencing entity
+                // to the referenced entity because we validate it during the startup that the Foreign key information
+                // has been inferred for all the relationships.
+                if (isMToNRelationship)
+                {
+
+                    foreignKeyDefinition = fKDefinitions.FirstOrDefault(
+                                                            fk => string.Equals(referencedDbTable.FullName, fk.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase)
+                                                            && fk.ReferencingColumns.Count > 0
+                                                            && fk.ReferencedColumns.Count > 0)!;
+                }
+                else
+                {
+                    referencingReferencedPair = new(referencingDbTable, referencedDbTable);
+                    foreignKeyDefinition = fKDefinitions.FirstOrDefault(
+                                                            fk => fk.Pair.Equals(referencingReferencedPair) &&
+                                                            fk.ReferencingColumns.Count > 0
+                                                            && fk.ReferencedColumns.Count > 0)!;
+                }
+
+                return true;
+            }
+
+            foreignKeyDefinition = null;
+            return false;
+        }
     }
 }
 

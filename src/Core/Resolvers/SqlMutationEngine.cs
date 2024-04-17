@@ -1066,7 +1066,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // This condition just acts as a guard against having to deal with null values in selection set resolution.
                     if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
                     {
-                        primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFields(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
+                        primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFieldValues(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
                     }
 
                     idx++;
@@ -1111,7 +1111,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
                 {
-                    primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFields(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
+                    primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFieldValues(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
                 }
             }
 
@@ -1201,26 +1201,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, referencedRelationship.Item1);
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure);
 
-                    currentEntityRelationshipMetadata!.TargetEntityToFkDefinitionMap.TryGetValue(relatedEntityName, out List<ForeignKeyDefinition>? foreignKeyDefinitions);
-                    ForeignKeyDefinition foreignKeyDefinition = FetchValidForeignKeyDefinition(sqlMetadataProvider: sqlMetadataProvider,
-                                                                                               foreignKeyDefinitions: foreignKeyDefinitions!,
-                                                                                               referencingEntityName: entityName,
-                                                                                               referencedEntityName: relatedEntityName,
-                                                                                               isMToNRelationship: false);
-                    PopulateReferencingFields(sqlMetadataProvider: sqlMetadataProvider,
-                                              multipleCreateStructure: multipleCreateStructure,
-                                              fkDefinition: foreignKeyDefinition,
-                                              computedRelationshipFields: referencedRelationshipMultipleCreateStructure.CurrentEntityCreatedValues,
-                                              isLinkingTable: false,
-                                              entityName: relatedEntityName);
+                    if (sqlMetadataProvider.TryGetFKDefinition(
+                                                    sourceEntityName: entityName,
+                                                    targetEntityName: relatedEntityName,
+                                                    referencingEntityName: entityName,
+                                                    referencedEntityName: relatedEntityName,
+                                                    out ForeignKeyDefinition? foreignKeyDefinition,
+                                                    isMToNRelationship: false))
+                    {
+                        PopulateReferencingFields(
+                            sqlMetadataProvider: sqlMetadataProvider,
+                            multipleCreateStructure: multipleCreateStructure,
+                            fkDefinition: foreignKeyDefinition,
+                            computedRelationshipFields: referencedRelationshipMultipleCreateStructure.CurrentEntityCreatedValues,
+                            isLinkingTable: false,
+                            entityName: relatedEntityName);
+                    }
                 }
 
-                multipleCreateStructure.CurrentEntityCreatedValues = BuildAndExecuteInsertDbQueries(sqlMetadataProvider: sqlMetadataProvider,
-                                                                                                    entityName: entityName,
-                                                                                                    higherLevelEntityName: entityName,
-                                                                                                    parameters: multipleCreateStructure.CurrentEntityParams!,
-                                                                                                    sourceDefinition: currentEntitySourceDefinition,
-                                                                                                    isLinkingEntity: false);
+                multipleCreateStructure.CurrentEntityCreatedValues = BuildAndExecuteInsertDbQueries(
+                                                                          sqlMetadataProvider: sqlMetadataProvider,
+                                                                          entityName: entityName,
+                                                                          higherLevelEntityName: entityName,
+                                                                          parameters: multipleCreateStructure.CurrentEntityParams!,
+                                                                          sourceDefinition: currentEntitySourceDefinition,
+                                                                          isLinkingEntity: false);
 
                 //Perform an insertion in the linking table if required
                 if (multipleCreateStructure.IsLinkingTableInsertionRequired)
@@ -1279,17 +1284,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // when records have been successfully created in both the entities involved in the relationship.
                     // In M:N relationship, both the entities are referenced entities and the linking table is the referencing table. 
                     // So, populating referencing fields is performed only for 1:N relationships.    
-                    if (currentEntityRelationshipMetadata is not null
-                        && currentEntityRelationshipMetadata.TargetEntityToFkDefinitionMap.TryGetValue(relatedEntityName, out List<ForeignKeyDefinition>? referencingEntityFKDefinitions)
-                        && !referencingEntityFKDefinitions.IsNullOrEmpty())
+                    if (sqlMetadataProvider.TryGetFKDefinition(
+                                                sourceEntityName: entityName,
+                                                targetEntityName: relatedEntityName,
+                                                referencingEntityName: relatedEntityName,
+                                                referencedEntityName: entityName,
+                                                out ForeignKeyDefinition? referencingEntityFKDefinition,
+                                                isMToNRelationship: referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired))
                     {
-                        ForeignKeyDefinition referencingEntityFKDefinition = FetchValidForeignKeyDefinition(
-                                                                                sqlMetadataProvider: sqlMetadataProvider,
-                                                                                foreignKeyDefinitions: referencingEntityFKDefinitions,
-                                                                                referencingEntityName: relatedEntityName,
-                                                                                referencedEntityName: entityName,
-                                                                                isMToNRelationship: referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired);
-
                         PopulateReferencingFields(
                             sqlMetadataProvider: sqlMetadataProvider,
                             multipleCreateStructure: referencingRelationshipMultipleCreateStructure,
@@ -1342,26 +1344,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructure.Parameters;
 
             List<string> exposedColumnNames = new();
-            foreach (string columnName in sourceDefinition.Columns.Keys)
+            if (sqlMetadataProvider.TryGetExposedFieldToBackingFieldMap(entityName, out IReadOnlyDictionary<string, string>? exposedFieldToBackingFieldMap))
             {
-                if (sqlMetadataProvider.TryGetExposedColumnName(entityName, columnName, out string? exposedColumnName) && !string.IsNullOrWhiteSpace(exposedColumnName))
-                {
-                    exposedColumnNames.Add(exposedColumnName);
-                }
+                exposedColumnNames = exposedFieldToBackingFieldMap.Keys.ToList();
             }
 
             DbResultSet? dbResultSet;
             DbResultSetRow? dbResultSetRow;
-
             dbResultSet = queryExecutor.ExecuteQuery(queryString,
                                                      queryParameters,
                                                      queryExecutor.ExtractResultSetFromDbDataReader,
                                                      GetHttpContext(),
-                                                     exposedColumnNames,
+                                                     exposedColumnNames.IsNullOrEmpty() ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
                                                      dataSourceName);
 
             dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
-
             if (dbResultSetRow is null || dbResultSetRow.Columns.Count == 0)
             {
                 if (isLinkingEntity)
@@ -1391,56 +1388,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Identifies and returns the foreign key definition with the right combination of
-        /// referencing and referenced entity names.
-        /// </summary>
-        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
-        /// <param name="foreignKeyDefinitions">List of foreign key definitions</param>
-        /// <param name="referencingEntityName">Referencing entity name</param>
-        /// <param name="referencedEntityName">Referenced entity name</param>
-        /// <param name="isMToNRelationship">Indicates whether the relationship is M:N</param>
-        /// <returns>Valid forrign key definition with the right referencing and referencing entities</returns>
-        /// <exception cref="DataApiBuilderException"></exception>
-        private static ForeignKeyDefinition FetchValidForeignKeyDefinition(ISqlMetadataProvider sqlMetadataProvider, List<ForeignKeyDefinition> foreignKeyDefinitions, string referencingEntityName, string referencedEntityName, bool isMToNRelationship)
-        {
-            string referencedTableFullName = sqlMetadataProvider.EntityToDatabaseObject[referencedEntityName].FullName;
-            string referencingTableFullName = sqlMetadataProvider.EntityToDatabaseObject[referencingEntityName].FullName;
-
-            foreach (ForeignKeyDefinition foreignKeyDefinition in foreignKeyDefinitions)
-            {
-                // For a M:N relationship, the referencing table is always the linking table.
-                // So, the referenced table is the only table that needs to be checked.
-                if (isMToNRelationship)
-                {
-                    if (string.Equals(referencedTableFullName, foreignKeyDefinition.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return foreignKeyDefinition;
-                    }
-                }
-                else
-                {
-                    if (string.Equals(referencingTableFullName, foreignKeyDefinition.Pair.ReferencingDbTable.FullName, StringComparison.OrdinalIgnoreCase)
-                   && string.Equals(referencedTableFullName, foreignKeyDefinition.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        return foreignKeyDefinition;
-                    }
-                }
-            }
-
-            throw new DataApiBuilderException(message: $"Foreign Key Definition does not exist with referencing entity: {referencingEntityName} and referenced entity: {referencedEntityName}",
-                                              statusCode: HttpStatusCode.InternalServerError,
-                                              subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
-
-        }
-
-        /// <summary>
         /// Helper method to extract the primary key fields from all the fields of the entity.
         /// </summary>
         /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
         /// <param name="entityName">Name of the entity</param>
         /// <param name="entityFields">All the fields belonging to the entity</param>
         /// <returns>Primary Key fields</returns>
-        private static Dictionary<string, object?> FetchPrimaryKeyFields(ISqlMetadataProvider sqlMetadataProvider, string entityName, Dictionary<string, object?> entityFields)
+        private static Dictionary<string, object?> FetchPrimaryKeyFieldValues(ISqlMetadataProvider sqlMetadataProvider, string entityName, Dictionary<string, object?> entityFields)
         {
             Dictionary<string, object?> pkFields = new();
             SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
@@ -1459,10 +1413,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// 
+        /// Helper method to populate the referencing fields in LinkingEntityParams or CurrentEntityParams depending on whether the current entity is a linking entity or not. 
         /// </summary>
-        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
-        /// <param name="fkDefinition">Foreign Key metadata constructed during engine start-up</param>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database.</param>
+        /// <param name="fkDefinition">Foreign Key metadata constructed during engine start-up.</param>
         /// <param name="multipleCreateStructure">Wrapper object assisting with the multiple create operation.</param>
         /// <param name="computedRelationshipFields">Relationship fields obtained as a result of creation of current or higher level entity item.</param>
         /// <param name="isLinkingTable">Indicates whether referencing fields are populated for a linking entity.</param>
@@ -1534,14 +1488,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             foreach ((string relationshipName, object? relationshipFieldValues) in (Dictionary<string, object?>)multipleCreateStructure.InputMutParams)
             {
                 if (topLevelEntityRelationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship) && entityRelationship is not null)
-                {   
+                {
                     // The linking object not being null indicates that the relationship is a many-to-many relationship.
                     // For M:N realtionship, new item(s) have to be created in the linking table in addition to the source and target tables.
                     // Creation of item(s) in the linking table is handled when processing the target entity.
                     // To be able to create item(s) in the linking table, PKs of the source and target items are required.
                     // Indirectly, the target entity depends on the PKs of the source entity.
                     // Hence, the target entity is added as a referencing entity.
-                    if (! string.IsNullOrWhiteSpace(entityRelationship.LinkingObject))
+                    if (!string.IsNullOrWhiteSpace(entityRelationship.LinkingObject))
                     {
                         multipleCreateStructure.ReferencingRelationships.Add(new Tuple<string, object?>(relationshipName, relationshipFieldValues) { });
                         continue;

@@ -108,9 +108,9 @@ update Comic --config "dab-config.PostgreSql.json" --permissions "authenticated:
 update series --config "dab-config.PostgreSql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.PostgreSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.PostgreSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
-update Shrub --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
+update Shrub --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName" --relationship fungus --cardinality one --target.entity Fungus --relationship.fields "species:habitat"
 update Fungus --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
-update Fungus --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
+update Fungus --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'" --relationship Shrub --cardinality one --target.entity Shrub --relationship.fields "habitat:species"
 update books_view_with_mapping --config "dab-config.PostgreSql.json" --map "id:book_id"
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
 update SupportedType --config "dab-config.PostgreSql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 

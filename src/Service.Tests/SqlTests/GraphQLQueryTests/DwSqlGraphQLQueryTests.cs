@@ -98,6 +98,15 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Regression test does not need to run for DW.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        public Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        {
+            throw new NotImplementedException("Regression test not needed for DW");
+        }
+
+        /// <summary>
         /// Test getting a single item by use of primary key
         /// <summary>
         [TestMethod]

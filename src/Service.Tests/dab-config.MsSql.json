@@ -2,7 +2,7 @@
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;",
+    "connection-string": "Server=localhost;Database=master;Trusted_Connection=True;TrustServerCertificate=true;",
     "options": {
       "set-session-context": true
     }
@@ -1590,6 +1590,16 @@
       ],
       "mappings": {
         "species": "fancyName"
+      },
+      "relationships": {
+        "fungus": {
+          "cardinality": "one",
+          "target.entity": "Fungus",
+          "source.fields": [ "species" ],
+          "target.fields": [ "habitat" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "Fungus": {
@@ -1662,6 +1672,16 @@
       ],
       "mappings": {
         "spores": "hazards"
+      },
+      "relationships": {
+        "shrub": {
+          "cardinality": "one",
+          "target.entity": "Shrub",
+          "source.fields": [ "habitat" ],
+          "target.fields": [ "species" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "books_view_all": {
@@ -2898,7 +2918,7 @@
         }
       ],
       "mappings": {
-        "id": "id",
+        "id": "identifier",
         "title": "title"
       },
       "relationships": {

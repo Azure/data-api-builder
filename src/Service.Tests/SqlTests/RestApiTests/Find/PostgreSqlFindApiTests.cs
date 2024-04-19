@@ -449,6 +449,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
+                "FindTest_Negative1QueryParams_Pagination",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationPaginationTableName + @"
+                        ORDER BY id asc
+                        LIMIT 100000
+                    ) AS subq
+                "
+            },
+            {
                 "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data

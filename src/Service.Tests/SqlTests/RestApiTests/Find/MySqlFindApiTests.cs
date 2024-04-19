@@ -457,6 +457,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindTest_Negative1QueryParams_Pagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'bkname', bkname)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationPaginationTableName + @"
+                      ORDER BY id asc
+                      LIMIT 100000
+                  ) AS subq"
+            },
+            {
                 "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id)) AS data

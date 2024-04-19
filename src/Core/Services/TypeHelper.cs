@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services
@@ -153,6 +154,43 @@ namespace Azure.DataApiBuilder.Core.Services
                 "TimeSpan" => EdmPrimitiveTypeKind.TimeOfDay,
                 _ => throw new ArgumentException($"Column type" +
                         $" {columnSystemType.Name} not yet supported.")
+            };
+
+            return type;
+        }
+
+        /// <summary>
+        /// Given GraphQl type, returns the corresponding primitive type kind.
+        /// </summary>
+        /// <param name="columnSystemType">Type of the column.</param>
+        /// <returns>EdmPrimitiveTypeKind</returns>
+        /// <exception cref="ArgumentException">Throws when the column</exception>
+        public static EdmPrimitiveTypeKind GetEdmPrimitiveTypeFromITypeNode(ITypeNode columnSystemType)
+        {
+            string graphQlType;
+            if (columnSystemType.IsListType())
+            {
+                graphQlType = ((ListTypeNode)columnSystemType).NamedType().Name.Value;
+            }
+            else if (columnSystemType.IsNonNullType())
+            {
+                graphQlType = ((NonNullTypeNode)columnSystemType).NamedType().Name.Value;
+            }
+            else
+            {
+                graphQlType = ((NamedTypeNode)columnSystemType).Name.Value;
+            }
+
+            // https://graphql.org/learn/schema/#scalar-types
+            EdmPrimitiveTypeKind type = graphQlType switch
+            {
+                "String" => EdmPrimitiveTypeKind.String,
+                "ID" => EdmPrimitiveTypeKind.Guid,
+                "Int" => EdmPrimitiveTypeKind.Int32,
+                "Float" => EdmPrimitiveTypeKind.Decimal,
+                "Boolean" => EdmPrimitiveTypeKind.Boolean,
+                "Date" => EdmPrimitiveTypeKind.Date,
+                _ => EdmPrimitiveTypeKind.PrimitiveType
             };
 
             return type;

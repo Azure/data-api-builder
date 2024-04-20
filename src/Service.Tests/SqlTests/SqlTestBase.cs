@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests
         protected static string _defaultSchemaName;
         protected static string _defaultSchemaVersion;
         protected static IAuthorizationResolver _authorizationResolver;
-        private static WebApplicationFactory<Program> _application;
+        protected static WebApplicationFactory<Program> _application;
         protected static ILogger<ISqlMetadataProvider> _sqlMetadataLogger;
         protected static ILogger<SqlMutationEngine> _mutationEngineLogger;
         protected static ILogger<IQueryEngine> _queryEngineLogger;

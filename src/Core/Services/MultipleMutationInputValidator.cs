@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="columnsDerivedFromParentEntity">Set of columns in this entity whose values should be
         /// derived from insertion in the source entity (i.e. source entity would have been the referenced entity).</param>
         /// <param name="columnsToBeDerivedFromEntity">Set of columns in this entity whose values are to be
-        /// derived from insertion in the this entity and returned to the source entity so as to provide values for
+        /// derived from insertion in this entity and returned to the source entity so as to provide values for
         /// the corresponding referencing fields (i.e. source entity would have been the referencing entity).</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
         /// <param name="parentEntityName">Parent entity's name.</param>

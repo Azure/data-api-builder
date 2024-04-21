@@ -118,6 +118,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         [TestMethod]
         public async Task PresenceOfMultipleSourcesOfTruthForReferencingColumnForCreateOneMutations()
         {
+            // Test 1.
             // For a relationship between Book (Referencing) - Publisher (Referenced) defined as books.publisher_id -> publisher.id,
             // consider the request input for Book:
             // 1. An explicit value is provided for referencing field publisher_id.
@@ -147,6 +148,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
+            // Test 2: Validates the functionality of the MultipleMutationInputValidator.ValidateAbsenceOfReferencingColumnsInTargetEntity().
             // For a relationship between Book (Referenced) - Review (Referencing) - defined as books.id <- reviews.book_id,
             // consider the request input for Review:
             // 1. An explicit value is provided for referencing field book_id.
@@ -173,13 +175,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
-            string createOnePublisherName = "createPublisher";
-
+            // Test 3.
             // For a relationship between Publisher (Referenced) - Book (Referencing) defined as publisher.id <- books.publisher_id,
             // consider the request input for Book:
             // 1. Publisher is the parent referenced entity - so it passes on a value for publisher_id to the referencing entity Book.
             // 2. A value is assigned for the target (referenced entity) via relationship field ('publisher'), which will give back
             // another value for publisher_id.
+            string createOnePublisherName = "createPublisher";
             string multipleCreateOneBookWithTwoPublishers = @"mutation {
                     createPublisher(item: {
                                         name: ""Human publisher"",
@@ -223,6 +225,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         [TestMethod]
         public async Task PresenceOfMultipleSourcesOfTruthForReferencingColumnForCreateMultipleMutations()
         {
+            // Test 1.
             // For a relationship between Book (Referencing) - Publisher (Referenced) defined as books.publisher_id -> publisher.id,
             // consider the request input for Book:
             // 1. An explicit value is provided for referencing field publisher_id.
@@ -254,6 +257,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
+            // Test 2: Validates the functionality of the MultipleMutationInputValidator.ValidateAbsenceOfReferencingColumnsInTargetEntity().
             // For a relationship between Book (Referenced) - Review (Referencing) -  defined as books.id <- reviews.book_id,
             // consider the request input for Review:
             // 1. An explicit value is provided for referencing field book_id.
@@ -282,13 +286,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
-            string createMultiplePublisherName = "createPublishers";
-
+            // Test 3.
             // For a relationship between Publisher (Referenced) - Book (Referencing) defined as publisher.id <- books.publisher_id,
             // consider the request input for Book:
             // 1. Publisher is the parent referenced entity - so it passes on a value for publisher_id to the referencing entity Book.
             // 2. A value is assigned for the target (referenced entity) via relationship field ('publisher'), which will give back
             // another value for publisher_id.
+            string createMultiplePublisherName = "createPublishers";
             string multipleCreateOneBookWithTwoPublishers = @"mutation {
                     createPublishers(items: [{
                                         name: ""Human publisher"",

@@ -31,7 +31,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="columnsToBeDerivedFromEntity">Set of columns in this entity whose values are to be
         /// derived from insertion in this entity and returned to the source entity so as to provide values for
         /// the corresponding referencing fields (i.e. source entity would have been the referencing entity).</param>
-        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
+        /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
+        /// as to at what level in the multiple mutation the exception occurred.</param>
         /// <param name="parentEntityName">Parent entity's name.</param>
         /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
         /// <example>       1. mutation {
@@ -163,7 +165,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="columnsToBeSuppliedToSourceEntity">Set of columns in this entity whose values are to be
         /// derived from insertion in this entity or its subsequent referenced entities and returned to the source entity
         /// so as to provide values for the corresponding referencing fields (i.e. source entity would have been the referencing entity).</param>
-        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
+        /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
+        /// as to at what level in the multiple mutation the exception occurred.</param>
         /// <param name="parentEntityName">Parent entity's name.</param>
         /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
         private static void ValidateObjectFieldNodes(
@@ -438,7 +442,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// Helper method get list of columns in a referencing entity which hold multiple references to a referenced entity.
         /// We don't support multiple-create for such use cases because then we have conflicting sources of truth for values for
         /// the columns holding multiple references to referenced entity. In such cases, the referencing column can assume the
-        /// value of any referenced column which leads to amibugites as to what value to assign to the referencing column.
+        /// value of any referenced column which leads to ambiguities as to what value to assign to the referencing column.
         /// </summary>
         /// <param name="referencingEntityName">Name of the referencing entity.</param>
         /// <param name="referencingColumns">Set of referencing columns.</param>
@@ -520,7 +524,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// referencing fields for all the relationships for which the current entity is the referenced entity.</param>
         /// <param name="fieldsToDeriveFromReferencedEntities">Dictionary storing the mapping from relationship name
         /// to the set of referenced fields for all the relationships for which the current entity is the referencing entity.</param>
-        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request.</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
+        /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
+        /// as to at what level in the multiple mutation the exception occurred.</param>
         /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
         private static void ValidateRelationshipFields(
             InputObjectType schemaObject,

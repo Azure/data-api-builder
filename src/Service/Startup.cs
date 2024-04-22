@@ -24,6 +24,7 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.HealthCheck;
 using HotChocolate.AspNetCore;
 using HotChocolate.Types;
 using Microsoft.ApplicationInsights;
@@ -33,6 +34,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -105,7 +107,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<RuntimeConfigValidator>();
 
             services.AddSingleton<CosmosClientProvider>();
-            services.AddHealthChecks();
+            services.AddHealthChecks()
+                .AddCheck<DabHealthCheck>("DabHealthCheck");
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
@@ -139,6 +142,14 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
+            services.AddSingleton<HealthReportResponseWriter>();
+
+            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            services.AddSingleton<ILogger<HealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<HealthReportResponseWriter>();
+            });
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
             {
@@ -387,7 +398,10 @@ namespace Azure.DataApiBuilder.Service
                     Enable = false
                 });
 
-                endpoints.MapHealthChecks("/");
+                endpoints.MapHealthChecks("/", new HealthCheckOptions
+                {
+                    ResponseWriter = app.ApplicationServices.GetRequiredService<HealthReportResponseWriter>().WriteResponse
+                });
             });
         }
 

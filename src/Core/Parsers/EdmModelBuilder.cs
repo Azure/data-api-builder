@@ -4,6 +4,7 @@
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services;
+using HotChocolate.Language;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Parsers
@@ -38,6 +39,41 @@ namespace Azure.DataApiBuilder.Core.Parsers
         }
 
         /// <summary>
+        /// Build the model from the provided schema.
+        /// </summary>
+        /// <param name="graphQLSchemaRoot">holds the whole schema.</param>
+        /// <returns>An EdmModelBuilder that can be used to get a model.</returns>
+        public EdmModelBuilder BuildModel(DocumentNode graphQLSchemaRoot)
+        {
+            return BuildEdmModelsForCosmos(graphQLSchemaRoot);
+        }
+
+        private EdmModelBuilder BuildEdmModelsForCosmos(DocumentNode graphQLSchemaRoot)
+        {
+            EdmEntityContainer container = new(DEFAULT_NAMESPACE, DEFAULT_CONTAINER_NAME);
+
+            foreach (ObjectTypeDefinitionNode typeDefinition in graphQLSchemaRoot.Definitions)
+            {
+                EdmEntityType edmEntity = new(DEFAULT_NAMESPACE, typeDefinition.Name.Value);
+                foreach (FieldDefinitionNode field in typeDefinition.Fields)
+                {
+                    edmEntity.AddStructuralProperty(
+                        name: field.Name.Value,
+                        type: TypeHelper.GetEdmPrimitiveTypeFromITypeNode(field.Type),
+                        isNullable: !field.Type.IsNonNullType());
+                }
+
+                container.AddEntitySet(
+                    name: typeDefinition.Name.Value,
+                    elementType: edmEntity);
+            }
+
+            _model.AddElement(container);
+
+            return this;
+        }
+
+        /// <summary>
         /// Build EdmEntityType objects for runtime config defined entities and add the created objects to the EdmModel.
         /// </summary>
         /// <param name="sqlMetadataProvider">Reference to entity names and associated database object metadata.</param>
@@ -47,8 +83,16 @@ namespace Azure.DataApiBuilder.Core.Parsers
             // since we allow for aliases to be used in place of the names of the actual
             // columns of the database object (such as table's columns), we need to
             // account for these potential aliases in our EDM Model.
+            IReadOnlyDictionary<string, Entity> linkingEntities = sqlMetadataProvider.GetLinkingEntities();
             foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
+                if (linkingEntities.ContainsKey(entityAndDbObject.Key))
+                {
+                    // No need to create entity types for linking entity because the linking entity is not exposed for REST and GraphQL.
+                    // Hence, there is no possibility of having a `filter` operation against it.
+                    continue;
+                }
+
                 // Do not add stored procedures, which do not have table definitions or conventional columns, to edm model
                 // As of now, no ODataFilterParsing will be supported for stored procedure result sets
                 if (entityAndDbObject.Value.SourceType is not EntitySourceType.StoredProcedure)
@@ -109,12 +153,19 @@ namespace Azure.DataApiBuilder.Core.Parsers
 
             // Entity set is a collection of the same entity, if we think of an entity as a row of data
             // that has a key, then an entity set can be thought of as a table made up of those rows.
-            foreach (KeyValuePair<string, DatabaseObject> entityAndDbObject in sqlMetadataProvider.GetEntityNamesAndDbObjects())
+            IReadOnlyDictionary<string, Entity> linkingEntities = sqlMetadataProvider.GetLinkingEntities();
+            foreach ((string entityName, DatabaseObject dbObject) in sqlMetadataProvider.GetEntityNamesAndDbObjects())
             {
-                if (entityAndDbObject.Value.SourceType != EntitySourceType.StoredProcedure)
+                if (linkingEntities.ContainsKey(entityName))
                 {
-                    string entityName = $"{entityAndDbObject.Value.FullName}";
-                    container.AddEntitySet(name: $"{entityAndDbObject.Key}.{entityName}", _entities[$"{entityAndDbObject.Key}.{entityName}"]);
+                    // No need to create entity set for linking entity.
+                    continue;
+                }
+
+                if (dbObject.SourceType != EntitySourceType.StoredProcedure)
+                {
+                    string fullSourceName = $"{dbObject.FullName}";
+                    container.AddEntitySet(name: $"{entityName}.{fullSourceName}", _entities[$"{entityName}.{fullSourceName}"]);
                 }
             }
 

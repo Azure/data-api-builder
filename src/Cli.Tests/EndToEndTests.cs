@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using Azure.DataApiBuilder.Product;
+using Cli.Constants;
 using Microsoft.Data.SqlClient;
 
 namespace Cli.Tests;
@@ -21,9 +22,10 @@ public class EndToEndTests
     public void TestInitialize()
     {
         MockFileSystem fileSystem = FileSystemUtils.ProvisionMockFileSystem();
-        fileSystem.AddFile(
-            TEST_SCHEMA_FILE,
-            new MockFileData(""));
+        // Mock GraphQL Schema File
+        fileSystem.AddFile(TEST_SCHEMA_FILE, new MockFileData(""));
+        // Empty runtime config file
+        fileSystem.AddFile("dab-config-empty.json", new MockFileData(""));
 
         _fileSystem = fileSystem;
 
@@ -120,7 +122,7 @@ public class EndToEndTests
             replaceEnvVar: true));
 
         SqlConnectionStringBuilder builder = new(runtimeConfig.DataSource.ConnectionString);
-        Assert.AreEqual(ProductInfo.GetDataApiBuilderApplicationName(), builder.ApplicationName);
+        Assert.AreEqual(ProductInfo.GetDataApiBuilderUserAgent(), builder.ApplicationName);
 
         Assert.IsNotNull(runtimeConfig);
         Assert.AreEqual(DatabaseType.MSSQL, runtimeConfig.DataSource.DatabaseType);
@@ -129,6 +131,90 @@ public class EndToEndTests
         Assert.IsFalse(runtimeConfig.Runtime.Rest?.Enabled);
         Assert.AreEqual("/graphql-api", runtimeConfig.Runtime.GraphQL?.Path);
         Assert.IsTrue(runtimeConfig.Runtime.GraphQL?.Enabled);
+    }
+
+    /// <summary>
+    /// Test to validate the usage of --graphql.multiple-create.enabled option of the init command for all database types.
+    ///
+    /// 1. Behavior for database types other than MsSQL:
+    ///      - Irrespective of whether the --graphql.multiple-create.enabled option is used or not, fields related to multiple-create will NOT be written to the config file.
+    ///      - As a result, after deserialization of such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be null.
+    /// 2. Behavior for MsSQL database type:
+    ///
+    ///      a. When --graphql.multiple-create.enabled option is used
+    ///           - In this case, the fields related to multiple mutation and multiple create operations will be written to the config file.
+    ///                "multiple-mutations": {
+    ///                    "create": {
+    ///                       "enabled": true/false
+    ///                    }
+    ///                }
+    ///         After deserializing such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be non-null and the value of the "enabled" field is expected to be the same as the value passed in the init command.
+    ///
+    ///      b. When --graphql.multiple-create.enabled option is not used
+    ///           - In this case, fields related to multiple mutation and multiple create operations will NOT be written to the config file.
+    ///           - As a result, after deserialization of such a config file, the Runtime.GraphQL.MultipleMutationOptions is expected to be null.
+    ///
+    /// </summary>
+    /// <param name="isMultipleCreateEnabled">Value interpreted by the CLI for '--graphql.multiple-create.enabled' option of the init command.
+    ///    When not used, CLI interprets the value for the option as CliBool.None
+    ///    When used with true/false, CLI interprets the value as CliBool.True/CliBool.False respectively.
+    /// </param>
+    /// <param name="expectedValueForMultipleCreateEnabledFlag"> Expected value for the multiple create enabled flag in the config file.</param>
+    [DataTestMethod]
+    [DataRow(CliBool.True, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MsSql database type")]
+    [DataRow(CliBool.False, "mssql", DatabaseType.MSSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MsSql database type")]
+    [DataRow(CliBool.None, "mssql", DatabaseType.MSSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MsSql database type")]
+    [DataRow(CliBool.True, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for MySql database type")]
+    [DataRow(CliBool.False, "mysql", DatabaseType.MySQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for MySql database type")]
+    [DataRow(CliBool.None, "mysql", DatabaseType.MySQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for MySql database type")]
+    [DataRow(CliBool.True, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for PostgreSql database type")]
+    [DataRow(CliBool.False, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for PostgreSql database type")]
+    [DataRow(CliBool.None, "postgresql", DatabaseType.PostgreSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for PostgreSql database type")]
+    [DataRow(CliBool.True, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for dwsql database type")]
+    [DataRow(CliBool.False, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for dwsql database type")]
+    [DataRow(CliBool.None, "dwsql", DatabaseType.DWSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for dwsql database type")]
+    [DataRow(CliBool.True, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled true' for cosmosdb_nosql database type")]
+    [DataRow(CliBool.False, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command with '--graphql.multiple-create.enabled false' for cosmosdb_nosql database type")]
+    [DataRow(CliBool.None, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for cosmosdb_nosql database type")]
+    public void TestEnablingMultipleCreateOperation(CliBool isMultipleCreateEnabled, string dbType, DatabaseType expectedDbType)
+    {
+        List<string> args = new() { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", dbType };
+
+        if (string.Equals("cosmosdb_nosql", dbType, StringComparison.OrdinalIgnoreCase))
+        {
+            List<string> cosmosNoSqlArgs = new() { "--cosmosdb_nosql-database",
+                          "graphqldb", "--cosmosdb_nosql-container", "planet", "--graphql-schema", TEST_SCHEMA_FILE};
+            args.AddRange(cosmosNoSqlArgs);
+        }
+
+        if (isMultipleCreateEnabled is not CliBool.None)
+        {
+            args.Add("--graphql.multiple-create.enabled");
+            args.Add(isMultipleCreateEnabled.ToString()!);
+        }
+
+        Program.Execute(args.ToArray(), _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(
+            TEST_RUNTIME_CONFIG_FILE,
+            out RuntimeConfig? runtimeConfig,
+            replaceEnvVar: true));
+
+        Assert.IsNotNull(runtimeConfig);
+        Assert.AreEqual(expectedDbType, runtimeConfig.DataSource.DatabaseType);
+        Assert.IsNotNull(runtimeConfig.Runtime);
+        Assert.IsNotNull(runtimeConfig.Runtime.GraphQL);
+        if (runtimeConfig.DataSource.DatabaseType is DatabaseType.MSSQL && isMultipleCreateEnabled is not CliBool.None)
+        {
+            Assert.IsNotNull(runtimeConfig.Runtime.GraphQL.MultipleMutationOptions);
+            Assert.IsNotNull(runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions);
+            bool expectedValueForMultipleCreateEnabled = isMultipleCreateEnabled == CliBool.True;
+            Assert.AreEqual(expectedValueForMultipleCreateEnabled, runtimeConfig.Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
+        }
+        else
+        {
+            Assert.IsNull(runtimeConfig.Runtime.GraphQL.MultipleMutationOptions, message: "MultipleMutationOptions is expected to be null because a) DB type is not MsSQL or b) Either --graphql.multiple-create.enabled option was not used or no value was provided.");
+        }
     }
 
     /// <summary>
@@ -607,20 +693,48 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to verify that `--help` and `--version` along with know command/option produce the exit code 0,
-    /// while unknown commands/options have exit code -1.
+    /// Validates that valid usage of verbs and associated options produce exit code 0 (CliReturnCode.SUCCESS).
+    /// Verifies that explicitly implemented verbs (add, update, init, start) and appropriately
+    /// supplied options produce exit code 0.
+    /// Verifies that non-explicitly implemented DAB CLI options `--help` and `--version` produce exit code 0.
+    /// init --config "dab-config.MsSql.json" --database-type mssql --connection-string "InvalidConnectionString"
     /// </summary>
     [DataTestMethod]
-    [DataRow(new string[] { "--version" }, 0, DisplayName = "Checking version should have exit code 0.")]
-    [DataRow(new string[] { "--help" }, 0, DisplayName = "Checking commands with help should have exit code 0.")]
-    [DataRow(new string[] { "add", "--help" }, 0, DisplayName = "Checking options with help should have exit code 0.")]
-    [DataRow(new string[] { "initialize" }, -1, DisplayName = "Invalid Command should have exit code -1.")]
-    [DataRow(new string[] { "init", "--database-name", "mssql" }, -1, DisplayName = "Invalid Options should have exit code -1.")]
-    [DataRow(new string[] { "init", "--database-type", "mssql", "-c", TEST_RUNTIME_CONFIG_FILE }, 0,
-    DisplayName = "Correct command with correct options should have exit code 0.")]
-    public void VerifyExitCodeForCli(string[] cliArguments, int expectedErrorCode)
+    [DataRow(new string[] { "--version" }, DisplayName = "Checking version.")]
+    [DataRow(new string[] { "--help" }, DisplayName = "Valid verbs with help.")]
+    [DataRow(new string[] { "add", "--help" }, DisplayName = "Valid options with help.")]
+    [DataRow(new string[] { "init", "--database-type", "mssql", "-c", TEST_RUNTIME_CONFIG_FILE }, DisplayName = "Valid verb with supported option.")]
+    public void ValidVerbsAndOptionsReturnZero(string[] cliArguments)
     {
-        Assert.AreEqual(expectedErrorCode, Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+        Assert.AreEqual(expected: CliReturnCode.SUCCESS, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+    }
+
+    /// <summary>
+    /// Validates that invalid verbs and options produce exit code -1 (CliReturnCode.GENERAL_ERROR).
+    /// </summary>
+    /// <param name="cliArguments">cli verbs, options, and option values</param>
+    [DataTestMethod]
+    [DataRow(new string[] { "--remove-telemetry" }, DisplayName = "Usage of non-existent verb remove-telemetry")]
+    [DataRow(new string[] { "--initialize" }, DisplayName = "Usage of invalid verb (longform of init not supported) initialize")]
+    [DataRow(new string[] { "init", "--database-name", "mssql" }, DisplayName = "Invalid init options database-name")]
+    public void InvalidVerbsAndOptionsReturnNonZeroExitCode(string[] cliArguments)
+    {
+        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
+    }
+
+    /// <summary>
+    /// Usage of valid verbs and options with values triggering exceptions should produce a non-zero exit code.
+    /// - File read/write issues when reading/writing to the config file.
+    /// - DAB engine failure.
+    /// </summary>
+    /// <param name="cliArguments">cli verbs, options, and option values</param>
+    [DataTestMethod]
+    [DataRow(new string[] { "init", "--config", "dab-config-empty.json", "--database-type", "mssql", "--connection-string", "SampleValue" },
+ DisplayName = "Config file value used already exists on the file system and results in init failure.")]
+    [DataRow(new string[] { "start", "--config", "dab-config-empty.json" }, DisplayName = "Config file value used is empty and engine startup fails")]
+    public void CliAndEngineFailuresReturnNonZeroExitCode(string[] cliArguments)
+    {
+        Assert.AreEqual(expected: CliReturnCode.GENERAL_ERROR, actual: Program.Execute(cliArguments, _cliLogger!, _fileSystem!, _runtimeConfigLoader!));
     }
 
     /// <summary>
@@ -657,22 +771,19 @@ public class EndToEndTests
 
     /// <summary>
     /// Test to verify that help writer window generates output on the console.
+    /// Every test here validates that the first line of the output contains the product name and version.
     /// </summary>
     [DataTestMethod]
     [DataRow("", "", new string[] { "ERROR" }, DisplayName = "No flags provided.")]
     [DataRow("initialize", "", new string[] { "ERROR", "Verb 'initialize' is not recognized." }, DisplayName = "Wrong Command provided.")]
-    [DataRow("", "--version", new string[] { "Microsoft.DataApiBuilder 1.0.0" }, DisplayName = "Checking version.")]
     [DataRow("", "--help", new string[] { "init", "add", "update", "start" }, DisplayName = "Checking output for --help.")]
     public void TestHelpWriterOutput(string command, string flags, string[] expectedOutputArray)
     {
-        using Process process = ExecuteDabCommand(
-            command,
-            flags
-        );
+        using Process process = ExecuteDabCommand(command, flags);
 
         string? output = process.StandardOutput.ReadToEnd();
         Assert.IsNotNull(output);
-        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
 
         foreach (string expectedOutput in expectedOutputArray)
         {
@@ -682,24 +793,25 @@ public class EndToEndTests
         process.Kill();
     }
 
-    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
-    [DataTestMethod]
-    public void TestVersionHasBuildHash(
-        string command,
-        string options
-    )
+    /// <summary>
+    /// When CLI is started via: dab --version, it should print the version number
+    /// which includes the commit hash. For example:
+    /// Microsoft.DataApiBuilder 0.12+2d181463e5dd46cf77fea31b7295c4e02e8ef031
+    /// </summary>
+    [TestMethod]
+    public void TestVersionHasBuildHash()
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
         using Process process = ExecuteDabCommand(
-            command: $"{command} ",
-            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
+            command: string.Empty,
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} --version"
         );
 
         string? output = process.StandardOutput.ReadLine();
         Assert.IsNotNull(output);
 
-        // Check that build hash is returned as part of  version number
+        // Check that the build hash is returned as part of the version number.
         string[] versionParts = output.Split('+');
         Assert.AreEqual(2, versionParts.Length, "Build hash not returned as part of version number.");
         Assert.AreEqual(40, versionParts[1].Length, "Build hash is not of expected length.");
@@ -708,21 +820,17 @@ public class EndToEndTests
     }
 
     /// <summary>
-    /// Test to verify that the version info is logged for both correct/incorrect command,
-    /// and that the config name is displayed in the logs.
+    /// For valid CLI commands (Valid verbs and options) validate that the correct
+    /// version is logged (without commit hash) and that the config file name is printed to console.
     /// </summary>
-    [DataRow("", "--version", false, DisplayName = "Checking dab version with --version.")]
-    [DataRow("", "--help", false, DisplayName = "Checking version through --help option.")]
-    [DataRow("edit", "--new-option", false, DisplayName = "Version printed with invalid command edit.")]
-    [DataRow("init", "--database-type mssql", true, DisplayName = "Version printed with valid command init.")]
-    [DataRow("add", "MyEntity -s my_entity --permissions \"anonymous:*\"", true, DisplayName = "Version printed with valid command add.")]
-    [DataRow("update", "MyEntity -s my_entity", true, DisplayName = "Version printed with valid command update.")]
-    [DataRow("start", "", true, DisplayName = "Version printed with valid command start.")]
+    [DataRow("init", "--database-type mssql", DisplayName = "Version printed with valid command init.")]
+    [DataRow("add", "MyEntity -s my_entity --permissions \"anonymous:*\"", DisplayName = "Version printed with valid command add.")]
+    [DataRow("update", "MyEntity -s my_entity", DisplayName = "Version printed with valid command update.")]
+    [DataRow("start", "", DisplayName = "Version printed with valid command start.")]
     [DataTestMethod]
-    public void TestVersionInfoAndConfigIsCorrectlyDisplayedWithDifferentCommand(
+    public void ValidCliVerbsAndOptions_DisplayVersionAndConfigFileName(
         string command,
-        string options,
-        bool isParsableDabCommandName)
+        string options)
     {
         _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
 
@@ -735,13 +843,45 @@ public class EndToEndTests
         Assert.IsNotNull(output);
 
         // Version Info logged by dab irrespective of commands being parsed correctly.
+        // When DAB CLI (CommandLineParser) detects that usage of parsable verbs and options, CommandLineParser
+        // uses the options.Handler() method to display relevant info and process the command.
+        // All options.Handler() methods print the version without commit hash.
         StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        output = process.StandardOutput.ReadLine();
+        StringAssert.Contains(output, TEST_RUNTIME_CONFIG_FILE, StringComparison.Ordinal);
 
-        if (isParsableDabCommandName)
-        {
-            output = process.StandardOutput.ReadLine();
-            StringAssert.Contains(output, TEST_RUNTIME_CONFIG_FILE, StringComparison.Ordinal);
-        }
+        process.Kill();
+    }
+
+    /// <summary>
+    /// Validate that the DAB CLI logs the correct version (with commit hash) to the console
+    /// when invalid verbs, '--version', or '--help' are used.
+    /// Console Output:
+    /// Microsoft.DataApiBuilder 0.12+5009b8720409ab321fd8cd19c716835528c8385b
+    /// </summary>
+    [DataRow("", "--version", DisplayName = "Checking dab version with --version.")]
+    [DataRow("", "--help", DisplayName = "Checking version through --help option.")]
+    [DataRow("edit", "--new-option", DisplayName = "Version printed with invalid command edit.")]
+    [DataTestMethod]
+    public void InvalidCliVerbsAndOptions_DisplayVersionWithCommitHashAndConfigFileName(
+        string command,
+        string options)
+    {
+        _fileSystem!.File.WriteAllText(TEST_RUNTIME_CONFIG_FILE, INITIAL_CONFIG);
+
+        using Process process = ExecuteDabCommand(
+            command: $"{command} ",
+            flags: $"--config {TEST_RUNTIME_CONFIG_FILE} {options}"
+        );
+
+        string? output = process.StandardOutput.ReadLine();
+        Assert.IsNotNull(output);
+
+        // Version Info logged by dab irrespective of commands being parsed correctly.
+        // When DAB CLI (CommandLineParser) detects that usage includes --version, --help, or invalid verbs/options,
+        // CommandLineParser's default HelpWriter is used to display the version and help information.
+        // Because the HelpWriter uses fileVersionInfo.ProductVersion, the version includes the commit hash.
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
 
         process.Kill();
     }
@@ -768,7 +908,7 @@ public class EndToEndTests
         );
         string? output = await process.StandardOutput.ReadLineAsync();
         Assert.IsNotNull(output);
-        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion()}", StringComparison.Ordinal);
+        StringAssert.Contains(output, $"{Program.PRODUCT_NAME} {ProductInfo.GetProductVersion(includeCommitHash: true)}", StringComparison.Ordinal);
 
         output = await process.StandardOutput.ReadLineAsync();
         Assert.IsNotNull(output);

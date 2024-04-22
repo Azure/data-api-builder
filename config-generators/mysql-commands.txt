@@ -59,7 +59,7 @@ update Book --config "dab-config.MySql.json" --permissions "authenticated:create
 update Book --config "dab-config.MySql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.MySql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update Book --config "dab-config.MySql.json" --relationship reviews --target.entity Review --cardinality many
-update Book --config "dab-config.MySql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update Book --config "dab-config.MySql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id" --relationship.fields "id:id"
 update Book --config "dab-config.MySql.json" --map "id:id,title:title"
 update Book --config "dab-config.MySql.json" --permissions "policy_tester_01:create,delete"
 update Book --config "dab-config.MySql.json" --permissions "policy_tester_01:update" --fields.include "*"

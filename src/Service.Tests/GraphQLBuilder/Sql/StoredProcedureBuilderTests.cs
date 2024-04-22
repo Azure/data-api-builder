@@ -197,7 +197,7 @@ namespace Azure.DataApiBuilder.Service.Tests.GraphQLBuilder.Sql
         {
             // Output column metadata hydration, parameter entities is used for relationship metadata handling, which is not
             // relevant for stored procedure tests.
-            ObjectTypeDefinitionNode objectTypeDefinitionNode = SchemaConverter.FromDatabaseObject(
+            ObjectTypeDefinitionNode objectTypeDefinitionNode = SchemaConverter.GenerateObjectTypeDefinitionForDatabaseObject(
                 entityName: entityName,
                 spDbObj,
                 configEntity: spEntity,

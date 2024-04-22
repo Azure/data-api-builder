@@ -16,7 +16,12 @@
     "graphql": {
       "enabled": true,
       "path": "/graphql",
-      "allow-introspection": true
+      "allow-introspection": true,
+      "multiple-mutations": {
+        "create": {
+          "enabled": true
+        }
+      }
     },
     "host": {
       "cors": {
@@ -320,6 +325,28 @@
           ]
         },
         {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "piecesAvailable"
+                ]
+              }
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
           "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
           "actions": [
             {
@@ -382,6 +409,28 @@
             },
             {
               "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "piecesAvailable"
+                ]
+              }
+            },
+            {
+              "action": "read"
             },
             {
               "action": "update"
@@ -846,8 +895,12 @@
         "authors": {
           "cardinality": "many",
           "target.entity": "Author",
-          "source.fields": [],
-          "target.fields": [],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.object": "book_author_link",
           "linking.source.fields": [
             "book_id"
@@ -1380,8 +1433,52 @@
               "action": "create"
             }
           ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
-      ]
+      ],
+      "relationships": {
+        "Stock": {
+          "cardinality": "one",
+          "target.entity": "Stock",
+          "source.fields": [],
+          "target.fields": [],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
     },
     "Tree": {
       "source": {
@@ -2832,8 +2929,12 @@
         "authors": {
           "cardinality": "many",
           "target.entity": "AuthorNF",
-          "source.fields": [],
-          "target.fields": [],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.object": "book_author_link",
           "linking.source.fields": [
             "book_id"

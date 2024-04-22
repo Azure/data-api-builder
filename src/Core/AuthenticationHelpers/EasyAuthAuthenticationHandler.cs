@@ -21,6 +21,7 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers;
 /// </summary>
 public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthenticationOptions>
 {
+#if NET8_0_OR_GREATER
     /// <summary>
     /// Constructor for the EasyAuthAuthenticationHandler.
     /// Note the parameters are required by the base class.
@@ -31,19 +32,38 @@ public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthe
     public EasyAuthAuthenticationHandler(
         IOptionsMonitor<EasyAuthAuthenticationOptions> options,
         ILoggerFactory logger,
-        UrlEncoder encoder
-        ) : base(options, logger, encoder)
+        UrlEncoder encoder)
+        // ISystemClock is obsolete in .NET 8.0 and later
+        // https://learn.microsoft.com/dotnet/core/compatibility/aspnet-core/8.0/isystemclock-obsolete
+        : base(options, logger, encoder)
     {
     }
-
+#else
     /// <summary>
-    /// Attempts processing of a request's authentication metadata.
-    /// When an EasyAuth header is present, parses the header and authenticates the user within a ClaimsPrincipal object.
-    /// The ClaimsPrincipal is a security principal usable by middleware to identify the
-    /// authenticated user.
+    /// Constructor for the EasyAuthAuthenticationHandler.
+    /// Note the parameters are required by the base class.
     /// </summary>
-    /// <returns>AuthenticatedResult (Fail, NoResult, Success).</returns>
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    /// <param name="options">EasyAuth authentication options.</param>
+    /// <param name="logger">Logger factory.</param>
+    /// <param name="encoder">URL encoder.</param>
+    public EasyAuthAuthenticationHandler(
+        IOptionsMonitor<EasyAuthAuthenticationOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder,
+        ISystemClock clock)
+        : base(options, logger, encoder, clock)
+    {
+    }
+#endif
+
+/// <summary>
+/// Attempts processing of a request's authentication metadata.
+/// When an EasyAuth header is present, parses the header and authenticates the user within a ClaimsPrincipal object.
+/// The ClaimsPrincipal is a security principal usable by middleware to identify the
+/// authenticated user.
+/// </summary>
+/// <returns>AuthenticatedResult (Fail, NoResult, Success).</returns>
+protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (Context.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER].Count > 0)
         {

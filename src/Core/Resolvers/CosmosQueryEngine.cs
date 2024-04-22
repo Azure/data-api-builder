@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
-            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            CosmosQueryStructure structure = new(context, parameters, _runtimeConfigProvider, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
             string queryString = _queryBuilder.Build(structure);
@@ -201,7 +201,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: add support for TOP and Order-by push-down
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            CosmosQueryStructure structure = new(context, parameters, _runtimeConfigProvider, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));

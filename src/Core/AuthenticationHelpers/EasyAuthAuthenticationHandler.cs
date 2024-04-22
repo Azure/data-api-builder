@@ -56,14 +56,14 @@ public class EasyAuthAuthenticationHandler : AuthenticationHandler<EasyAuthAuthe
     }
 #endif
 
-/// <summary>
-/// Attempts processing of a request's authentication metadata.
-/// When an EasyAuth header is present, parses the header and authenticates the user within a ClaimsPrincipal object.
-/// The ClaimsPrincipal is a security principal usable by middleware to identify the
-/// authenticated user.
-/// </summary>
-/// <returns>AuthenticatedResult (Fail, NoResult, Success).</returns>
-protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    /// <summary>
+    /// Attempts processing of a request's authentication metadata.
+    /// When an EasyAuth header is present, parses the header and authenticates the user within a ClaimsPrincipal object.
+    /// The ClaimsPrincipal is a security principal usable by middleware to identify the
+    /// authenticated user.
+    /// </summary>
+    /// <returns>AuthenticatedResult (Fail, NoResult, Success).</returns>
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         if (Context.Request.Headers[AuthenticationOptions.CLIENT_PRINCIPAL_HEADER].Count > 0)
         {

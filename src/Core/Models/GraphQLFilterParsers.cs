@@ -299,7 +299,7 @@ public class GQLFilterParser
     {
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
-            entityIdentifier: entityName,
+            entityIdentifier: entityType,
             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER].ToString(),
             operation: EntityActionOperation.Read);
 

@@ -69,7 +69,7 @@ public static class AppServiceAuthentication
     {
         ClaimsIdentity? identity = null;
 
-        if (context.Request.Headers.TryGetValue(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, out StringValues headerValues) && headerValues.Count == 1 )
+        if (context.Request.Headers.TryGetValue(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, out StringValues headerValues) && headerValues.Count == 1)
         {
             try
             {

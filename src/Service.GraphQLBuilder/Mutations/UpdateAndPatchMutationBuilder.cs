@@ -44,7 +44,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             }
 
             HotChocolate.Language.IHasName? definition = definitions.FirstOrDefault(d => d.Name.Value == field.Type.NamedType().Name.Value);
-
             // When updating, you don't need to provide the data for nested models, but you will for other nested types
             // For cosmos, allow updating nested objects
             if (definition is not null && definition is ObjectTypeDefinitionNode objectType && IsModelType(objectType) && databaseType is not DatabaseType.CosmosDB_NoSQL)

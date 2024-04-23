@@ -252,7 +252,7 @@ namespace Cli
                     {
                         containsWildcardOperation = true;
                     }
-                    else if (isStoredProcedure && !EntityAction.ValidPermissionOperations.Contains((EntityActionOperation)op))
+                    else if (!isStoredProcedure && !EntityAction.ValidPermissionOperations.Contains((EntityActionOperation)op))
                     {
                         _logger.LogError("Invalid actions found in --permissions");
                         return false;

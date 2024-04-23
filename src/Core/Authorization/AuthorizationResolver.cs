@@ -419,6 +419,7 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// Stored procedures only support Operation.Execute.
     /// In case the operation is Operation.All (wildcard), it gets resolved to a set of CRUD operations.
     /// </summary>
+    /// <param name="databaseType">database Type i.e Cosmos_NoSQL etc.</param>
     /// <param name="operation">operation type.</param>
     /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
     /// <returns>IEnumerable of all available operations.</returns>

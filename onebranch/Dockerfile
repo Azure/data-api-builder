@@ -14,7 +14,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:6.0-cbl-mariner2.0 AS runtime
 # OneBranch uses the injected task Copy Artifacts to
 # copy artifacts from pipeline artifacts: "/mnt/{...}/out" 
 # to the container running the docker tasks: /mnt/{...}/docker/artifacts/
-COPY ./src/out/engine/net6.0 /App
+COPY ./ /App
 
 # Change working directory to the /App folder within the Docker image and configure
 # how Data Api buider is started when the container runs.

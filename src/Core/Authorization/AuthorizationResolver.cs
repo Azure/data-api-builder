@@ -429,12 +429,20 @@ public class AuthorizationResolver : IAuthorizationResolver
             return new List<EntityActionOperation> { EntityActionOperation.Execute };
         }
 
-        if (databaseType is DatabaseType.CosmosDB_NoSQL)
-        {
-            return operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperationsForCosmos : new List<EntityActionOperation> { operation };
-        }
+        IEnumerable<EntityActionOperation> validOperation =
+            operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperations : new List<EntityActionOperation> { operation };
 
-        return operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperations : new List<EntityActionOperation> { operation };
+        //For CosmosDB, add Patch operation to the list of valid operations if Update operation is present.
+        if (databaseType is DatabaseType.CosmosDB_NoSQL &&
+                    validOperation.Contains(EntityActionOperation.Update))
+        {
+            List<EntityActionOperation> tempOperationList = validOperation.ToList<EntityActionOperation>();
+            tempOperationList.Add(EntityActionOperation.Patch);
+
+            validOperation = tempOperationList;
+        };
+
+        return validOperation;
     }
 
     /// <summary>

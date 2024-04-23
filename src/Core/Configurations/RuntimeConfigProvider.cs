@@ -189,7 +189,7 @@ public class RuntimeConfigProvider
                 throw new ArgumentException($"'{nameof(runtimeConfig.DataSource.ConnectionString)}' cannot be null or empty.", nameof(runtimeConfig.DataSource.ConnectionString));
             }
 
-            if (_runtimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
+            if (_runtimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL)
             {
                 _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
             }

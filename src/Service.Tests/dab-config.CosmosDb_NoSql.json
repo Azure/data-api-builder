@@ -69,9 +69,6 @@
             },
             {
               "action": "delete"
-            },
-            {
-              "action": "patch"
             }
           ]
         },
@@ -139,9 +136,6 @@
             },
             {
               "action": "delete"
-            },
-            {
-              "action": "patch"
             }
           ]
         },
@@ -184,9 +178,6 @@
             },
             {
               "action": "delete"
-            },
-            {
-              "action": "patch"
             }
           ]
         },
@@ -209,7 +200,7 @@
         }
       ]
     },
-    "TagAlias": {
+    "Tag": {
       "source": {
         "object": "graphqldb.planet"
       },
@@ -238,9 +229,6 @@
             },
             {
               "action": "delete"
-            },
-            {
-              "action": "patch"
             }
           ]
         }
@@ -292,9 +280,6 @@
             },
             {
               "action": "delete"
-            },
-            {
-              "action": "patch"
             }
           ]
         }

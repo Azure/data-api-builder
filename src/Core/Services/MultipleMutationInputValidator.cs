@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string parentEntityName,
             IMetadataProviderFactory sqlMetadataProviderFactory)
         {
-            if (parameters is List<ObjectFieldNode> listOfObjectFieldNode)
+            if (parameters is List<ObjectFieldNode> listOfObjectFieldNodes)
             {
                 // For the example createbook mutation written above, the object value for `item` is interpreted as a List<ObjectFieldNode> i.e.
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
-                    objectFieldNodes: listOfObjectFieldNode,
+                    currentEntityInputFieldNodes: listOfObjectFieldNodes,
                     runtimeConfig: runtimeConfig,
                     columnsDerivedFromSourceEntity: columnsDerivedFromParentEntity,
                     columnsToBeSuppliedToSourceEntity: columnsToBeDerivedFromEntity,
@@ -95,11 +95,11 @@ namespace Azure.DataApiBuilder.Core.Services
                     parentEntityName: parentEntityName,
                     sqlMetadataProviderFactory: sqlMetadataProviderFactory);
             }
-            else if (parameters is List<IValueNode> listOfIValueNode)
+            else if (parameters is List<IValueNode> listOfIValueNodes)
             {
                 // For the example createbooks mutation written above, the list value for `items` is interpreted as a List<IValueNode>
                 // i.e. items is a list of ObjectValueNode(s).
-                listOfIValueNode.ForEach(iValueNode => ValidateGraphQLValueNode(
+                listOfIValueNodes.ForEach(iValueNode => ValidateGraphQLValueNode(
                     schema: schema,
                     entityName: entityName,
                     context: context,
@@ -119,7 +119,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     entityName: entityName,
                     context: context,
-                    objectFieldNodes: objectValueNode.Fields,
+                    currentEntityInputFieldNodes: objectValueNode.Fields,
                     runtimeConfig: runtimeConfig,
                     columnsDerivedFromSourceEntity: columnsDerivedFromParentEntity,
                     columnsToBeSuppliedToSourceEntity: columnsToBeDerivedFromEntity,
@@ -145,8 +145,8 @@ namespace Azure.DataApiBuilder.Core.Services
             }
             else
             {
-                throw new DataApiBuilderException(message: $"Unable to process input at level: {nestingLevel}",
-                    statusCode: HttpStatusCode.NotImplemented,
+                throw new DataApiBuilderException(message: $"Unable to process input at level: {nestingLevel} for entity: {entityName}",
+                    statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
         }
@@ -158,7 +158,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="schemaObject">Input object type for the field.</param>
         /// <param name="entityName">Current entity's name.</param>
         /// <param name="context">Middleware Context.</param>
-        /// <param name="objectFieldNodes">List of ObjectFieldNodes for the the input field.</param>
+        /// <param name="currentEntityInputFieldNodes">List of ObjectFieldNodes for the the input field.</param>
         /// <param name="runtimeConfig">Runtime config</param>
         /// <param name="columnsDerivedFromSourceEntity">Set of columns in this entity whose values should be
         /// derived from insertion in the source entity (i.e. source entity would have been the referenced entity).</param>
@@ -174,7 +174,7 @@ namespace Azure.DataApiBuilder.Core.Services
             InputObjectType schemaObject,
             string entityName,
             IMiddlewareContext context,
-            IReadOnlyList<ObjectFieldNode> objectFieldNodes,
+            IReadOnlyList<ObjectFieldNode> currentEntityInputFieldNodes,
             RuntimeConfig runtimeConfig,
             HashSet<string> columnsDerivedFromSourceEntity,
             HashSet<string> columnsToBeSuppliedToSourceEntity,
@@ -185,7 +185,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
-            Dictionary<string, IValueNode?> backingColumnData = MultipleCreateOrderHelper.GetBackingColumnDataFromFields(context, entityName, objectFieldNodes, metadataProvider);
+            Dictionary<string, IValueNode?> backingColumnData = MultipleCreateOrderHelper.GetBackingColumnDataFromFields(context, entityName, currentEntityInputFieldNodes, metadataProvider);
 
             // Set of columns in the current entity whose values can be derived via:
             // a. User input
@@ -203,7 +203,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // in the current entity are derived from the insertion in the parent entity. Hence, the input data for
             // current entity (referencing entity) i.e. derivableColumnsFromRequestBody must not contain values for referencing columns.
             ValidateAbsenceOfReferencingColumnsInTargetEntity(
-                 columnsInTargetEntity: derivableColumnsFromRequestBody,
+                 backingColumnToSourceMapInTargetEntity: derivableColumnsFromRequestBody,
                  derivedColumnsFromSourceEntity: columnsDerivedFromSourceEntity,
                  nestingLevel: nestingLevel,
                  targetEntityName: entityName,
@@ -245,7 +245,8 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 if (sourceDefinition.Columns[columnToBeDerivedFromEntity].IsAutoGenerated)
                 {
-                    // The value for an autogenerated column is derivable.
+                    // The value for an autogenerated column is derivable. In other words, the value autogenerated during creation of this entity
+                    // can be provided to another entity's referencing fields.
                     columnsToBeSuppliedToSourceEntity.Remove(columnToBeDerivedFromEntity);
                 }
                 else if (backingColumnData.TryGetValue(columnToBeDerivedFromEntity, out IValueNode? value))
@@ -276,26 +277,27 @@ namespace Azure.DataApiBuilder.Core.Services
             // conflicts with the current entity's name or the parent entity's name, we are able to distinguish
             // with the help of this identifier. It should be noted that the identifier is not allowed in the names
             // of entities exposed in DAB.
-            string relationshipSourceIdentifier = "$";
+            const string relationshipSourceIdentifier = "$";
             // Loop over all the relationship fields input provided for the current entity.
-            foreach (ObjectFieldNode fieldNode in objectFieldNodes)
+            foreach (ObjectFieldNode currentEntityInputFieldNode in currentEntityInputFieldNodes)
             {
-                (IValueNode? fieldValue, SyntaxKind fieldKind) = GraphQLUtils.GetFieldDetails(fieldNode.Value, context.Variables);
+                (IValueNode? fieldValue, SyntaxKind fieldKind) = GraphQLUtils.GetFieldDetails(currentEntityInputFieldNode.Value, context.Variables);
                 if (fieldKind is SyntaxKind.NullValue || GraphQLUtils.IsScalarField(fieldKind))
                 {
                     // If the current field is a column/scalar field or has a null value, continue.
                     continue;
                 }
 
-                string relationshipName = fieldNode.Name.Value;
+                string relationshipName = currentEntityInputFieldNode.Name.Value;
                 string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
                 string? linkingObject = runtimeConfig.Entities![entityName].Relationships![relationshipName].LinkingObject;
                 if (!string.IsNullOrWhiteSpace(linkingObject))
                 {
-                    // When a linking object is present, it indicates an M:N relationship between current entity and the target entity.
-                    // For such a case, the linking table act as a referencing table for both the source/target entities, both of which act as
-                    // referenced entities. In such a case, no column values for the target entity can be derived from insertion in the current entity,
-                    // and no column values for the current entity can be derived from the insertion in the target entity.
+                    // The presence of a linking object indicates that an M:N relationship exists between the current entity and the target/child entity.
+                    // The linking table acts as a referencing table for both the source/target entities which act as
+                    // referenced entities. Consequently:
+                    // - Column values for the target entity can't be derived from insertion in the current entity.
+                    // - Column values for the current entity can't be derived from the insertion in the target/child entity.
                     continue;
                 }
 
@@ -323,10 +325,10 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     // This should not be hit ideally.
                     throw new DataApiBuilderException(
-                        message: $"Could not determine definition for source: {entityName} and target: {targetEntityName} entities for " +
+                        message: $"Could not resolve relationship metadata for source: {entityName} and target: {targetEntityName} entities for " +
                         $"relationship: {relationshipName} at level: {nestingLevel}",
-                        statusCode: HttpStatusCode.NotFound,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
                 }
 
                 // Validate that one column in the referencing entity is not referencing multiple columns in the referenced entity
@@ -343,7 +345,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // which leads to possibility of two conflicting sources of truth for this column.
                     // This is an invalid use case for multiple-create.
                     throw new DataApiBuilderException(
-                        message: $"The fields: {repeatedReferencingFields} in the entity: {referencingEntityName} references multiple fields in the " +
+                        message: $"The field(s): {repeatedReferencingFields} in the entity: {referencingEntityName} reference(s) multiple fields in the " +
                         $"related entity: {referencedEntityName} for the relationship: {relationshipName} at level: {nestingLevel}.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
@@ -375,7 +377,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                             metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedColumnName);
                             throw new DataApiBuilderException(
-                                message: $"Found conflicting sources of values for the field: {exposedColumnName} for entity: {entityName} at level: {nestingLevel}." +
+                                message: $"Found conflicting sources providing a value for the field: {exposedColumnName} for entity: {entityName} at level: {nestingLevel}." +
                                 $"Source 1: {conflictingSource}, Source 2: Relationship: {relationshipName}.",
                                 statusCode: HttpStatusCode.BadRequest,
                                 subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
@@ -392,16 +394,19 @@ namespace Azure.DataApiBuilder.Core.Services
                             columnsToBeSuppliedToSourceEntity.Remove(referencingColumn);
                         }
 
-                        // Populate the set of fields for which the target entity for the current relationship needs to provide a value.
+                        // Resolve the field(s) whose value(s) will be sourced from the creation of record in the current relationship's target entity.
                         fieldsToDeriveFromReferencedEntities.TryAdd(relationshipName, new());
                         fieldsToDeriveFromReferencedEntities[relationshipName].Add(referencedColumn);
 
-                        // All the referencing columns in the current entity can get a value via insertion in the target entity (c).
+                        // Value(s) for the current entity's referencing column(s) are sourced from the creation
+                        // of record in the current relationship's target entity.
                         derivableColumnsFromRequestBody.TryAdd(referencingColumn, relationshipSourceIdentifier + relationshipName);
                     }
                 }
                 else
                 {
+                    // Keep track of the set of referencing columns in the target (referencing) entity which will get their value sourced from insertion
+                    // in the current entity.
                     fieldsToSupplyToReferencingEntities.Add(relationshipName, new(fkDefinition.ReferencingColumns));
                 }
             }
@@ -430,7 +435,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 schemaObject: schemaObject,
                 entityName: entityName,
                 context: context,
-                objectFieldNodes: objectFieldNodes,
+                currentEntityInputFields: currentEntityInputFieldNodes,
                 runtimeConfig: runtimeConfig,
                 fieldsToSupplyToReferencingEntities: fieldsToSupplyToReferencingEntities,
                 fieldsToDeriveFromReferencedEntities: fieldsToDeriveFromReferencedEntities,
@@ -470,10 +475,10 @@ namespace Azure.DataApiBuilder.Core.Services
 
         /// <summary>
         /// Helper method to validate that we have non-null values for all the fields which are non-nullable or do not have a
-        /// default value. With multiple-create, the fields which hold FK reference to other fields in same/other referenced table become optional,
-        /// because the value for them may come from insertion in the aforementioned referenced table. However, providing data for
-        /// insertion in the referenced table is again optional. Hence, it might be the case that the request input didn't contain
-        /// data for any of the referencing field nor the referenced table. We need to invalidate such request.
+        /// default value. With multiple-create, the fields which hold FK reference to other fields in same/other referenced table
+        /// become optional, because their values may come from insertion in the aforementioned referenced table. However, providing
+        /// data for insertion in the referenced table is again optional. Hence, the request input may not contain data for any of the
+        /// referencing fields or the referenced table. We need to invalidate such request.
         /// </summary>
         /// <param name="derivableBackingColumns">Set of backing columns in the current entity whose values can be derived.</param>
         /// <param name="entityName">Name of the entity</param>
@@ -490,6 +495,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// with Publisher entity was present which would give back the publisher_id nor do we have a scalar value provided by the
         /// user for publisher_id.
         /// </example>
+
         private static void ValidatePresenceOfRequiredColumnsForInsertion(
             HashSet<string> derivableBackingColumns,
             string entityName,
@@ -518,7 +524,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="schemaObject">Input object type for the field.</param>
         /// <param name="entityName">Current entity's name.</param>
         /// <param name="context">Middleware context.</param>
-        /// <param name="objectFieldNodes">List of ObjectFieldNodes for the the input field.</param>
+        /// <param name="currentEntityInputFields">List of ObjectFieldNodes for the the input field.</param>
         /// <param name="runtimeConfig">Runtime config</param>
         /// <param name="fieldsToSupplyToReferencingEntities">Dictionary storing the mapping from relationship name to the set of
         /// referencing fields for all the relationships for which the current entity is the referenced entity.</param>
@@ -532,41 +538,41 @@ namespace Azure.DataApiBuilder.Core.Services
             InputObjectType schemaObject,
             string entityName,
             IMiddlewareContext context,
-            IReadOnlyList<ObjectFieldNode> objectFieldNodes,
+            IReadOnlyList<ObjectFieldNode> currentEntityInputFields,
             RuntimeConfig runtimeConfig,
             Dictionary<string, HashSet<string>> fieldsToSupplyToReferencingEntities,
             Dictionary<string, HashSet<string>> fieldsToDeriveFromReferencedEntities,
             int nestingLevel,
             IMetadataProviderFactory sqlMetadataProviderFactory)
         {
-            foreach (ObjectFieldNode field in objectFieldNodes)
+            foreach (ObjectFieldNode currentEntityInputField in currentEntityInputFields)
             {
-                Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(field.Value, context.Variables);
+                Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(currentEntityInputField.Value, context.Variables);
                 SyntaxKind fieldKind = fieldDetails.Item2;
 
                 // For non-scalar fields, i.e. relationship fields, we have to recurse to process fields in the relationship field -
                 // which represents input data for a related entity.
                 if (fieldKind is not SyntaxKind.NullValue && !GraphQLUtils.IsScalarField(fieldKind))
                 {
-                    string relationshipName = field.Name.Value;
+                    string relationshipName = currentEntityInputField.Name.Value;
                     string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
-                    HashSet<string>? derivedColumnsForEntity, columnsToBeDerivedFromEntity;
+                    HashSet<string>? columnValuePairsResolvedForTargetEntity, columnValuePairsToBeResolvedFromTargetEntity;
 
                     // When the current entity is a referenced entity, there will be no corresponding entry for the relationship
-                    // in the derivedColumnsForRelationships dictionary.
-                    fieldsToSupplyToReferencingEntities.TryGetValue(relationshipName, out derivedColumnsForEntity);
+                    // in the fieldsToSupplyToReferencingEntities dictionary.
+                    fieldsToSupplyToReferencingEntities.TryGetValue(relationshipName, out columnValuePairsResolvedForTargetEntity);
 
                     // When the current entity is a referencing entity, there will be no corresponding entry for the relationship
-                    // in the columnsToBeDerivedFromRelationships dictionary.
-                    fieldsToDeriveFromReferencedEntities.TryGetValue(relationshipName, out columnsToBeDerivedFromEntity);
+                    // in the fieldsToDeriveFromReferencedEntities dictionary.
+                    fieldsToDeriveFromReferencedEntities.TryGetValue(relationshipName, out columnValuePairsToBeResolvedFromTargetEntity);
                     ValidateGraphQLValueNode(
                         schema: schemaObject.Fields[relationshipName],
                         entityName: targetEntityName,
                         context: context,
                         parameters: fieldDetails.Item1,
                         runtimeConfig: runtimeConfig,
-                        columnsDerivedFromParentEntity: derivedColumnsForEntity ?? new(),
-                        columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity ?? new(),
+                        columnsDerivedFromParentEntity: columnValuePairsResolvedForTargetEntity ?? new(),
+                        columnsToBeDerivedFromEntity: columnValuePairsToBeResolvedFromTargetEntity ?? new(),
                         nestingLevel: nestingLevel,
                         parentEntityName: entityName,
                         sqlMetadataProviderFactory: sqlMetadataProviderFactory);
@@ -580,13 +586,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// In case when a value for referencing column is also specified in the referencing entity, there can be two conflicting sources of truth,
         /// which we don't want to allow. In such a case, we throw an appropriate exception.
         /// </summary>
-        /// <param name="columnsInTargetEntity">Columns in the target (referencing) entity.</param>
+        /// <param name="backingColumnToSourceMapInTargetEntity">Dictionary storing mapping from names of backing columns in the target (referencing) entity to the source
+        /// of the corresponding column's value The source can either be:
+        /// 1. User provided scalar input for a column
+        /// 2. Insertion in the source (referenced) entity.</param>
         /// <param name="derivedColumnsFromSourceEntity">Foreign key columns to be derived from the source (referenced) entity.</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create GraphQL request.</param>
         /// <param name="targetEntityName">Name of the target entity.</param>
         /// <param name="metadataProvider">Metadata provider.</param>
         private static void ValidateAbsenceOfReferencingColumnsInTargetEntity(
-            Dictionary<string, string> columnsInTargetEntity,
+            Dictionary<string, string> backingColumnToSourceMapInTargetEntity,
             HashSet<string> derivedColumnsFromSourceEntity,
             int nestingLevel,
             string targetEntityName,
@@ -594,11 +603,12 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             foreach (string derivedColumnFromSourceEntity in derivedColumnsFromSourceEntity)
             {
-                if (columnsInTargetEntity.ContainsKey(derivedColumnFromSourceEntity))
+                if (backingColumnToSourceMapInTargetEntity.ContainsKey(derivedColumnFromSourceEntity))
                 {
                     metadataProvider.TryGetExposedColumnName(targetEntityName, derivedColumnFromSourceEntity, out string? exposedColumnName);
                     throw new DataApiBuilderException(
-                        message: $"The field: {exposedColumnName} cannot be present for entity: {targetEntityName} at level: {nestingLevel}.",
+                        message: $"You can't specify the field {exposedColumnName} in the create input for {targetEntityName} at level {nestingLevel} " +
+                        $"because the value is derived from the creation of the record in it's parent entity specified in the request.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

@@ -1930,9 +1930,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 RelationShipPair referencingReferencedPair = new(referencingDbTable, referencedDbTable);
                 List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
 
-                // At this point, we are sure that a valid foreign key definition would exist from the referencing entity
-                // to the referenced entity because we validate it during the startup that the Foreign key information
-                // has been inferred for all the relationships.
+                // At this point, DAB guarantees that a valid foreign key definition exists between the the referencing entity
+                // and the referenced entity. That's because DAB validates that all foreign key metadata
+                // was inferred for each relationship during startup.
                 foreignKeyDefinition = fKDefinitions.FirstOrDefault(
                     fk => fk.Pair.Equals(referencingReferencedPair) &&
                     fk.ReferencingColumns.Count > 0

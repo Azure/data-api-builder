@@ -329,8 +329,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// <summary>
         /// Test to validate that when one referencing column references multiple referenced columns in one referenced entity,
         /// we fail the request during request validation because then we have conflicting sources of truth for values for
-        /// the referencing column. In such cases, the referencing column can assume the value of any referenced column which
-        /// leads to amibugites as to what value to assign to the referencing column.
+        /// the referencing column. In these instances, the column that is being referenced can take on the value from any
+        /// column it references. This can create uncertainty about which value should be assigned to the column being referenced.
         /// </summary>
         [TestMethod]
         public async Task InvalidateRepeatedReferencingColumnToOneReferencedEntityInReferencingEntity()
@@ -340,7 +340,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // of truth for the value of User_RepeatedReferencingColumnToOneEntity.username:
             // 1. UserProfile.username
             // 2. UserProfile.profilepictureurl
-            // which causes ambiguity as to what value should be assigned to the User_RepeatedReferencingColumnToOneEntity.username
+            // which leads to ambiguity as to what value should be assigned to the User_RepeatedReferencingColumnToOneEntity.username
             // field after performing insertion in the referenced UserProfile entity.
             string createUserRepeatedRelationshipColumn = "createUser_RepeatedReferencingColumnToOneEntity";
             string createUserRepeatedRelationshipColumnMutation =

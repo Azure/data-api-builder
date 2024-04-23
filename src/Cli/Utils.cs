@@ -97,6 +97,12 @@ namespace Cli
                 {
                     HashSet<EntityActionOperation> resolvedOperations = sourceType is EntitySourceType.StoredProcedure ?
                         EntityAction.ValidStoredProcedurePermissionOperations : EntityAction.ValidPermissionOperations;
+
+                    if (databaseType is DatabaseType.CosmosDB_NoSQL && resolvedOperations.Contains(EntityActionOperation.Update))
+                    {
+                        resolvedOperations.Add(EntityActionOperation.Patch);
+                    }
+
                     // Expand wildcard to all valid operations (except execute)
                     foreach (EntityActionOperation validOp in resolvedOperations)
                     {
@@ -219,7 +225,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">array of string containing operations for permissions</param>
         /// <returns>True if no invalid operation is found.</returns>
-        public static bool VerifyOperations(string[] operations, EntitySourceType? sourceType, DatabaseType databaseType)
+        public static bool VerifyOperations(string[] operations, EntitySourceType? sourceType)
         {
             // Check if there are any duplicate operations
             // Ex: read,read,create
@@ -246,7 +252,7 @@ namespace Cli
                     {
                         containsWildcardOperation = true;
                     }
-                    else if (!isStoredProcedure && !EntityAction.ValidPermissionOperations.Contains((EntityActionOperation)op))
+                    else if (isStoredProcedure && !EntityAction.ValidPermissionOperations.Contains((EntityActionOperation)op))
                     {
                         _logger.LogError("Invalid actions found in --permissions");
                         return false;

@@ -129,9 +129,7 @@ public interface IAuthorizationResolver
         }
 
         if (entityPermissionsMap is not null &&
-            entityPermissionsMap[entityName]
-                .OperationToRolesMap
-                .TryGetValue(operation, out List<string>? roleList) &&
+            entityPermissionsMap[entityName].OperationToRolesMap.TryGetValue(operation, out List<string>? roleList) &&
             roleList is not null)
         {
             return roleList;

@@ -153,31 +153,22 @@ public class UtilsTests
     /// <param name="entitySourceType">Table, StoredProcedure, View</param>
     /// <param name="isSuccess">True/False</param>
     [DataTestMethod]
-    [DataRow(new string[] { "*" }, EntitySourceType.StoredProcedure, true, DatabaseType.MySQL, DisplayName = "PASS: Stored-Procedure with wildcard CRUD operation.")]
-    [DataRow(new string[] { "execute" }, EntitySourceType.StoredProcedure, true, DatabaseType.MySQL, DisplayName = "PASS: Stored-Procedure with execute operation only.")]
-    [DataRow(new string[] { "create", "read" }, EntitySourceType.StoredProcedure, false, DatabaseType.MySQL, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation.")]
-    [DataRow(new string[] { "*" }, EntitySourceType.Table, true, DatabaseType.MySQL, DisplayName = "PASS: Table with wildcard CRUD operation.")]
-    [DataRow(new string[] { "create" }, EntitySourceType.Table, true, DatabaseType.MySQL, DisplayName = "PASS: Table with 1 CRUD operation.")]
-    [DataRow(new string[] { "create", "read" }, EntitySourceType.Table, true, DatabaseType.MySQL, DisplayName = "PASS: Table with more than 1 CRUD operation.")]
-    [DataRow(new string[] { "*" }, EntitySourceType.View, true, DatabaseType.MySQL, DisplayName = "PASS: View with wildcard CRUD operation.")]
-    [DataRow(new string[] { "create" }, EntitySourceType.View, true, DatabaseType.MySQL, DisplayName = "PASS: View with 1 CRUD operation.")]
-    [DataRow(new string[] { "create", "read" }, EntitySourceType.View, true, DatabaseType.MySQL, DisplayName = "PASS: View with more than 1 CRUD operation.")]
-    [DataRow(new string[] { "*" }, EntitySourceType.StoredProcedure, true, DatabaseType.CosmosDB_NoSQL, DisplayName = "PASS: Stored-Procedure with wildcard CRUD operation.")]
-    [DataRow(new string[] { "execute" }, EntitySourceType.StoredProcedure, true, DatabaseType.CosmosDB_NoSQL, DisplayName = "PASS: Stored-Procedure with execute operation only.")]
-    [DataRow(new string[] { "create", "read" }, EntitySourceType.StoredProcedure, false, DatabaseType.CosmosDB_NoSQL, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation.")]
-    [DataRow(new string[] { "*" }, EntitySourceType.Table, true, DatabaseType.CosmosDB_NoSQL, DisplayName = "PASS: Table with wildcard CRUD operation.")]
-    [DataRow(new string[] { "create" }, EntitySourceType.Table, true, DatabaseType.CosmosDB_NoSQL, DisplayName = "PASS: Table with 1 CRUD operation.")]
-    [DataRow(new string[] { "create", "read" }, EntitySourceType.Table, true, DatabaseType.CosmosDB_NoSQL, DisplayName = "PASS: Table with more than 1 CRUD operation.")]
-    [DataRow(new string[] { "*" }, EntitySourceType.View, true, DatabaseType.CosmosDB_NoSQL, DisplayName = "PASS: View with wildcard CRUD operation.")]
-    [DataRow(new string[] { "create" }, EntitySourceType.View, true, DatabaseType.CosmosDB_NoSQL, DisplayName = "PASS: View with 1 CRUD operation.")]
-    [DataRow(new string[] { "create", "read" }, EntitySourceType.View, true, DatabaseType.CosmosDB_NoSQL, DisplayName = "PASS: View with more than 1 CRUD operation.")]
+    [DataRow(new string[] { "*" }, EntitySourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with wildcard CRUD operation.")]
+    [DataRow(new string[] { "execute" }, EntitySourceType.StoredProcedure, true, DisplayName = "PASS: Stored-Procedure with execute operation only.")]
+    [DataRow(new string[] { "create", "read" }, EntitySourceType.StoredProcedure, false, DisplayName = "FAIL: Stored-Procedure with more than 1 CRUD operation.")]
+    [DataRow(new string[] { "*" }, EntitySourceType.Table, true, DisplayName = "PASS: Table with wildcard CRUD operation.")]
+    [DataRow(new string[] { "create" }, EntitySourceType.Table, true, DisplayName = "PASS: Table with 1 CRUD operation.")]
+    [DataRow(new string[] { "create", "read" }, EntitySourceType.Table, true, DisplayName = "PASS: Table with more than 1 CRUD operation.")]
+    [DataRow(new string[] { "*" }, EntitySourceType.View, true, DisplayName = "PASS: View with wildcard CRUD operation.")]
+    [DataRow(new string[] { "create" }, EntitySourceType.View, true, DisplayName = "PASS: View with 1 CRUD operation.")]
+    [DataRow(new string[] { "create", "read" }, EntitySourceType.View, true, DisplayName = "PASS: View with more than 1 CRUD operation.")]
+
     public void TestStoredProcedurePermissions(
         string[] operations,
         EntitySourceType entitySourceType,
-        bool isSuccess,
-        DatabaseType databaseType)
+        bool isSuccess)
     {
-        Assert.AreEqual(isSuccess, VerifyOperations(operations, entitySourceType, databaseType));
+        Assert.AreEqual(isSuccess, VerifyOperations(operations, entitySourceType));
     }
 
     /// <summary>

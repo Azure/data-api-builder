@@ -378,8 +378,7 @@ namespace Cli
                 options.Permissions,
                 policy,
                 field,
-                source.Type,
-                initialRuntimeConfig.DataSource.DatabaseType);
+                source.Type);
             if (permissionSettings is null)
             {
                 _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
@@ -527,8 +526,7 @@ namespace Cli
             IEnumerable<string> permissions,
             EntityActionPolicy? policy,
             EntityActionFields? fields,
-            EntitySourceType? sourceType,
-            DatabaseType databaseType)
+            EntitySourceType? sourceType)
         {
             // Getting Role and Operations from permission string
             string? role, operations;
@@ -539,7 +537,7 @@ namespace Cli
             }
 
             // Check if provided operations are valid
-            if (!VerifyOperations(operations!.Split(","), sourceType, databaseType))
+            if (!VerifyOperations(operations!.Split(","), sourceType))
             {
                 return null;
             }
@@ -768,7 +766,7 @@ namespace Cli
 
             // Verifies that the list of operations declared are valid for the specified sourceType.
             // Example: Stored-procedure can only have 1 operation.
-            if (!VerifyOperations(newOperationArray, sourceType, databaseType))
+            if (!VerifyOperations(newOperationArray, sourceType))
             {
                 return null;
             }

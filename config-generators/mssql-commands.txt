@@ -29,6 +29,10 @@ add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --g
 add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
 add series --config "dab-config.MsSql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.MsSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
+add User_NonAutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add UserProfile --config "dab-config.MsSql.json" --source "user_profiles" --permissions "anonymous:*" --rest true --graphql true
+add User_AutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
 add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false
 add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "query"
@@ -138,6 +142,9 @@ update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_upd
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MsSql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
+update User_NonAutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_NonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "username:username"
+update User_AutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_AutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid:profileid"
+update User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_AutogenToNonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid,username:userid,username"
 update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:execute" --rest.methods "Get"
 update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "Query" --rest.methods "Get"

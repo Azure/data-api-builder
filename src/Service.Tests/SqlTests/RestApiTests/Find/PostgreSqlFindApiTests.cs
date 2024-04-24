@@ -810,7 +810,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     FROM (
                         SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
                         FROM " + _integrationMappingTable + @"
-                        WHERE ""treeId"" < 2
+                        WHERE ""treeId"" > ""Pseudotsuga menziesii""
                         ORDER BY species asc, ""treeId"" asc
                         LIMIT 101
                     ) AS subq

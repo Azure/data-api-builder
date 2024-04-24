@@ -2918,7 +2918,7 @@
         }
       ],
       "mappings": {
-        "id": "identifier",
+        "id": "id",
         "title": "title"
       },
       "relationships": {

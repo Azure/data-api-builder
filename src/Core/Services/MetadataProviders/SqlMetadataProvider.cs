@@ -1130,6 +1130,13 @@ namespace Azure.DataApiBuilder.Core.Services
         /// In the future, mappings for SPs could be used for parameter renaming.
         /// We also handle logging the primary key information here since this is when we first have
         /// the exposed names suitable for logging.
+        /// As part of building the database query, when generating the output columns,
+        /// EntityBackingColumnsToExposedNames is looked at.
+        /// But, when linking entity details are not populated, the flow will fail
+        /// when generating the output columns.
+        /// Hence, mappings of exposed names to backing columns
+        /// and of backing columns to exposed names
+        /// are generated for linking entities as well.
         /// </summary>
         private void GenerateExposedToBackingColumnMapsForEntities()
         {
@@ -1145,9 +1152,10 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// 
+        /// Helper method to generate the mappings of exposed names to
+        /// backing columns, and of backing columns to exposed names.
         /// </summary>
-        /// <param name="entityName"></param>
+        /// <param name="entityName">Name of the entity</param>
         private void GenerateExposedToBackingColumnMapUtil(string entityName)
         {
             try
@@ -1786,7 +1794,6 @@ namespace Azure.DataApiBuilder.Core.Services
         private void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
-
             // For each table definition that has to be populated with the inferred
             // foreign key information.
             foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)

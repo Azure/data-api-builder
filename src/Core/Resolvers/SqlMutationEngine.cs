@@ -90,7 +90,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string graphqlMutationName = context.Selection.Field.Name.Value;
             string entityName = GraphQLUtils.GetEntityNameFromContext(context);
 
-            dataSourceName = GetValidatedDataSourceName(dataSourceName);
             ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(sqlMetadataProvider.GetDatabaseType());
 
@@ -173,6 +172,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     sqlMetadataProvider,
                                     !isPointMutation);
 
+                        // For point create multiple mutation operation, a single item is created in the
+                        // table backing the top level entity. So, the PK of the created item is fetched and
+                        // used when calling the query engine to process the selection set.
+                        // For many type multiple create operation, one or more than one item are created
+                        // in the table backing the top level entity. So, the PKs of the created items are
+                        // fetched and used when calling the query engine to process the selection set.
+                        // Point multiple create mutation and many type multiple create mutation are calling different
+                        // overloaded method ("ExecuteAsync") of the query engine to process the selection set.
                         if (isPointMutation)
                         {
                             result = await queryEngine.ExecuteAsync(
@@ -1000,9 +1007,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (multipleInputType)
             {
-                int idx = 0;
-
-                // For a many type multipe create operation, after parsing the hotchocolate input parameters, the resultant data structure is a list of dictionaries.
+                // For a many type multiple create operation, after parsing the hotchocolate input parameters, the resultant data structure is a list of dictionaries.
                 // Each entry in the list corresponds to the input parameters for a single input item.
                 // The fields belonging to the inputobjecttype are converted to
                 // 1. Scalar input fields: Key - Value pair of field name and field value.
@@ -1011,15 +1016,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 List<IDictionary<string, object?>> parsedInputList = (List<IDictionary<string, object?>>)parsedInputParams;
 
                 // For many type multiple create operation, the "parameters" dictionary is a key pair of <"items", List<IValueNode>>.
-                // The value field got using the key "items" cannot be of any other type.
-                // Ideally, this condition should never be hit, because such invalid cases should be caught by Hotchocolate.
-                // But, this acts as a guard against other types with "items" field.
+                // Ideally, the input provided for "items" field should not be any other type than List<IValueNode>
+                // as HotChocolate will detect and throw errors before the execution flow reaches here.
+                // However, this acts as a guard to ensure that the right input type for "items" field is used.
                 if (param is not List<IValueNode> paramList)
                 {
                     throw new DataApiBuilderException(message: $"Unsupported type used with {fieldName} in the create mutation input",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
+
+                // In the following loop, the input elements in "parsedInputList" are iterated and processed.
+                // idx tracks the index number to fetch the corresponding unparsed hotchocolate input parameters from "paramList".
+                // Both parsed and unparsed input parameters are necessary for successfully determing the order of insertion
+                // among the entities involved in the multiple create mutation request.
+                int idx = 0;
 
                 // Consider a mutation request such as the following
                 // mutation{
@@ -1096,7 +1107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IDictionary<string, object?> parsedInput = (IDictionary<string, object?>)parsedInputParams;
 
                 // For point multiple create operation, the "parameters" dictionary is a key pair of <"item", List<ObjectFieldNode>>.
-                // The value field got using the key "item" cannot be of any other type.
+                // The value field retrieved using the key "item" cannot be of any other type.
                 // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate but acts as a guard against using any other types with "item" field
                 if (param is not List<ObjectFieldNode> paramList)
                 {

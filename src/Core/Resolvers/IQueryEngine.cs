@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, IDictionary<string, object?> parameters, string dataSourceName);
 
         /// <summary>
-        /// Executes the given IMiddlewareContext of the GraphQL query and expecting a list of Jsons back.
+        /// Executes the given IMiddlewareContext of the GraphQL query and expects a list of JsonDocument objects back.
         /// This method accepts a list of PKs for which to construct and return the response.
         /// </summary>
         /// <param name="context">IMiddleware context of the GraphQL query</param>

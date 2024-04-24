@@ -220,7 +220,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             ParametrizeColumns();
-
         }
 
         /// <summary>

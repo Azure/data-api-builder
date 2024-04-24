@@ -142,7 +142,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public Task<bool> ReadAsync(DbDataReader reader);
 
         /// <summary>
-        /// Wrapper for DbDataReader.ReadAsync.
+        /// Wrapper for DbDataReader.Read().
         /// This will catch certain db errors and throw an exception which can
         /// be reported to the user.
         /// This method is synchronous. It does not make use of async/await.

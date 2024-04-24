@@ -633,6 +633,5 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return jsonString.ToString();
         }
-
     }
 }

@@ -138,7 +138,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string mySqlQuery = @"
                 SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('fancyName', `subq7`.`species`, 'habitat',
-                                `subq7`.`habitat`)), JSON_ARRAY()) AS `data`
+                                `subq7`.`habitat`,  'fungi', `subq7`.`fungi`)), JSON_ARRAY()) AS `data`
                 FROM (
                     SELECT `table0`.`species` AS `fancyName`,
                         `table1_subq`.`data` AS `fungi`

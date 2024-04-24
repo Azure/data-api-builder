@@ -1468,14 +1468,14 @@
           species: fancyName
         },
         Relationships: {
-+         fungus: {
-+           TargetEntity: Fungus,
-+           SourceFields: [
-+             species
-+           ],
-+           TargetFields: [
-+             habitat
-+           ]
+          fungus: {
+            TargetEntity: Fungus,
+            SourceFields: [
+              species
+            ],
+            TargetFields: [
+              habitat
+            ]
           }
         }
       }
@@ -1550,14 +1550,14 @@
           spores: hazards
         },
         Relationships: {
-+         Shrub: {
-+           TargetEntity: Shrub,
-+           SourceFields: [
-+             habitat
-+           ],
-+           TargetFields: [
-+             species
-+           ]
+          Shrub: {
+            TargetEntity: Shrub,
+            SourceFields: [
+              habitat
+            ],
+            TargetFields: [
+              species
+            ]
           }
         }
       }

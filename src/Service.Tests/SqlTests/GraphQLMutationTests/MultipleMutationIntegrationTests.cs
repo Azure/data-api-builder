@@ -82,7 +82,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // 3. No value is assigned for the referenced entity via relationship field ('publisher').
             string createmultipleBooksMutationName = "createbooks";
             string createMultipleBooksWithoutPublisher = @"mutation {
-                    createbooks(items: [{ title: ""My New Book"" }]) {
+                    createbooks(items: [ { title: ""My New Book"", publisher_id: 1234 }, { title: ""My New Book"" }]) {
                         items{
                            id
                            title
@@ -234,7 +234,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // give back another value for publisher_id.
             string createMultipleBooksMutationName = "createbooks";
             string createMultipleBooksWithPublisher = @"mutation {
-                    createbooks(items: [{ title: ""My New Book"", publisher_id: 1234, publishers: { name: ""New publisher""}}]) {
+                    createbooks(items: [{ title: ""My New Book"", publisher_id: 1234 }, { title: ""My New Book"", publisher_id: 1234, publishers: { name: ""New publisher""}}]) {
                         items{
                            id
                            title
@@ -264,7 +264,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // 1. An explicit value is provided for referencing field book_id.
             // 2. Book is the parent referenced entity - so it passes on a value for book_id to the referencing entity Review.
             string createMultipleBooksWithReviews = @"mutation {
-                    createbooks(items: [{ title: ""My New Book"", publisher_id: 1234, reviews: [{ content: ""Good book"", book_id: 123}]}]) {
+                    createbooks(items: [{ title: ""My New Book"", publisher_id: 1234, reviews: [{ content: ""Good book""}]},
+                                        { title: ""My New Book"", publisher_id: 1234, reviews: [{ content: ""Good book"", book_id: 123}]}]) {
                         items{
                            id
                            title

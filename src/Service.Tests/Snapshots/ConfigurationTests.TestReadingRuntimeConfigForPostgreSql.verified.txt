@@ -1377,14 +1377,15 @@
         Mappings: {
           species: fancyName
         },
-        "relationships": {
-          "fungus": {
-            "cardinality": "one",
-            "target.entity": "Fungus",
-            "source.fields": [ "species" ],
-            "target.fields": [ "habitat" ],
-            "linking.source.fields": [],
-            "linking.target.fields": []
+        Relationships: {
++         fungus: {
++           TargetEntity: Fungus,
++           SourceFields: [
++             species
++           ],
++           TargetFields: [
++             habitat
++           ]
           }
         }
       }
@@ -1458,14 +1459,15 @@
         Mappings: {
           spores: hazards
         },
-        "relationships": {
-          "shrub": {
-            "cardinality": "one",
-            "target.entity": "Shrub",
-            "source.fields": [ "habitat" ],
-            "target.fields": [ "species" ],
-            "linking.source.fields": [],
-            "linking.target.fields": []
+        Relationships: {
++         Shrub: {
++           TargetEntity: Shrub,
++           SourceFields: [
++             habitat
++           ],
++           TargetFields: [
++             species
++           ]
           }
         }
       }

@@ -106,14 +106,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     parentEntityName: string.Empty,
                     columnsDerivedFromParentEntity: new(),
                     columnsToBeDerivedFromEntity: new());
-
-                MultipleMutationInputValidator.ValidateGraphQLValueNode(
+                MultipleMutationInputValidator multipleMutationInputValidator = new(sqlMetadataProviderFactory: _sqlMetadataProviderFactory, runtimeConfigProvider: _runtimeConfigProvider);
+                multipleMutationInputValidator.ValidateGraphQLValueNode(
                     schema: schemaForArgument,
                     context: context,
                     parameters: param,
-                    runtimeConfig: _runtimeConfigProvider.GetConfig(),
                     nestingLevel: 0,
-                    sqlMetadataProviderFactory: _sqlMetadataProviderFactory,
                     multipleMutationInputValidationContext: multipleMutationInputValidationContext);
             }
 

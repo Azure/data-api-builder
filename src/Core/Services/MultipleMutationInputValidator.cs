@@ -4,6 +4,7 @@
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -17,6 +18,13 @@ namespace Azure.DataApiBuilder.Core.Services
 {
     public class MultipleMutationInputValidator
     {
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
+
+        public MultipleMutationInputValidator(IMetadataProviderFactory sqlMetadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider) {
+            _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
+            _runtimeConfigProvider = runtimeConfigProvider;
+        }
         /// <summary>
         /// Recursive method to validate a GraphQL value node which can represent the input for item/items
         /// argument for the mutation node, or can represent an object value (*:1 relationship)
@@ -25,11 +33,9 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="schema">Schema for the input field</param>
         /// <param name="context">Middleware Context.</param>
         /// <param name="parameters">Value for the input field.</param>
-        /// <param name="runtimeConfig">Runtime config</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
-        /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
         /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
         /// <example>       1. mutation {
         ///                 createbook(
@@ -62,13 +68,11 @@ namespace Azure.DataApiBuilder.Core.Services
         ///                         title
         ///                     }
         ///                 }</example>
-        public static void ValidateGraphQLValueNode(
+        public void ValidateGraphQLValueNode(
             IInputField schema,
             IMiddlewareContext context,
             object? parameters,
-            RuntimeConfig runtimeConfig,
             int nestingLevel,
-            IMetadataProviderFactory sqlMetadataProviderFactory,
             MultipleMutationInputValidationContext multipleMutationInputValidationContext)
         {
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNodes)
@@ -79,9 +83,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     context: context,
                     currentEntityInputFieldNodes: listOfObjectFieldNodes,
-                    runtimeConfig: runtimeConfig,
                     nestingLevel: nestingLevel + 1,
-                    sqlMetadataProviderFactory: sqlMetadataProviderFactory,
                     multipleMutationInputValidationContext: multipleMutationInputValidationContext);
             }
             else if (parameters is List<IValueNode> listOfIValueNodes)
@@ -92,9 +94,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schema: schema,
                     context: context,
                     parameters: iValueNode,
-                    runtimeConfig: runtimeConfig,
                     nestingLevel: nestingLevel,
-                    sqlMetadataProviderFactory: sqlMetadataProviderFactory,
                     multipleMutationInputValidationContext: multipleMutationInputValidationContext));
             }
             else if (parameters is ObjectValueNode objectValueNode)
@@ -105,9 +105,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
                     context: context,
                     currentEntityInputFieldNodes: objectValueNode.Fields,
-                    runtimeConfig: runtimeConfig,
                     nestingLevel: nestingLevel + 1,
-                    sqlMetadataProviderFactory: sqlMetadataProviderFactory,
                     multipleMutationInputValidationContext: multipleMutationInputValidationContext);
             }
             else if (parameters is ListValueNode listValueNode)
@@ -118,9 +116,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     schema: schema,
                     context: context,
                     parameters: objectValueNodeInListValueNode,
-                    runtimeConfig: runtimeConfig,
                     nestingLevel: nestingLevel,
-                    sqlMetadataProviderFactory: sqlMetadataProviderFactory,
                     multipleMutationInputValidationContext: multipleMutationInputValidationContext));
             }
             else
@@ -138,24 +134,21 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="schemaObject">Input object type for the field.</param>
         /// <param name="context">Middleware Context.</param>
         /// <param name="currentEntityInputFieldNodes">List of ObjectFieldNodes for the the input field.</param>
-        /// <param name="runtimeConfig">Runtime config</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
-        /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
         /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
-        private static void ValidateObjectFieldNodes(
+        private void ValidateObjectFieldNodes(
             InputObjectType schemaObject,
             IMiddlewareContext context,
             IReadOnlyList<ObjectFieldNode> currentEntityInputFieldNodes,
-            RuntimeConfig runtimeConfig,
             int nestingLevel,
-            IMetadataProviderFactory sqlMetadataProviderFactory,
             MultipleMutationInputValidationContext multipleMutationInputValidationContext)
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             string entityName = multipleMutationInputValidationContext.EntityName;
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
-            ISqlMetadataProvider metadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
             Dictionary<string, IValueNode?> backingColumnData = MultipleCreateOrderHelper.GetBackingColumnDataFromFields(context, entityName, currentEntityInputFieldNodes, metadataProvider);
 
@@ -253,7 +246,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     string relationshipName = currentEntityInputFieldNode.Name.Value;
                     ProcessRelationshipField(
                     context: context,
-                    runtimeConfig: runtimeConfig,
                     metadataProvider: metadataProvider,
                     backingColumnData: backingColumnData,
                     derivableColumnsFromRequestBody: derivableColumnsFromRequestBody,
@@ -291,11 +283,9 @@ namespace Azure.DataApiBuilder.Core.Services
                 entityName: entityName,
                 context: context,
                 currentEntityInputFields: currentEntityInputFieldNodes,
-                runtimeConfig: runtimeConfig,
                 fieldsToSupplyToReferencingEntities: fieldsToSupplyToReferencingEntities,
                 fieldsToDeriveFromReferencedEntities: fieldsToDeriveFromReferencedEntities,
-                nestingLevel: nestingLevel,
-                sqlMetadataProviderFactory: sqlMetadataProviderFactory);
+                nestingLevel: nestingLevel);
         }
 
         /// <summary>
@@ -315,7 +305,6 @@ namespace Azure.DataApiBuilder.Core.Services
         /// 'fieldsToSupplyToReferencingEntities' for the current relationship.
         /// </summary>
         /// <param name="context">Middleware context.</param>
-        /// <param name="runtimeConfig">Runtime config</param>
         /// <param name="metadataProvider">Metadata provider.</param>
         /// <param name="backingColumnData">Column name/value for backing columns present in the request input for the current entity.</param>
         /// <param name="derivableColumnsFromRequestBody">Set of columns in the current entity whose values can be derived via:
@@ -333,9 +322,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
         /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
-        private static void ProcessRelationshipField(
+        private void ProcessRelationshipField(
             IMiddlewareContext context,
-            RuntimeConfig runtimeConfig,
             ISqlMetadataProvider metadataProvider,
             Dictionary<string, IValueNode?> backingColumnData,
             Dictionary<string, string> derivableColumnsFromRequestBody,
@@ -346,6 +334,7 @@ namespace Azure.DataApiBuilder.Core.Services
             int nestingLevel,
             MultipleMutationInputValidationContext multipleMutationInputValidationContext)
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             string entityName = multipleMutationInputValidationContext.EntityName;
             // When the source of a referencing field in current entity is a relationship, the relationship's name is added to the value in
             // the KV pair of (referencing column, source) in derivableColumnsFromRequestBody with a prefix '$' so that if the relationship name
@@ -557,7 +546,6 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="entityName">Current entity's name.</param>
         /// <param name="context">Middleware context.</param>
         /// <param name="currentEntityInputFields">List of ObjectFieldNodes for the the input field.</param>
-        /// <param name="runtimeConfig">Runtime config</param>
         /// <param name="fieldsToSupplyToReferencingEntities">Dictionary storing the mapping from relationship name to the set of
         /// referencing fields for all the relationships for which the current entity is the referenced entity.</param>
         /// <param name="fieldsToDeriveFromReferencedEntities">Dictionary storing the mapping from relationship name
@@ -565,18 +553,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
-        /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
-        private static void ValidateRelationshipFields(
+        private void ValidateRelationshipFields(
             InputObjectType schemaObject,
             string entityName,
             IMiddlewareContext context,
             IReadOnlyList<ObjectFieldNode> currentEntityInputFields,
-            RuntimeConfig runtimeConfig,
             Dictionary<string, HashSet<string>> fieldsToSupplyToReferencingEntities,
             Dictionary<string, HashSet<string>> fieldsToDeriveFromReferencedEntities,
-            int nestingLevel,
-            IMetadataProviderFactory sqlMetadataProviderFactory)
+            int nestingLevel)
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             foreach (ObjectFieldNode currentEntityInputField in currentEntityInputFields)
             {
                 Tuple<IValueNode?, SyntaxKind> fieldDetails = GraphQLUtils.GetFieldDetails(currentEntityInputField.Value, context.Variables);
@@ -608,9 +594,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         schema: schemaObject.Fields[relationshipName],
                         context: context,
                         parameters: fieldDetails.Item1,
-                        runtimeConfig: runtimeConfig,
                         nestingLevel: nestingLevel,
-                        sqlMetadataProviderFactory: sqlMetadataProviderFactory,
                         multipleMutationInputValidationContext: multipleMutationInputValidationContext);
                 }
             }

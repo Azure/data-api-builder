@@ -103,7 +103,7 @@ FROM
 SELECT COALESCE(jsonb_agg(to_jsonb(""subq7"")), '[]') AS ""data""
 FROM
     (SELECT ""table0"".""species"" AS ""fancyName"",
-            ""table1_subq"".""data"" AS ""fungi""
+            ""table1_subq"".""data"" AS ""fungus""
      FROM ""public"".""trees"" AS ""table0""
      LEFT OUTER JOIN LATERAL
          (SELECT to_jsonb(""subq6"") AS ""data""

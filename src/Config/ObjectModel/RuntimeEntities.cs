@@ -61,7 +61,7 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
         get
         {
             Entity? entity;
-            if(Entities.TryGetValue(key, out entity) && entity is not null)
+            if (Entities.TryGetValue(key, out entity) && entity is not null)
             {
                 return entity;
             }

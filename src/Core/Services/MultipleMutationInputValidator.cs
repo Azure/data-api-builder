@@ -4,6 +4,7 @@
 using System.Net;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -22,20 +23,14 @@ namespace Azure.DataApiBuilder.Core.Services
         /// or a list value (*:N relationship) node for related target entities.
         /// </summary>
         /// <param name="schema">Schema for the input field</param>
-        /// <param name="entityName">Current entity's name.</param>
         /// <param name="context">Middleware Context.</param>
         /// <param name="parameters">Value for the input field.</param>
         /// <param name="runtimeConfig">Runtime config</param>
-        /// <param name="columnsDerivedFromParentEntity">Set of columns in this entity whose values should be
-        /// derived from insertion in the source entity (i.e. source entity would have been the referenced entity).</param>
-        /// <param name="columnsToBeDerivedFromEntity">Set of columns in this entity whose values are to be
-        /// derived from insertion in this entity and returned to the source entity so as to provide values for
-        /// the corresponding referencing fields (i.e. source entity would have been the referencing entity).</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
-        /// <param name="parentEntityName">Parent entity's name.</param>
         /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
+        /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
         /// <example>       1. mutation {
         ///                 createbook(
         ///                     item: {
@@ -69,15 +64,12 @@ namespace Azure.DataApiBuilder.Core.Services
         ///                 }</example>
         public static void ValidateGraphQLValueNode(
             IInputField schema,
-            string entityName,
             IMiddlewareContext context,
             object? parameters,
             RuntimeConfig runtimeConfig,
-            HashSet<string> columnsDerivedFromParentEntity,
-            HashSet<string> columnsToBeDerivedFromEntity,
             int nestingLevel,
-            string parentEntityName,
-            IMetadataProviderFactory sqlMetadataProviderFactory)
+            IMetadataProviderFactory sqlMetadataProviderFactory,
+            MultipleMutationInputValidationContext multipleMutationInputValidationContext)
         {
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNodes)
             {
@@ -85,15 +77,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 // all the fields present for item namely- title, reviews, publisher, authors are interpreted as ObjectFieldNode.
                 ValidateObjectFieldNodes(
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
-                    entityName: entityName,
                     context: context,
                     currentEntityInputFieldNodes: listOfObjectFieldNodes,
                     runtimeConfig: runtimeConfig,
-                    columnsDerivedFromSourceEntity: columnsDerivedFromParentEntity,
-                    columnsToBeSuppliedToSourceEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel + 1,
-                    parentEntityName: parentEntityName,
-                    sqlMetadataProviderFactory: sqlMetadataProviderFactory);
+                    sqlMetadataProviderFactory: sqlMetadataProviderFactory,
+                    multipleMutationInputValidationContext: multipleMutationInputValidationContext);
             }
             else if (parameters is List<IValueNode> listOfIValueNodes)
             {
@@ -101,15 +90,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 // i.e. items is a list of ObjectValueNode(s).
                 listOfIValueNodes.ForEach(iValueNode => ValidateGraphQLValueNode(
                     schema: schema,
-                    entityName: entityName,
                     context: context,
                     parameters: iValueNode,
                     runtimeConfig: runtimeConfig,
-                    columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
-                    columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel,
-                    parentEntityName: parentEntityName,
-                    sqlMetadataProviderFactory: sqlMetadataProviderFactory));
+                    sqlMetadataProviderFactory: sqlMetadataProviderFactory,
+                    multipleMutationInputValidationContext: multipleMutationInputValidationContext));
             }
             else if (parameters is ObjectValueNode objectValueNode)
             {
@@ -117,15 +103,12 @@ namespace Azure.DataApiBuilder.Core.Services
                 // Similarly the individual node (elements in the list) for the reviews, authors ListValueNode(s) are also interpreted as ObjectValueNode(s).
                 ValidateObjectFieldNodes(
                     schemaObject: ExecutionHelper.InputObjectTypeFromIInputField(schema),
-                    entityName: entityName,
                     context: context,
                     currentEntityInputFieldNodes: objectValueNode.Fields,
                     runtimeConfig: runtimeConfig,
-                    columnsDerivedFromSourceEntity: columnsDerivedFromParentEntity,
-                    columnsToBeSuppliedToSourceEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel + 1,
-                    parentEntityName: parentEntityName,
-                    sqlMetadataProviderFactory: sqlMetadataProviderFactory);
+                    sqlMetadataProviderFactory: sqlMetadataProviderFactory,
+                    multipleMutationInputValidationContext: multipleMutationInputValidationContext);
             }
             else if (parameters is ListValueNode listValueNode)
             {
@@ -133,19 +116,16 @@ namespace Azure.DataApiBuilder.Core.Services
                 // All the nodes in the ListValueNode are parsed one by one.
                 listValueNode.GetNodes().ToList().ForEach(objectValueNodeInListValueNode => ValidateGraphQLValueNode(
                     schema: schema,
-                    entityName: entityName,
                     context: context,
                     parameters: objectValueNodeInListValueNode,
                     runtimeConfig: runtimeConfig,
-                    columnsDerivedFromParentEntity: columnsDerivedFromParentEntity,
-                    columnsToBeDerivedFromEntity: columnsToBeDerivedFromEntity,
                     nestingLevel: nestingLevel,
-                    parentEntityName: parentEntityName,
-                    sqlMetadataProviderFactory: sqlMetadataProviderFactory));
+                    sqlMetadataProviderFactory: sqlMetadataProviderFactory,
+                    multipleMutationInputValidationContext: multipleMutationInputValidationContext));
             }
             else
             {
-                throw new DataApiBuilderException(message: $"Unable to process input at level: {nestingLevel} for entity: {entityName}",
+                throw new DataApiBuilderException(message: $"Unable to process input at level: {nestingLevel} for entity: {multipleMutationInputValidationContext.EntityName}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
@@ -156,32 +136,24 @@ namespace Azure.DataApiBuilder.Core.Services
         /// validate that the presence/absence of fields make logical sense for the multiple-create request.
         /// </summary>
         /// <param name="schemaObject">Input object type for the field.</param>
-        /// <param name="entityName">Current entity's name.</param>
         /// <param name="context">Middleware Context.</param>
         /// <param name="currentEntityInputFieldNodes">List of ObjectFieldNodes for the the input field.</param>
         /// <param name="runtimeConfig">Runtime config</param>
-        /// <param name="columnsDerivedFromSourceEntity">Set of columns in this entity whose values should be
-        /// derived from insertion in the source entity (i.e. source entity would have been the referenced entity).</param>
-        /// <param name="columnsToBeSuppliedToSourceEntity">Set of columns in this entity whose values are to be
-        /// derived from insertion in this entity or its subsequent referenced entities and returned to the source entity
-        /// so as to provide values for the corresponding referencing fields (i.e. source entity would have been the referencing entity).</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
-        /// <param name="parentEntityName">Parent entity's name.</param>
         /// <param name="sqlMetadataProviderFactory">Metadata provider factory.</param>
+        /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
         private static void ValidateObjectFieldNodes(
             InputObjectType schemaObject,
-            string entityName,
             IMiddlewareContext context,
             IReadOnlyList<ObjectFieldNode> currentEntityInputFieldNodes,
             RuntimeConfig runtimeConfig,
-            HashSet<string> columnsDerivedFromSourceEntity,
-            HashSet<string> columnsToBeSuppliedToSourceEntity,
             int nestingLevel,
-            string parentEntityName,
-            IMetadataProviderFactory sqlMetadataProviderFactory)
+            IMetadataProviderFactory sqlMetadataProviderFactory,
+            MultipleMutationInputValidationContext multipleMutationInputValidationContext)
         {
+            string entityName = multipleMutationInputValidationContext.EntityName;
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
@@ -204,15 +176,14 @@ namespace Azure.DataApiBuilder.Core.Services
             // current entity (referencing entity) i.e. derivableColumnsFromRequestBody must not contain values for referencing columns.
             ValidateAbsenceOfReferencingColumnsInTargetEntity(
                  backingColumnToSourceMapInTargetEntity: derivableColumnsFromRequestBody,
-                 derivedColumnsFromSourceEntity: columnsDerivedFromSourceEntity,
+                 multipleMutationInputValidationContext: multipleMutationInputValidationContext,
                  nestingLevel: nestingLevel,
-                 targetEntityName: entityName,
                  metadataProvider: metadataProvider);
 
             // Add all the columns whose value(s) will be derived from insertion in parent entity to the set of derivable columns (b).
-            foreach (string columnDerivedFromSourceEntity in columnsDerivedFromSourceEntity)
+            foreach (string columnDerivedFromSourceEntity in multipleMutationInputValidationContext.ColumnsDerivedFromParentEntity)
             {
-                derivableColumnsFromRequestBody.TryAdd(columnDerivedFromSourceEntity, parentEntityName);
+                derivableColumnsFromRequestBody.TryAdd(columnDerivedFromSourceEntity, multipleMutationInputValidationContext.ParentEntityName);
             }
 
             // For the relationships with the parent entity, where the current entity is a referenced entity,
@@ -237,17 +208,17 @@ namespace Azure.DataApiBuilder.Core.Services
             // Case 1: Remove from columnsToBeDerivedFromEntity, the columns which are autogenerated or
             // have been provided a non-null value in the input for the current entity.
 
-            // As we iterate through columns which can derived from the current entity, we keep removing them from the
-            // columnsToDerive because we know the column value can be derived.
-            // At the end, if there are still columns yet to be derived, i.e.columnsToDerive.count > 0,
+            // As we iterate through columns which can be derived from the current entity, we keep removing them from the
+            // columnsToBeSuppliedToSourceEntity because we know the column value can be derived.
+            // At the end, if there are still columns yet to be derived, i.e. columnsToBeSuppliedToSourceEntity.count > 0,
             // we throw an exception.
-            foreach (string columnToBeDerivedFromEntity in columnsToBeSuppliedToSourceEntity)
+            foreach (string columnToBeDerivedFromEntity in multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity)
             {
                 if (sourceDefinition.Columns[columnToBeDerivedFromEntity].IsAutoGenerated)
                 {
                     // The value for an autogenerated column is derivable. In other words, the value autogenerated during creation of this entity
                     // can be provided to another entity's referencing fields.
-                    columnsToBeSuppliedToSourceEntity.Remove(columnToBeDerivedFromEntity);
+                    multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(columnToBeDerivedFromEntity);
                 }
                 else if (backingColumnData.TryGetValue(columnToBeDerivedFromEntity, out IValueNode? value))
                 {
@@ -260,7 +231,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    columnsToBeSuppliedToSourceEntity.Remove(columnToBeDerivedFromEntity);
+                    multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(columnToBeDerivedFromEntity);
                 }
             }
 
@@ -272,142 +243,26 @@ namespace Azure.DataApiBuilder.Core.Services
             // the relationships for which the current entity is the referencing entity.
             Dictionary<string, HashSet<string>> fieldsToDeriveFromReferencedEntities = new();
 
-            // When the source of a referencing field in current entity is a relationship, the relationship's name is added to the value in
-            // the KV pair of (referencing column, source) in derivableColumnsFromRequestBody with a prefix '$' so that if the relationship name
-            // conflicts with the current entity's name or the parent entity's name, we are able to distinguish
-            // with the help of this identifier. It should be noted that the identifier is not allowed in the names
-            // of entities exposed in DAB.
-            const string relationshipSourceIdentifier = "$";
             // Loop over all the relationship fields input provided for the current entity.
             foreach (ObjectFieldNode currentEntityInputFieldNode in currentEntityInputFieldNodes)
             {
                 (IValueNode? fieldValue, SyntaxKind fieldKind) = GraphQLUtils.GetFieldDetails(currentEntityInputFieldNode.Value, context.Variables);
-                if (fieldKind is SyntaxKind.NullValue || GraphQLUtils.IsScalarField(fieldKind))
+                if (fieldKind is not SyntaxKind.NullValue && !GraphQLUtils.IsScalarField(fieldKind))
                 {
-                    // If the current field is a column/scalar field or has a null value, continue.
-                    continue;
-                }
-
-                string relationshipName = currentEntityInputFieldNode.Name.Value;
-                string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
-                string? linkingObject = runtimeConfig.Entities![entityName].Relationships![relationshipName].LinkingObject;
-                if (!string.IsNullOrWhiteSpace(linkingObject))
-                {
-                    // The presence of a linking object indicates that an M:N relationship exists between the current entity and the target/child entity.
-                    // The linking table acts as a referencing table for both the source/target entities which act as
-                    // referenced entities. Consequently:
-                    // - Column values for the target entity can't be derived from insertion in the current entity.
-                    // - Column values for the current entity can't be derived from the insertion in the target/child entity.
-                    continue;
-                }
-
-                // Determine the referencing entity for the current relationship field input.
-                string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(
-                    relationshipName: relationshipName,
+                    // Process the relationship field.
+                    string relationshipName = currentEntityInputFieldNode.Name.Value;
+                    ProcessRelationshipField(
                     context: context,
-                    sourceEntityName: entityName,
-                    targetEntityName: targetEntityName,
+                    runtimeConfig: runtimeConfig,
                     metadataProvider: metadataProvider,
-                    columnDataInSourceBody: backingColumnData,
-                    targetNodeValue: fieldValue,
-                    nestingLevel: nestingLevel);
-
-                // Determine the referenced entity.
-                string referencedEntityName = referencingEntityName.Equals(entityName) ? targetEntityName : entityName;
-
-                // Get the required foreign key definition with the above inferred referencing and referenced entities.
-                if(!metadataProvider.TryGetFKDefinition(
-                    sourceEntityName: entityName,
-                    targetEntityName: targetEntityName,
-                    referencingEntityName: referencingEntityName,
-                    referencedEntityName: referencedEntityName,
-                    foreignKeyDefinition: out ForeignKeyDefinition? fkDefinition))
-                {
-                    // This should not be hit ideally.
-                    throw new DataApiBuilderException(
-                        message: $"Could not resolve relationship metadata for source: {entityName} and target: {targetEntityName} entities for " +
-                        $"relationship: {relationshipName} at level: {nestingLevel}",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
-                }
-
-                // Validate that one column in the referencing entity is not referencing multiple columns in the referenced entity
-                // to avoid conflicting sources of truth for the value of referencing column.
-                IEnumerable<string> listOfRepeatedReferencingFields = GetListOfRepeatedExposedReferencingColumns(
-                        referencingEntityName: referencingEntityName,
-                        referencingColumns: fkDefinition.ReferencingColumns,
-                        metadataProvider: metadataProvider);
-
-                if (listOfRepeatedReferencingFields.Count() > 0)
-                {
-                    string repeatedReferencingFields = "{" + string.Join(", ", listOfRepeatedReferencingFields) + "}";
-                    // This indicates one column is holding reference to multiple referenced columns in the related entity,
-                    // which leads to possibility of two conflicting sources of truth for this column.
-                    // This is an invalid use case for multiple-create.
-                    throw new DataApiBuilderException(
-                        message: $"The field(s): {repeatedReferencingFields} in the entity: {referencingEntityName} reference(s) multiple fields in the " +
-                        $"related entity: {referencedEntityName} for the relationship: {relationshipName} at level: {nestingLevel}.",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                }
-
-                // The current entity is the referencing entity.
-                if (referencingEntityName.Equals(entityName))
-                {
-                    for (int idx = 0; idx < fkDefinition.ReferencingColumns.Count; idx++)
-                    {
-                        string referencingColumn = fkDefinition.ReferencingColumns[idx];
-                        string referencedColumn = fkDefinition.ReferencedColumns[idx];
-
-                        // The input data for current entity should not specify a value for a referencing column -
-                        // as it's value will be derived from the insertion in the referenced (target) entity.
-                        if (derivableColumnsFromRequestBody.TryGetValue(referencingColumn, out string? referencingColumnSource))
-                        {
-                            string conflictingSource;
-                            if (referencingColumnSource.StartsWith(relationshipSourceIdentifier))
-                            {
-                                // If the source name starts with "$", this indicates the source for the referencing column
-                                // was another relationship.
-                                conflictingSource = "Relationship: " + referencingColumnSource.Substring(relationshipSourceIdentifier.Length);
-                            }
-                            else
-                            {
-                                conflictingSource = referencingColumnSource.Equals(parentEntityName) ? $"Parent entity: {referencingColumnSource}" : $"entity: {entityName}";
-                            }
-
-                            metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedColumnName);
-                            throw new DataApiBuilderException(
-                                message: $"Found conflicting sources providing a value for the field: {exposedColumnName} for entity: {entityName} at level: {nestingLevel}." +
-                                $"Source 1: {conflictingSource}, Source 2: Relationship: {relationshipName}.",
-                                statusCode: HttpStatusCode.BadRequest,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                        }
-
-                        // Case 2: When a column whose value is to be derived from the insertion in current entity
-                        // (happens when the parent entity is a referencing entity in a relationship with current entity),
-                        // is a referencing column in the current relationship, we pass on the responsibility of getting the value
-                        // of such a column to the target entity in the current relationship.
-                        if (columnsToBeSuppliedToSourceEntity.Contains(referencingColumn))
-                        {
-                            // We optimistically assume that we will get the value of the referencing column
-                            // from the insertion in the target entity.
-                            columnsToBeSuppliedToSourceEntity.Remove(referencingColumn);
-                        }
-
-                        // Resolve the field(s) whose value(s) will be sourced from the creation of record in the current relationship's target entity.
-                        fieldsToDeriveFromReferencedEntities.TryAdd(relationshipName, new());
-                        fieldsToDeriveFromReferencedEntities[relationshipName].Add(referencedColumn);
-
-                        // Value(s) for the current entity's referencing column(s) are sourced from the creation
-                        // of record in the current relationship's target entity.
-                        derivableColumnsFromRequestBody.TryAdd(referencingColumn, relationshipSourceIdentifier + relationshipName);
-                    }
-                }
-                else
-                {
-                    // Keep track of the set of referencing columns in the target (referencing) entity which will get their value sourced from insertion
-                    // in the current entity.
-                    fieldsToSupplyToReferencingEntities.Add(relationshipName, new(fkDefinition.ReferencingColumns));
+                    backingColumnData: backingColumnData,
+                    derivableColumnsFromRequestBody: derivableColumnsFromRequestBody,
+                    fieldsToSupplyToReferencingEntities: fieldsToSupplyToReferencingEntities,
+                    fieldsToDeriveFromReferencedEntities: fieldsToDeriveFromReferencedEntities,
+                    relationshipName: relationshipName,
+                    relationshipFieldValue: fieldValue,
+                    nestingLevel: nestingLevel,
+                    multipleMutationInputValidationContext: multipleMutationInputValidationContext);
                 }
             }
 
@@ -416,7 +271,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // 2. Via an autogenerated value from the database,
             // 3. Via Insertion in a referenced target entity in a relationship,
             // if there are still columns which are yet to be derived, this means we don't have sufficient data to perform insertion.
-            if (columnsToBeSuppliedToSourceEntity.Count > 0)
+            if (multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Count > 0)
             {
                 throw new DataApiBuilderException(
                     message: $"Insufficient data provided for insertion in the entity: {entityName} at level: {nestingLevel}.",
@@ -441,6 +296,183 @@ namespace Azure.DataApiBuilder.Core.Services
                 fieldsToDeriveFromReferencedEntities: fieldsToDeriveFromReferencedEntities,
                 nestingLevel: nestingLevel,
                 sqlMetadataProviderFactory: sqlMetadataProviderFactory);
+        }
+
+        /// <summary>
+        /// Helper method which processes a relationship field provided in the input for the current entity and does a few things:
+        /// 1. Does nothing when the relationship represents an M:N relationship as for M:N relationship both the source/target entities act as
+        /// referenced tables while the linking table act as the referencing table..
+        /// 2. Validates that one referencing column from referencing entity does not reference multiple columns from the referenced entity.
+        /// 3. When the target entity is the referenced entity:
+        ///     - Validates that there are no conflicting sources of values for fields in the current entity. This happens when the insertion in the target
+        ///     entity returns a value for a referencing field in current entity but the value for the same referencing field had already being determined
+        ///     via insertion in the parent entity or the current entity.
+        ///     - Adds a mapping from (relationshipName,referencedFields in target entity) to 'fieldsToDeriveFromReferencedEntities' for the current relationship.
+        ///     - Adds to 'derivableColumnsFromRequestBody', the set of referencing fields for which values can be derived from insertion in the target entity.
+        ///     - Removes the referencing fields present in multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity because the responsibility
+        ///     of providing value for such fields is delegated to the target entity.
+        /// 4. When the target entity is the referencing entity, adds a mapping from (relationshipName,referencingFields in target entity) to
+        /// 'fieldsToSupplyToReferencingEntities' for the current relationship.
+        /// </summary>
+        /// <param name="context">Middleware context.</param>
+        /// <param name="runtimeConfig">Runtime config</param>
+        /// <param name="metadataProvider">Metadata provider.</param>
+        /// <param name="backingColumnData">Column name/value for backing columns present in the request input for the current entity.</param>
+        /// <param name="derivableColumnsFromRequestBody">Set of columns in the current entity whose values can be derived via:
+        /// a. User input
+        /// b. Insertion in the source referenced entity (if current entity is a referencing entity for a relationship with its parent entity)
+        /// c. Insertion in the target referenced entity (if the current entity is a referencing entity for a relationship with its target entity).
+        /// </param>
+        /// <param name="fieldsToSupplyToReferencingEntities">Dictionary storing the mapping from relationship name to the set of
+        /// referencing fields for all the relationships for which the current entity is the referenced entity.</param>
+        /// <param name="fieldsToDeriveFromReferencedEntities">Dictionary storing the mapping from relationship name
+        /// to the set of referenced fields for all the relationships for which the current entity is the referencing entity.</param>
+        /// <param name="relationshipName">Relationship name.</param>
+        /// <param name="relationshipFieldValue">Input value for relationship field.</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
+        /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
+        /// as to at what level in the multiple mutation the exception occurred.</param>
+        /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
+        private static void ProcessRelationshipField(
+            IMiddlewareContext context,
+            RuntimeConfig runtimeConfig,
+            ISqlMetadataProvider metadataProvider,
+            Dictionary<string, IValueNode?> backingColumnData,
+            Dictionary<string, string> derivableColumnsFromRequestBody,
+            Dictionary<string, HashSet<string>> fieldsToSupplyToReferencingEntities,
+            Dictionary<string, HashSet<string>> fieldsToDeriveFromReferencedEntities,
+            string relationshipName,
+            IValueNode? relationshipFieldValue,
+            int nestingLevel,
+            MultipleMutationInputValidationContext multipleMutationInputValidationContext)
+        {
+            string entityName = multipleMutationInputValidationContext.EntityName;
+            // When the source of a referencing field in current entity is a relationship, the relationship's name is added to the value in
+            // the KV pair of (referencing column, source) in derivableColumnsFromRequestBody with a prefix '$' so that if the relationship name
+            // conflicts with the current entity's name or the parent entity's name, we are able to distinguish
+            // with the help of this identifier. It should be noted that the identifier is not allowed in the names
+            // of entities exposed in DAB.
+            const string relationshipSourceIdentifier = "$";
+            string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
+            string? linkingObject = runtimeConfig.Entities![entityName].Relationships![relationshipName].LinkingObject;
+            if (!string.IsNullOrWhiteSpace(linkingObject))
+            {
+                // The presence of a linking object indicates that an M:N relationship exists between the current entity and the target/child entity.
+                // The linking table acts as a referencing table for both the source/target entities which act as
+                // referenced entities. Consequently:
+                // - Column values for the target entity can't be derived from insertion in the current entity.
+                // - Column values for the current entity can't be derived from the insertion in the target/child entity.
+                return;
+            }
+
+            // Determine the referencing entity for the current relationship field input.
+            string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(
+                relationshipName: relationshipName,
+                context: context,
+                sourceEntityName: entityName,
+                targetEntityName: targetEntityName,
+                metadataProvider: metadataProvider,
+                columnDataInSourceBody: backingColumnData,
+                targetNodeValue: relationshipFieldValue,
+                nestingLevel: nestingLevel);
+
+            // Determine the referenced entity.
+            string referencedEntityName = referencingEntityName.Equals(entityName) ? targetEntityName : entityName;
+
+            // Get the required foreign key definition with the above inferred referencing and referenced entities.
+            if (!metadataProvider.TryGetFKDefinition(
+                sourceEntityName: entityName,
+                targetEntityName: targetEntityName,
+                referencingEntityName: referencingEntityName,
+                referencedEntityName: referencedEntityName,
+                foreignKeyDefinition: out ForeignKeyDefinition? fkDefinition))
+            {
+                // This should not be hit ideally.
+                throw new DataApiBuilderException(
+                    message: $"Could not resolve relationship metadata for source: {entityName} and target: {targetEntityName} entities for " +
+                    $"relationship: {relationshipName} at level: {nestingLevel}",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
+            }
+
+            // Validate that one column in the referencing entity is not referencing multiple columns in the referenced entity
+            // to avoid conflicting sources of truth for the value of referencing column.
+            IEnumerable<string> listOfRepeatedReferencingFields = GetListOfRepeatedExposedReferencingColumns(
+                    referencingEntityName: referencingEntityName,
+                    referencingColumns: fkDefinition.ReferencingColumns,
+                    metadataProvider: metadataProvider);
+
+            if (listOfRepeatedReferencingFields.Count() > 0)
+            {
+                string repeatedReferencingFields = "{" + string.Join(", ", listOfRepeatedReferencingFields) + "}";
+                // This indicates one column is holding reference to multiple referenced columns in the related entity,
+                // which leads to possibility of two conflicting sources of truth for this column.
+                // This is an invalid use case for multiple-create.
+                throw new DataApiBuilderException(
+                    message: $"The field(s): {repeatedReferencingFields} in the entity: {referencingEntityName} reference(s) multiple field(s) in the " +
+                    $"related entity: {referencedEntityName} for the relationship: {relationshipName} at level: {nestingLevel}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            // The current entity is the referencing entity.
+            if (referencingEntityName.Equals(entityName))
+            {
+                for (int idx = 0; idx < fkDefinition.ReferencingColumns.Count; idx++)
+                {
+                    string referencingColumn = fkDefinition.ReferencingColumns[idx];
+                    string referencedColumn = fkDefinition.ReferencedColumns[idx];
+
+                    // The input data for current entity should not specify a value for a referencing column -
+                    // as it's value will be derived from the insertion in the referenced (target) entity.
+                    if (derivableColumnsFromRequestBody.TryGetValue(referencingColumn, out string? referencingColumnSource))
+                    {
+                        string conflictingSource;
+                        if (referencingColumnSource.StartsWith(relationshipSourceIdentifier))
+                        {
+                            // If the source name starts with "$", this indicates the source for the referencing column
+                            // was another relationship.
+                            conflictingSource = "Relationship: " + referencingColumnSource.Substring(relationshipSourceIdentifier.Length);
+                        }
+                        else
+                        {
+                            conflictingSource = referencingColumnSource.Equals(multipleMutationInputValidationContext.ParentEntityName) ? $"Parent entity: {referencingColumnSource}" : $"entity: {entityName}";
+                        }
+
+                        metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedColumnName);
+                        throw new DataApiBuilderException(
+                            message: $"Found conflicting sources providing a value for the field: {exposedColumnName} for entity: {entityName} at level: {nestingLevel}." +
+                            $"Source 1: {conflictingSource}, Source 2: Relationship: {relationshipName}.",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
+                    // Case 2: When a column whose value is to be derived from the insertion in current entity
+                    // (happens when the parent entity is a referencing entity in a relationship with current entity),
+                    // is a referencing column in the current relationship, we pass on the responsibility of getting the value
+                    // of such a column to the target entity in the current relationship.
+                    if (multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Contains(referencingColumn))
+                    {
+                        // We optimistically assume that we will get the value of the referencing column
+                        // from the insertion in the target entity.
+                        multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(referencingColumn);
+                    }
+
+                    // Resolve the field(s) whose value(s) will be sourced from the creation of record in the current relationship's target entity.
+                    fieldsToDeriveFromReferencedEntities.TryAdd(relationshipName, new());
+                    fieldsToDeriveFromReferencedEntities[relationshipName].Add(referencedColumn);
+
+                    // Value(s) for the current entity's referencing column(s) are sourced from the creation
+                    // of record in the current relationship's target entity.
+                    derivableColumnsFromRequestBody.TryAdd(referencingColumn, relationshipSourceIdentifier + relationshipName);
+                }
+            }
+            else
+            {
+                // Keep track of the set of referencing columns in the target (referencing) entity which will get their value sourced from insertion
+                // in the current entity.
+                fieldsToSupplyToReferencingEntities.Add(relationshipName, new(fkDefinition.ReferencingColumns));
+            }
         }
 
         /// <summary>
@@ -565,17 +597,21 @@ namespace Azure.DataApiBuilder.Core.Services
                     // When the current entity is a referencing entity, there will be no corresponding entry for the relationship
                     // in the fieldsToDeriveFromReferencedEntities dictionary.
                     fieldsToDeriveFromReferencedEntities.TryGetValue(relationshipName, out columnValuePairsToBeResolvedFromTargetEntity);
+
+                    MultipleMutationInputValidationContext multipleMutationInputValidationContext = new(
+                        entityName: targetEntityName,
+                        parentEntityName: entityName,
+                        columnsDerivedFromParentEntity: columnValuePairsResolvedForTargetEntity ?? new(),
+                        columnsToBeDerivedFromEntity: columnValuePairsToBeResolvedFromTargetEntity ?? new());
+
                     ValidateGraphQLValueNode(
                         schema: schemaObject.Fields[relationshipName],
-                        entityName: targetEntityName,
                         context: context,
                         parameters: fieldDetails.Item1,
                         runtimeConfig: runtimeConfig,
-                        columnsDerivedFromParentEntity: columnValuePairsResolvedForTargetEntity ?? new(),
-                        columnsToBeDerivedFromEntity: columnValuePairsToBeResolvedFromTargetEntity ?? new(),
                         nestingLevel: nestingLevel,
-                        parentEntityName: entityName,
-                        sqlMetadataProviderFactory: sqlMetadataProviderFactory);
+                        sqlMetadataProviderFactory: sqlMetadataProviderFactory,
+                        multipleMutationInputValidationContext: multipleMutationInputValidationContext);
                 }
             }
         }
@@ -590,25 +626,23 @@ namespace Azure.DataApiBuilder.Core.Services
         /// of the corresponding column's value The source can either be:
         /// 1. User provided scalar input for a column
         /// 2. Insertion in the source (referenced) entity.</param>
-        /// <param name="derivedColumnsFromSourceEntity">Foreign key columns to be derived from the source (referenced) entity.</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create GraphQL request.</param>
-        /// <param name="targetEntityName">Name of the target entity.</param>
         /// <param name="metadataProvider">Metadata provider.</param>
+        /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
         private static void ValidateAbsenceOfReferencingColumnsInTargetEntity(
             Dictionary<string, string> backingColumnToSourceMapInTargetEntity,
-            HashSet<string> derivedColumnsFromSourceEntity,
             int nestingLevel,
-            string targetEntityName,
-            ISqlMetadataProvider metadataProvider)
+            ISqlMetadataProvider metadataProvider,
+            MultipleMutationInputValidationContext multipleMutationInputValidationContext)
         {
-            foreach (string derivedColumnFromSourceEntity in derivedColumnsFromSourceEntity)
+            foreach (string derivedColumnFromParentEntity in multipleMutationInputValidationContext.ColumnsDerivedFromParentEntity)
             {
-                if (backingColumnToSourceMapInTargetEntity.ContainsKey(derivedColumnFromSourceEntity))
+                if (backingColumnToSourceMapInTargetEntity.ContainsKey(derivedColumnFromParentEntity))
                 {
-                    metadataProvider.TryGetExposedColumnName(targetEntityName, derivedColumnFromSourceEntity, out string? exposedColumnName);
+                    metadataProvider.TryGetExposedColumnName(multipleMutationInputValidationContext.EntityName, derivedColumnFromParentEntity, out string? exposedColumnName);
                     throw new DataApiBuilderException(
-                        message: $"You can't specify the field {exposedColumnName} in the create input for {targetEntityName} at level {nestingLevel} " +
-                        $"because the value is derived from the creation of the record in it's parent entity specified in the request.",
+                        message: $"You can't specify the field: {exposedColumnName} in the create input for entity: {multipleMutationInputValidationContext.EntityName} " +
+                        $"at level: {nestingLevel} because the value is derived from the creation of the record in it's parent entity specified in the request.",
                         statusCode: HttpStatusCode.BadRequest,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }

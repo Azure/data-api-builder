@@ -143,7 +143,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // values for the referencing field 'publisher_id'.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "Found conflicting sources of values for the field: publisher_id for entity: Book at level: 1." +
+                    message: "Found conflicting sources providing a value for the field: publisher_id for entity: Book at level: 1." +
                     "Source 1: entity: Book, Source 2: Relationship: publishers.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -171,7 +171,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // values for the referencing field 'book_id'.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "The field: book_id cannot be present for entity: Review at level: 2.",
+                    message: "You can't specify the field: book_id in the create input for entity: Review at level: 2 because the value is derived from " +
+                    "the creation of the record in it's parent entity specified in the request.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
@@ -207,7 +208,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // values for the referencing field 'publisher_id'.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "Found conflicting sources of values for the field: publisher_id for entity: Book at level: 2." +
+                    message: "Found conflicting sources providing a value for the field: publisher_id for entity: Book at level: 2." +
                     "Source 1: Parent entity: Publisher, Source 2: Relationship: publishers.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -252,7 +253,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // values for the referencing field 'publisher_id'.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "Found conflicting sources of values for the field: publisher_id for entity: Book at level: 1." +
+                    message: "Found conflicting sources providing a value for the field: publisher_id for entity: Book at level: 1." +
                     "Source 1: entity: Book, Source 2: Relationship: publishers.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -282,7 +283,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // values for the referencing field 'book_id'.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "The field: book_id cannot be present for entity: Review at level: 2.",
+                    message: "You can't specify the field: book_id in the create input for entity: Review at level: 2 because the value is derived from the " +
+                    "creation of the record in it's parent entity specified in the request.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
 
@@ -320,7 +322,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // values for the referencing field 'publisher_id'.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "Found conflicting sources of values for the field: publisher_id for entity: Book at level: 2." +
+                    message: "Found conflicting sources providing a value for the field: publisher_id for entity: Book at level: 2." +
                     "Source 1: Parent entity: Publisher, Source 2: Relationship: publishers.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -371,7 +373,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // 'username' can be derived from both of the referenced columns in the referenced entity.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "The fields: {username} in the entity: User_RepeatedReferencingColumnToOneEntity references multiple fields in" +
+                    message: "The field(s): {username} in the entity: User_RepeatedReferencingColumnToOneEntity reference(s) multiple field(s) in" +
                     " the related entity: UserProfile for the relationship: UserProfile at level: 1.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );
@@ -420,7 +422,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
             // userid can be derived from both of the referenced columns in the different referenced entities.
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: "Found conflicting sources of values for the field: userid for entity: UserProfile_RepeatedReferencingColumnToTwoEntities at level: 1." +
+                    message: "Found conflicting sources providing a value for the field: userid for entity: UserProfile_RepeatedReferencingColumnToTwoEntities at level: 1." +
                     "Source 1: Relationship: book, Source 2: Relationship: publisher.",
                     statusCode: DataApiBuilderException.SubStatusCodes.BadRequest.ToString()
                 );

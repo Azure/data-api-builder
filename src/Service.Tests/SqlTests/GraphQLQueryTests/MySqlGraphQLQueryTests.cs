@@ -137,10 +137,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
         {
             string mySqlQuery = @"
-                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('fancyName', `subq7`.`fancyName`, 'fungi', `subq7`.`fungi`)), JSON_ARRAY()) AS `data`
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('fancyName', `subq7`.`fancyName`, 'fungus', `subq7`.`fungus`)), JSON_ARRAY()) AS `data`
                 FROM (
                     SELECT `table0`.`species` AS `fancyName`,
-                        `table1_subq`.`data` AS `fungi`
+                        `table1_subq`.`data` AS `fungus`
                     FROM `trees` AS `table0`
                     LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('habitat', `subq6`.`habitat`) AS `data` FROM (
                             SELECT `table1`.`habitat` AS `habitat`

@@ -62,26 +62,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 root = document.RootElement.Clone();
             }
 
+            // If the request includes either hasNextPage or endCursor then to correctly return those
+            // values we need to determine the correct pagination logic
+            bool isPaginationRequested = paginationMetadata.RequestedHasNextPage || paginationMetadata.RequestedEndCursor;
+
             IEnumerable<JsonElement> rootEnumerated = root.EnumerateArray();
-
+            int returnedElementCount = rootEnumerated.Count();
             bool hasExtraElement = false;
-            if (paginationMetadata.RequestedHasNextPage)
+
+            if (isPaginationRequested)
             {
-                // check if the number of elements requested is successfully returned
-                // structure.Limit() is first + 1 for paginated queries where hasNextPage is requested
-                hasExtraElement = rootEnumerated.Count() == paginationMetadata.Structure!.Limit();
-
-                // add hasNextPage to connection elements
-                connection.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement);
-
+                // structure.Limit() is first + 1 for paginated queries where hasNextPage or endCursor is requested
+                hasExtraElement = returnedElementCount == paginationMetadata.Structure!.Limit();
                 if (hasExtraElement)
                 {
-                    // remove the last element
+                    // In a pagination scenario where we have an extra element, this element
+                    // must be removed since it was only used to determine if there are additional
+                    // records after those requested.
                     rootEnumerated = rootEnumerated.Take(rootEnumerated.Count() - 1);
+                    --returnedElementCount;
                 }
             }
 
-            int returnedElemNo = rootEnumerated.Count();
+            if (paginationMetadata.RequestedHasNextPage)
+            {
+                // add hasNextPage to connection elements
+                connection.Add(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, hasExtraElement);
+            }
 
             if (paginationMetadata.RequestedItems)
             {
@@ -100,11 +107,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (paginationMetadata.RequestedEndCursor)
             {
-                // parse *Connection.endCursor if there are no elements
-                // if no after is added, but it has been requested HotChocolate will report it as null
-                if (returnedElemNo > 0)
+                // Note: if we do not add endCursor to the connection but it was in the request, its value will
+                // automatically be populated as null.
+                // Need to validate we have an extra element, because otherwise there is no next page
+                // and endCursor should be left as null.
+                if (returnedElementCount > 0 && hasExtraElement)
                 {
-                    JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElemNo - 1);
+                    JsonElement lastElemInRoot = rootEnumerated.ElementAtOrDefault(returnedElementCount - 1);
                     connection.Add(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME,
                         MakeCursorFromJsonElement(
                             lastElemInRoot,
@@ -568,12 +577,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="jsonResult">Results plus one extra record if more exist.</param>
         /// <param name="first">Client provided limit if one exists, otherwise 0.</param>
+        /// <param name="defaultPageSize">Default limit for page size.</param>
+        /// <param name="maxPageSize">Maximum limit for page size.</param>
         /// <returns>Bool representing if more records are available.</returns>
-        public static bool HasNext(JsonElement jsonResult, uint? first)
+        public static bool HasNext(JsonElement jsonResult, int? first, uint defaultPageSize, uint maxPageSize)
         {
-            // When first is 0 we use default limit of 100, otherwise we use first
+            // When first is null we use default limit from runtime config, otherwise we use first
             uint numRecords = (uint)jsonResult.GetArrayLength();
-            uint? limit = first is not null ? first : 100;
+
+            uint limit;
+            if (first.HasValue)
+            {
+                // first is not null.
+                if (first == -1)
+                {
+                    // user has requested max value.
+                    limit = maxPageSize;
+                }
+                else
+                {
+                    limit = (uint)first;
+                }
+            }
+            else
+            {
+                limit = defaultPageSize;
+            }
+
             return numRecords > limit;
         }
 

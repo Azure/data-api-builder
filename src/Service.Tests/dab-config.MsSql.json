@@ -16,7 +16,12 @@
     "graphql": {
       "enabled": true,
       "path": "/graphql",
-      "allow-introspection": true
+      "allow-introspection": true,
+      "multiple-mutations": {
+        "create": {
+          "enabled": true
+        }
+      }
     },
     "host": {
       "cors": {
@@ -320,6 +325,28 @@
           ]
         },
         {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "piecesAvailable"
+                ]
+              }
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
           "role": "TestNestedFilterFieldIsNull_ColumnForbidden",
           "actions": [
             {
@@ -382,6 +409,28 @@
             },
             {
               "action": "create"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create",
+              "fields": {
+                "exclude": [
+                  "piecesAvailable"
+                ]
+              }
+            },
+            {
+              "action": "read"
             },
             {
               "action": "update"
@@ -846,8 +895,12 @@
         "authors": {
           "cardinality": "many",
           "target.entity": "Author",
-          "source.fields": [],
-          "target.fields": [],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.object": "book_author_link",
           "linking.source.fields": [
             "book_id"
@@ -1380,8 +1433,35 @@
               "action": "create"
             }
           ]
+        },
+        {
+          "role": "test_role_with_excluded_fields_on_create",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
-      ]
+      ],
+      "relationships": {
+        "Stock": {
+          "cardinality": "one",
+          "target.entity": "Stock",
+          "source.fields": [],
+          "target.fields": [],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
     },
     "Tree": {
       "source": {
@@ -2106,6 +2186,154 @@
           ]
         }
       ]
+    },
+    "User_NonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_NonAutogenRelationshipColumn",
+          "plural": "User_NonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_NonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "username"
+          ],
+          "target.fields": [
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile",
+          "plural": "UserProfiles"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "User_AutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenRelationshipColumn",
+          "plural": "User_AutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "profileid"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "User_AutogenToNonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenToNonAutogenRelationshipColumn",
+          "plural": "User_AutogenToNonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenToNonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "userid",
+            "username"
+          ],
+          "target.fields": [
+            "userid",
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
     },
     "GetBooks": {
       "source": {
@@ -2832,8 +3060,12 @@
         "authors": {
           "cardinality": "many",
           "target.entity": "AuthorNF",
-          "source.fields": [],
-          "target.fields": [],
+          "source.fields": [
+            "id"
+          ],
+          "target.fields": [
+            "id"
+          ],
           "linking.object": "book_author_link",
           "linking.source.fields": [
             "book_id"
@@ -2862,13 +3094,13 @@
             {
               "action": "create",
               "fields": {
-                  "include": [
-                      "*"
-                  ],
-                  "exclude": [
-                      "current_date",
-                      "next_date"
-                  ]
+                "include": [
+                  "*"
+                ],
+                "exclude": [
+                  "current_date",
+                  "next_date"
+                ]
               }
             },
             "read",

@@ -457,6 +457,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                   ) AS subq"
             },
             {
+                "FindTest_Negative1QueryParams_Pagination",
+                @"
+                  SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id, 'bkname', bkname)) AS data
+                  FROM (
+                      SELECT *
+                      FROM " + _integrationPaginationTableName + @"
+                      ORDER BY id asc
+                      LIMIT 100000
+                  ) AS subq"
+            },
+            {
                 "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
                 @"
                   SELECT JSON_ARRAYAGG(JSON_OBJECT('id', id)) AS data
@@ -972,6 +983,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     FROM (
                         SELECT id, title, ROW_NUMBER() OVER (ORDER BY publisher_id asc, id asc)" + @"
                         FROM " + _integrationTableName + @" 
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('id', id, 'journalname', journalname, 'color', color, 'ownername', ownername)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _tableWithVarcharMax + @"
+                        WHERE color IS NULL AND ownername = 'Abhishek'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('speciesid', speciesid, 'region', region, 'habitat', habitat)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'sand'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                @"
+                    SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('speciesid', speciesid, 'region', region, 'habitat', habitat)), JSON_ARRAY()) AS data
+                    FROM (
+                        SELECT *" + @"
+                        FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'forestland'
                     ) AS subq
                 "
             }

@@ -14,6 +14,7 @@ add stocks_price --config "dab-config.MsSql.json" --source stocks_price --permis
 update stocks_price --config "dab-config.MsSql.json" --permissions "anonymous:read"
 update stocks_price --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_ColumnForbidden:read" --fields.exclude "price"
 update stocks_price --config "dab-config.MsSql.json" --permissions "TestNestedFilterFieldIsNull_EntityReadForbidden:create"
+update stocks_price --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_create:create,read,update,delete"
 add Tree --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete"
 add Shrub --config "dab-config.MsSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.MsSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
@@ -28,6 +29,10 @@ add Journal --config "dab-config.MsSql.json" --source "journals" --rest true --g
 add ArtOfWar --config "dab-config.MsSql.json" --source "aow" --rest true --graphql false --permissions "anonymous:*"
 add series --config "dab-config.MsSql.json" --source "series" --permissions "anonymous:*"
 add Sales --config "dab-config.MsSql.json" --source "sales" --permissions "anonymous:*" --rest true --graphql true
+add User_NonAutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add UserProfile --config "dab-config.MsSql.json" --source "user_profiles" --permissions "anonymous:*" --rest true --graphql true
+add User_AutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
 add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false
 add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "query"
@@ -65,12 +70,14 @@ update Publisher --config "dab-config.MsSql.json" --permissions "database_policy
 update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:update" --policy-database "@item.id ne 1234"
 update Publisher --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.name ne 'New publisher'"
 update Stock --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
+update Stock --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_create:read,update,delete"
+update Stock --config "dab-config.MsSql.json" --permissions "test_role_with_excluded_fields_on_create:create" --fields.exclude "piecesAvailable"
 update Stock --config "dab-config.MsSql.json" --rest commodities --graphql true --relationship stocks_price --target.entity stocks_price --cardinality one
 update Book --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete"
 update Book --config "dab-config.MsSql.json" --relationship publishers --target.entity Publisher --cardinality one
 update Book --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update Book --config "dab-config.MsSql.json" --relationship reviews --target.entity Review --cardinality many
-update Book --config "dab-config.MsSql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update Book --config "dab-config.MsSql.json" --relationship authors --target.entity Author --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id" --relationship.fields "id:id"
 update Book --config "dab-config.MsSql.json" --map "id:id,title:title"
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:create,delete"
 update Book --config "dab-config.MsSql.json" --permissions "policy_tester_01:update" --fields.include "*"
@@ -112,6 +119,7 @@ update WebsiteUser --config "dab-config.MsSql.json" --permissions "authenticated
 update Revenue --config "dab-config.MsSql.json" --permissions "database_policy_tester:create" --policy-database "@item.revenue gt 1000"
 update Comic --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true --relationship myseries --target.entity series --cardinality one
 update series --config "dab-config.MsSql.json" --relationship comics --target.entity Comic --cardinality many
+update stocks_price --config "dab-config.MsSql.json" --relationship Stock --target.entity Stock --cardinality one
 update Broker --config "dab-config.MsSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.MsSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
 update Shrub --config "dab-config.MsSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
@@ -134,6 +142,9 @@ update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_upd
 update Journal --config "dab-config.MsSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.MsSql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
+update User_NonAutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_NonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "username:username"
+update User_AutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_AutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid:profileid"
+update User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_AutogenToNonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid,username:userid,username"
 update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:execute" --rest.methods "Get"
 update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "Query" --rest.methods "Get"
@@ -169,7 +180,7 @@ update BookNF --config "dab-config.MsSql.json" --permissions "TestNestedFilterCh
 update BookNF --config "dab-config.MsSql.json" --relationship publishers --target.entity PublisherNF --cardinality one
 update BookNF --config "dab-config.MsSql.json" --relationship websiteplacement --target.entity BookWebsitePlacement --cardinality one
 update BookNF --config "dab-config.MsSql.json" --relationship reviews --target.entity Review --cardinality many
-update BookNF --config "dab-config.MsSql.json" --relationship authors --target.entity AuthorNF --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id"
+update BookNF --config "dab-config.MsSql.json" --relationship authors --target.entity AuthorNF --cardinality many --linking.object book_author_link --linking.source.fields "book_id" --linking.target.fields "author_id" --relationship.fields "id:id"
 update BookNF --config "dab-config.MsSql.json" --map "id:id,title:title"
 update Comic --config "dab-config.MsSql.json" --permissions "TestNestedFilterManyOne_ColumnForbidden:read"
 update Comic --config "dab-config.MsSql.json" --permissions "TestNestedFilterManyOne_EntityReadForbidden:read"

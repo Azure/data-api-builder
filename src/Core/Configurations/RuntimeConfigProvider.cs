@@ -93,7 +93,7 @@ public class RuntimeConfigProvider
     /// </summary>
     private bool TrySetupConfigFileWatcher()
     {
-        if (!IsLateConfigured && _runtimeConfig is not null && _runtimeConfig.IsDevelopmentMode())
+        if (!IsLateConfigured && _runtimeConfig is not null && RuntimeConfig.IsHotReloadable())
         {
             try
             {
@@ -151,7 +151,8 @@ public class RuntimeConfigProvider
     /// </summary>
     public void HotReloadConfig()
     {
-        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true);
+        // _runtimeconfig can not be null in a hot reload scenario
+        ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true, _runtimeConfig!.DefaultDataSourceName);
     }
 
     /// <summary>
@@ -193,7 +194,7 @@ public class RuntimeConfigProvider
                 _runtimeConfig = HandleCosmosNoSqlConfiguration(schema, _runtimeConfig, _runtimeConfig.DataSource.ConnectionString);
             }
 
-            ManagedIdentityAccessToken[_runtimeConfig.GetDefaultDataSourceName()] = accessToken;
+            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
         }
 
         bool configLoadSucceeded = await InvokeConfigLoadedHandlersAsync();
@@ -268,8 +269,8 @@ public class RuntimeConfigProvider
                 DatabaseType.CosmosDB_NoSQL => HandleCosmosNoSqlConfiguration(graphQLSchema, runtimeConfig, connectionString),
                 _ => runtimeConfig with { DataSource = runtimeConfig.DataSource with { ConnectionString = connectionString } }
             };
-            ManagedIdentityAccessToken[_runtimeConfig.GetDefaultDataSourceName()] = accessToken;
-            _runtimeConfig.UpdateDataSourceNameToDataSource(_runtimeConfig.GetDefaultDataSourceName(), _runtimeConfig.DataSource);
+            ManagedIdentityAccessToken[_runtimeConfig.DefaultDataSourceName] = accessToken;
+            _runtimeConfig.UpdateDataSourceNameToDataSource(_runtimeConfig.DefaultDataSourceName, _runtimeConfig.DataSource);
 
             return await InvokeConfigLoadedHandlersAsync();
         }
@@ -298,7 +299,7 @@ public class RuntimeConfigProvider
     {
         if (string.IsNullOrEmpty(dataSourceName))
         {
-            dataSourceName = runtimeConfig.GetDefaultDataSourceName();
+            dataSourceName = runtimeConfig.DefaultDataSourceName;
         }
 
         DbConnectionStringBuilder dbConnectionStringBuilder = new()
@@ -341,7 +342,7 @@ public class RuntimeConfigProvider
         // Update the connection string in the datasource with the one that was provided to the controller
         dataSource = dataSource with { Options = options, ConnectionString = connectionString };
 
-        if (dataSourceName == runtimeConfig.GetDefaultDataSourceName())
+        if (dataSourceName == runtimeConfig.DefaultDataSourceName)
         {
             // update default db.
             runtimeConfig = runtimeConfig with { DataSource = dataSource };

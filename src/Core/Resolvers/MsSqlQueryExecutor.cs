@@ -107,7 +107,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // using default datasource name for first db - maintaining backward compatibility for single db scenario.
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             _dataSourceAccessTokenUsage.TryGetValue(dataSourceName, out bool setAccessToken);
@@ -198,7 +198,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {
-                dataSourceName = ConfigProvider.GetConfig().GetDefaultDataSourceName();
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
             }
 
             if (httpContext is null || !_dataSourceToSessionContextUsage[dataSourceName])
@@ -305,12 +305,51 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return dbResultSet;
         }
 
-        /// <inheritdoc/>
-        public override void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, DbParameter parameter)
+        /// <inheritdoc />
+        public override SqlCommand PrepareDbCommand(
+            SqlConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            HttpContext? httpContext,
+            string dataSourceName)
         {
-            if (parameterEntry.Value is not null && parameterEntry.Value.DbType is not null)
+            SqlCommand cmd = conn.CreateCommand();
+            cmd.CommandType = CommandType.Text;
+
+            // Add query to send user data from DAB to the underlying database to enable additional security the user might have configured
+            // at the database level.
+            string sessionParamsQuery = GetSessionParamsQuery(httpContext, parameters, dataSourceName);
+
+            cmd.CommandText = sessionParamsQuery + sqltext;
+            if (parameters is not null)
             {
-                parameter.DbType = (DbType)parameterEntry.Value.DbType;
+                foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in parameters)
+                {
+                    SqlParameter parameter = cmd.CreateParameter();
+                    parameter.ParameterName = parameterEntry.Key;
+                    parameter.Value = parameterEntry.Value.Value ?? DBNull.Value;
+                    PopulateDbTypeForParameter(parameterEntry, parameter);
+                    cmd.Parameters.Add(parameter);
+                }
+            }
+
+            return cmd;
+        }
+
+        /// <inheritdoc/>
+        public static void PopulateDbTypeForParameter(KeyValuePair<string, DbConnectionParam> parameterEntry, SqlParameter parameter)
+        {
+            if (parameterEntry.Value is not null)
+            {
+                if (parameterEntry.Value.DbType is not null)
+                {
+                    parameter.DbType = (DbType)parameterEntry.Value.DbType;
+                }
+
+                if (parameterEntry.Value.SqlDbType is not null)
+                {
+                    parameter.SqlDbType = (SqlDbType)parameterEntry.Value.SqlDbType;
+                }
             }
         }
     }

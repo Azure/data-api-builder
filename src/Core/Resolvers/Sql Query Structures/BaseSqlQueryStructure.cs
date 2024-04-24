@@ -43,12 +43,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string? FilterPredicates { get; set; }
 
         /// <summary>
-        /// DbPolicyPredicates is a string that represents the filter portion of our query
-        /// in the WHERE Clause added by virtue of the database policy.
-        /// </summary>
-        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
-
-        /// <summary>
         /// Collection of all the fields referenced in the database policy for create action.
         /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
         /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
@@ -124,6 +118,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Get column type from table underlying the query structure
         /// </summary>
+        /// <param name="columnName">backing column name</param>
         public Type GetColumnSystemType(string columnName)
         {
             if (GetUnderlyingSourceDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
@@ -275,8 +270,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     (leftColumnName, rightColumnName) =>
                     {
                         // no table name or schema here is needed because this is a subquery that joins on table alias
-                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftTableAlias);
-                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightTableAlias);
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: leftColumnName, tableAlias: leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: rightColumnName, tableAlias: rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,

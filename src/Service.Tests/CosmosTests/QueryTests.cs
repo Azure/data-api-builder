@@ -59,10 +59,9 @@ query{
 ";
         public static readonly string MoonWithInvalidAuthorizationPolicy = @"
 query ($id: ID, $partitionKeyValue: String) {
-    moon_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue){
+    invalidAuthModel_by_pk (id: $id, _partitionKeyValue: $partitionKeyValue){
         id
         name
-        details
     }
 }";
         private static List<string> _idList;
@@ -72,7 +71,7 @@ query ($id: ID, $partitionKeyValue: String) {
         public void TestFixtureSetup()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, TOTAL_ITEM_COUNT);
@@ -103,7 +102,7 @@ query ($id: ID, $partitionKeyValue: String) {
             string id = _idList[0];
             string clientRoleHeader = AuthorizationType.Authenticated.ToString();
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "moon_by_pk",
+                queryName: "invalidAuthModel_by_pk",
                 query: MoonWithInvalidAuthorizationPolicy,
                 variables: new() { { "id", id }, { "partitionKeyValue", id } },
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
@@ -307,11 +306,11 @@ query {{
             string id = _idList[0];
             string query = @$"
 query {{
-    star_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
+    planet_by_pk (id: ""{id}"", _partitionKeyValue: ""{id}"") {{
         id
     }}
 }}";
-            JsonElement response = await ExecuteGraphQLRequestAsync("star_by_pk", query);
+            JsonElement response = await ExecuteGraphQLRequestAsync("planet_by_pk", query);
 
             // Validate results
             Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -742,7 +741,7 @@ type Planet @model(name:""Planet"") {
         public void TestFixtureTearDown()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }

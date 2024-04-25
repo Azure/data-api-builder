@@ -1450,23 +1450,6 @@
               "action": "delete"
             }
           ]
-        },
-        {
-          "role": "test_role_with_excluded_fields_on_create",
-          "actions": [
-            {
-              "action": "create"
-            },
-            {
-              "action": "read"
-            },
-            {
-              "action": "update"
-            },
-            {
-              "action": "delete"
-            }
-          ]
         }
       ],
       "relationships": {
@@ -2203,6 +2186,248 @@
           ]
         }
       ]
+    },
+    "User_NonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_NonAutogenRelationshipColumn",
+          "plural": "User_NonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_NonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "username"
+          ],
+          "target.fields": [
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile",
+          "plural": "UserProfiles"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "User_AutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenRelationshipColumn",
+          "plural": "User_AutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "profileid"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "User_AutogenToNonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenToNonAutogenRelationshipColumn",
+          "plural": "User_AutogenToNonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenToNonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "userid",
+            "username"
+          ],
+          "target.fields": [
+            "userid",
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "User_RepeatedReferencingColumnToOneEntity": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_RepeatedReferencingColumnToOneEntity",
+          "plural": "User_RepeatedReferencingColumnToOneEntities"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "username",
+            "username"
+          ],
+          "target.fields": [
+            "profilepictureurl",
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile_RepeatedReferencingColumnToTwoEntities": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile_RepeatedReferencingColumnToTwoEntities",
+          "plural": "UserProfile_RepeatedReferencingColumnToTwoEntities"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "book": {
+          "cardinality": "one",
+          "target.entity": "Book",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "publisher": {
+          "cardinality": "one",
+          "target.entity": "Publisher",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "id"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
     },
     "GetBooks": {
       "source": {
@@ -2963,13 +3188,13 @@
             {
               "action": "create",
               "fields": {
-                  "include": [
-                      "*"
-                  ],
-                  "exclude": [
-                      "current_date",
-                      "next_date"
-                  ]
+                "include": [
+                  "*"
+                ],
+                "exclude": [
+                  "current_date",
+                  "next_date"
+                ]
               }
             },
             "read",

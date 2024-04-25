@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Data;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.ObjectModel;
 
@@ -73,6 +74,7 @@ public abstract class DatabaseObject
 /// <summary>
 /// Sub-class of DatabaseObject class, represents a table in the database.
 /// </summary>
+[DebuggerDisplay("Table: {FullName}")]
 public class DatabaseTable : DatabaseObject
 {
     public DatabaseTable(string schemaName, string tableName)
@@ -269,6 +271,7 @@ public class ColumnDefinition
     }
 }
 
+[DebuggerDisplay("ReferencingDbTable = {Pair.ReferencingDbTable.FullName} (Count = {ReferencingColumns.Count}), ReferencedDbTable = {Pair.ReferencedDbTable.FullName} (Count = {ReferencedColumns.Count})")]
 public class ForeignKeyDefinition
 {
     /// <summary>
@@ -310,6 +313,7 @@ public class ForeignKeyDefinition
     }
 }
 
+[DebuggerDisplay("ReferencingDbTable = {ReferencingDbTable.FullName}, ReferencedDbTable = {ReferencedDbTable.FullName}")]
 public class RelationShipPair
 {
     public RelationShipPair() { }

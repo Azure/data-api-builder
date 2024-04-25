@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
-        /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
+        /// <param name="multipleMutationEntityInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
         /// <example>       1. mutation {
         ///                 createbook(
         ///                     item: {
@@ -73,7 +73,7 @@ namespace Azure.DataApiBuilder.Core.Services
             IMiddlewareContext context,
             object? parameters,
             int nestingLevel,
-            MultipleMutationInputValidationContext multipleMutationInputValidationContext)
+            MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext)
         {
             if (parameters is List<ObjectFieldNode> listOfObjectFieldNodes)
             {
@@ -84,7 +84,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     context: context,
                     currentEntityInputFieldNodes: listOfObjectFieldNodes,
                     nestingLevel: nestingLevel + 1,
-                    multipleMutationInputValidationContext: multipleMutationInputValidationContext);
+                    multipleMutationEntityInputValidationContext: multipleMutationEntityInputValidationContext);
             }
             else if (parameters is List<IValueNode> listOfIValueNodes)
             {
@@ -95,7 +95,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     context: context,
                     parameters: iValueNode,
                     nestingLevel: nestingLevel,
-                    multipleMutationInputValidationContext: multipleMutationInputValidationContext));
+                    multipleMutationEntityInputValidationContext: multipleMutationEntityInputValidationContext));
             }
             else if (parameters is ObjectValueNode objectValueNode)
             {
@@ -106,7 +106,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     context: context,
                     currentEntityInputFieldNodes: objectValueNode.Fields,
                     nestingLevel: nestingLevel + 1,
-                    multipleMutationInputValidationContext: multipleMutationInputValidationContext);
+                    multipleMutationEntityInputValidationContext: multipleMutationEntityInputValidationContext);
             }
             else if (parameters is ListValueNode listValueNode)
             {
@@ -117,11 +117,11 @@ namespace Azure.DataApiBuilder.Core.Services
                     context: context,
                     parameters: objectValueNodeInListValueNode,
                     nestingLevel: nestingLevel,
-                    multipleMutationInputValidationContext: multipleMutationInputValidationContext));
+                    multipleMutationEntityInputValidationContext: multipleMutationEntityInputValidationContext));
             }
             else
             {
-                throw new DataApiBuilderException(message: $"Unable to process input at level: {nestingLevel} for entity: {multipleMutationInputValidationContext.EntityName}",
+                throw new DataApiBuilderException(message: $"Unable to process input at level: {nestingLevel} for entity: {multipleMutationEntityInputValidationContext.EntityName}",
                     statusCode: HttpStatusCode.BadRequest,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
@@ -137,16 +137,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
-        /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
+        /// <param name="multipleMutationEntityInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
         private void ValidateObjectFieldNodes(
             InputObjectType schemaObject,
             IMiddlewareContext context,
             IReadOnlyList<ObjectFieldNode> currentEntityInputFieldNodes,
             int nestingLevel,
-            MultipleMutationInputValidationContext multipleMutationInputValidationContext)
+            MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            string entityName = multipleMutationInputValidationContext.EntityName;
+            string entityName = multipleMutationEntityInputValidationContext.EntityName;
             string dataSourceName = GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfig);
             ISqlMetadataProvider metadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
             SourceDefinition sourceDefinition = metadataProvider.GetSourceDefinition(entityName);
@@ -169,14 +169,14 @@ namespace Azure.DataApiBuilder.Core.Services
             // current entity (referencing entity) i.e. derivableColumnsFromRequestBody must not contain values for referencing columns.
             ValidateAbsenceOfReferencingColumnsInTargetEntity(
                  backingColumnToSourceMapInTargetEntity: derivableColumnsFromRequestBody,
-                 multipleMutationInputValidationContext: multipleMutationInputValidationContext,
+                 multipleMutationInputValidationContext: multipleMutationEntityInputValidationContext,
                  nestingLevel: nestingLevel,
                  metadataProvider: metadataProvider);
 
             // Add all the columns whose value(s) will be derived from insertion in parent entity to the set of derivable columns (b).
-            foreach (string columnDerivedFromSourceEntity in multipleMutationInputValidationContext.ColumnsDerivedFromParentEntity)
+            foreach (string columnDerivedFromSourceEntity in multipleMutationEntityInputValidationContext.ColumnsDerivedFromParentEntity)
             {
-                derivableColumnsFromRequestBody.TryAdd(columnDerivedFromSourceEntity, multipleMutationInputValidationContext.ParentEntityName);
+                derivableColumnsFromRequestBody.TryAdd(columnDerivedFromSourceEntity, multipleMutationEntityInputValidationContext.ParentEntityName);
             }
 
             // For the relationships with the parent entity, where the current entity is a referenced entity,
@@ -205,13 +205,13 @@ namespace Azure.DataApiBuilder.Core.Services
             // columnsToBeSuppliedToSourceEntity because we know the column value can be derived.
             // At the end, if there are still columns yet to be derived, i.e. columnsToBeSuppliedToSourceEntity.count > 0,
             // we throw an exception.
-            foreach (string columnToBeDerivedFromEntity in multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity)
+            foreach (string columnToBeDerivedFromEntity in multipleMutationEntityInputValidationContext.ColumnsToBeDerivedFromEntity)
             {
                 if (sourceDefinition.Columns[columnToBeDerivedFromEntity].IsAutoGenerated)
                 {
                     // The value for an autogenerated column is derivable. In other words, the value autogenerated during creation of this entity
                     // can be provided to another entity's referencing fields.
-                    multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(columnToBeDerivedFromEntity);
+                    multipleMutationEntityInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(columnToBeDerivedFromEntity);
                 }
                 else if (backingColumnData.TryGetValue(columnToBeDerivedFromEntity, out IValueNode? value))
                 {
@@ -224,7 +224,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(columnToBeDerivedFromEntity);
+                    multipleMutationEntityInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(columnToBeDerivedFromEntity);
                 }
             }
 
@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     relationshipName: relationshipName,
                     relationshipFieldValue: fieldValue,
                     nestingLevel: nestingLevel,
-                    multipleMutationInputValidationContext: multipleMutationInputValidationContext);
+                    multipleMutationEntityInputValidationContext: multipleMutationEntityInputValidationContext);
                 }
             }
 
@@ -263,7 +263,7 @@ namespace Azure.DataApiBuilder.Core.Services
             // 2. Via an autogenerated value from the database,
             // 3. Via Insertion in a referenced target entity in a relationship,
             // if there are still columns which are yet to be derived, this means we don't have sufficient data to perform insertion.
-            if (multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Count > 0)
+            if (multipleMutationEntityInputValidationContext.ColumnsToBeDerivedFromEntity.Count > 0)
             {
                 throw new DataApiBuilderException(
                     message: $"Insufficient data provided for insertion in the entity: {entityName} at level: {nestingLevel}.",
@@ -321,7 +321,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request. As we go down in the multiple mutation from the source
         /// entity input to target entity input, the nesting level increases by 1. This helps us to throw meaningful exception messages to the user
         /// as to at what level in the multiple mutation the exception occurred.</param>
-        /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
+        /// <param name="multipleMutationEntityInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
         private void ProcessRelationshipField(
             IMiddlewareContext context,
             ISqlMetadataProvider metadataProvider,
@@ -332,10 +332,10 @@ namespace Azure.DataApiBuilder.Core.Services
             string relationshipName,
             IValueNode? relationshipFieldValue,
             int nestingLevel,
-            MultipleMutationInputValidationContext multipleMutationInputValidationContext)
+            MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
-            string entityName = multipleMutationInputValidationContext.EntityName;
+            string entityName = multipleMutationEntityInputValidationContext.EntityName;
             // When the source of a referencing field in current entity is a relationship, the relationship's name is added to the value in
             // the KV pair of (referencing column, source) in derivableColumnsFromRequestBody with a prefix '$' so that if the relationship name
             // conflicts with the current entity's name or the parent entity's name, we are able to distinguish
@@ -425,7 +425,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         }
                         else
                         {
-                            conflictingSource = referencingColumnSource.Equals(multipleMutationInputValidationContext.ParentEntityName) ? $"Parent entity: {referencingColumnSource}" : $"entity: {entityName}";
+                            conflictingSource = referencingColumnSource.Equals(multipleMutationEntityInputValidationContext.ParentEntityName) ? $"Parent entity: {referencingColumnSource}" : $"entity: {entityName}";
                         }
 
                         metadataProvider.TryGetExposedColumnName(entityName, referencingColumn, out string? exposedColumnName);
@@ -440,11 +440,11 @@ namespace Azure.DataApiBuilder.Core.Services
                     // (happens when the parent entity is a referencing entity in a relationship with current entity),
                     // is a referencing column in the current relationship, we pass on the responsibility of getting the value
                     // of such a column to the target entity in the current relationship.
-                    if (multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Contains(referencingColumn))
+                    if (multipleMutationEntityInputValidationContext.ColumnsToBeDerivedFromEntity.Contains(referencingColumn))
                     {
                         // We optimistically assume that we will get the value of the referencing column
                         // from the insertion in the target entity.
-                        multipleMutationInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(referencingColumn);
+                        multipleMutationEntityInputValidationContext.ColumnsToBeDerivedFromEntity.Remove(referencingColumn);
                     }
 
                     // Resolve the field(s) whose value(s) will be sourced from the creation of record in the current relationship's target entity.
@@ -584,7 +584,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     // in the fieldsToDeriveFromReferencedEntities dictionary.
                     fieldsToDeriveFromReferencedEntities.TryGetValue(relationshipName, out columnValuePairsToBeResolvedFromTargetEntity);
 
-                    MultipleMutationInputValidationContext multipleMutationInputValidationContext = new(
+                    MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext = new(
                         entityName: targetEntityName,
                         parentEntityName: entityName,
                         columnsDerivedFromParentEntity: columnValuePairsResolvedForTargetEntity ?? new(),
@@ -595,7 +595,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         context: context,
                         parameters: fieldDetails.Item1,
                         nestingLevel: nestingLevel,
-                        multipleMutationInputValidationContext: multipleMutationInputValidationContext);
+                        multipleMutationEntityInputValidationContext: multipleMutationEntityInputValidationContext);
                 }
             }
         }
@@ -608,8 +608,8 @@ namespace Azure.DataApiBuilder.Core.Services
         /// </summary>
         /// <param name="backingColumnToSourceMapInTargetEntity">Dictionary storing mapping from names of backing columns in the target (referencing) entity to the source
         /// of the corresponding column's value The source can either be:
-        /// 1. User provided scalar input for a column
-        /// 2. Insertion in the source (referenced) entity.</param>
+        /// 1. User provided scalar input for a column (in which case source value = current entity's name)
+        /// 2. Insertion in the source (referenced) entity (in which case source value = parent entity's name)</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create GraphQL request.</param>
         /// <param name="metadataProvider">Metadata provider.</param>
         /// <param name="multipleMutationInputValidationContext">MultipleMutationInputValidationContext object for current entity.</param>
@@ -617,7 +617,7 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, string> backingColumnToSourceMapInTargetEntity,
             int nestingLevel,
             ISqlMetadataProvider metadataProvider,
-            MultipleMutationInputValidationContext multipleMutationInputValidationContext)
+            MultipleMutationEntityInputValidationContext multipleMutationInputValidationContext)
         {
             foreach (string derivedColumnFromParentEntity in multipleMutationInputValidationContext.ColumnsDerivedFromParentEntity)
             {

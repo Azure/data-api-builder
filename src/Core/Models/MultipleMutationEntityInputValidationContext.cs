@@ -6,7 +6,7 @@ namespace Azure.DataApiBuilder.Core.Models
     /// <summary>
     /// Class to represent input for an entity in a multiple-create request.
     /// </summary>
-    public class MultipleMutationInputValidationContext
+    public class MultipleMutationEntityInputValidationContext
     {
         /// <summary>
         /// Current entity name.
@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Core.Models
         /// </summary>
         public HashSet<string> ColumnsToBeDerivedFromEntity { get; }
 
-        public MultipleMutationInputValidationContext(
+        public MultipleMutationEntityInputValidationContext(
             string entityName,
             string parentEntityName,
             HashSet<string> columnsDerivedFromParentEntity,

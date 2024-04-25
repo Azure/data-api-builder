@@ -21,7 +21,8 @@ namespace Azure.DataApiBuilder.Core.Services
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         private readonly IMetadataProviderFactory _sqlMetadataProviderFactory;
 
-        public MultipleMutationInputValidator(IMetadataProviderFactory sqlMetadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider) {
+        public MultipleMutationInputValidator(IMetadataProviderFactory sqlMetadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider)
+        {
             _sqlMetadataProviderFactory = sqlMetadataProviderFactory;
             _runtimeConfigProvider = runtimeConfigProvider;
         }

@@ -1225,7 +1225,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Classifiy the relationship fields (if present in the input request) into referencing and referenced relationships and
                 // populate multipleCreateStructure.ReferencingRelationships and multipleCreateStructure.ReferencedRelationships respectively.
                 DetermineReferencedAndReferencingRelationships(context, multipleCreateStructure, sqlMetadataProvider, entity.Relationships, parameterNodes);
-                PopulateCurrentAndLinkingEntityParams(entityName, multipleCreateStructure, sqlMetadataProvider, entity.Relationships);
+                PopulateCurrentAndLinkingEntityParams(multipleCreateStructure, sqlMetadataProvider, entity.Relationships);
 
                 SourceDefinition currentEntitySourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
                 currentEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? currentEntityRelationshipMetadata);
@@ -1616,14 +1616,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///  1.  multipleCreateStructure.CurrentEntityParams with the current entity's fields.
         ///  2.  multipleCreateStructure.LinkingEntityParams with the linking entity's fields.
         /// </summary>
-        /// <param name="entityName">Entity name</param>
         /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
         /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
         /// <param name="topLevelEntityRelationships">Relationship metadata of the source entity</param>
-        private static void PopulateCurrentAndLinkingEntityParams(string entityName,
-                                                                      MultipleCreateStructure multipleCreateStructure,
-                                                                      ISqlMetadataProvider sqlMetadataProvider,
-                                                                      Dictionary<string, EntityRelationship>? topLevelEntityRelationships)
+        private static void PopulateCurrentAndLinkingEntityParams(
+                MultipleCreateStructure multipleCreateStructure,
+                ISqlMetadataProvider sqlMetadataProvider,
+                Dictionary<string, EntityRelationship>? topLevelEntityRelationships)
         {
 
             if (multipleCreateStructure.InputMutParams is null)
@@ -1638,7 +1637,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     continue;
                 }
 
-                if (sqlMetadataProvider.TryGetBackingColumn(entityName, fieldName, out _))
+                if (sqlMetadataProvider.TryGetBackingColumn(multipleCreateStructure.EntityName, fieldName, out _))
                 {
                     multipleCreateStructure.CurrentEntityParams[fieldName] = fieldValue;
                 }

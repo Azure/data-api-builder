@@ -1310,258 +1310,258 @@
         "region": "United State\u0027s Region"
       }
     },
-      "Shrub": {
-        "source": {
-          "object": "trees",
-          "type": "table"
-        },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "Shrub",
-            "plural": "Shrubs"
-          }
-        },
-        "rest": {
-          "enabled": true,
-          "path": "/plants"
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              {
-                "action": "create"
-              },
-              {
-                "action": "read"
-              },
-              {
-                "action": "update"
-              },
-              {
-                "action": "delete"
-              }
-            ]
-          },
-          {
-            "role": "authenticated",
-            "actions": [
-              {
-                "action": "create"
-              },
-              {
-                "action": "read"
-              },
-              {
-                "action": "update"
-              },
-              {
-                "action": "delete"
-              }
-            ]
-          }
-        ],
-        "mappings": {
-          "species": "fancyName"
+    "Shrub": {
+      "source": {
+        "object": "trees",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Shrub",
+          "plural": "Shrubs"
         }
       },
-      "Fungus": {
-        "source": {
-          "object": "fungi",
-          "type": "table"
+      "rest": {
+        "enabled": true,
+        "path": "/plants"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "fungus",
-            "plural": "fungi"
-          }
-        },
-        "rest": {
-          "enabled": true
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              {
-                "action": "create"
-              },
-              {
-                "action": "read"
-              },
-              {
-                "action": "update"
-              },
-              {
-                "action": "delete"
-              }
-            ]
-          },
-          {
-            "role": "authenticated",
-            "actions": [
-              {
-                "action": "create"
-              },
-              {
-                "action": "read"
-              },
-              {
-                "action": "update"
-              },
-              {
-                "action": "delete"
-              }
-            ]
-          },
-          {
-            "role": "policy_tester_01",
-            "actions": [
-              {
-                "action": "read",
-                "fields": {
-                  "exclude": [],
-                  "include": [
-                    "*"
-                  ]
-                },
-                "policy": {
-                  "database": "@item.region ne \u0027northeast\u0027"
-                }
-              }
-            ]
-          }
-        ],
-        "mappings": {
-          "spores": "hazards"
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
-      },
-      "books_view_all": {
-        "source": {
-          "object": "books_view_all",
-          "type": "view",
-          "key-fields": [
-            "id"
-          ]
-        },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "books_view_all",
-            "plural": "books_view_alls"
-          }
-        },
-        "rest": {
-          "enabled": true
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              {
-                "action": "*"
-              }
-            ]
-          },
-          {
-            "role": "authenticated",
-            "actions": [
-              {
-                "action": "create"
-              },
-              {
-                "action": "read"
-              },
-              {
-                "action": "update"
-              },
-              {
-                "action": "delete"
-              }
-            ]
-          }
-        ]
-      },
-      "books_view_with_mapping": {
-        "source": {
-          "object": "books_view_with_mapping",
-          "type": "view",
-          "key-fields": [
-            "id"
-          ]
-        },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "books_view_with_mapping",
-            "plural": "books_view_with_mappings"
-          }
-        },
-        "rest": {
-          "enabled": true
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              {
-                "action": "*"
-              }
-            ]
-          }
-        ],
-        "mappings": {
-          "id": "book_id"
-        }
-      },
-      "stocks_view_selected": {
-        "source": {
-          "object": "stocks_view_selected",
-          "type": "view",
-          "key-fields": [
-            "categoryid",
-            "pieceid"
-          ]
-        },
-        "graphql": {
-          "enabled": true,
-          "type": {
-            "singular": "stocks_view_selected",
-            "plural": "stocks_view_selecteds"
-          }
-        },
-        "rest": {
-          "enabled": true
-        },
-        "permissions": [
-          {
-            "role": "anonymous",
-            "actions": [
-              {
-                "action": "*"
-              }
-            ]
-          },
-          {
-            "role": "authenticated",
-            "actions": [
-              {
-                "action": "create"
-              },
-              {
-                "action": "read"
-              },
-              {
-                "action": "update"
-              },
-              {
-                "action": "delete"
-              }
-            ]
-          }
-        ]
+      ],
+      "mappings": {
+        "species": "fancyName"
       }
+    },
+    "Fungus": {
+      "source": {
+        "object": "fungi",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "fungus",
+          "plural": "fungi"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        },
+        {
+          "role": "policy_tester_01",
+          "actions": [
+            {
+              "action": "read",
+              "fields": {
+                "exclude": [],
+                "include": [
+                  "*"
+                ]
+              },
+              "policy": {
+                "database": "@item.region ne \u0027northeast\u0027"
+              }
+            }
+          ]
+        }
+      ],
+      "mappings": {
+        "spores": "hazards"
+      }
+    },
+    "books_view_all": {
+      "source": {
+        "object": "books_view_all",
+        "type": "view",
+        "key-fields": [
+          "id"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "books_view_all",
+          "plural": "books_view_alls"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
+    },
+    "books_view_with_mapping": {
+      "source": {
+        "object": "books_view_with_mapping",
+        "type": "view",
+        "key-fields": [
+          "id"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "books_view_with_mapping",
+          "plural": "books_view_with_mappings"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "mappings": {
+        "id": "book_id"
+      }
+    },
+    "stocks_view_selected": {
+      "source": {
+        "object": "stocks_view_selected",
+        "type": "view",
+        "key-fields": [
+          "categoryid",
+          "pieceid"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "stocks_view_selected",
+          "plural": "stocks_view_selecteds"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
+        }
+      ]
     }
+  }
 }

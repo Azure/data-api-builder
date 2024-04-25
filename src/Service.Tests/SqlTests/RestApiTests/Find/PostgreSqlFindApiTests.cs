@@ -808,10 +808,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT  treeId, species AS fancyName, region, height
+                        SELECT  ""treeId"", species AS ""fancyName"", region, height
                         FROM " + _integrationMappingTable + @"
-                        WHERE fancyName > 'Pseudotsuga menziesii'
-                        ORDER BY species asc, fancyName asc
+                        WHERE ""fancyName"" > 'Pseudotsuga menziesii'
+                        ORDER BY species asc, ""fancyName"" asc
                         LIMIT 101
                     ) AS subq
                 "

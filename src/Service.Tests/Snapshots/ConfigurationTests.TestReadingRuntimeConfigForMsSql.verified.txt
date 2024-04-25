@@ -2574,6 +2574,91 @@
       }
     },
     {
+      User_RepeatedReferencingColumnToOneEntity: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_RepeatedReferencingColumnToOneEntity,
+          Plural: User_RepeatedReferencingColumnToOneEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              username,
+              username
+            ],
+            TargetFields: [
+              profilepictureurl,
+              username
+            ]
+          }
+        }
+      }
+    },
+    {
+      UserProfile_RepeatedReferencingColumnToTwoEntities: {
+        Source: {
+          Object: user_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: UserProfile_RepeatedReferencingColumnToTwoEntities,
+          Plural: UserProfile_RepeatedReferencingColumnToTwoEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          book: {
+            TargetEntity: Book,
+            SourceFields: [
+              userid
+            ],
+            TargetFields: [
+              id
+            ]
+          },
+          publisher: {
+            TargetEntity: Publisher,
+            SourceFields: [
+              userid
+            ],
+            TargetFields: [
+              id
+            ]
+          }
+        }
+      }
+    },
+    {
       GetBooks: {
         Source: {
           Object: get_books,

@@ -2452,7 +2452,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 Assert.IsNotNull(mutationResponse);
                 SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
-                                                            message: "Relationship Field value for Entity: Book, Column : publisher_id not found");
+                                                            message: "Missing value for required column: publisher_id for entity: Book at level: 1.");
             }
         }
 

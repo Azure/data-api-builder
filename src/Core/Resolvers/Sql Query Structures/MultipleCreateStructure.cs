@@ -31,12 +31,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         /// <summary>
         /// Fields belonging to the current entity.
         /// </summary>
-        public IDictionary<string, object?> CurrentEntityParams;
+        public Dictionary<string, object?> CurrentEntityParams;
 
         /// <summary>
         /// Fields belonging to the linking table.
         /// </summary>
-        public IDictionary<string, object?> LinkingTableParams;
+        public Dictionary<string, object?> LinkingTableParams;
 
         /// <summary>
         /// Values in the record created in the table backing the current entity. 

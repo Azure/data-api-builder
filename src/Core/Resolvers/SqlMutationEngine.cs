@@ -990,7 +990,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameters">Mutation parameter arguments</param>
         /// <param name="sqlMetadataProvider">SqlMetadaprovider</param>
         /// <param name="context">Hotchocolate's context for the graphQL request.</param>
-        /// <param name="multipleInputType">Boolean indicating whether the create operation is for multiple items.</param>
+        /// <param name="isMultipleInputType">Boolean indicating whether the create operation is for multiple items.</param>
         /// <returns>Primary keys of the created records (in the top level entity).</returns>
         /// <exception cref="DataApiBuilderException"></exception>
         private List<IDictionary<string, object?>> PerformMultipleCreateOperation(
@@ -998,12 +998,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IMiddlewareContext context,
                 IDictionary<string, object?> parameters,
                 ISqlMetadataProvider sqlMetadataProvider,
-                bool multipleInputType = false)
+                bool isMultipleInputType = false)
         {
-            string fieldName = multipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
+            // rootFieldName can be either "item" or "items" depending on whether the operation
+            // is point multiple create or many-type multiple create. 
+            string rootFieldName = isMultipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
 
             // Parse the hotchocolate input parameters into .net object types
-            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, fieldName, parameters);
+            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, parameters);
 
             if (parsedInputParams is null)
             {
@@ -1017,14 +1019,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // For point multiple create operation, only one entry will be present.
             List<IDictionary<string, object?>> primaryKeysOfCreatedItemsInTopLevelEntity = new();
 
-            if (!parameters.TryGetValue(fieldName, out object? param) || param is null)
+            if (!parameters.TryGetValue(rootFieldName, out object? param) || param is null)
             {
-                throw new DataApiBuilderException(message: $"Mutation Request should contain the expected argument: {fieldName} in the input",
+                throw new DataApiBuilderException(message: $"Mutation Request should contain the expected argument: {rootFieldName} in the input",
                                                   statusCode: HttpStatusCode.BadRequest,
                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            if (multipleInputType)
+            if (isMultipleInputType)
             {
                 // For a many type multiple create operation, after parsing the hotchocolate input parameters, the resultant data structure is a list of dictionaries.
                 // Each entry in the list corresponds to the input parameters for a single input item.
@@ -1040,7 +1042,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // However, this acts as a guard to ensure that the right input type for "items" field is used.
                 if (param is not List<IValueNode> paramList)
                 {
-                    throw new DataApiBuilderException(message: $"Unsupported type used with {fieldName} in the create mutation input",
+                    throw new DataApiBuilderException(message: $"Unsupported type used with {rootFieldName} in the create mutation input",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -1130,7 +1132,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate but acts as a guard against using any other types with "item" field
                 if (param is not List<ObjectFieldNode> paramList)
                 {
-                    throw new DataApiBuilderException(message: $"Unsupported type used with {fieldName} in the create mutation input",
+                    throw new DataApiBuilderException(message: $"Unsupported type used with {rootFieldName} in the create mutation input",
                                                       statusCode: HttpStatusCode.BadRequest,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
@@ -1598,8 +1600,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///  1. Top Level Entity - Book:
         ///     a) Title
         ///  2. Related Entity - Publisher, Author
-        ///  In M:N relationship, the fields belong to the linking entity appears in the related entity.
-        ///  "royalty_percentage" belongs to the linking entity but appears as in the input object for Author entity.
+        ///  In M:N relationship, the field(s)(e.g. royalty_percentage) belonging to the
+        ///  linking entity(book_author_link) is a property of the related entity's input object.
         ///  So, this method identifies and populates 
         ///  1.  multipleCreateStructure.CurrentEntityParams with the current entity's fields.
         ///  2.  multipleCreateStructure.LinkingEntityParams with the linking entity's fields.
@@ -1644,7 +1646,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="fieldName">GQL field from which to extract the parameters. It is either "item" or "items".</param>
         /// <param name="mutationParameters">Dictionary of mutation parameters</param>
         /// <returns>Parsed input mutation parameters.</returns>
-        internal static object? GQLMultipleCreateArgumentToDictParams(IMiddlewareContext context, string fieldName, IDictionary<string, object?> mutationParameters)
+        internal static object? GQLMultipleCreateArgumentToDictParams(
+                IMiddlewareContext context,
+                string fieldName,
+                IDictionary<string, object?> mutationParameters)
         {
             if (mutationParameters.TryGetValue(fieldName, out object? inputParameters))
             {
@@ -1656,25 +1661,30 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else
             {
                 throw new DataApiBuilderException(
-                    message: $"Expected {fieldName} argument in mutation arguments.",
+                    message: $"Expected root mutation input field: '{fieldName}'.",
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
                     statusCode: HttpStatusCode.BadRequest);
             }
         }
 
         /// <summary>
-        /// Helper function to parse the mutation parameters from Hotchocolate input types to Dictionary of field names and values.
+        /// Helper function to parse the mutation parameters from Hotchocolate input types to
+        /// Dictionary of field names and values.
         /// For multiple create mutation, the input types of a field can be a scalar, object or list type.
-        /// This function recursively parses for each input type.
+        /// This function recursively parses each input type.
         /// </summary>
         /// <param name="context">GQL middleware context used to resolve the values of arguments.</param>
         /// <param name="inputObjectType">Type of the input object field.</param>
         /// <param name="inputParameters"></param>
         /// <returns></returns>
-        internal static object? GQLMultipleCreateArgumentToDictParamsHelper(IMiddlewareContext context, InputObjectType inputObjectType, object? inputParameters)
+        internal static object? GQLMultipleCreateArgumentToDictParamsHelper(
+            IMiddlewareContext context,
+            InputObjectType inputObjectType,
+            object? inputParameters)
         {
-            // This condition is met for input types that accepts an array of values.
-            // 1. Many type multiple create operation ---> creatbooks, createBookmarks_Multiple.
+            // This condition is met for input types that accept an array of values
+            // where the mutation input field is 'items' such as 
+            // 1. Many-type multiple create operation ---> createbooks, createBookmarks_Multiple.
             // 2. Input types for 1:N and M:N relationships.
             if (inputParameters is List<IValueNode> inputList)
             {
@@ -1682,7 +1692,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 foreach (IValueNode input in inputList)
                 {
-                    object? resultItem = GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, input.Value);
+                    object? resultItem = GQLMultipleCreateArgumentToDictParamsHelper(
+                                            context: context,
+                                            inputObjectType: inputObjectType,
+                                            inputParameters: input.Value);
                     if (resultItem is not null)
                     {
                         resultList.Add((IDictionary<string, object?>)resultItem);
@@ -1692,7 +1705,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return resultList;
             }
 
-            // This condition is met for input types that accept input for a single item.
+            // This condition is met when the mutation input is a single item where the
+            // mutation input field is 'item' such as
             // 1. Point multiple create operation --> createbook.
             // 2. Input types for 1:1 and N:1 relationships.
             else if (inputParameters is List<ObjectFieldNode> nodes)

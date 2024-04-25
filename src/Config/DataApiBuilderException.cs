@@ -31,6 +31,10 @@ public class DataApiBuilderException : Exception
         /// </summary>
         EntityNotFound,
         /// <summary>
+        /// The relationship for a pair of source/target entities does not exist.
+        /// </summary>
+        RelationshipNotFound,
+        /// <summary>
         /// Request failed authentication. i.e. No/Invalid JWT token
         /// </summary>
         AuthenticationChallenge,

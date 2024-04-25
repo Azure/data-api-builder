@@ -118,7 +118,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
-        /// information.
+        /// information. This is used to construct the follow-up query
+        /// for a many-type multiple create mutation.
+        /// This constructor accepts a list of query parameters as opposed to a single query parameter
+        /// like the other constructors for SqlQueryStructure.
+        /// For constructing the follow-up query of a many-type multiple create mutation, the primary keys
+        /// of the created items in the top level entity will be passed as the query parameters.
         /// </summary>
         public SqlQueryStructure(
             IMiddlewareContext ctx,

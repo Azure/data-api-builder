@@ -68,6 +68,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // For GraphQL read operation, we are deliberately not passing httpContext to this point
             // and hence it will take its default value i.e. null here.
             // For GraphQL read operation, the database policy predicates are added later in the Sql{*}QueryStructure classes.
+            // Linking entities are not configured by the users through the config file.
+            // DAB interprets the database metadata for linking tables and creates an Entity objects for them.
+            // This is done because linking entity field information are needed for successfully
+            // generating the schema when multiple create feature is enabled.
             if (httpContext is not null && !isLinkingEntity)
             {
                 AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(

@@ -431,9 +431,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// Helper method to get the name of the related entity for a given relationship name.
         /// </summary>
         /// <param name="entity">Entity object</param>
+        /// <param name="entityName">Name of the entity</param>
         /// <param name="relationshipName">Name of the relationship</param>
         /// <returns>Name of the related entity</returns>
-        public static string GetRelatedEntityNameInRelationship(Entity entity, string entityName, string relationshipName)
+        public static string GetRelationshipTargetEntityName(Entity entity, string entityName, string relationshipName)
         {
             if (entity.Relationships is null)
             {

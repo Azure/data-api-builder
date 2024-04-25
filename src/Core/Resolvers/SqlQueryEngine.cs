@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
         /// <param name="parameters">PKs of the created items</param>
         /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if empty</param>
-        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteAsync(IMiddlewareContext context, List<IDictionary<string, object?>> parameters, string dataSourceName)
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteMultipleCreateFollowUpQueryAsync(IMiddlewareContext context, List<IDictionary<string, object?>> parameters, string dataSourceName)
         {
 
             string entityName = GraphQLUtils.GetEntityNameFromContext(context);

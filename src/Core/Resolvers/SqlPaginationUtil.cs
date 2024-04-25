@@ -577,12 +577,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="jsonResult">Results plus one extra record if more exist.</param>
         /// <param name="first">Client provided limit if one exists, otherwise 0.</param>
+        /// <param name="defaultPageSize">Default limit for page size.</param>
+        /// <param name="maxPageSize">Maximum limit for page size.</param>
         /// <returns>Bool representing if more records are available.</returns>
-        public static bool HasNext(JsonElement jsonResult, uint? first)
+        public static bool HasNext(JsonElement jsonResult, int? first, uint defaultPageSize, uint maxPageSize)
         {
-            // When first is 0 we use default limit of 100, otherwise we use first
+            // When first is null we use default limit from runtime config, otherwise we use first
             uint numRecords = (uint)jsonResult.GetArrayLength();
-            uint? limit = first is not null ? first : 100;
+
+            uint limit;
+            if (first.HasValue)
+            {
+                // first is not null.
+                if (first == -1)
+                {
+                    // user has requested max value.
+                    limit = maxPageSize;
+                }
+                else
+                {
+                    limit = (uint)first;
+                }
+            }
+            else
+            {
+                limit = defaultPageSize;
+            }
+
             return numRecords > limit;
         }
 

@@ -17,7 +17,6 @@ using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
-
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     /// <summary>
@@ -60,14 +59,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public Dictionary<string, string> ColumnLabelToParam { get; }
 
         /// <summary>
-        /// Default limit when no first param is specified for list queries
-        /// </summary>
-        private const uint DEFAULT_LIST_LIMIT = 100;
-
-        /// <summary>
         /// The maximum number of results this query should return.
         /// </summary>
-        private uint? _limit = DEFAULT_LIST_LIMIT;
+        private uint? _limit = PaginationOptions.DEFAULT_PAGE_SIZE;
 
         /// <summary>
         /// If this query is built because of a GraphQL query (as opposed to
@@ -198,7 +192,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             AddColumnsForEndCursor();
-            _limit = context.First is not null ? context.First + 1 : DEFAULT_LIST_LIMIT + 1;
+            runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+            _limit = runtimeConfig?.GetPaginationLimit((int?)context.First) + 1;
+
             ParametrizeColumns();
         }
 
@@ -334,24 +330,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 IsListQuery = outputType.IsListType();
             }
 
-            if (IsListQuery && queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
+            if (IsListQuery)
             {
-                // parse first parameter for all list queries
-                object? firstObject = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
-
-                if (firstObject != null)
+                runtimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
+                if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
                 {
-                    int first = (int)firstObject;
-
-                    if (first <= 0)
-                    {
-                        throw new DataApiBuilderException(
-                        message: $"Invalid number of items requested, {QueryBuilder.PAGE_START_ARGUMENT_NAME} argument must be an integer greater than 0 for {schemaField.Name}. Actual value: {first.ToString()}",
-                        statusCode: HttpStatusCode.BadRequest,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
-                    }
-
-                    _limit = (uint)first;
+                    // parse first parameter for all list queries
+                    object? firstObject = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                    _limit = runtimeConfig?.GetPaginationLimit((int?)firstObject);
+                }
+                else
+                {
+                    // if first is not passed, we should use the default page size.
+                    _limit = runtimeConfig?.DefaultPageSize();
                 }
             }
 

@@ -53,6 +53,8 @@ DROP TABLE IF EXISTS intern_data;
 DROP TABLE IF EXISTS books_sold;
 DROP TABLE IF EXISTS default_with_function_table;
 DROP TABLE IF EXISTS [DimAccount]
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS user_profiles;
 DROP SCHEMA IF EXISTS [foo];
 DROP SCHEMA IF EXISTS [bar];
 COMMIT;
@@ -328,6 +330,19 @@ ADD CONSTRAINT [FK_DimAccount_DimAccount]
 
 ALTER TABLE [dbo].[DimAccount] CHECK CONSTRAINT [FK_DimAccount_DimAccount];
 
+CREATE TABLE users (
+    userid INT PRIMARY KEY IDENTITY,
+    username NVARCHAR(50) UNIQUE,
+    email NVARCHAR(100)
+);
+
+CREATE TABLE user_profiles (
+    profileid INT PRIMARY KEY IDENTITY,
+    username NVARCHAR(50) UNIQUE,
+    profilepictureurl NVARCHAR(255),
+	userid INT
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -551,6 +566,9 @@ INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 
 (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
 
 INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GETDATE());
+
+INSERT INTO users (username, email) VALUES ('john_doe', 'john.doe@example.com'), ('jane_smith', 'jane.smith@example.com');
+INSERT INTO user_profiles (username, profilepictureurl, userid) VALUES ('john_doe', 'https://example.com/profiles/john_doe.jpg', 1), ('jane_smith', 'https://example.com/profiles/jane_smith.jpg', 2);
 
 SET IDENTITY_INSERT DimAccount ON
 INSERT INTO DimAccount(AccountKey, ParentAccountKey)

@@ -2005,6 +2005,38 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
         }
+
+        /// <inheritdoc/>
+        public bool TryGetFKDefinition(
+            string sourceEntityName,
+            string targetEntityName,
+            string referencingEntityName,
+            string referencedEntityName,
+            [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition)
+        {
+            if (GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencingEntityName, out DatabaseObject? referencingDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencedEntityName, out DatabaseObject? referencedDbObject))
+            {
+                DatabaseTable referencingDbTable = (DatabaseTable)referencingDbObject;
+                DatabaseTable referencedDbTable = (DatabaseTable)referencedDbObject;
+                SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+                RelationShipPair referencingReferencedPair = new(referencingDbTable, referencedDbTable);
+                List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+
+                // At this point, DAB guarantees that a valid foreign key definition exists between the the referencing entity
+                // and the referenced entity. That's because DAB validates that all foreign key metadata
+                // was inferred for each relationship during startup.
+                foreignKeyDefinition = fKDefinitions.FirstOrDefault(
+                    fk => fk.Pair.Equals(referencingReferencedPair) &&
+                    fk.ReferencingColumns.Count > 0
+                    && fk.ReferencedColumns.Count > 0)!;
+                return true;
+            }
+
+            foreignKeyDefinition = null;
+            return false;
+        }
     }
 }
 

@@ -14,6 +14,7 @@ public record RuntimeOptions
     public string? BaseRoute { get; init; }
     public TelemetryOptions? Telemetry { get; init; }
     public EntityCacheOptions? Cache { get; init; }
+    public PaginationOptions? Pagination { get; init; }
 
     [JsonConstructor]
     public RuntimeOptions(
@@ -22,7 +23,8 @@ public record RuntimeOptions
         HostOptions? Host,
         string? BaseRoute = null,
         TelemetryOptions? Telemetry = null,
-        EntityCacheOptions? Cache = null)
+        EntityCacheOptions? Cache = null,
+        PaginationOptions? Pagination = null)
     {
         this.Rest = Rest;
         this.GraphQL = GraphQL;
@@ -30,6 +32,7 @@ public record RuntimeOptions
         this.BaseRoute = BaseRoute;
         this.Telemetry = Telemetry;
         this.Cache = Cache;
+        this.Pagination = Pagination;
     }
 
     /// <summary>

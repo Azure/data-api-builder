@@ -336,7 +336,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
         /// <summary>
         /// During serialization we add TypeName to the DatabaseObject based on its type. TypeName is the AssemblyQualifiedName for the type.
-        /// Example : "TypeName": "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        /// Example : "TypeName": "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config",
         /// If there is a code refactor which changes the path of this object, the deserialization with old value will fail, as it wont be able to find the object in the location
         /// previously defined.
         /// Note : Currently this is being used by GraphQL workload, failure of this test case needs to be
@@ -367,7 +367,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
                     // Split TypeName into different parts
                     // following splits different sections of :
-                    // "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+                    // "Azure.DataApiBuilder.Config.DatabasePrimitives.DatabaseTable, Azure.DataApiBuilder.Config"
                     string[] typeNameSplitParts = typeName.Split(',');
 
                     string namespaceString = typeNameSplitParts[0].Trim();
@@ -376,6 +376,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
                     string projectNameString = typeNameSplitParts[1].Trim();
                     Assert.AreEqual(projectNameString, "Azure.DataApiBuilder.Config");
+
+                    Assert.AreEqual(typeNameSplitParts.Length, 2);
                 }
                 else
                 {

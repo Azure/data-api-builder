@@ -137,7 +137,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     },
                     Servers = new List<OpenApiServer>
                     {
-                        new OpenApiServer { Url = url }
+                        new() { Url = url }
                     },
                     Paths = BuildPaths(),
                     Components = components

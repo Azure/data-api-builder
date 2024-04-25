@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
         /// <summary>
         /// Name of the immediate higher level entity.
         /// </summary>
-        public string HigherLevelEntityName;
+        public string ParentEntityName;
 
         /// <summary>
         /// Input parameters parsed from the graphQL mutation operation.
@@ -60,13 +60,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
 
         public MultipleCreateStructure(
                string entityName,
-               string higherLevelEntityName,
+               string parentEntityName,
                object? inputMutParams = null,
                bool isLinkingTableInsertionRequired = false)
         {
             EntityName = entityName;
             InputMutParams = inputMutParams;
-            HigherLevelEntityName = higherLevelEntityName;
+            ParentEntityName = parentEntityName;
 
             ReferencedRelationships = new();
             ReferencingRelationships = new();

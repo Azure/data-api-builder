@@ -1078,7 +1078,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     MultipleCreateStructure multipleCreateStructure = new(
                         entityName: entityName,
-                        higherLevelEntityName: entityName,
+                        parentEntityName: entityName,
                         inputMutParams: parsedInput);
 
                     Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItem = new();
@@ -1137,7 +1137,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 MultipleCreateStructure multipleCreateStructure = new(
                     entityName: entityName,
-                    higherLevelEntityName: entityName,
+                    parentEntityName: entityName,
                     inputMutParams: parsedInput);
 
                 PerformDbInsertOperation(context, paramList, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
@@ -1187,7 +1187,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach (IDictionary<string, object?> parsedInputParam in parsedInputParamList)
                 {
                     MultipleCreateStructure multipleCreateStrucutreForCurrentItem = new(entityName: multipleCreateStructure.EntityName,
-                                                                                        higherLevelEntityName: multipleCreateStructure.HigherLevelEntityName,
+                                                                                        parentEntityName: multipleCreateStructure.ParentEntityName,
                                                                                         inputMutParams: parsedInputParam,
                                                                                         isLinkingTableInsertionRequired: multipleCreateStructure.IsLinkingTableInsertionRequired)
                     {
@@ -1232,7 +1232,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 foreach ((string relationshipName, object? relationshipFieldValue) in multipleCreateStructure.ReferencedRelationships)
                 {
                     string relatedEntityName = GraphQLUtils.GetRelatedEntityNameInRelationship(entity, entityName, relationshipName);
-                    MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(entityName: relatedEntityName, higherLevelEntityName: entityName, inputMutParams: relationshipFieldValue);
+                    MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(entityName: relatedEntityName, parentEntityName: entityName, inputMutParams: relationshipFieldValue);
                     IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, relationshipName);
                     PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure, nestingLevel + 1);
 
@@ -1257,7 +1257,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 multipleCreateStructure.CurrentEntityCreatedValues = BuildAndExecuteInsertDbQueries(
                                                                           sqlMetadataProvider: sqlMetadataProvider,
                                                                           entityName: entityName,
-                                                                          higherLevelEntityName: entityName,
+                                                                          parentEntityName: entityName,
                                                                           parameters: multipleCreateStructure.CurrentEntityParams!,
                                                                           sourceDefinition: currentEntitySourceDefinition,
                                                                           isLinkingEntity: false,
@@ -1284,23 +1284,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     //          ...
                     //      }
                     // There exists two relationships for a linking table.
-                    // 1. Relationship between the higher level entity (Book) and the linking table.
+                    // 1. Relationship between the parent entity (Book) and the linking table.
                     // 2. Relationship between the current entity (Author) and the linking table.
                     // To construct the insert database query for the linking table, relationship fields from both the
                     // relationships are required. 
 
                     // Populate Current entity's relationship fields
-                    List<ForeignKeyDefinition> foreignKeyDefinitions = currentEntityRelationshipMetadata!.TargetEntityToFkDefinitionMap[multipleCreateStructure.HigherLevelEntityName];
+                    List<ForeignKeyDefinition> foreignKeyDefinitions = currentEntityRelationshipMetadata!.TargetEntityToFkDefinitionMap[multipleCreateStructure.ParentEntityName];
                     ForeignKeyDefinition fkDefinition = foreignKeyDefinitions[0];
                     PopulateReferencingFields(sqlMetadataProvider, multipleCreateStructure, fkDefinition, multipleCreateStructure.CurrentEntityCreatedValues, isLinkingTable: true);
 
-                    string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.HigherLevelEntityName, entityName);
+                    string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.ParentEntityName, entityName);
                     SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(linkingEntityName);
 
                     _ = BuildAndExecuteInsertDbQueries(
                             sqlMetadataProvider: sqlMetadataProvider,
                             entityName: linkingEntityName,
-                            higherLevelEntityName: entityName,
+                            parentEntityName: entityName,
                             parameters: multipleCreateStructure.LinkingTableParams!,
                             sourceDefinition: linkingTableSourceDefinition,
                             isLinkingEntity: true,
@@ -1312,7 +1312,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     string relatedEntityName = GraphQLUtils.GetRelatedEntityNameInRelationship(entity, entityName, relationshipFieldName);
                     MultipleCreateStructure referencingRelationshipMultipleCreateStructure = new(entityName: relatedEntityName,
-                                                                                                 higherLevelEntityName: entityName,
+                                                                                                 parentEntityName: entityName,
                                                                                                  inputMutParams: relationshipFieldValue,
                                                                                                  isLinkingTableInsertionRequired: GraphQLUtils.IsMToNRelationship(entity, relationshipFieldName));
                     IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, relationshipFieldName);
@@ -1349,7 +1349,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
         /// <param name="entityName">Current entity name</param>
-        /// <param name="higherLevelEntityName">Higher level entity name</param>
+        /// <param name="parentEntityName">Parent entity name</param>
         /// <param name="parameters">Dictionary containing the data ncessary to create a record in the table</param>
         /// <param name="sourceDefinition">Entity's source definition object</param>
         /// <param name="isLinkingEntity">Indicates whether the entity is a linking entity</param>
@@ -1357,7 +1357,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>Created record in the database as a dictionary</returns>
         private Dictionary<string, object?> BuildAndExecuteInsertDbQueries(ISqlMetadataProvider sqlMetadataProvider,
                                                                            string entityName,
-                                                                           string higherLevelEntityName,
+                                                                           string parentEntityName,
                                                                            IDictionary<string, object?> parameters,
                                                                            SourceDefinition sourceDefinition,
                                                                            bool isLinkingEntity,
@@ -1375,9 +1375,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
 
-            // When the entity is a linking entity, the higher level entity's name is used to get the
+            // When the entity is a linking entity, the parent entity's name is used to get the
             // datasource name. Otherwise, the entity's name is used.
-            string dataSourceName = isLinkingEntity ? _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(higherLevelEntityName)
+            string dataSourceName = isLinkingEntity ? _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(parentEntityName)
                                                     : _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
             string queryString = queryBuilder.Build(sqlInsertStructure);
             Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructure.Parameters;
@@ -1402,7 +1402,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 if (isLinkingEntity)
                 {
-                    throw new DataApiBuilderException(message: $"Could not insert row with given values in the linking table joining entities: {entityName} and {higherLevelEntityName} at nesting level : {nestingLevel}",
+                    throw new DataApiBuilderException(message: $"Could not insert row with given values in the linking table joining entities: {entityName} and {parentEntityName} at nesting level : {nestingLevel}",
                                                       statusCode: HttpStatusCode.InternalServerError,
                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                 }
@@ -1462,7 +1462,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database.</param>
         /// <param name="fkDefinition">Foreign Key metadata constructed during engine start-up.</param>
         /// <param name="multipleCreateStructure">Wrapper object assisting with the multiple create operation.</param>
-        /// <param name="computedRelationshipFields">Relationship fields obtained as a result of creation of current or higher level entity item.</param>
+        /// <param name="computedRelationshipFields">Relationship fields obtained as a result of creation of current or parent entity item.</param>
         /// <param name="isLinkingTable">Indicates whether referencing fields are populated for a linking entity.</param>
         /// <param name="entityName">Name of the entity.</param>
         private static void PopulateReferencingFields(ISqlMetadataProvider sqlMetadataProvider, MultipleCreateStructure multipleCreateStructure, ForeignKeyDefinition fkDefinition, Dictionary<string, object?>? computedRelationshipFields, bool isLinkingTable, string? entityName = null)

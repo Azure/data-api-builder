@@ -1363,14 +1363,14 @@
           spores: hazards
         },
         Relationships: {
-+         Shrub: {
-+           TargetEntity: Shrub,
-+           SourceFields: [
-+             habitat
-+           ],
-+           TargetFields: [
-+             species
-+           ]
+          Shrub: {
+            TargetEntity: Shrub,
+            SourceFields: [
+              habitat
+            ],
+            TargetFields: [
+              species
+            ]
           }
         }
       }

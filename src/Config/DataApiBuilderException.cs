@@ -115,10 +115,6 @@ public class DataApiBuilderException : Exception
         /// </summary>
         InvalidIdentifierField,
         /// <summary>
-        /// Relationship with the specified name not declared for the entity.
-        /// </summary>
-        RelationshipNotFound,
-        /// <summary>
         /// Relationship Field's value not found
         /// </summary>
         RelationshipFieldNotFound

@@ -56,7 +56,21 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
         return Entities.ContainsKey(key);
     }
 
-    public Entity this[string key] => Entities[key];
+    public Entity this[string key]
+    {
+        get
+        {
+            Entity? entity;
+            if (Entities.TryGetValue(key, out entity) && entity is not null)
+            {
+                return entity;
+            }
+            else
+            {
+                throw new ApplicationException($"The entity '{key}' was not found in the dab-config json");
+            }
+        }
+    }
 
     IEnumerator IEnumerable.GetEnumerator()
     {

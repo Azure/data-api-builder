@@ -145,7 +145,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
         /// </summary>
         /// <param name="fkLookupKey">{entityName, relationshipName} used to lookup foreign key metadata.</param>
-        /// <param name="targetEntityName">Entity name as in config file for the related entity.</param>
+        /// <param name="targetEntityName">Related(target) entity's name.</param>
         /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
         /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
         public void AddJoinPredicatesForRelationship(

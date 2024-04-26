@@ -5,6 +5,12 @@ using System.Diagnostics;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel
 {
+    /// <summary>
+    /// Identifies a specific value pair:
+    /// 1. entity name
+    /// 2. relationship name
+    /// Which can be used to uniquely identify a relationship (ForeignKeyDefinition object(s)).
+    /// </summary>
     [DebuggerDisplay("{EntityName} - {RelationshipName}")]
     public class EntityRelationshipKey
     {

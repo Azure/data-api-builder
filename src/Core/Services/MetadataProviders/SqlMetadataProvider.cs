@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <summary>
         /// Maps {entityName, relationshipName} to the foreign key definition defined for the relationship.
         /// The fk definition denotes referencing/referenced fields and whether the referencing/referenced fields
-        /// apply to the target or source entity as defined in the relationshp config.
+        /// apply to the target or source entity as defined in the relationship in the config file.
         /// </summary>
         public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinitions { get; set; } = new();
 
@@ -786,26 +786,26 @@ namespace Azure.DataApiBuilder.Core.Services
                     AddForeignKeyForTargetEntity(
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,
-                        targetEntityName,
+                        targetEntityName: targetEntityName,
                         referencingDbTable: linkingDbTable,
                         referencedDbTable: databaseTable,
                         referencingColumns: relationship.LinkingSourceFields,
                         referencedColumns: relationship.SourceFields,
                         referencingEntityRole: RelationshipRole.Linking,
                         referencedEntityRole: RelationshipRole.Source,
-                        relationshipData);
+                        relationshipData: relationshipData);
 
                     AddForeignKeyForTargetEntity(
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,
-                        targetEntityName,
+                        targetEntityName: targetEntityName,
                         referencingDbTable: linkingDbTable,
                         referencedDbTable: targetDbTable,
                         referencingColumns: relationship.LinkingTargetFields,
                         referencedColumns: relationship.TargetFields,
                         referencingEntityRole: RelationshipRole.Linking,
                         referencedEntityRole: RelationshipRole.Target,
-                        relationshipData);
+                        relationshipData: relationshipData);
 
                     RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
@@ -827,23 +827,28 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
-                    // For Many-One OR One-One Relationships, optimistically
-                    // add foreign keys from either sides in the hopes of finding their metadata
-                    // at a later stage when we query the database about foreign keys.
-                    // Any of these may be present when it's a One-One relationship,
-                    // The second fk isn't present when it's a Many-One relationship.
-                    // When the configuration file doesn't specify how to relate these entities,
-                    // at least 1 of the following foreign keys should be present (in the database metadata?).
+                    // For Many-One OR One-One Relationships, DAB optimistically
+                    // creates two ForeignKeyDefinitions to represent the relationship:
+                    //
+                    // #1
+                    // Referencing Entity | Referenced Entity
+                    // -------------------|-------------------
+                    // Target Entity      | Source Entity
+                    //
+                    // #2
+                    // Referencing Entity | Referenced Entity
+                    // -------------------|-------------------
+                    // Source Entity      | Target Entity
+                    //
+                    // One of the created ForeignKeyDefinitions correctly matches foreign key
+                    // metadata in the database and DAB will later identify the correct
+                    // ForeignKeyDefinition object when processing database schema metadata.
+                    //
+                    // When the runtime config doesn't specify how to relate these entities
+                    // (via source/target fields), DAB expects to identity that one of
+                    // the ForeignKeyDefinition objects will match foreign key metadata in the database.
 
-                    // Adding this foreign key in the hopes of finding a foreign key
-                    // in the underlying database object of the source entity referencing
-                    // the target entity.
-                    // This foreign key may NOT exist when:
-                    // a. this source entity is related to the target entity in a One-to-One relationship
-                    // but the foreign key was added to the target entity's underlying source
-                    // This is covered by the foreign key below.
-                    // OR
-                    // b. no foreign keys were defined at all.
+                    // Create ForeignKeyDefinition #1
                     AddForeignKeyForTargetEntity(
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,
@@ -856,11 +861,9 @@ namespace Azure.DataApiBuilder.Core.Services
                         referencedEntityRole: RelationshipRole.Target,
                         relationshipData);
 
-                    // Adds another foreign key definition with targetEntity.GetSourceName()
-                    // as the referencingTableName - in the situation of a One-to-One relationship
-                    // and the foreign key is defined in the source of targetEntity.
-                    // This foreign key WILL NOT exist if its a Many-One relationship.
-                    // Skips this fk when target and source entities are the same (self-referencing).
+                    // Create ForeignKeyDefinition #1
+                    // Skips this fk when target and source entities are the same (self-referencing)
+                    // because one ForeignKeyDefintion is sufficient to represent the relationship.
                     if (targetEntityName != entityName)
                     {
                         AddForeignKeyForTargetEntity(
@@ -879,9 +882,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 else if (relationship.Cardinality is Cardinality.Many)
                 {
                     // Example: publisher(One)-books(Many)
-                    // Obtain the foreign key information from the books table
-                    // about the publisher id so we can do the join.
-                    // The referencingTable (books) is the source of the target entity (publisher). //confusing language.
                     AddForeignKeyForTargetEntity(
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,
@@ -1772,7 +1772,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         // This function resolves foreign key definitions from the database
                         // so we explicitly persist that information here.
-                        FkSource = ForeignKeyDefinitionSource.DatabaseSchema,
+                        Source = RelationshipDefinitionSource.DatabaseSchema,
                         Pair = pair
                     };
                     pairToFkDefinition.Add(pair, foreignKeyDefinition);
@@ -1948,8 +1948,8 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// When a foreign key relationship is defined in the runtime config, the user may configure
-        /// source and target fields. By configuring source and target fields, the user overrides the
+        /// When a relationship is defined in the runtime config, the user may define
+        /// source and target fields. By doing so, the user overrides the
         /// foreign key constraint defined in the database.
         /// </summary>
         /// <param name="configResolvedFkDefinition">FkDefinition resolved from the runtime config.</param>

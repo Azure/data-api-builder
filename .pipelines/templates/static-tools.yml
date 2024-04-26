@@ -26,30 +26,10 @@ jobs:
       packageType: sdk
       version: 6.0.x
 
-  # Analyze source and build output text files for credentials
-  - task: CredScan@3
-    displayName: 'CredScan'
+  - task: CodeQL3000Init@0
+    displayName: 'CodeQL Init'
     inputs:
-      toolMajorVersion: V2
-      scanFolder: $(Build.SourcesDirectory)
-      suppressionsFile: templates/CredScanSuppressions.json
-      debugMode: false
-      verboseOutput: false
-
-  # Scan text elements including code, code comments, and content/web pages, for sensitive terms based on legal, cultural, or geopolitical reasons
-  - task: PoliCheck@2
-    displayName: 'PoliCheck'
-    inputs:
-      targetType: F
-
-  # AntiMalware scan
-  - task: AntiMalware@4
-    displayName: 'AntiMalware'
-    inputs:
-      EnableServices: true
-      SignatureFreshness: OneDay
-      # Signature refreshes on Hosted Agents can sometimes have a delay of a day or two.
-      TreatStaleSignatureAs: Warning
+      Enabled: true
 
   - task: DotNetCoreCLI@2
     displayName: Build Azure.DataApiBuilder.sln
@@ -59,24 +39,6 @@ jobs:
       configuration: '${{ parameters.BuildConfiguration }}'
       publishTestResults: true
 
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-binskim.BinSkim@4
-    displayName: 'BinSkim'
-    inputs:
-      InputType: Basic
-      AnalyzeTargetGlob: $(Build.SourcesDirectory)\**.dll;$(Build.SourcesDirectory)\**.exe;-:f|$(Build.SourcesDirectory)\**\Microsoft.Azure.Cosmos.ServiceInterop.dll
-      AnalyzeIgnorePdbLoadError: true
-
-  - task: Semmle@1
-    displayName: 'Run CodeQL (Semmle) (csharp)'
-    inputs:
-      sourceCodeDirectory: '$(Build.SourcesDirectory)'
-
-  # Publish Analysis Results (position after all tools ran)
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-publishsecurityanalysislogs.PublishSecurityAnalysisLogs@3
-    displayName: 'Publish Security Analysis Logs'
-
-  # The Post-Analysis build task will analyze the log files produced by the tools, and introduce a build break
-  - task: securedevelopmentteam.vss-secure-development-tools.build-task-postanalysis.PostAnalysis@2
-    displayName: 'Post Analysis'
-    inputs:
-      AllTools: true
+  - task: CodeQL3000Finalize@0
+    displayName: 'CodeQL Finalize'
+    condition: always()

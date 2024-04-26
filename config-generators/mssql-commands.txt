@@ -1,4 +1,4 @@
-init --config "dab-config.MsSql.json" --database-type mssql --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000"
+init --config "dab-config.MsSql.json" --database-type mssql --set-session-context true --connection-string "Server=tcp:127.0.0.1,1433;Persist Security Info=False;User ID=sa;Password=REPLACEME;MultipleActiveResultSets=False;Connection Timeout=5;" --host-mode Development --cors-origin "http://localhost:5000" --graphql.multiple-create.enabled true
 add Publisher --config "dab-config.MsSql.json" --source publishers --permissions "anonymous:read"
 add Stock --config "dab-config.MsSql.json" --source stocks --permissions "anonymous:create,read,update,delete"
 add Book --config "dab-config.MsSql.json" --source books --permissions "anonymous:create,read,update,delete" --graphql "book:books"
@@ -33,6 +33,8 @@ add User_NonAutogenRelationshipColumn --config "dab-config.MsSql.json" --source 
 add UserProfile --config "dab-config.MsSql.json" --source "user_profiles" --permissions "anonymous:*" --rest true --graphql true
 add User_AutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add User_RepeatedReferencingColumnToOneEntity --config "dab-config.MsSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add UserProfile_RepeatedReferencingColumnToTwoEntities --config "dab-config.MsSql.json" --source "user_profiles" --permissions "anonymous:*" --rest true --graphql true
 add GetBooks --config "dab-config.MsSql.json" --source "get_books" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true
 add GetBook --config "dab-config.MsSql.json" --source "get_book_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql false
 add GetPublisher --config "dab-config.MsSql.json" --source "get_publisher_by_id" --source.type "stored-procedure" --permissions "anonymous:execute" --rest true --graphql true --graphql.operation "query"
@@ -145,6 +147,9 @@ update ArtOfWar --config "dab-config.MsSql.json" --permissions "authenticated:*"
 update User_NonAutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_NonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "username:username"
 update User_AutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_AutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid:profileid"
 update User_AutogenToNonAutogenRelationshipColumn --config "dab-config.MsSql.json" --relationship UserProfile_AutogenToNonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid,username:userid,username"
+update User_RepeatedReferencingColumnToOneEntity --config "dab-config.MsSql.json" --relationship UserProfile --target.entity UserProfile --cardinality one --relationship.fields "username,username:profilepictureurl,username"
+update UserProfile_RepeatedReferencingColumnToTwoEntities --config "dab-config.MsSql.json" --relationship book --target.entity Book --cardinality one --relationship.fields "userid:id"
+update UserProfile_RepeatedReferencingColumnToTwoEntities --config "dab-config.MsSql.json" --relationship publisher --target.entity Publisher --cardinality one --relationship.fields "userid:id"
 update GetBook --config "dab-config.MsSql.json" --permissions "authenticated:execute" --rest.methods "Get"
 update GetPublisher --config "dab-config.MsSql.json" --permissions "authenticated:execute"
 update GetBooks --config "dab-config.MsSql.json" --permissions "authenticated:execute" --graphql.operation "Query" --rest.methods "Get"

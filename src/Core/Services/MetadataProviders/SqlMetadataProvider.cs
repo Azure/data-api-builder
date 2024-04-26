@@ -827,18 +827,19 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else if (relationship.Cardinality == Cardinality.One)
                 {
+                    // Example: books(Many) - publisher(One)
                     // For Many-One OR One-One Relationships, DAB optimistically
                     // creates two ForeignKeyDefinitions to represent the relationship:
                     //
                     // #1
                     // Referencing Entity | Referenced Entity
                     // -------------------|-------------------
-                    // Target Entity      | Source Entity
+                    // Source Entity      | Target Entity
                     //
                     // #2
                     // Referencing Entity | Referenced Entity
                     // -------------------|-------------------
-                    // Source Entity      | Target Entity
+                    // Target Entity      | Source Entity
                     //
                     // One of the created ForeignKeyDefinitions correctly matches foreign key
                     // metadata in the database and DAB will later identify the correct
@@ -861,9 +862,9 @@ namespace Azure.DataApiBuilder.Core.Services
                         referencedEntityRole: RelationshipRole.Target,
                         relationshipData);
 
-                    // Create ForeignKeyDefinition #1
-                    // Skips this fk when target and source entities are the same (self-referencing)
-                    // because one ForeignKeyDefintion is sufficient to represent the relationship.
+                    // Create ForeignKeyDefinition #2
+                    // when target and source entities differ (NOT self-referencing)
+                    // because one ForeignKeyDefintion is sufficient to represent a self-joining relationship.
                     if (targetEntityName != entityName)
                     {
                         AddForeignKeyForTargetEntity(
@@ -882,6 +883,13 @@ namespace Azure.DataApiBuilder.Core.Services
                 else if (relationship.Cardinality is Cardinality.Many)
                 {
                     // Example: publisher(One)-books(Many)
+                    // For Many-Many relationships, DAB creates one
+                    // ForeignKeyDefinition to represent the relationship:
+                    //
+                    // #1
+                    // Referencing Entity | Referenced Entity
+                    // -------------------|-------------------
+                    // Target Entity      | Source Entity
                     AddForeignKeyForTargetEntity(
                         sourceEntityName: entityName,
                         relationshipName: relationshipName,

@@ -55,6 +55,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures
 
         /// <summary>
         /// Input parameters parsed from the graphQL mutation operation.
+        /// The parsed input parameters of the multiple create mutation result will be
+        /// assigned to this field.
+        /// Type of the object assigned depends on the type of the multiple create operation.
+        /// 1. Point multiple create - Dictionary<string, object?>
+        /// 2. Many multiple create - List<Dictionary<string, object?>>
         /// </summary>
         public object? InputMutParams;
 

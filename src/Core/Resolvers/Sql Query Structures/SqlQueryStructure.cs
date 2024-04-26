@@ -791,15 +791,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // use the _underlyingType from the subquery which will be overridden appropriately if the query is paginated
                     ObjectType subunderlyingType = subquery._underlyingFieldType;
                     string targetEntityName = MetadataProvider.GetEntityName(subunderlyingType.Name);
-                    string subtableAlias = subquery.SourceAlias;
+                    string subqueryTableAlias = subquery.SourceAlias;
                     EntityRelationshipKey currentEntityRelationshipKey = new(EntityName, relationshipName: fieldName);
                     AddJoinPredicatesForRelationship(
                         fkLookupKey: currentEntityRelationshipKey,
                         targetEntityName,
-                        relatedSourceAlias: subtableAlias,
+                        subqueryTargetTableAlias: subqueryTableAlias,
                         subquery);
 
-                    string subqueryAlias = $"{subtableAlias}_subq";
+                    string subqueryAlias = $"{subqueryTableAlias}_subq";
                     JoinQueries.Add(subqueryAlias, subquery);
                     Columns.Add(new LabelledColumn(tableSchema: subquery.DatabaseObject.SchemaName,
                               tableName: subquery.DatabaseObject.Name,

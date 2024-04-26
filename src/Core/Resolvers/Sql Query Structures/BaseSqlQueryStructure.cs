@@ -177,11 +177,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Add query predicates for self-joined entity.
-        /// Example tsql to illustrate what the predicates enable:
+        /// Example pseudo tsql to illustrate what the predicates enable:
         /// SELECT [columns] FROM [SqlQueryStructure.SourceAlias] // table0
         /// JSON_QUERY(...) AS [fkLookupKey.relationshipName] // RelationshipName represents the sub query.
         /// OUTER APPLY (
-        ///     SELECT [columns] FROM [functionParams.targetTableAlias] // table1
+        ///     // The param 'subQuery' captures the contents of this OUTER APPLY
+        ///     SELECT [columns] FROM [functionParams.subqueryTargetTableAlias] // table1
         ///     WHERE [table0].[fk.SourceColumn] = [table1].[fk.TargetColumn]
         /// )
         /// WHERE [table0].[fk.SourceColumn] = [@param value from request]
@@ -199,7 +200,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string subqueryTargetTableAlias,
             BaseSqlQueryStructure subQuery)
         {
-            if (MetadataProvider.RelationshipToFkDefinitions.TryGetValue(key: fkLookupKey, out ForeignKeyDefinition? fkDef))
+            if (MetadataProvider.RelationshipToFkDefinition.TryGetValue(key: fkLookupKey, out ForeignKeyDefinition? fkDef))
             {
                 subQuery.Predicates.AddRange(
                         CreateJoinPredicates(

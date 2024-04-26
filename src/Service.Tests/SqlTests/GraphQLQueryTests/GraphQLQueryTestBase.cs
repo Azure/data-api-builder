@@ -1566,6 +1566,8 @@ query {
 
         /// <summary>
         /// Validates that DAB evaluates the self-joining relationship "child_accounts "for the entity dbo_DimAccounts.
+        /// The database schema defines a foreign key relationship between the dbo_DimAccount table and itself:
+        /// Referencing field: ParentAccountKey | Referenced field: AccountKey
         /// The field child_accounts represents the one-to-many relationship entry:
         /// - source entity: dbo_DimAccount | source.fields: AccountKey
         /// - target entity: dbo_DimAccount | target.fields: ParentAccountKey
@@ -1612,9 +1614,9 @@ query {
 }
              */
 
-            Assert.AreEqual(2, response.GetProperty("AccountKey").GetInt32());
-            Assert.AreEqual(1, response.GetProperty("ParentAccountKey").GetInt32());
-            Assert.AreEqual(2, response.GetProperty("child_accounts").GetProperty("items").GetArrayLength());
+            Assert.AreEqual(expected: 2, actual: response.GetProperty("AccountKey").GetInt32());
+            Assert.AreEqual(expected: 1, actual: response.GetProperty("ParentAccountKey").GetInt32());
+            Assert.AreEqual(expected: 2, actual: response.GetProperty("child_accounts").GetProperty("items").GetArrayLength());
             List<JsonElement> childAccounts = response.GetProperty("child_accounts").GetProperty("items").EnumerateArray().ToList();
             Assert.IsTrue(childAccounts[0].GetProperty("AccountKey").GetInt32() == 3);
             Assert.IsTrue(childAccounts[1].GetProperty("AccountKey").GetInt32() == 4);
@@ -1622,6 +1624,8 @@ query {
 
         /// <summary>
         /// Validates that DAB evaluates the self-joining relationship "parent_account" for the entity dbo_DimAccounts.
+        /// The database schema defines a foreign key relationship between the dbo_DimAccount table and itself:
+        /// Referencing field: ParentAccountKey | Referenced field: AccountKey
         /// The field parent_account represents the many-to-one relationship entry:
         /// - source entity: dbo_DimAccount | source.fields: ParentAccountKey
         /// - target entity: dbo_DimAccount | target.fields: AccountKey
@@ -1663,11 +1667,11 @@ query {
   }
 }
              */
-            Assert.AreEqual(1, response.GetProperty("items").GetArrayLength());
+            Assert.AreEqual(expected: 1, actual: response.GetProperty("items").GetArrayLength());
             List<JsonElement> results = response.GetProperty("items").EnumerateArray().ToList();
             Assert.AreEqual(expected: 1, actual: results.Count, message: "More results than expected");
             JsonElement account = results[0];
-            Assert.AreEqual(2, account.GetProperty("AccountKey").GetInt32());
+            Assert.AreEqual(expected: 2, actual: account.GetProperty("AccountKey").GetInt32());
             // help write an assert that checks the parent_account field
             int expectedParentAccountKey = account.GetProperty("ParentAccountKey").GetInt32();
             int relationshipResolvedAccountKey = account.GetProperty("parent_account").GetProperty("AccountKey").GetInt32();

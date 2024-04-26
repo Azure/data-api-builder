@@ -54,11 +54,11 @@ namespace Azure.DataApiBuilder.Core.Services
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; set; }
 
         /// <summary>
-        /// Maps {entityName, relationshipName} to the foreign key definition defined for the relationship.
-        /// The fk definition denotes referencing/referenced fields and whether the referencing/referenced fields
+        /// Maps {entityName, relationshipName} to the ForeignKeyDefinition defined for the relationship.
+        /// The ForeignKeyDefinition denotes referencing/referenced fields and whether the referencing/referenced fields
         /// apply to the target or source entity as defined in the relationship in the config file.
         /// </summary>
-        public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinitions { get; set; } = new();
+        public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinition { get; set; } = new();
 
         protected IQueryExecutor QueryExecutor { get; }
 
@@ -1897,7 +1897,7 @@ namespace Azure.DataApiBuilder.Core.Services
                         EntityRelationshipKey entityToFkDefKey = new(
                             entityName: configResolvedFkDefinition.SourceEntityName,
                             relationshipName: configResolvedFkDefinition.RelationshipName);
-                        RelationshipToFkDefinitions.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
+                        RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
                     }
                     else
                     {
@@ -1911,7 +1911,7 @@ namespace Azure.DataApiBuilder.Core.Services
                             relationshipName: configResolvedFkDefinition.RelationshipName);
                         configResolvedFkDefinition.ReferencedColumns = databaseResolvedFkDefinition.ReferencedColumns;
                         configResolvedFkDefinition.ReferencingColumns = databaseResolvedFkDefinition.ReferencingColumns;
-                        RelationshipToFkDefinitions.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
+                        RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
                     }
                 }
                 else
@@ -1957,7 +1957,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                         // The following operation generates FK metadata for use when processing requests on self-joined/referencing entities.
                         EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
-                        if (!RelationshipToFkDefinitions.TryAdd(key, configResolvedFkDefinition))
+                        if (!RelationshipToFkDefinition.TryAdd(key, configResolvedFkDefinition))
                         {
                             Console.WriteLine("for config-only defined relationship, no db fk, dab is failing to keep track of both 2 generated fk definitions.");
                         }

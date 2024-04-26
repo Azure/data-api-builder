@@ -392,6 +392,9 @@ public class ForeignKeyDefinition
 [DebuggerDisplay("ReferencingDbTable = {ReferencingDbTable.FullName}, ReferencedDbTable = {ReferencedDbTable.FullName}")]
 public class RelationShipPair
 {
+    /// <summary>
+    /// Relationship name specified in the runtime config.
+    /// </summary>
     public string RelationshipName { get; set; } = string.Empty;
 
     public RelationShipPair() { }

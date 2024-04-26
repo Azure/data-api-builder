@@ -431,7 +431,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
         private static void VerifyRelationShipPair(RelationShipPair expectedRelationShipPair, RelationShipPair deserializedRelationShipPair)
         {
-            List<FieldInfo> fieldMetadata = typeof(RelationShipPair).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();   
+            List<FieldInfo> fieldMetadata = typeof(RelationShipPair).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
             Assert.AreEqual(expected: 3, actual: fieldMetadata.Count, message: $"Unexpected field count for object type {typeof(RelationShipPair)}");
 
             Assert.IsTrue(expectedRelationShipPair.Equals(deserializedRelationShipPair));

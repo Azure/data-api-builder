@@ -203,9 +203,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 subQuery.Predicates.AddRange(
                         CreateJoinPredicates(
-                            leftTableAlias: SourceAlias, //source
+                            leftTableAlias: SourceAlias,
                             leftColumnNames: fkDef.ResolveSourceColumns(),
-                            rightTableAlias: targetTableAlias, //target
+                            rightTableAlias: targetTableAlias,
                             rightColumnNames: fkDef.ResolveTargetColumns()));         
             }
             else

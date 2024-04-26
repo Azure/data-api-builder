@@ -61,6 +61,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
+            DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
+            DatabaseTable targetDbTable = (DatabaseTable)targetDbObject;
+            if (sourceDbTable.Equals(targetDbTable))
+            {
+                throw new DataApiBuilderException(
+                message: $"Multiple-create for relationship: {relationshipName} at level: {nestingLevel} having the " +
+                $"source entity: {sourceEntityName} and target entity: {targetEntityName} backed by same database table is not yet supported.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+            }
+
             if (TryDetermineReferencingEntityBasedOnEntityRelationshipMetadata(
                     sourceEntityName: sourceEntityName,
                     targetEntityName: targetEntityName,

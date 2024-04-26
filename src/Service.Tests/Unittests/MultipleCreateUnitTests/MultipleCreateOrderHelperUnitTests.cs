@@ -379,7 +379,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
         /// <summary>
         /// Test to validate that when multiple-create is executed for a relationship for which source and target entities are backed by the
-        /// same database tables, we throw an appropriate exception because DAB currently does not support multiple-create for such relationships.
+        /// same database table, we throw an appropriate exception because DAB currently does not support multiple-create for such relationships.
         /// </summary>
         [TestMethod]
         public void TestExceptionForSelfReferencingRelationships()

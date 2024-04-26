@@ -112,7 +112,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 _runtimeConfigProvider,
                 _gQLFilterParser,
                 new IncrementingInteger(),
-                entityName);
+                entityName,
+                isMultipleCreateOperation: true);
 
             if (structure.PaginationMetadata.IsPaginated)
             {
@@ -304,7 +305,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Open connection and execute query using _queryExecutor
             if (isMultipleCreateOperation)
             {
-                queryString = queryBuilder.BuildQueryForMultipleCreateOperation(structure);
+                structure.IsMultipleCreateOperation = true;
+                queryString = queryBuilder.Build(structure);
             }
             else
             {

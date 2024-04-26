@@ -42,43 +42,24 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     structure.JoinQueries.Select(
                         x => $" OUTER APPLY ({Build(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
 
-            string predicates = JoinPredicateStrings(
-                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
-                                    structure.FilterPredicates,
-                                    Build(structure.Predicates),
-                                    Build(structure.PaginationMetadata.PaginationPredicate));
+            string predicates;
 
-            string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
-                + $" FROM {fromSql}"
-                + $" WHERE {predicates}"
-                + $" ORDER BY {Build(structure.OrderByColumns)}";
-
-            query += FOR_JSON_SUFFIX;
-            if (!structure.IsListQuery)
+            if (structure.IsMultipleCreateOperation)
             {
-                query += "," + WITHOUT_ARRAY_WRAPPER_SUFFIX;
-            }
-
-            return query;
-        }
-
-        /// <inheritdoc />
-        public string BuildQueryForMultipleCreateOperation(SqlQueryStructure structure)
-        {
-            string dataIdent = QuoteIdentifier(SqlQueryStructure.DATA_IDENT);
-            string fromSql = $"{QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)} " +
-                             $"AS {QuoteIdentifier($"{structure.SourceAlias}")}{Build(structure.Joins)}";
-
-            fromSql += string.Join(
-                    "",
-                    structure.JoinQueries.Select(
-                        x => $" OUTER APPLY ({BuildQueryForMultipleCreateOperation(x.Value)}) AS {QuoteIdentifier(x.Key)}({dataIdent})"));
-
-            string predicates = JoinPredicateStrings(
+                predicates = JoinPredicateStrings(
                                     structure.GetDbPolicyForOperation(EntityActionOperation.Read),
                                     structure.FilterPredicates,
                                     Build(structure.Predicates, " OR ", isMultipleCreateOperation: true),
                                     Build(structure.PaginationMetadata.PaginationPredicate));
+            }
+            else
+            {
+                predicates = JoinPredicateStrings(
+                                    structure.GetDbPolicyForOperation(EntityActionOperation.Read),
+                                    structure.FilterPredicates,
+                                    Build(structure.Predicates),
+                                    Build(structure.PaginationMetadata.PaginationPredicate));
+            }
 
             string query = $"SELECT TOP {structure.Limit()} {WrappedColumns(structure)}"
                 + $" FROM {fromSql}"

@@ -81,6 +81,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private List<OrderByColumn>? _primaryKeyAsOrderByColumns;
 
         /// <summary>
+        /// Indicates whether the SqlQueryStructure is constructed for
+        /// a multiple create mutation operation.
+        /// </summary>
+        public bool IsMultipleCreateOperation;
+
+        /// <summary>
         /// Generate the structure for a SQL query based on GraphQL query
         /// information.
         /// Only use as constructor for the outermost queries not subqueries
@@ -133,7 +139,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             RuntimeConfigProvider runtimeConfigProvider,
             GQLFilterParser gQLFilterParser,
             IncrementingInteger counter,
-            string entityName = "")
+            string entityName = "",
+            bool isMultipleCreateOperation = false)
             : this(sqlMetadataProvider,
                   authorizationResolver,
                   gQLFilterParser,
@@ -142,6 +149,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                   counter: counter)
         {
             _ctx = ctx;
+            IsMultipleCreateOperation = isMultipleCreateOperation;
 
             IObjectField schemaField = _ctx.Selection.Field;
             FieldNode? queryField = _ctx.Selection.SyntaxNode;

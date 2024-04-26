@@ -1816,35 +1816,31 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// Hydrates the table definition (SourceDefinition) with the inferred foreign key metadata
-        /// about the referencing and referenced columns.
-        /// sourceDefinition.SourceEntityRelationshipMap
+        /// Hydrates the table definition (SourceDefinition) with database foreign key
+        /// metadata that define a relationship's referencing and referenced columns.
         /// </summary>
         /// <param name="dbEntitiesToBePopulatedWithFK">List of database entities
         /// whose definition has to be populated with foreign key information.</param>
         private void FillInferredFkInfo(
             IEnumerable<SourceDefinition> dbEntitiesToBePopulatedWithFK)
         {
-            // For each table definition that has to be populated with the inferred
-            // foreign key information.
             foreach (SourceDefinition sourceDefinition in dbEntitiesToBePopulatedWithFK)
             {
-                // For each source entities, which maps to this table definition
-                // and has a relationship metadata to be filled.
                 foreach ((string sourceEntityName, RelationshipMetadata relationshipData)
                        in sourceDefinition.SourceEntityRelationshipMap)
                 {
-                    // Enumerate all the foreign keys required for all the target entities
-                    // that this source is related to.
+                    // Create ForeignKeyDefinition objects representing the relationships
+                    // between the source entity and each of its defined target entities.
                     foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        // 
-                        // Scenario 1: When a FK constraint is defined between source and target entities in the database.
-                        // In this case, there will be exactly one ForeignKeyDefinition with the right pair of Referencing and Referenced tables. 
-                        // Scenario 2: When no FK constraint is defined between source and target entities and the relationship fields are configured through the config,
-                        // two entries are present in fkDefinitionsToTarget. 
-                        // First entry: Referencing table: Source entity, Referenced table: Target entity
-                        // Second entry: Referencing table: Target entity, Referenced table: Source entity 
+                        // fkDefinitionsToTarget is a List that is hydrated differently depending
+                        // on the source of the relationship metadata:
+                        // 1. Database FK constraints:
+                        //      - One ForeignKeyDefinition with the db schema specified Referencing and Referenced tables.
+                        // 2. Config Defined:
+                        //      - Two ForeignKeyDefinition objects:
+                        //        1.  Referencing table: Source entity, Referenced table: Target entity
+                        //        2.  Referencing table: Target entity, Referenced table: Source entity 
                         List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = GetValidatedFKs(fKDefinitionsToTarget);
                         relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }
@@ -1898,15 +1894,17 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
                 else
                 {
-                    // A database foreign key doesn't exist matching configResolvedFkDefinition's referencing and referenced
-                    // tables. This condition performs one more check to see if DAB resolved a foreign key definition
-                    // from the database matching the inverse order of the referencing/referenced tables.
-                    // If DAB finds a match, it means that the FK constraint exists between the source and target entities and
-                    // DAB can skip adding configResolvedFkDefinition to the list of validated foreign key definitions.
+                    // A database foreign key doesn't exist that matches configResolvedFkDefinition's referencing and referenced
+                    // tables. This section now checks whether DAB resolved a database foreign key definition
+                    // matching the inverse order of the referencing/referenced tables.
+                    // A match indicates that a FK constraint exists between the source and target entities and
+                    // DAB can skip adding the optimstically created configResolvedFkDefinition
+                    // to the list of validated foreign key definitions.
                     //
                     // A database FK constraint may exist between the inverse order of referencing/referenced tables
                     // in configResolvedFkDefinition when the relationship has a right cardinality of 1.
-                    // DAB added FK definitons from both source->target and target->source to the source entity's definition
+                    // DAB optimistically created ForeignKeyDefinition objects denoting relationships between:
+                    // both source->target and target->source to the entity's SourceDefinition
                     // because during relationship preprocessing, DAB doesn't know if the relationship is an N:1 a 1:1 relationship.
                     // So here, we need to remove the "wrong" FK definition for:
                     // 1. N:1 relationships,
@@ -1916,15 +1914,16 @@ namespace Azure.DataApiBuilder.Core.Services
                     // DAB added two Foreign key definitions to Book's source definition:
                     // 1. Book->Publisher [Referencing: Book, Referenced: Publisher] ** this is the correct foreign key definition
                     // 2. Publisher->Book [Referencing: Publisher, Referenced: Book]
-                    // This is because DAB pre-processes runtime config relationships prior to retreiving FK definitions from the database.
-                    // Consequently, because Book->Publisher is an N:1 relationship, DAB optimistically genereated FK definitions for both
-                    // source->target and target->source entities because database metadata hasn't yet been pulled to confirm which combination
-                    // of optimistically generated FK defintions matched the database FK relationship metadata.
+                    // This is because DAB pre-processes runtime config relationships prior to processing database FK definitions.
+                    // Consequently, because Book->Publisher is an N:1 relationship, DAB optimistically generated ForeignKeyDefinition
+                    // objects for both source->target and target->source entities because DAB doesn't yet have db metadata
+                    // to confirm which combination of optimistically generated ForeignKeyDefinition objects matched
+                    // the database FK relationship metadata.
                     //
-                    // At this point in the code, DAB has the database resolved FK metadata is available and can decide whether
-                    // 1. configResolvedFkDefinition has a matched database fk definition and isn't added to the list of
+                    // At this point in the code, DAB now has the database resolved FK metadata and can determine whether
+                    // 1. configResolvedFkDefinition matches a database fk definition -> isn't added to the list of
                     //    validated FK definitions because it's already added.
-                    // 2. configResolvedFkDefinition doesn't have a matched database fk definition and is added to the list of
+                    // 2. configResolvedFkDefinition doesn't match a database fk definition -> added to the list of
                     //    validated FK definitions because it's not already added.
                     bool doesFkExistInDatabase = VerifyForeignKeyExistsInDB(
                         databaseTableA: configResolvedFkDefinition.Pair.ReferencingDbTable,

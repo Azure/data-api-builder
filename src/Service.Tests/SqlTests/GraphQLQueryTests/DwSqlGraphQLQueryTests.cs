@@ -107,22 +107,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
         {
             string dwSqlQuery = @"
-                SELECT COALESCE('['+STRING_AGG('{'+N'""fancyName"":' + ISNULL('""'+STRING_ESCAPE([fancyName],'json')+'""','null')
-                +','+N'""fungus"":' + ISNULL('""'+STRING_ESCAPE([fungus],'json')+'""','null')+'}',', ')+']','[]')
+                SELECT COALESCE('['+STRING_AGG('{'+N'""fancyName"":' + ISNULL('""' + STRING_ESCAPE([fancyName],'json') + '""','null')+','+N'""fungus"":' + ISNULL([fungus],'null')+'}',', ')+']','[]')
                 FROM (
-                    SELECT TOP 100 [table0].[species] AS [fancyName], ([table1_subq].[data]) AS [fungus]
-                FROM [dbo].[trees] AS [table0]
-                OUTER APPLY (
-                    SELECT STRING_AGG('{'+N'""habitat"":' + ISNULL('""'+STRING_ESCAPE([habitat],'json')+'""','null')+'}',', ')
-                    FROM (
-                        SELECT TOP 1 [table1].[habitat] AS [habitat]
-                        FROM [dbo].[fungi] AS [table1]
-                        WHERE [table0].[species] = [table1].[habitat] AND [table1].[habitat] = [table0].[species]
-                        ORDER BY [table1].[speciesid] ASC)
-                        AS [table1])
-                    AS [table1_subq]([data])
+                    SELECT TOP 100 [table0].[species] AS [fancyName], 
+                        (SELECT TOP 1 '{""habitat"":""' + STRING_ESCAPE([table1].[habitat], 'json') + '""}'
+                         FROM [dbo].[fungi] AS [table1]
+                         WHERE [table0].[species] = [table1].[habitat] AND [table1].[habitat] = [table0].[species]
+                         ORDER BY [table1].[speciesid] ASC) AS [fungus]
+                    FROM [dbo].[trees] AS [table0]
                     WHERE 1 = 1
-                    ORDER BY [table0].[treeId] ASC) AS [table0]";
+                    ORDER BY [table0].[treeId] ASC
+                ) AS [table0]";
 
             await OneToOneJoinQueryWithMappedFieldNamesInRelationship(dwSqlQuery);
         }

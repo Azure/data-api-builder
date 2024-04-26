@@ -98,14 +98,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Regression test does not need to run for DW.
+        /// Test query on One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
         /// </summary>
         /// <exception cref="NotImplementedException"></exception>
         [TestMethod]
-        [Ignore]
-        public Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
         {
-            throw new NotImplementedException("Regression test not needed for DW");
+            string dwSqlQuery = @"
+                SELECT COALESCE('['+STRING_AGG('{'+N'""fancyName"":' + ISNULL('""'+STRING_ESCAPE([fancyName],'json')+'""','null')
+                +','+N'""fungus"":' + ISNULL('""'+STRING_ESCAPE([fungus],'json')+'""','null')+'}',', ')+']','[]')
+                FROM (
+                    SELECT TOP 100 [table0].[species] AS [fancyName], ([table1_subq].[data]) AS [fungus]
+                FROM [dbo].[trees] AS [table0]
+                OUTER APPLY (
+                    SELECT STRING_AGG('{'+N'""habitat"":' + ISNULL('""'+STRING_ESCAPE([habitat],'json')+'""','null')+'}',', ')
+                    FROM (
+                        SELECT TOP 1 [table1].[habitat] AS [habitat]
+                        FROM [dbo].[fungi] AS [table1]
+                        WHERE [table0].[species] = [table1].[habitat] AND [table1].[habitat] = [table0].[species]
+                        ORDER BY [table1].[speciesid] ASC)
+                        AS [table1])
+                    AS [table1_subq]([data])
+                    WHERE 1 = 1
+                    ORDER BY [table0].[treeId] ASC) AS [table0]";
+
+            await OneToOneJoinQueryWithMappedFieldNamesInRelationship(dwSqlQuery);
         }
 
         /// <summary>

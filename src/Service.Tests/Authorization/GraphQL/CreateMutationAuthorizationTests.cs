@@ -116,13 +116,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 );
 
             // The authenticated role has create permissions on both the Book and Publisher entities.
-            // Hence the authorization checks will pass.
+            // So, no errors are expected during authorization checks.
+            // Hence, passing an empty string as the expected error message.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createBookMutationName,
                 graphQLMutation: createOneBookMutation,
                 isAuthenticated: true,
                 clientRoleHeader: "authenticated",
-                expectedResult: ""
+                expectedErrorMessage: ""
                 );
         }
 
@@ -155,13 +156,14 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
                 clientRoleHeader: "anonymous");
 
             // The authenticated role has create permissions on both the Book and Publisher entities.
-            // Hence the authorization checks will pass.
+            // So, no errors are expected during authorization checks.
+            // Hence, passing an empty string as the expected error message.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createMultipleBooksMutationName,
                 graphQLMutation: createMultipleBookMutation,
                 isAuthenticated: true,
                 clientRoleHeader: "authenticated",
-                expectedResult: ""
+                expectedErrorMessage: ""
                 );
         }
 
@@ -231,12 +233,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             // Since the field stocks.piecesAvailable is not included in the mutation,
             // the authorization check should pass.
+            // Hence, passing an empty string as the expected error message.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createOneStockMutationName,
                 graphQLMutation: createOneStockWithoutPiecesAvailable,
                 isAuthenticated: true,
                 clientRoleHeader: "test_role_with_excluded_fields_on_create",
-                expectedResult: "");
+                expectedErrorMessage: "");
 
             // Executing a similar mutation request but with stocks_price as top-level entity.
             // This validates that the recursive logic to do authorization on fields belonging to related entities
@@ -298,12 +301,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             // Since the field stocks.piecesAvailable is not included in the mutation,
             // the authorization check should pass.
+            // Hence, passing an empty string as the expected error message.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createOneStockMutationName,
                 graphQLMutation: createOneStocksPriceWithoutPiecesAvailable,
                 isAuthenticated: true,
                 clientRoleHeader: "test_role_with_excluded_fields_on_create",
-                expectedResult: "");
+                expectedErrorMessage: "");
         }
 
         /// <summary>
@@ -379,12 +383,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             // Since the field stocks.piecesAvailable is not included in the mutation,
             // the authorization check should pass.
+            // Hence, passing an empty string as the expected error message.
             await ValidateRequestIsAuthorized(
                 graphQLMutationName: createMultipleStockMutationName,
                 graphQLMutation: createMultipleStocksWithoutPiecesAvailable,
                 isAuthenticated: true,
                 clientRoleHeader: "test_role_with_excluded_fields_on_create",
-                expectedResult: "");
+                expectedErrorMessage: "");
         }
 
         #endregion
@@ -428,13 +433,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
         /// </summary>
         /// <param name="graphQLMutationName">Name of the mutation.</param>
         /// <param name="graphQLMutation">Request body of the mutation.</param>
-        /// <param name="expectedResult">Expected result.</param>
+        /// <param name="expectedErrorMessage">Expected error message.</param>
         /// <param name="isAuthenticated">Boolean indicating whether the request should be treated as authenticated or not.</param>
         /// <param name="clientRoleHeader">Value of X-MS-API-ROLE client role header.</param>
         private async Task ValidateRequestIsAuthorized(
             string graphQLMutationName,
             string graphQLMutation,
-            string expectedResult = "Value cannot be null",
+            string expectedErrorMessage = "Value cannot be null",
             bool isAuthenticated = false,
             string clientRoleHeader = "anonymous")
         {
@@ -448,7 +453,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization.GraphQL
 
             SqlTestHelper.TestForErrorInGraphQLResponse(
                     actual.ToString(),
-                    message: expectedResult
+                    message: expectedErrorMessage
                 );
         }
 

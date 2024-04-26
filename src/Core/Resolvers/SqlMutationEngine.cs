@@ -987,7 +987,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Performs the given GraphQL create mutation operation.
         /// </summary>
         /// <param name="entityName">Name of the top level entity</param>
-        /// <param name="parameters">Mutation parameter arguments</param>
+        /// <param name="mutationInputParamsFromGQLContext">Multiple Create mutation's input parameters retrieved from GraphQL context</param>
         /// <param name="sqlMetadataProvider">SqlMetadaprovider</param>
         /// <param name="context">Hotchocolate's context for the graphQL request.</param>
         /// <param name="isMultipleInputType">Boolean indicating whether the create operation is for multiple items.</param>
@@ -996,7 +996,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private List<IDictionary<string, object?>> PerformMultipleCreateOperation(
                 string entityName,
                 IMiddlewareContext context,
-                IDictionary<string, object?> parameters,
+                IDictionary<string, object?> mutationInputParamsFromGQLContext,
                 ISqlMetadataProvider sqlMetadataProvider,
                 bool isMultipleInputType = false)
         {
@@ -1005,13 +1005,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string rootFieldName = isMultipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
 
             // Parse the hotchocolate input parameters into .net object types
-            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, parameters);
+            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, mutationInputParamsFromGQLContext);
 
             if (parsedInputParams is null)
             {
-                throw new DataApiBuilderException(message: "The input for multiple create mutation operation cannot be null",
-                                                  statusCode: HttpStatusCode.BadRequest,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                throw new DataApiBuilderException(
+                    message: "The input for multiple create mutation operation cannot be null",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             // List of Primary keys of the created records in the top level entity.
@@ -1019,11 +1020,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // For point multiple create operation, only one entry will be present.
             List<IDictionary<string, object?>> primaryKeysOfCreatedItemsInTopLevelEntity = new();
 
-            if (!parameters.TryGetValue(rootFieldName, out object? param) || param is null)
+            if (!mutationInputParamsFromGQLContext.TryGetValue(rootFieldName, out object? unparsedInputFieldsForRootField)
+                || unparsedInputFieldsForRootField is null)
             {
-                throw new DataApiBuilderException(message: $"Mutation Request should contain the expected argument: {rootFieldName} in the input",
-                                                  statusCode: HttpStatusCode.BadRequest,
-                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                throw new DataApiBuilderException(
+                    message: $"Mutation Request should contain the expected argument: {rootFieldName} in the input",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
             if (isMultipleInputType)
@@ -1034,24 +1037,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // 1. Scalar input fields: Key - Value pair of field name and field value.
                 // 2. Object type input fields: Key - Value pair of relationship name and a dictionary of parameters (takes place for 1:1, N:1 relationship types)
                 // 3. List type input fields: key - Value pair of relationship name and a list of dictionary of parameters (takes place for 1:N, M:N relationship types) 
-                List<IDictionary<string, object?>> parsedInputList = (List<IDictionary<string, object?>>)parsedInputParams;
+                List<IDictionary<string, object?>> parsedMutationInputFields = (List<IDictionary<string, object?>>)parsedInputParams;
 
                 // For many type multiple create operation, the "parameters" dictionary is a key pair of <"items", List<IValueNode>>.
                 // Ideally, the input provided for "items" field should not be any other type than List<IValueNode>
                 // as HotChocolate will detect and throw errors before the execution flow reaches here.
                 // However, this acts as a guard to ensure that the right input type for "items" field is used.
-                if (param is not List<IValueNode> paramList)
+                if (unparsedInputFieldsForRootField is not List<IValueNode> unparsedInputForRootField)
                 {
-                    throw new DataApiBuilderException(message: $"Unsupported type used with {rootFieldName} in the create mutation input",
-                                                      statusCode: HttpStatusCode.BadRequest,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: $"Unsupported type used with {rootFieldName} in the create mutation input",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 // In the following loop, the input elements in "parsedInputList" are iterated and processed.
                 // idx tracks the index number to fetch the corresponding unparsed hotchocolate input parameters from "paramList".
                 // Both parsed and unparsed input parameters are necessary for successfully determing the order of insertion
                 // among the entities involved in the multiple create mutation request.
-                int idx = 0;
+                int itemsIndex = 0;
 
                 // Consider a mutation request such as the following
                 // mutation{
@@ -1072,28 +1076,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 //      }
                 //   }
                 // }
-                // For the above mutation request, in the parsedInputList, the 0th dictionary will correspond to the fields for the 0th element in the items array.
-                // Likewise, 1st dictionary in the parsedInputList will correspond to the fields for the 1st element in the items array and so on.
-                // Each element in the items array is independent of any other element in the array. Therefore, the create operation for each element in the items array is independent of the other elements.
-                // So, parsedInputList is iterated and the create operation is performed for each element in the list.
-                foreach (IDictionary<string, object?> parsedInput in parsedInputList)
+                // In the above mutation, each element in the 'items' array forms the 'parsedInputList'.
+                // items[itemsIndex].Key -> field(s) in the input such as 'title' and 'publishers' (type: string)
+                // items[itemsIndex].Value -> field value(s) for each corresponding field (type: object?)
+                // items[0] -> object with title 'Harry Potter and the Chamber of Secrets'
+                // items[1] -> object with title 'Educated'
+                // The processing logic is distinctly executed for each object in `items'.
+                foreach (IDictionary<string, object?> parsedMutationInputField in parsedMutationInputFields)
                 {
                     MultipleCreateStructure multipleCreateStructure = new(
                         entityName: entityName,
-                        parentEntityName: entityName,
-                        inputMutParams: parsedInput);
+                        parentEntityName: string.Empty,
+                        inputMutParams: parsedMutationInputField);
 
                     Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItem = new();
 
-                    IValueNode? fieldNodeForCurrentItem = paramList[idx];
-                    if (fieldNodeForCurrentItem is null)
+                    IValueNode? unparsedFieldNodeForCurrentItem = unparsedInputForRootField[itemsIndex];
+                    if (unparsedFieldNodeForCurrentItem is null)
                     {
-                        throw new DataApiBuilderException(message: "Error when processing the mutation request",
-                                                          statusCode: HttpStatusCode.BadRequest,
-                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                        throw new DataApiBuilderException(
+                            message: "Error when processing the mutation request",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    PerformDbInsertOperation(context, fieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
+                    ProcessMultipleCreateInputField(context, unparsedFieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
 
                     // Ideally the CurrentEntityCreatedValues should not be null. CurrentEntityCreatedValues being null indicates that the create operation
                     // has failed and that will result in an exception being thrown.
@@ -1103,7 +1110,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFieldValues(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
                     }
 
-                    idx++;
+                    itemsIndex++;
                 }
             }
             else
@@ -1125,24 +1132,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // Key          Value
                 // title        Harry Potter and the Chamber of Secrets
                 // publishers   Dictionary<name, Bloomsbury>
-                IDictionary<string, object?> parsedInput = (IDictionary<string, object?>)parsedInputParams;
+                IDictionary<string, object?> parsedInputFields = (IDictionary<string, object?>)parsedInputParams;
 
                 // For point multiple create operation, the "parameters" dictionary is a key pair of <"item", List<ObjectFieldNode>>.
                 // The value field retrieved using the key "item" cannot be of any other type.
                 // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate but acts as a guard against using any other types with "item" field
-                if (param is not List<ObjectFieldNode> paramList)
+                if (unparsedInputFieldsForRootField is not List<ObjectFieldNode> unparsedInputFields)
                 {
-                    throw new DataApiBuilderException(message: $"Unsupported type used with {rootFieldName} in the create mutation input",
-                                                      statusCode: HttpStatusCode.BadRequest,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    throw new DataApiBuilderException(
+                        message: $"Unsupported type used with {rootFieldName} in the create mutation input",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 MultipleCreateStructure multipleCreateStructure = new(
                     entityName: entityName,
                     parentEntityName: entityName,
-                    inputMutParams: parsedInput);
+                    inputMutParams: parsedInputFields);
 
-                PerformDbInsertOperation(context, paramList, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
+                ProcessMultipleCreateInputField(context, unparsedInputFields, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
 
                 if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
                 {
@@ -1158,19 +1166,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// 2. Builds and executes the necessary database queries to insert all the data into appropriate tables.
         /// </summary>
         /// <param name="context">Hotchocolate's context for the graphQL request.</param>
-        /// <param name="parameters">Mutation parameter arguments</param>
+        /// <param name="unparsedInputFields">Mutation input parameter from GQL Context for the current item being processed</param>
         /// <param name="sqlMetadataProvider">SqlMetadataprovider for the given database type.</param>
         /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
         /// <param name="nestingLevel">Current depth of nesting in the multiple-create request</param>
-        private void PerformDbInsertOperation(
+        private void ProcessMultipleCreateInputField(
             IMiddlewareContext context,
-            object? parameters,
+            object? unparsedInputFields,
             ISqlMetadataProvider sqlMetadataProvider,
             MultipleCreateStructure multipleCreateStructure,
             int nestingLevel)
         {
 
-            if (multipleCreateStructure.InputMutParams is null || parameters is null)
+            if (multipleCreateStructure.InputMutParams is null || unparsedInputFields is null)
             {
                 throw new DataApiBuilderException(
                         message: "The input for a multiple create mutation operation cannot be null.",
@@ -1178,45 +1186,50 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
             }
 
-            // For One - Many and Many - Many relationship types, the entire logic needs to be run for each element of the input.
-            // So, when the input parameters is of list type, we iterate over the list and run the logic for each element.
+            // For One - Many and Many - Many relationship types, processing logic is distinctly executed for each
+            // object in the input list.
+            // So, when the input parameters is of list type, we iterate over the list
+            // and call the same method for each element.
             if (multipleCreateStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
             {
-                List<IDictionary<string, object?>> parsedInputParamList = (List<IDictionary<string, object?>>)multipleCreateStructure.InputMutParams;
-                List<IValueNode> paramList = (List<IValueNode>)parameters;
-                int idx = 0;
+                List<IDictionary<string, object?>> parsedInputItems = (List<IDictionary<string, object?>>)multipleCreateStructure.InputMutParams;
+                List<IValueNode> unparsedInputFieldList = (List<IValueNode>)unparsedInputFields;
+                int parsedInputItemIndex = 0;
 
-                foreach (IDictionary<string, object?> parsedInputParam in parsedInputParamList)
+                foreach (IDictionary<string, object?> parsedInputItem in parsedInputItems)
                 {
-                    MultipleCreateStructure multipleCreateStructureForCurrentItem = new(entityName: multipleCreateStructure.EntityName,
-                                                                                        parentEntityName: multipleCreateStructure.ParentEntityName,
-                                                                                        inputMutParams: parsedInputParam,
-                                                                                        isLinkingTableInsertionRequired: multipleCreateStructure.IsLinkingTableInsertionRequired)
+                    MultipleCreateStructure multipleCreateStructureForCurrentItem = new(
+                        entityName: multipleCreateStructure.EntityName,
+                        parentEntityName: multipleCreateStructure.ParentEntityName,
+                        inputMutParams: parsedInputItem,
+                        isLinkingTableInsertionRequired: multipleCreateStructure.IsLinkingTableInsertionRequired)
                     {
                         CurrentEntityParams = multipleCreateStructure.CurrentEntityParams,
                         LinkingTableParams = multipleCreateStructure.LinkingTableParams
                     };
 
                     Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItems = new();
-                    IValueNode? nodeForCurrentInput = paramList[idx];
+                    IValueNode? nodeForCurrentInput = unparsedInputFieldList[parsedInputItemIndex];
                     if (nodeForCurrentInput is null)
                     {
-                        throw new DataApiBuilderException(message: "Error when processing the mutation request",
-                                                          statusCode: HttpStatusCode.InternalServerError,
-                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                        throw new DataApiBuilderException(
+                            message: "Error when processing the mutation request",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                     }
 
-                    PerformDbInsertOperation(context, nodeForCurrentInput.Value, sqlMetadataProvider, multipleCreateStructureForCurrentItem, nestingLevel);
-                    idx++;
+                    ProcessMultipleCreateInputField(context, nodeForCurrentInput.Value, sqlMetadataProvider, multipleCreateStructureForCurrentItem, nestingLevel);
+                    parsedInputItemIndex++;
                 }
             }
             else
             {
-                if (parameters is not List<ObjectFieldNode> parameterNodes)
+                if (unparsedInputFields is not List<ObjectFieldNode> parameterNodes)
                 {
-                    throw new DataApiBuilderException(message: "Error occurred while processing the mutation request",
-                                                      statusCode: HttpStatusCode.InternalServerError,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                    throw new DataApiBuilderException(
+                        message: "Error occurred while processing the mutation request",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
                 }
 
                 string entityName = multipleCreateStructure.EntityName;
@@ -1236,7 +1249,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     string relatedEntityName = GraphQLUtils.GetRelationshipTargetEntityName(entity, entityName, relationshipName);
                     MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(entityName: relatedEntityName, parentEntityName: entityName, inputMutParams: relationshipFieldValue);
                     IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, relationshipName);
-                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure, nestingLevel + 1);
+                    ProcessMultipleCreateInputField(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure, nestingLevel + 1);
 
                     if (sqlMetadataProvider.TryGetFKDefinition(
                                                     sourceEntityName: entityName,
@@ -1343,7 +1356,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             entityName: entityName);
                     }
 
-                    PerformDbInsertOperation(context, node.Value, sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, nestingLevel + 1);
+                    ProcessMultipleCreateInputField(context, node.Value, sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, nestingLevel + 1);
                 }
             }
         }
@@ -1395,35 +1408,39 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             DbResultSet? dbResultSet;
             DbResultSetRow? dbResultSetRow;
-            dbResultSet = queryExecutor.ExecuteQuery(queryString,
-                                                     queryParameters,
-                                                     queryExecutor.ExtractResultSetFromDbDataReader,
-                                                     GetHttpContext(),
-                                                     exposedColumnNames.IsNullOrEmpty() ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
-                                                     dataSourceName);
+            dbResultSet = queryExecutor.ExecuteQuery(
+                queryString,
+                queryParameters,
+                queryExecutor.ExtractResultSetFromDbDataReader,
+                GetHttpContext(),
+                exposedColumnNames.IsNullOrEmpty() ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
+                dataSourceName);
 
             dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
             if (dbResultSetRow is null || dbResultSetRow.Columns.Count == 0)
             {
                 if (isLinkingEntity)
                 {
-                    throw new DataApiBuilderException(message: $"Could not insert row with given values in the linking table joining entities: {entityName} and {parentEntityName} at nesting level : {nestingLevel}",
-                                                      statusCode: HttpStatusCode.InternalServerError,
-                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                    throw new DataApiBuilderException(
+                        message: $"Could not insert row with given values in the linking table joining entities: {entityName} and {parentEntityName} at nesting level : {nestingLevel}",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                 }
                 else
                 {
                     if (dbResultSetRow is null)
                     {
-                        throw new DataApiBuilderException(message: "No data returned back from database.",
-                                                          statusCode: HttpStatusCode.InternalServerError,
-                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                        throw new DataApiBuilderException(
+                            message: "No data returned back from database.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
                     }
                     else
                     {
-                        throw new DataApiBuilderException(message: $"Could not insert row with given values for entity: {entityName} at nesting level : {nestingLevel}",
-                                                          statusCode: HttpStatusCode.Forbidden,
-                                                          subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                        throw new DataApiBuilderException(
+                            message: $"Could not insert row with given values for entity: {entityName} at nesting level : {nestingLevel}",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
                     }
                 }
             }
@@ -1436,7 +1453,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
         /// <param name="entityName">Name of the entity</param>
-        /// <param name="createdValuesForEntityItem">Values with with an entity item was created in the database</param>
+        /// <param name="createdValuesForEntityItem">Field::Value dictionary of entity created in the database.</param>
         /// <returns>Primary Key fields</returns>
         private static Dictionary<string, object?> FetchPrimaryKeyFieldValues(ISqlMetadataProvider sqlMetadataProvider, string entityName, Dictionary<string, object?> createdValuesForEntityItem)
         {
@@ -1652,25 +1669,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Parse the mutation parameters from Hotchocolate input types to Dictionary of field names and values.
         /// </summary>
         /// <param name="context">GQL middleware context used to resolve the values of arguments</param>
-        /// <param name="fieldName">GQL field from which to extract the parameters. It is either "item" or "items".</param>
+        /// <param name="rootFieldName">GQL field from which to extract the parameters. It is either "item" or "items".</param>
         /// <param name="mutationParameters">Dictionary of mutation parameters</param>
         /// <returns>Parsed input mutation parameters.</returns>
         internal static object? GQLMultipleCreateArgumentToDictParams(
                 IMiddlewareContext context,
-                string fieldName,
+                string rootFieldName,
                 IDictionary<string, object?> mutationParameters)
         {
-            if (mutationParameters.TryGetValue(fieldName, out object? inputParameters))
+            if (mutationParameters.TryGetValue(rootFieldName, out object? inputParameters))
             {
                 IObjectField fieldSchema = context.Selection.Field;
-                IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
+                IInputField itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
                 InputObjectType inputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
                 return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters);
             }
             else
             {
                 throw new DataApiBuilderException(
-                    message: $"Expected root mutation input field: '{fieldName}'.",
+                    message: $"Expected root mutation input field: '{rootFieldName}'.",
                     subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
                     statusCode: HttpStatusCode.BadRequest);
             }
@@ -1695,16 +1712,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // where the mutation input field is 'items' such as 
             // 1. Many-type multiple create operation ---> createbooks, createBookmarks_Multiple.
             // 2. Input types for 1:N and M:N relationships.
-            if (inputParameters is List<IValueNode> inputList)
+            if (inputParameters is List<IValueNode> inputFields)
             {
                 List<IDictionary<string, object?>> resultList = new();
 
-                foreach (IValueNode input in inputList)
+                foreach (IValueNode inputField in inputFields)
                 {
                     object? resultItem = GQLMultipleCreateArgumentToDictParamsHelper(
                                             context: context,
                                             inputObjectType: inputObjectType,
-                                            inputParameters: input.Value);
+                                            inputParameters: inputField.Value);
                     if (resultItem is not null)
                     {
                         resultList.Add((IDictionary<string, object?>)resultItem);

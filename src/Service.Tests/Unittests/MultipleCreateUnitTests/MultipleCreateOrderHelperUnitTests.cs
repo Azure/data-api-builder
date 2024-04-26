@@ -384,7 +384,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         [TestMethod]
         public void TestExceptionForSelfReferencingRelationships()
         {
-            // Identical source and target entities backed by the database table 'books'.
+            // Identical source and target entities backed by the same database table 'books'.
             ValidateExceptionForSelfReferencingRelationship(sourceEntityName: "Book", targetEntityName: "Book");
 
             // Different source and target entities backed by the same database table 'books'.

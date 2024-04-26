@@ -1695,14 +1695,38 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// Helper function to parse the mutation parameters from Hotchocolate input types to
-        /// Dictionary of field names and values.
+        /// Dictionary of field names and values. The parsed input types will not contain
+        /// any hotchocolate types such as IValueNode, ObjectFieldNode, etc.
         /// For multiple create mutation, the input types of a field can be a scalar, object or list type.
         /// This function recursively parses each input type.
+        /// Consider the following multiple create mutation requests:
+        /// 1. mutation pointMultipleCreateExample{
+        ///      createbook(
+        ///         item: {
+        ///            title: "Harry Potter and the Goblet of Fire",
+        ///            publishers: { name: "Bloomsbury" },
+        ///            authors: [{ name: "J.K Rowling", birthdate: "1965-07-31", royalty_percentage: 100.0 }],
+        ///            reviews: [ {content: "Great book" }, {content: "Wonderful read"}]
+        ///         })
+        ///      {
+        ///         //selection set (not relevant in this function)
+        ///      }
+        ///    }
+        ///    
+        /// 2. mutation manyMultipleCreateExample{  
+        ///      createbooks(
+        ///        items:[{ fieldName0: "fieldValue0"},{fieldNameN: "fieldValueN"}]){  
+        ///           //selection set (not relevant in this function)  
+        ///        }  
+        ///      }  
         /// </summary>
         /// <param name="context">GQL middleware context used to resolve the values of arguments.</param>
         /// <param name="inputObjectType">Type of the input object field.</param>
-        /// <param name="inputParameters"></param>
-        /// <returns></returns>
+        /// <param name="inputParameters">Mutation input parameters retrieved from IMiddleware context</param>
+        /// <returns>Parsed mutation parameters as either
+        /// 1. Dictionary<string, object?> or
+        /// 2. List<Dictionary<string, object?>>
+        /// </returns>
         internal static object? GQLMultipleCreateArgumentToDictParamsHelper(
             IMiddlewareContext context,
             InputObjectType inputObjectType,
@@ -1710,63 +1734,126 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             // This condition is met for input types that accept an array of values
             // where the mutation input field is 'items' such as 
-            // 1. Many-type multiple create operation ---> createbooks, createBookmarks_Multiple.
-            // 2. Input types for 1:N and M:N relationships.
+            // 1. Many-type multiple create operation ---> createbooks, createBookmarks_Multiple:
+            // For the mutation manyMultipleCreateExample (outlined in the method summary),
+            // the following conditions will evalaute to true for root field 'items'.
+            // 2. Input types for 1:N and M:N relationships:
+            // For the mutation pointMultipleCreateExample (outlined in the method summary),
+            // the following condition will evaluate to true for fields 'authors' and 'reviews'.
+            // For both the cases, each element in the input object can be a combination of
+            // scalar and relationship fields.
+            // The parsing logic is run distinctly for each element by recursively calling the same function.
+            // Each parsed input result is stored in a list and finally this list is returned.
             if (inputParameters is List<IValueNode> inputFields)
             {
-                List<IDictionary<string, object?>> resultList = new();
-
+                List<IDictionary<string, object?>> parsedInputFieldItems = new();
                 foreach (IValueNode inputField in inputFields)
                 {
-                    object? resultItem = GQLMultipleCreateArgumentToDictParamsHelper(
+                    object? parsedInputFieldItem = GQLMultipleCreateArgumentToDictParamsHelper(
                                             context: context,
                                             inputObjectType: inputObjectType,
                                             inputParameters: inputField.Value);
-                    if (resultItem is not null)
+                    if (parsedInputFieldItem is not null)
                     {
-                        resultList.Add((IDictionary<string, object?>)resultItem);
+                        parsedInputFieldItems.Add((IDictionary<string, object?>)parsedInputFieldItem);
                     }
                 }
 
-                return resultList;
+                return parsedInputFieldItems;
             }
 
             // This condition is met when the mutation input is a single item where the
             // mutation input field is 'item' such as
             // 1. Point multiple create operation --> createbook.
-            // 2. Input types for 1:1 and N:1 relationships.
-            else if (inputParameters is List<ObjectFieldNode> nodes)
+            // For the mutation pointMultipleCreateExample (outlined in the method summary),
+            // the following condition will evaluate to true for root field 'item'.
+            // The inputParameters will contain ObjectFieldNode objects for
+            // fields : ['title', 'publishers', 'authors', 'reviews']
+            // 2. Relationship fields that are of object type:
+            // For the mutation pointMultipleCreateExample (outlined in the method summary),
+            // when processing the field 'publishers'. For 'publishers' field, 
+            // inputParameters will contain ObjectFieldNode objects for fields: ['name']
+            else if (inputParameters is List<ObjectFieldNode> inputFieldNodes)
             {
-                Dictionary<string, object?> result = new();
-                foreach (ObjectFieldNode node in nodes)
+                Dictionary<string, object?> parsedInputFields = new();
+                foreach (ObjectFieldNode inputFieldNode in inputFieldNodes)
                 {
-                    string name = node.Name.Value;
-                    if (node.Value.Kind == SyntaxKind.ListValue)
+                    string fieldName = inputFieldNode.Name.Value;
+                    // For the mutation pointMultipleCreateExample (outlined in the method summary),
+                    // the following condition will evaluate to true for fields 'authors' and 'reviews'.
+                    // Fields 'authors'/'reviews' can again consist of combination of scalar and relationship fields.
+                    // So, the input object type for 'authors'/'reviews' is fetched and the same function is
+                    // invoked with the fetched input object type again to parse the input fields of 'authors'/'reviews'.
+                    if (inputFieldNode.Value.Kind == SyntaxKind.ListValue)
                     {
-                        result.Add(name, GQLMultipleCreateArgumentToDictParamsHelper(context, GetInputObjectTypeForAField(name, inputObjectType.Fields), node.Value.Value));
+                        parsedInputFields.Add(
+                            fieldName,
+                            GQLMultipleCreateArgumentToDictParamsHelper(
+                                context,
+                                GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
+                                inputFieldNode.Value.Value));
                     }
-                    else if (node.Value.Kind == SyntaxKind.ObjectValue)
+                    // For the mutation pointMultipleCreateExample (outlined in the method summary),
+                    // the following condition will evaluate to true for fields 'publishers'.
+                    // Field 'publishers' can again consist of combination of scalar and relationship fields.
+                    // So, the input object type for 'publishers' is fetched and the same function is
+                    // invoked with the fetched input object type again to parse the input fields of 'publishers'.
+                    else if (inputFieldNode.Value.Kind == SyntaxKind.ObjectValue)
                     {
-                        result.Add(name, GQLMultipleCreateArgumentToDictParamsHelper(context, GetInputObjectTypeForAField(name, inputObjectType.Fields), node.Value.Value));
+                        parsedInputFields.Add(
+                            fieldName,
+                            GQLMultipleCreateArgumentToDictParamsHelper(
+                                context,
+                                GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
+                                inputFieldNode.Value.Value));
                     }
+                    // The flow enters this block for all scalar input fields.
                     else
                     {
-                        object? value = ExecutionHelper.ExtractValueFromIValueNode(value: node.Value,
-                                                                                   argumentSchema: inputObjectType.Fields[name],
-                                                                                   variables: context.Variables);
+                        object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
+                            value: inputFieldNode.Value,
+                            argumentSchema: inputObjectType.Fields[fieldName],
+                            variables: context.Variables);
 
-                        result.Add(name, value);
+                        parsedInputFields.Add(fieldName, fieldValue);
                     }
                 }
 
-                return result;
+                return parsedInputFields;
             }
-
-            return null;
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: "Unsupported input type found in the mutation request",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
         }
 
         /// <summary>
         /// Extracts the InputObjectType for a given field.
+        /// Consider the following multiple create mutation 
+        /// mutation multipleCreateExample{  
+        ///  createbook(
+        ///    item: {
+        ///      title: "Harry Potter and the Goblet of Fire", 
+        ///      publishers: { name: "Bloomsbury" },  
+        ///      authors: [{ name: "J.K Rowling", birthdate: "1965-07-31", royalty_percentage: 100.0 }]}){  
+        ///        selection set (not relevant in this function)  
+        ///      }
+        ///   }  
+        /// }
+        /// When parsing this mutation request, the flow will reach this function two times.
+        /// 1. For the field 'publishers'.
+        ///    - The function will get invoked with params
+        ///         fieldName: 'publishers',
+        ///         fields: All the fields present in CreateBookInput input object
+        ///    - The function will return `CreatePublisherInput`
+        /// 2. For the field 'authors'.
+        ///     - The function will get invoked with params
+        ///         fieldName: 'authors',
+        ///         fields: All the fields present in CreateBookInput input object
+        ///     - The function will return `CreateAuthorInput`
         /// </summary>
         /// <param name="fieldName">Field name for which the input object type is to be extracted.</param>
         /// <param name="fields">Fields present in the input object type.</param>
@@ -1779,9 +1866,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 return ExecutionHelper.InputObjectTypeFromIInputField(field);
             }
 
-            throw new DataApiBuilderException(message: $"Field {fieldName} not found.",
-                                              subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError,
-                                              statusCode: HttpStatusCode.InternalServerError);
+            throw new ArgumentException($"Field {fieldName} not found in the list of fields provided.");
         }
 
         /// <summary>

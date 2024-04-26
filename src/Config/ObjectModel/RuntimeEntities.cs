@@ -5,6 +5,7 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -67,7 +68,9 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
             }
             else
             {
-                throw new ApplicationException($"The entity '{key}' was not found in the dab-config json");
+                throw new DataApiBuilderException(message: $"The entity '{key}' was not found in the dab-config json",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
         }
     }

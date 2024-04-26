@@ -2990,8 +2990,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     Content = JsonContent.Create(payload)
                 };
 
-                ApplicationException ex = await Assert.ThrowsExceptionAsync<ApplicationException>(async () => await client.SendAsync(graphQLRequest));
-                Assert.AreEqual(ex.Message, "The entity 'Planet' was not found in the dab-config json");
+                DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () => await client.SendAsync(graphQLRequest));
+                Assert.AreEqual("The entity 'Planet' was not found in the dab-config json", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
         }
 

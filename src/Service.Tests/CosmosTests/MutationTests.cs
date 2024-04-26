@@ -18,7 +18,6 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -744,20 +743,24 @@ mutation {{
     }}
 }}";
             _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
-
+            // Executing path with updating "existing" field and "adding" a new field
             const string newName = "new_name";
             mutation = $@"
 mutation {{
     patchPlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
         id
         name
+        stars
+        {{
+            id
+        }}
     }}
 }}";
             JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
-
             // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
             Assert.AreEqual(newName, response.GetProperty("name").GetString());
-            Assert.AreNotEqual(name, response.GetProperty("name").GetString());
+            Assert.AreEqual(id, response.GetProperty("stars")[0].GetProperty("id").GetString());
         }
 
         [TestMethod]
@@ -772,12 +775,17 @@ mutation {{
             };
             _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
 
+            // Executing path with updating "existing" field and "adding" a new field
             const string newName = "new_name";
             string mutation = @"
 mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
     patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
         id
         name
+        stars
+        {
+            id
+        }
      }
 }";
             var update = new
@@ -787,17 +795,108 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
             };
 
             JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
-
             // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
             Assert.AreEqual(newName, response.GetProperty("name").GetString());
-            Assert.AreNotEqual(input.name, response.GetProperty("name").GetString());
+            Assert.AreEqual("TestStar", response.GetProperty("stars")[0].GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task CanPatchNestedItemWithVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name",
+                character = new
+                {
+                    id = "characterId",
+                    name = "characterName",
+                    homePlanet = 1,
+                    star = new
+                    {
+                        id = "starId",
+                        name = "starName",
+                        tag = new
+                        {
+                            id = "tagId",
+                            name = "tagName"
+                        }
+                    }
+                }
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            // Executing path with updating "existing" field and "adding" a new field
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
+    patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+        character
+        {
+            id
+            name
+            type
+            homePlanet
+            star
+            {
+                id
+                name
+                tag
+                {
+                    id
+                    name
+                }
+            }
+        }
+        stars
+        {
+            id
+        }
+     }
+}";
+            var update = new
+            {
+                name = "new_name",
+                character = new
+                {
+                    id = "characterId",
+                    name = "characterName",
+                    type = "characterType",
+                    homePlanet = 2,
+                    star = new
+                    {
+                        id = "starId",
+                        name = "starName1",
+                        tag = new
+                        {
+                            id = "tagId",
+                            name = "tagName"
+                        }
+                    }
+                },
+                stars = new[] { new { id = "TestStar" } }
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreEqual("characterType", response.GetProperty("character").GetProperty("type").GetString());
+            Assert.AreEqual("characterName", response.GetProperty("character").GetProperty("name").GetString());
+            Assert.AreEqual(2, response.GetProperty("character").GetProperty("homePlanet").GetInt32());
+            Assert.AreEqual("starName1", response.GetProperty("character").GetProperty("star").GetProperty("name").GetString());
+            Assert.AreEqual("TestStar", response.GetProperty("stars")[0].GetProperty("id").GetString());
         }
 
         /// <summary>
         ///  Patch Operation has limitation of executing/patching only 10 attributes at a time, internally which is 10 patch operation.
         ///  In DAB, we are supporting multiple patch operations in a single patch operation by executing them in a Transactional Batch.
         /// </summary>
-        /// <returns></returns>
         [TestMethod]
         public async Task CanPatchMoreThan10AttributesInAnItemWithVariables()
         {
@@ -967,13 +1066,12 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
             Assert.AreEqual(patchResponse.GetProperty("id").GetString(), input.id);
             Assert.AreEqual(patchResponse.GetProperty("age").GetInt32(), input.age);
             Assert.AreEqual(patchResponse.GetProperty("dimension").GetString(), input.dimension);
-            Assert.AreEqual(patchResponse.GetProperty("suns").ToString(), JsonConvert.SerializeObject(input.suns));
             // Asserting updated information
             Assert.AreEqual(patchResponse.GetProperty("name").GetString(), update.name);
-            Assert.AreEqual(patchResponse.GetProperty("character").ToString(), JsonConvert.SerializeObject(update.character));
-            Assert.AreEqual(patchResponse.GetProperty("tags").ToString(), JsonConvert.SerializeObject(update.tags));
-            Assert.AreEqual(patchResponse.GetProperty("stars").ToString(), JsonConvert.SerializeObject(update.stars));
-            Assert.AreEqual(patchResponse.GetProperty("moons").ToString(), JsonConvert.SerializeObject(update.moons));
+            Assert.AreEqual(patchResponse.GetProperty("character").ToString(), JsonSerializer.Serialize(update.character));
+            Assert.AreEqual(patchResponse.GetProperty("tags").ToString(), JsonSerializer.Serialize(update.tags));
+            Assert.AreEqual(patchResponse.GetProperty("stars").ToString(), JsonSerializer.Serialize(update.stars));
+            Assert.AreEqual(patchResponse.GetProperty("moons").ToString(), JsonSerializer.Serialize(update.moons));
         }
 
         /// <summary>

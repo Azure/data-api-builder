@@ -22,6 +22,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class CosmosMutationEngine : IMutationEngine
     {
+        private const int PATCH_OPERATIONS_LIMIT = 10;
+
         private readonly CosmosClientProvider _clientProvider;
         private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly IAuthorizationResolver _authorizationResolver;
@@ -256,11 +258,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// Refer https://learn.microsoft.com/en-us/azure/cosmos-db/partial-document-update for more details on patch operations
+        /// Refer to https://learn.microsoft.com/azure/cosmos-db/partial-document-update for more details on patch operations
         /// </summary>
-        /// <param name="queryArgs"></param>
-        /// <param name="container"></param>
-        /// <returns></returns>
         /// <exception cref="InvalidDataException"></exception>
         /// <exception cref="DataApiBuilderException"></exception>
         private static async Task<JObject> HandlePatchAsync(IDictionary<string, object?> queryArgs, Container container)
@@ -311,7 +310,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<PatchOperation> patchOperations = new();
             GeneratePatchOperations(input, "", patchOperations);
 
-            int patchOperationsLimit = 10;
             if (patchOperations.Count <= 10)
             {
                 return (await container.PatchItemAsync<JObject>(id, new PartitionKey(partitionKey), patchOperations)).Resource;
@@ -321,7 +319,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // Hence dividing into multiple patch request, if it is requested for more than 10 item at a time.
             TransactionalBatch batch = container.CreateTransactionalBatch(new PartitionKey(partitionKey));
             int numberOfBatches = -1;
-            for (int counter = 0; counter < patchOperations.Count; counter += patchOperationsLimit)
+            for (int counter = 0; counter < patchOperations.Count; counter += PATCH_OPERATIONS_LIMIT)
             {
                 // Get next 10 patch operations from the list
                 List<PatchOperation> chunk = patchOperations.GetRange(counter, Math.Min(10, patchOperations.Count - counter));

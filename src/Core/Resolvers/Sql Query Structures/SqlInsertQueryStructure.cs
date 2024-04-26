@@ -41,14 +41,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
-            HttpContext httpContext
+            HttpContext httpContext,
+            bool isLinkingEntity = false
         ) : this(
             entityName,
             sqlMetadataProvider,
             authorizationResolver,
             gQLFilterParser,
-            GQLMutArgumentToDictParams(context, MutationBuilder.ITEM_INPUT_ARGUMENT_NAME, mutationParams),
-            httpContext)
+            GQLMutArgumentToDictParams(context, CreateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams),
+            httpContext,
+            isLinkingEntity)
         { }
 
         public SqlInsertStructure(
@@ -57,7 +59,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
             IDictionary<string, object?> mutationParams,
-            HttpContext httpContext
+            HttpContext httpContext,
+            bool isLinkingEntity = false
             )
         : base(
               metadataProvider: sqlMetadataProvider,
@@ -65,7 +68,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
               gQLFilterParser: gQLFilterParser,
               entityName: entityName,
               httpContext: httpContext,
-              operationType: EntityActionOperation.Create)
+              operationType: EntityActionOperation.Create,
+              isLinkingEntity: isLinkingEntity)
         {
             InsertColumns = new();
             Values = new();

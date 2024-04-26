@@ -32,7 +32,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
         private static int _maxRetryCount = 5;
 
-        private AsyncRetryPolicy _retryPolicy;
+        private AsyncRetryPolicy _retryPolicyAsync;
+
+        private RetryPolicy _retryPolicy;
 
         /// <summary>
         /// Dictionary that stores dataSourceName to its corresponding connection string builder.
@@ -49,15 +51,98 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
+            _retryPolicyAsync = Policy
+                .Handle<DbException>(DbExceptionParser.IsTransientException)
+                .WaitAndRetryAsync(
+                    retryCount: _maxRetryCount,
+                    sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                    onRetry: (exception, backOffTime) =>
+                    {
+                        QueryExecutorLogger.LogError(exception: exception, message: "Error during query execution, retrying.");
+                    });
+
             _retryPolicy = Policy
-            .Handle<DbException>(DbExceptionParser.IsTransientException)
-            .WaitAndRetryAsync(
-                retryCount: _maxRetryCount,
-                sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-                onRetry: (exception, backOffTime) =>
+                .Handle<DbException>(DbExceptionParser.IsTransientException)
+                .WaitAndRetry(
+                    retryCount: _maxRetryCount,
+                    sleepDurationProvider: (attempt) => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
+                    onRetry: (exception, backOffTime) =>
+                    {
+                        QueryExecutorLogger.LogError(exception: exception, message: "Error during query execution, retrying.");
+                    });
+        }
+
+        /// <inheritdoc/>
+        public virtual TResult? ExecuteQuery<TResult>(
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
+            HttpContext? httpContext = null,
+            List<string>? args = null,
+            string dataSourceName = "")
+        {
+            if (string.IsNullOrEmpty(dataSourceName))
+            {
+                dataSourceName = ConfigProvider.GetConfig().DefaultDataSourceName;
+            }
+
+            if (!ConnectionStringBuilders.ContainsKey(dataSourceName))
+            {
+                throw new DataApiBuilderException("Query execution failed. Could not find datasource to execute query against", HttpStatusCode.BadRequest, DataApiBuilderException.SubStatusCodes.DataSourceNotFound);
+            }
+
+            using TConnection conn = new()
+            {
+                ConnectionString = ConnectionStringBuilders[dataSourceName].ConnectionString,
+            };
+
+            int retryAttempt = 0;
+
+            SetManagedIdentityAccessTokenIfAny(conn, dataSourceName);
+
+            return _retryPolicy.Execute(() =>
+            {
+                retryAttempt++;
+                try
                 {
-                    QueryExecutorLogger.LogError(exception: exception, message: "Error during query execution, retrying.");
-                });
+                    // When IsLateConfigured is true we are in a hosted scenario and do not reveal query information.
+                    if (!ConfigProvider.IsLateConfigured)
+                    {
+                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                        QueryExecutorLogger.LogDebug("{correlationId} Executing query: {queryText}", correlationId, sqltext);
+                    }
+
+                    TResult? result = ExecuteQueryAgainstDb(conn, sqltext, parameters, dataReaderHandler, httpContext, dataSourceName, args);
+
+                    if (retryAttempt > 1)
+                    {
+                        string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                        int maxRetries = _maxRetryCount + 1;
+                        // This implies that the request got successfully executed during one of retry attempts.
+                        QueryExecutorLogger.LogInformation("{correlationId} Request executed successfully in {retryAttempt} attempt of {maxRetries} available attempts.", correlationId, retryAttempt, maxRetries);
+                    }
+
+                    return result;
+                }
+                catch (DbException e)
+                {
+                    if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
+                    {
+                        throw e;
+                    }
+                    else
+                    {
+                        QueryExecutorLogger.LogError(
+                            exception: e,
+                            message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                            HttpContextExtensions.GetLoggerCorrelationId(httpContext),
+                            e.Message);
+
+                        // Throw custom DABException
+                        throw DbExceptionParser.Parse(e);
+                    }
+                }
+            });
         }
 
         /// <inheritdoc/>
@@ -87,7 +172,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
-            return await _retryPolicy.ExecuteAsync(async () =>
+            return await _retryPolicyAsync.ExecuteAsync(async () =>
             {
                 retryAttempt++;
                 try
@@ -218,6 +303,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return cmd;
         }
 
+        /// <inheritdoc/>
+        public virtual TResult? ExecuteQueryAgainstDb<TResult>(
+            TConnection conn,
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
+            HttpContext? httpContext,
+            string dataSourceName,
+            List<string>? args = null)
+        {
+            conn.Open();
+            DbCommand cmd = PrepareDbCommand(conn, sqltext, parameters, httpContext, dataSourceName);
+
+            try
+            {
+                using DbDataReader dbDataReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                if (dataReaderHandler is not null && dbDataReader is not null)
+                {
+                    return dataReaderHandler(dbDataReader, args);
+                }
+                else
+                {
+                    return default(TResult);
+                }
+            }
+            catch (DbException e)
+            {
+                string correlationId = HttpContextExtensions.GetLoggerCorrelationId(httpContext);
+                QueryExecutorLogger.LogError(
+                    exception: e,
+                    message: "{correlationId} Query execution error due to:\n{errorMessage}",
+                    correlationId,
+                    e.Message);
+                throw DbExceptionParser.Parse(e);
+            }
+        }
+
         /// <inheritdoc />
         public virtual string GetSessionParamsQuery(HttpContext? httpContext, IDictionary<string, DbConnectionParam> parameters, string dataSourceName = "")
         {
@@ -238,6 +360,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             await Task.Yield();
         }
 
+        public virtual void SetManagedIdentityAccessTokenIfAny(DbConnection conn, string dataSourceName = "")
+        {
+            // no-op in the base class.
+            Task.Yield();
+        }
+
         /// <inheritdoc />
         public async Task<bool> ReadAsync(DbDataReader reader)
         {
@@ -256,12 +384,72 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public async Task<DbResultSet>
-            ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
+        public bool Read(DbDataReader reader)
         {
-            DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader).Result ?? new());
+            try
+            {
+                return reader.Read();
+            }
+            catch (DbException e)
+            {
+                QueryExecutorLogger.LogError(
+                    exception: e,
+                    message: "Query execution error due to:\n{errorMessage}",
+                    e.Message);
+                throw DbExceptionParser.Parse(e);
+            }
+        }
+
+        /// <inheritdoc />
+        public async Task<DbResultSet>
+            ExtractResultSetFromDbDataReaderAsync(DbDataReader dbDataReader, List<string>? args = null)
+        {
+            DbResultSet dbResultSet = new(resultProperties: GetResultPropertiesAsync(dbDataReader).Result ?? new());
 
             while (await ReadAsync(dbDataReader))
+            {
+                if (dbDataReader.HasRows)
+                {
+                    DbResultSetRow dbResultSetRow = new();
+                    DataTable? schemaTable = dbDataReader.GetSchemaTable();
+
+                    if (schemaTable is not null)
+                    {
+                        foreach (DataRow schemaRow in schemaTable.Rows)
+                        {
+                            string columnName = (string)schemaRow["ColumnName"];
+
+                            if (args is not null && !args.Contains(columnName))
+                            {
+                                continue;
+                            }
+
+                            int colIndex = dbDataReader.GetOrdinal(columnName);
+                            if (!dbDataReader.IsDBNull(colIndex))
+                            {
+                                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+                            }
+                            else
+                            {
+                                dbResultSetRow.Columns.Add(columnName, value: null);
+                            }
+                        }
+                    }
+
+                    dbResultSet.Rows.Add(dbResultSetRow);
+                }
+            }
+
+            return dbResultSet;
+        }
+
+        /// <inheritdoc />
+        public DbResultSet
+            ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
+        {
+            DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader) ?? new());
+
+            while (Read(dbDataReader))
             {
                 if (dbDataReader.HasRows)
                 {
@@ -306,7 +494,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbDataReader dbDataReader,
             List<string>? args = null)
         {
-            DbResultSet dbResultSet = await ExtractResultSetFromDbDataReader(dbDataReader);
+            DbResultSet dbResultSet = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
             JsonArray resultArray = new();
 
             foreach (DbResultSetRow dbResultSetRow in dbResultSet.Rows)
@@ -361,7 +549,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet
-                = await ExtractResultSetFromDbDataReader(dbDataReader);
+                = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
 
             /// Processes a second result set from DbDataReader if it exists.
             /// In MsSQL upsert:
@@ -375,7 +563,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else if (await dbDataReader.NextResultAsync())
             {
                 // Since no first result set exists, we return the second result set.
-                return await ExtractResultSetFromDbDataReader(dbDataReader);
+                return await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
             }
             else
             {
@@ -401,7 +589,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <inheritdoc />
         /// <Note>This function is a DbDataReader handler of type
         /// Func<DbDataReader, List<string>?, Task<TResult?>></Note>
-        public Task<Dictionary<string, object>> GetResultProperties(
+        public Task<Dictionary<string, object>> GetResultPropertiesAsync(
             DbDataReader dbDataReader,
             List<string>? columnNames = null)
         {
@@ -411,6 +599,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 { nameof(dbDataReader.HasRows), dbDataReader.HasRows }
             };
             return Task.FromResult(resultProperties);
+        }
+
+        /// <inheritdoc />
+        /// <Note>This function is a DbDataReader handler of type
+        /// Func<DbDataReader, List<string>?, TResult?></Note>
+        public Dictionary<string, object> GetResultProperties(
+            DbDataReader dbDataReader,
+            List<string>? columnNames = null)
+        {
+            Dictionary<string, object> resultProperties = new()
+            {
+                { nameof(dbDataReader.RecordsAffected), dbDataReader.RecordsAffected },
+                { nameof(dbDataReader.HasRows), dbDataReader.HasRows }
+            };
+            return resultProperties;
         }
 
         private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)

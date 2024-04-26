@@ -848,7 +848,6 @@ namespace Azure.DataApiBuilder.Core.Services
                     // When the runtime config doesn't specify how to relate these entities
                     // (via source/target fields), DAB expects to identity that one of
                     // the ForeignKeyDefinition objects will match foreign key metadata in the database.
-
                     // Create ForeignKeyDefinition #1
                     AddForeignKeyForTargetEntity(
                         sourceEntityName: entityName,

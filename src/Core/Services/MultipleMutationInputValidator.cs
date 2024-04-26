@@ -345,15 +345,7 @@ namespace Azure.DataApiBuilder.Core.Services
             const string relationshipSourceIdentifier = "$";
             string targetEntityName = runtimeConfig.Entities![entityName].Relationships![relationshipName].TargetEntity;
             string? linkingObject = runtimeConfig.Entities![entityName].Relationships![relationshipName].LinkingObject;
-            if (!string.IsNullOrWhiteSpace(linkingObject))
-            {
-                // The presence of a linking object indicates that an M:N relationship exists between the current entity and the target/child entity.
-                // The linking table acts as a referencing table for both the source/target entities which act as
-                // referenced entities. Consequently:
-                // - Column values for the target entity can't be derived from insertion in the current entity.
-                // - Column values for the current entity can't be derived from the insertion in the target/child entity.
-                return;
-            }
+            bool isMNRelationship = !string.IsNullOrWhiteSpace(linkingObject);
 
             // Determine the referencing entity for the current relationship field input.
             string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(
@@ -364,7 +356,18 @@ namespace Azure.DataApiBuilder.Core.Services
                 metadataProvider: metadataProvider,
                 columnDataInSourceBody: backingColumnData,
                 targetNodeValue: relationshipFieldValue,
-                nestingLevel: nestingLevel);
+                nestingLevel: nestingLevel,
+                isMNRelationship: isMNRelationship);
+
+            if (isMNRelationship)
+            {
+                // The presence of a linking object indicates that an M:N relationship exists between the current entity and the target/child entity.
+                // The linking table acts as a referencing table for both the source/target entities which act as
+                // referenced entities. Consequently:
+                // - Column values for the target entity can't be derived from insertion in the current entity.
+                // - Column values for the current entity can't be derived from the insertion in the target/child entity.
+                return;
+            }
 
             // Determine the referenced entity.
             string referencedEntityName = referencingEntityName.Equals(entityName) ? targetEntityName : entityName;

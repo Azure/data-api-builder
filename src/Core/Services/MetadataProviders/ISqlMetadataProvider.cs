@@ -226,6 +226,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="referencedEntityName">Referenced entity name.</param>
         /// <param name="referencingEntityName">Referencing entity name.</param>
         /// <param name="foreignKeyDefinition">Stores the required foreign key definition from the referencing to referenced entity.</param>
+        /// <param name="isMToNRelationship">Indicates whether the relationship type is M:N</param>
         /// <returns>true when the foreign key definition is successfully determined.</returns>
         /// <example>
         /// For a 1:N relationship between Publisher: Book entity defined in Publisher entity's config:
@@ -239,6 +240,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string targetEntityName,
             string referencingEntityName,
             string referencedEntityName,
-            [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition) => throw new NotImplementedException();
+            [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition,
+            bool isMToNRelationship) => throw new NotImplementedException();
     }
 }

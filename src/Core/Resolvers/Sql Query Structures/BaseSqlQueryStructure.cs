@@ -163,7 +163,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 AddJoinPredicatesForSelfJoinedEntity(
                     fkLookupKey: fkLookupKey,
-                    relatedSourceAlias: relatedSourceAlias,
+                    targetTableAlias: relatedSourceAlias,
                     subQuery: subQuery);
             }
             else
@@ -176,26 +176,37 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Add query predicates for self-joined entity.
+        /// Example tsql to illustrate what the predicates enable:
+        /// SELECT [columns] FROM [SqlQueryStructure.SourceAlias] // table0
+        /// JSON_QUERY(...) AS [fkLookupKey.relationshipName] // RelationshipName represents the sub query.
+        /// OUTER APPLY (
+        ///     SELECT [columns] FROM [functionParams.targetTableAlias] // table1
+        ///     WHERE [table0].[fk.SourceColumn] = [table1].[fk.TargetColumn]
+        /// )
+        /// WHERE [table0].[fk.SourceColumn] = [@param value from request]
+        ///
         /// Process self-joining entity relationship. Excludes support for processing
         /// self-joining relationships in GraphQL query filters (nested filter entities).
         /// </summary>
         /// <param name="fkLookupKey">{entityName, relationshipName} used to lookup foreign key metadata.</param>
-        /// <param name="relatedSourceAlias">The alias assigned for the underlying source of this related entity.</param>
+        /// <param name="targetTableAlias">The table alias of the target entity, used in the sub-query.</param>
         /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
-        /// <exception cref="DataApiBuilderException"></exception>
+        /// <exception cref="DataApiBuilderException">Raised when an entity's relationship config is not found in the
+        /// metadata provider.</exception>
         private void AddJoinPredicatesForSelfJoinedEntity(
             EntityRelationshipKey fkLookupKey,
-            string relatedSourceAlias,
+            string targetTableAlias,
             BaseSqlQueryStructure subQuery)
         {
             if (MetadataProvider.RelationshipToFkDefinitions.TryGetValue(key: fkLookupKey, out ForeignKeyDefinition? fkDef))
             {
                 subQuery.Predicates.AddRange(
                         CreateJoinPredicates(
-                            leftTableAlias: relatedSourceAlias, //target
-                            leftColumnNames: fkDef.ResolveTargetColumns(),
-                            rightTableAlias: SourceAlias, //source
-                            rightColumnNames: fkDef.ResolveSourceColumns()));
+                            leftTableAlias: SourceAlias, //source
+                            leftColumnNames: fkDef.ResolveSourceColumns(),
+                            rightTableAlias: targetTableAlias, //target
+                            rightColumnNames: fkDef.ResolveTargetColumns()));         
             }
             else
             {

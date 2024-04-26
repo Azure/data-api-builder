@@ -376,10 +376,18 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         #endregion
 
         #region Order determination test for relationships having source/target entities backed by same database table
+
+        /// <summary>
+        /// Test to validate that when multiple-create is executed for a relationship for which source and target entities are backed by the
+        /// same database tables, we throw an appropriate exception because DAB currently does not support multiple-create for such relationships.
+        /// </summary>
         [TestMethod]
         public void TestExceptionForSelfReferencingRelationships()
         {
+            // Identical source and target entities backed by the database table 'books'.
             ValidateExceptionForSelfReferencingRelationship(sourceEntityName: "Book", targetEntityName: "Book");
+
+            // Different source and target entities backed by the same database table 'books'.
             ValidateExceptionForSelfReferencingRelationship(sourceEntityName: "Book", targetEntityName: "BookNF");
         }
         #endregion
@@ -406,6 +414,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.AreEqual(expectedReferencingEntityName, actualReferencingEntityName);
         }
 
+        /// <summary>
+        /// Helper method to validate the exception when multiple-create is executed for a self-referencing relationship where source and target
+        /// entities are backed by the same database table.
+        /// </summary>
+        /// <param name="sourceEntityName">Name of the source entity.</param>
+        /// <param name="targetEntityName">NAme of the target entity.</param>
         private static void ValidateExceptionForSelfReferencingRelationship(
             string sourceEntityName,
             string targetEntityName)

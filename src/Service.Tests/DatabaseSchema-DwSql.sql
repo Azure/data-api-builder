@@ -32,6 +32,7 @@ DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS authors_history;
+DROP TABLE IF EXISTS [DimAccount]
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -226,6 +227,28 @@ CREATE TABLE authors_history (
     year_of_publish int,
     books_published int
 );
+
+CREATE TABLE [dbo].[DimAccount] (
+    [AccountKey]                    [INT]           IDENTITY(1, 1) NOT NULL,
+    [ParentAccountKey]              [INT]           NULL,
+    CONSTRAINT [PK_DimAccount]
+        PRIMARY KEY CLUSTERED ([AccountKey] ASC)
+);
+
+ALTER TABLE [dbo].[DimAccount] WITH CHECK
+ADD CONSTRAINT [FK_DimAccount_DimAccount]
+    FOREIGN KEY ([ParentAccountKey])
+    REFERENCES [dbo].[DimAccount] ([AccountKey]);
+
+ALTER TABLE [dbo].[DimAccount] CHECK CONSTRAINT [FK_DimAccount_DimAccount];
+
+SET IDENTITY_INSERT DimAccount ON
+INSERT INTO DimAccount(AccountKey, ParentAccountKey)
+VALUES (1, null),
+(2, 1),
+(3, 2),
+(4, 2);
+SET IDENTITY_INSERT DimAccount OFF
 
 EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
       SELECT * FROM dbo.publishers

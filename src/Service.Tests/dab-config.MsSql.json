@@ -3669,7 +3669,6 @@
         }
       ],
       "relationships": {
-
         "parent_account": {
           "cardinality": "one",
           "target.entity": "dbo_DimAccount",

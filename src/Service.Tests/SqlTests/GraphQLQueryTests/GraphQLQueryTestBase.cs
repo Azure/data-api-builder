@@ -1573,7 +1573,7 @@ query {
         /// to many child records' referencing field ParentAccountKey.
         /// </summary>
         [TestMethod]
-        public async Task QueryById_SelfReferencingRelationship_ReturnsExpectedChildre()
+        public async Task QueryById_SelfReferencingRelationship_ReturnsExpectedChildren()
         {
             string query = @"
             query queryAccountAndParent{
@@ -1621,7 +1621,7 @@ query {
         }
 
         /// <summary>
-        /// Validates that DAB evaluates the self-joining relationship "parent_account "for the entity dbo_DimAccounts.
+        /// Validates that DAB evaluates the self-joining relationship "parent_account" for the entity dbo_DimAccounts.
         /// The field parent_account represents the many-to-one relationship entry:
         /// - source entity: dbo_DimAccount | source.fields: ParentAccountKey
         /// - target entity: dbo_DimAccount | target.fields: AccountKey
@@ -1646,7 +1646,7 @@ query {
 
             JsonElement response = await ExecuteGraphQLRequestAsync(query, "dbo_DimAccounts", false);
 
-            /* Expected Resposne
+            /* Expected Response
 {
   "data": {
     "dbo_DimAccounts": {

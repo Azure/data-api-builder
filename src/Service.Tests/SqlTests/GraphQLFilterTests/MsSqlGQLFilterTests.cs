@@ -97,7 +97,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLFilterTests
         /// Test a field of the nested filter is null.
         /// </summary>
         [DataTestMethod]
-        [DataRow("Authenticated", false, "", DisplayName = "Requestor authorized to use nested filter.")]
+        [DataRow("Authenticated", false, "", DisplayName = "No nested filter AuthZ error")]
         [DataRow("TestNestedFilterFieldIsNull_ColumnForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE, DisplayName = "Excluded column in nested filter entity, AuthZ failure")]
         [DataRow("TestNestedFilterFieldIsNull_EntityReadForbidden", true, DataApiBuilderException.GRAPHQL_FILTER_ENTITY_AUTHZ_FAILURE, DisplayName = "Nested filter entity read access forbidden, AuthZ failure")]
         public async Task TestNestedFilterFieldIsNull(string roleName, bool expectsError, string errorMessageFragment)

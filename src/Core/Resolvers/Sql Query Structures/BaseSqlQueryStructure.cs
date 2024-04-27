@@ -207,7 +207,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             leftTableAlias: SourceAlias,
                             leftColumnNames: fkDef.ResolveSourceColumns(),
                             rightTableAlias: subqueryTargetTableAlias,
-                            rightColumnNames: fkDef.ResolveTargetColumns()));         
+                            rightColumnNames: fkDef.ResolveTargetColumns()));
             }
             else
             {

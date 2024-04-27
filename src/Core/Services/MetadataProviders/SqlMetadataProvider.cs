@@ -828,6 +828,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 else if (relationship.Cardinality == Cardinality.One)
                 {
                     // Example: books(Many) - publisher(One)
+                    // where books.publisher_id is referencing publisher.id
                     // For Many-One OR One-One Relationships, DAB optimistically
                     // creates two ForeignKeyDefinitions to represent the relationship:
                     //
@@ -882,6 +883,7 @@ namespace Azure.DataApiBuilder.Core.Services
                 else if (relationship.Cardinality is Cardinality.Many)
                 {
                     // Example: publisher(One)-books(Many)
+                    // where publisher.id is referenced by books.publisher_id
                     // For Many-Many relationships, DAB creates one
                     // ForeignKeyDefinition to represent the relationship:
                     //
@@ -1901,10 +1903,13 @@ namespace Azure.DataApiBuilder.Core.Services
                         validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
 
                         // Save additional metadata for use when processing requests on self-joined/referencing entities.
-                        EntityRelationshipKey entityToFkDefKey = new(
-                            entityName: configResolvedFkDefinition.SourceEntityName,
-                            relationshipName: configResolvedFkDefinition.RelationshipName);
-                        RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
+                        if (IsSelfJoiningRelationship(configResolvedFkDefinition))
+                        {
+                            EntityRelationshipKey entityToFkDefKey = new(
+                                entityName: configResolvedFkDefinition.SourceEntityName,
+                                relationshipName: configResolvedFkDefinition.RelationshipName);
+                            RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
+                        }
                     }
                     else
                     {
@@ -1913,12 +1918,15 @@ namespace Azure.DataApiBuilder.Core.Services
                         // Save additional metadata for use when processing requests on self-joined/referencing entities.
                         // Since the configResolvedFkDefinition has additional metadata populated, DAB supplements that
                         // object by using the inferred FK definition's referenced/referencing columns.
-                        EntityRelationshipKey entityToFkDefKey = new(
-                            entityName: configResolvedFkDefinition.SourceEntityName,
-                            relationshipName: configResolvedFkDefinition.RelationshipName);
-                        configResolvedFkDefinition.ReferencedColumns = databaseResolvedFkDefinition.ReferencedColumns;
-                        configResolvedFkDefinition.ReferencingColumns = databaseResolvedFkDefinition.ReferencingColumns;
-                        RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
+                        if (IsSelfJoiningRelationship(databaseResolvedFkDefinition))
+                        {
+                            EntityRelationshipKey entityToFkDefKey = new(
+                                entityName: configResolvedFkDefinition.SourceEntityName,
+                                relationshipName: configResolvedFkDefinition.RelationshipName);
+                            configResolvedFkDefinition.ReferencedColumns = databaseResolvedFkDefinition.ReferencedColumns;
+                            configResolvedFkDefinition.ReferencingColumns = databaseResolvedFkDefinition.ReferencingColumns;
+                            RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
+                        }
                     }
                 }
                 else
@@ -1963,16 +1971,27 @@ namespace Azure.DataApiBuilder.Core.Services
                         validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
 
                         // The following operation generates FK metadata for use when processing requests on self-joined/referencing entities.
-                        EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
-                        if (!RelationshipToFkDefinition.TryAdd(key, configResolvedFkDefinition))
+                        if (IsSelfJoiningRelationship(configResolvedFkDefinition))
                         {
-                            Console.WriteLine("for config-only defined relationship, no db fk, dab is failing to keep track of both 2 generated fk definitions.");
+                            EntityRelationshipKey key = new(entityName: configResolvedFkDefinition.SourceEntityName, configResolvedFkDefinition.RelationshipName);
+                            RelationshipToFkDefinition.TryAdd(key, configResolvedFkDefinition);
                         }
                     }
                 }
             }
 
             return validatedFKDefinitionsToTarget;
+        }
+
+        /// <summary>
+        /// Returns whether the supplied foreign key definition denotes a self-joining relationship
+        /// by checking whether the backing tables are the same.
+        /// </summary>
+        /// <param name="fkDefinition">ForeignKeyDefinition representing a relationship.</param>
+        /// <returns>true when the ForeignKeyDefinition represents a self-joining relationship</returns>
+        private static bool IsSelfJoiningRelationship(ForeignKeyDefinition fkDefinition)
+        {
+            return fkDefinition.Pair.ReferencedDbTable.FullName.Equals(fkDefinition.Pair.ReferencingDbTable.FullName);
         }
 
         /// <summary>

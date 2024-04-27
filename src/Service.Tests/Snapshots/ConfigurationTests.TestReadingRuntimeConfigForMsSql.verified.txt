@@ -3509,7 +3509,7 @@
     {
       dbo_DimAccount: {
         Source: {
-          Object: dbo.DimAccount,
+          Object: DimAccount,
           Type: Table
         },
         GraphQL: {
@@ -3525,16 +3525,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read
-              },
-              {
-                Action: Create
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
+                Action: *
               }
             ]
           }

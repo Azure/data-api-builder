@@ -1090,7 +1090,7 @@ public class RuntimeConfigValidator : IConfigValidator
         invalidColumns.Clear();
         foreach (string field in fields)
         {
-            if (!sqlMetadataProvider.TryGetBackingColumn(entityName, field, out _))
+            if (!sqlMetadataProvider.TryGetExposedColumnName(entityName, field, out _))
             {
                 invalidColumns.Add(field);
             }

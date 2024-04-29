@@ -151,6 +151,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         mutationFields.AddRange(createMutationNodes);
                         break;
                     case EntityActionOperation.Update:
+                        // Generate Mutation operation for Patch and Update both for CosmosDB
                         mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
                             name,
                             inputs,
@@ -161,19 +162,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             databaseType,
                             returnEntityName,
                             rolesAllowedForMutation));
-                        break;
-                    case EntityActionOperation.Delete:
-                        mutationFields.Add(DeleteMutationBuilder.Build(
-                            name,
-                            objectTypeDefinitionNode,
-                            entities[dbEntityName],
-                            dbEntityName,
-                            databaseType,
-                            returnEntityName,
-                            rolesAllowedForMutation));
-                        break;
-                    case EntityActionOperation.Patch:
-                        mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
+
+                        if (databaseType is DatabaseType.CosmosDB_NoSQL)
+                        {
+                            mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
                             name,
                             inputs,
                             objectTypeDefinitionNode,
@@ -185,6 +177,18 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             rolesAllowedForMutation,
                             EntityActionOperation.Patch,
                             operationNamePrefix: "patch"));
+                        }
+                        
+                        break;
+                    case EntityActionOperation.Delete:
+                        mutationFields.Add(DeleteMutationBuilder.Build(
+                            name,
+                            objectTypeDefinitionNode,
+                            entities[dbEntityName],
+                            dbEntityName,
+                            databaseType,
+                            returnEntityName,
+                            rolesAllowedForMutation));
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(paramName: "action", message: "Invalid argument value provided.");

@@ -131,7 +131,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 EntityActionOperation.Patch =>
                     _authorizationResolver.AreColumnsAllowedForOperation(entityName,
                         roleName: clientRole,
-                        operation: EntityActionOperation.Patch,
+                        operation: EntityActionOperation.Update,
                         columns: inputArgumentKeys),
                 EntityActionOperation.Create =>
                     _authorizationResolver.AreColumnsAllowedForOperation(entityName,

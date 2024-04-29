@@ -333,7 +333,7 @@ public class AuthorizationResolver : IAuthorizationResolver
                     // so that it doesn't need to be evaluated per request.
                     PopulateAllowedExposedColumns(operationToColumn.AllowedExposedColumns, entityName, allowedColumns, metadataProvider);
 
-                    IEnumerable<EntityActionOperation> operations = GetAllOperationsForObjectType(runtimeConfig.DataSource.DatabaseType, operation, entity.Source.Type);
+                    IEnumerable<EntityActionOperation> operations = GetAllOperationsForObjectType(operation, entity.Source.Type);
                     foreach (EntityActionOperation crudOperation in operations)
                     {
                         // Try to add the opElement to the map if not present.
@@ -345,7 +345,7 @@ public class AuthorizationResolver : IAuthorizationResolver
 
                         foreach (string allowedColumn in allowedColumns)
                         {
-                            entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap(runtimeConfig.DataSource.DatabaseType, entity.Source.Type));
+                            entityToRoleMap.FieldToRolesMap.TryAdd(key: allowedColumn, CreateOperationToRoleMap(entity.Source.Type));
                             entityToRoleMap.FieldToRolesMap[allowedColumn][crudOperation].Add(role);
                         }
 
@@ -419,31 +419,17 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// Stored procedures only support Operation.Execute.
     /// In case the operation is Operation.All (wildcard), it gets resolved to a set of CRUD operations.
     /// </summary>
-    /// <param name="databaseType">database Type i.e Cosmos_NoSQL etc.</param>
     /// <param name="operation">operation type.</param>
     /// <param name="sourceType">Type of database object: Table, View, or Stored Procedure.</param>
     /// <returns>IEnumerable of all available operations.</returns>
-    public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(DatabaseType databaseType, EntityActionOperation operation, EntitySourceType? sourceType)
+    public static IEnumerable<EntityActionOperation> GetAllOperationsForObjectType(EntityActionOperation operation, EntitySourceType? sourceType)
     {
         if (sourceType is EntitySourceType.StoredProcedure)
         {
             return new List<EntityActionOperation> { EntityActionOperation.Execute };
         }
 
-        IEnumerable<EntityActionOperation> validOperations =
-            operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperations : new List<EntityActionOperation> { operation };
-
-        //For CosmosDB, add Patch operation to the list of valid operations if Update operation is present.
-        if (databaseType is DatabaseType.CosmosDB_NoSQL &&
-                    validOperations.Contains(EntityActionOperation.Update))
-        {
-            List<EntityActionOperation> tempOperationList = validOperations.ToList<EntityActionOperation>();
-            tempOperationList.Add(EntityActionOperation.Patch);
-
-            validOperations = tempOperationList;
-        };
-
-        return validOperations;
+        return operation is EntityActionOperation.All ? EntityAction.ValidPermissionOperations : new List<EntityActionOperation> { operation };
     }
 
     /// <summary>
@@ -817,10 +803,10 @@ public class AuthorizationResolver : IAuthorizationResolver
     /// Creates new key value map of
     /// Key: operationType
     /// Value: Collection of role names.
-    /// There are only six possible operations
+    /// There are only five possible operations
     /// </summary>
     /// <returns>Dictionary: Key - Operation | Value - List of roles.</returns>
-    private static Dictionary<EntityActionOperation, List<string>> CreateOperationToRoleMap(DatabaseType databaseType, EntitySourceType? sourceType)
+    private static Dictionary<EntityActionOperation, List<string>> CreateOperationToRoleMap(EntitySourceType? sourceType)
     {
         if (sourceType is EntitySourceType.StoredProcedure)
         {
@@ -830,21 +816,13 @@ public class AuthorizationResolver : IAuthorizationResolver
             };
         }
 
-        Dictionary<EntityActionOperation, List<string>> operationMap = new()
+        return new Dictionary<EntityActionOperation, List<string>>()
         {
             { EntityActionOperation.Create, new List<string>()},
             { EntityActionOperation.Read, new List<string>()},
             { EntityActionOperation.Update, new List<string>()},
             { EntityActionOperation.Delete, new List<string>()}
         };
-
-        // Patch operation is supported only for NOSQL databases i.e. CosmosDB
-        if (databaseType is DatabaseType.CosmosDB_NoSQL)
-        {
-            operationMap.Add(EntityActionOperation.Patch, new List<string>());
-        }
-
-        return operationMap;
     }
 
     #endregion

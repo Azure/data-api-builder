@@ -425,6 +425,27 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }";
 
+        internal const string GRAPHQL_SCHEMA_WITH_CYCLE = @"
+type Character {
+    id : ID,
+    name : String,
+    star: Planet,
+    moons: [Moon],
+}
+
+type Planet @model(name:""Planet"") {
+    id : ID!,
+    name : String,
+    character: Character
+}
+
+type Moon {
+    id : ID,
+    name : String,
+    details : String,
+    character: Character
+}
+";
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
@@ -2936,6 +2957,34 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
             }
+        }
+
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public void ValidateGraphQLSchemaForCircularReference()
+        {
+            // Read the base config from the file system
+            TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
+            FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+            if (!baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig))
+            {
+                throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
+            }
+
+            // Setup a mock file system, and use that one with the loader/provider for the config
+            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
+            {
+                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA_WITH_CYCLE) },
+                { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
+                    new MockFileData(baseConfig.ToJson()) }
+            });
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+
+            DataApiBuilderException exception =
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+            Assert.AreEqual("Circular reference detected in the schema for entity 'Character'.", exception.Message);
+            Assert.AreEqual(System.Net.HttpStatusCode.InternalServerError, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
         }
 
         [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]

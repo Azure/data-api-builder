@@ -195,16 +195,38 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
             IncrementingInteger tableCounter,
-            EntityDbPolicyCosmosModel? previousEntity = null)
+            EntityDbPolicyCosmosModel? previousEntity = null,
+            HashSet<string>? visitedEntity = null)
         {
             // Traverse the fields and add them to the path
             foreach (FieldDefinitionNode field in fields)
             {
+                // Create a tracker to keep track of visited entities to detect circular references
+                HashSet<string> trackerForField = new();
+                if (visitedEntity is not null)
+                {
+                    trackerForField = visitedEntity;
+                }
+
                 string entityType = field.Type.NamedType().Name.Value;
+
                 // If the entity is not in the runtime config, skip it
                 if (!_runtimeConfig.Entities.ContainsKey(entityType))
                 {
                     continue;
+                }
+
+                // If the entity is already visited, then it is a circular reference
+                if (trackerForField.Contains(entityType))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Circular reference detected in the schema for entity '{entityType}'.",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+                else
+                {
+                    trackerForField.Add(entityType);
                 }
 
                 string? alias = null;
@@ -253,7 +275,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     schemaDocument: schemaDocument,
                     currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
                     tableCounter: tableCounter,
-                    previousEntity: isArrayType ? currentEntity : null);
+                    previousEntity: isArrayType ? currentEntity : null,
+                    visitedEntity: trackerForField);
             }
         }
 

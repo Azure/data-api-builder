@@ -657,8 +657,7 @@ namespace Cli
                     options.Permissions,
                     updatedPolicy,
                     updatedFields,
-                    updatedSourceType,
-                    initialConfig.DataSource.DatabaseType);
+                    updatedSourceType);
 
                 if (updatedPermissions is null)
                 {
@@ -749,8 +748,7 @@ namespace Cli
                                                                         IEnumerable<string> permissions,
                                                                         EntityActionPolicy? policy,
                                                                         EntityActionFields? fields,
-                                                                        EntitySourceType? sourceType,
-                                                                        DatabaseType databaseType)
+                                                                        EntitySourceType? sourceType)
         {
 
             // Parse role and operations from the permissions string
@@ -794,7 +792,7 @@ namespace Cli
                         // User didn't use WILDCARD, and wants to update some of the operations.
                         IDictionary<EntityActionOperation, EntityAction> existingOperations
                             = ConvertOperationArrayToIEnumerable(
-                                permission.Actions, entityToUpdate.Source.Type, databaseType);
+                                permission.Actions, entityToUpdate.Source.Type);
 
                         // Merge existing operations with new operations
                         EntityAction[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);

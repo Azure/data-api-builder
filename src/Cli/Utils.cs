@@ -87,7 +87,7 @@ namespace Cli
         /// </summary>
         /// <param name="operations">Array of operations which is of type JsonElement.</param>
         /// <returns>Dictionary of operations</returns>
-        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType? sourceType, DatabaseType databaseType)
+        public static IDictionary<EntityActionOperation, EntityAction> ConvertOperationArrayToIEnumerable(EntityAction[] operations, EntitySourceType? sourceType)
         {
             Dictionary<EntityActionOperation, EntityAction> result = new();
             foreach (EntityAction operation in operations)
@@ -97,11 +97,6 @@ namespace Cli
                 {
                     HashSet<EntityActionOperation> resolvedOperations = sourceType is EntitySourceType.StoredProcedure ?
                         EntityAction.ValidStoredProcedurePermissionOperations : EntityAction.ValidPermissionOperations;
-
-                    if (databaseType is DatabaseType.CosmosDB_NoSQL && resolvedOperations.Contains(EntityActionOperation.Update))
-                    {
-                        resolvedOperations.Add(EntityActionOperation.Patch);
-                    }
 
                     // Expand wildcard to all valid operations (except execute)
                     foreach (EntityActionOperation validOp in resolvedOperations)

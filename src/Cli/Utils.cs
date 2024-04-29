@@ -96,8 +96,8 @@ namespace Cli
                 if (op is EntityActionOperation.All)
                 {
                     HashSet<EntityActionOperation> resolvedOperations = sourceType is EntitySourceType.StoredProcedure ?
-                        EntityAction.ValidStoredProcedurePermissionOperations : EntityAction.ValidPermissionOperations;
-
+                        EntityAction.ValidStoredProcedurePermissionOperations :
+                        EntityAction.ValidPermissionOperations;
                     // Expand wildcard to all valid operations (except execute)
                     foreach (EntityActionOperation validOp in resolvedOperations)
                     {

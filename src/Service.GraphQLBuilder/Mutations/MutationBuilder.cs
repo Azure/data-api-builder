@@ -178,7 +178,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                             EntityActionOperation.Patch,
                             operationNamePrefix: "patch"));
                         }
-                        
+
                         break;
                     case EntityActionOperation.Delete:
                         mutationFields.Add(DeleteMutationBuilder.Build(

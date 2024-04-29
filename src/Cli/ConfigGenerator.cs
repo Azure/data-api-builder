@@ -364,7 +364,7 @@ namespace Cli
             // Try to get the source object as string or DatabaseObjectSource for new Entity
             if (!TryCreateSourceObjectForNewEntity(
                 options,
-                initialRuntimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL,
+                initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL,
                 out EntitySource? source))
             {
                 _logger.LogError("Unable to create the source object.");
@@ -374,11 +374,7 @@ namespace Cli
             EntityActionPolicy? policy = GetPolicyForOperation(options.PolicyRequest, options.PolicyDatabase);
             EntityActionFields? field = GetFieldsForOperation(options.FieldsToInclude, options.FieldsToExclude);
 
-            EntityPermission[]? permissionSettings = ParsePermission(
-                options.Permissions,
-                policy,
-                field,
-                source.Type);
+            EntityPermission[]? permissionSettings = ParsePermission(options.Permissions, policy, field, source.Type);
             if (permissionSettings is null)
             {
                 _logger.LogError("Please add permission in the following format. --permissions \"<<role>>:<<actions>>\"");
@@ -428,7 +424,7 @@ namespace Cli
                 }
             }
 
-            EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL);
+            EntityRestOptions restOptions = ConstructRestOptions(options.RestRoute, SupportedRestMethods, initialRuntimeConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions graphqlOptions = ConstructGraphQLTypeDetails(options.GraphQLType, graphQLOperationsForStoredProcedures);
 
             // Create new entity.
@@ -634,7 +630,7 @@ namespace Cli
                 }
             }
 
-            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL);
+            EntityRestOptions updatedRestDetails = ConstructUpdatedRestDetails(entity, options, initialConfig.DataSource.DatabaseType == DatabaseType.CosmosDB_NoSQL);
             EntityGraphQLOptions updatedGraphQLDetails = ConstructUpdatedGraphQLDetails(entity, options);
             EntityPermission[]? updatedPermissions = entity!.Permissions;
             Dictionary<string, EntityRelationship>? updatedRelationships = entity.Relationships;
@@ -652,12 +648,7 @@ namespace Cli
             if (options.Permissions is not null && options.Permissions.Any())
             {
                 // Get the Updated Permission Settings
-                updatedPermissions = GetUpdatedPermissionSettings(
-                    entity,
-                    options.Permissions,
-                    updatedPolicy,
-                    updatedFields,
-                    updatedSourceType);
+                updatedPermissions = GetUpdatedPermissionSettings(entity, options.Permissions, updatedPolicy, updatedFields, updatedSourceType);
 
                 if (updatedPermissions is null)
                 {
@@ -790,9 +781,7 @@ namespace Cli
                     else
                     {
                         // User didn't use WILDCARD, and wants to update some of the operations.
-                        IDictionary<EntityActionOperation, EntityAction> existingOperations
-                            = ConvertOperationArrayToIEnumerable(
-                                permission.Actions, entityToUpdate.Source.Type);
+                        IDictionary<EntityActionOperation, EntityAction> existingOperations = ConvertOperationArrayToIEnumerable(permission.Actions, entityToUpdate.Source.Type);
 
                         // Merge existing operations with new operations
                         EntityAction[] updatedOperationArray = GetUpdatedOperationArray(newOperationArray, policy, fields, existingOperations);

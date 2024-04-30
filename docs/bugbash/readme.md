@@ -12,7 +12,7 @@ Alternatively, You can create an account on portal https://learn.microsoft.com/e
 ## Scenarios:
 **Making connection to Cosmos DB**
 - [ ] You should be able to use DAB using Connection String.
-- [ ] You should be able to use DAB using Managed Identity.
+- [ ] You should be able to use DAB using Managed Identity (ref, how to set up RBAC for Cosmos DB https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac)
 
 **Mutation Operation**
 - [ ] Should be able to Create a simple/complex Item

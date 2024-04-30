@@ -120,9 +120,9 @@ update Broker --config "dab-config.DwSql.json" --permissions "authenticated:crea
 update WebsiteUser --config "dab-config.DwSql.json" --permissions "authenticated:create,read,delete,update" --rest false --graphql "websiteUser:websiteUsers"
 update SupportedType --config "dab-config.DwSql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
 update Tree --config "dab-config.DwSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
-update Shrub --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
+update Shrub --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName" --relationship fungus --cardinality one --target.entity Fungus --relationship.fields "species:habitat"
 update Fungus --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
-update Fungus --config "dab-config.DwSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
+update Fungus --config "dab-config.DwSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'" --relationship Shrub --cardinality one --target.entity Shrub --relationship.fields "habitat:species"
 update books_view_all --config "dab-config.DwSql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update books_view_with_mapping --config "dab-config.DwSql.json" --map "id:book_id" 
 update series --config "dab-config.DwSql.json" --relationship comics --target.entity Comic --cardinality many --relationship.fields "id:series_id"

@@ -1,0 +1,1502 @@
+[
+    {
+        "id": "7388354b-a93c-44a7-a415-e11ece234579",
+        "name": "Earth",
+        "dimension": "space",
+        "age": 0,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "7388354b-a93c-44a7-a415-e11ece234579",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Earth_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "7388354b-a93c-44a7-a415-e11ece234579",
+                "name": "Earth_star",
+                "tag": {
+                    "id": "7388354b-a93c-44a7-a415-e11ece234579",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "7388354b-a93c-44a7-a415-e11ece234579",
+                "name": "Earth_star",
+                "tag": {
+                    "id": "7388354b-a93c-44a7-a415-e11ece234579",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "7388354b-a93c-44a7-a415-e11ece234579",
+                "name": "Earth_sun"
+            },
+            {
+                "id": "7388354b-a93c-44a7-a415-e11ece234579",
+                "name": "Earth_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "7388354b-a93c-44a7-a415-e11ece234579",
+                "name": "0 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "7388354b-a93c-44a7-a415-e11ece234579v1",
+                        "name": "moonattr0",
+                        "moreAttributes": [
+                            {
+                                "id": "7388354b-a93c-44a7-a415-e11ece234579v1v1",
+                                "name": "moonattr0"
+                            },
+                            {
+                                "id": "7388354b-a93c-44a7-a415-e11ece234579v1v2",
+                                "name": "moonattr0"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "7388354b-a93c-44a7-a415-e11ece234579v2",
+                        "name": "moonattr1",
+                        "moreAttributes": [
+                            {
+                                "id": "7388354b-a93c-44a7-a415-e11ece234579v1v1",
+                                "name": "moonattr0"
+                            },
+                            {
+                                "id": "7388354b-a93c-44a7-a415-e11ece234579v1v2",
+                                "name": "moonattr0"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "7388354b-a93c-44a7-a415-e11ece234579",
+                "name": "1 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "7388354b-a93c-44a7-a415-e11ece234579v1",
+                        "name": "moonattr0",
+                        "moreAttributes": [
+                            {
+                                "id": "7388354b-a93c-44a7-a415-e11ece234579v1v1",
+                                "name": "moonattr0"
+                            },
+                            {
+                                "id": "7388354b-a93c-44a7-a415-e11ece234579v1v2",
+                                "name": "moonattr0"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "7388354b-a93c-44a7-a415-e11ece234579v2",
+                        "name": "moonattr1",
+                        "moreAttributes": [
+                            {
+                                "id": "7388354b-a93c-44a7-a415-e11ece234579v1v1",
+                                "name": "moonattr0"
+                            },
+                            {
+                                "id": "7388354b-a93c-44a7-a415-e11ece234579v1v2",
+                                "name": "moonattr0"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "7388354b-a93c-44a7-a415-e11ece234579",
+            "name": "blue earth0",
+            "type": "earth0"
+        },
+        "additionalAttributes": [
+            {
+                "id": "7388354b-a93c-44a7-a415-e11ece234579v1",
+                "name": "volcano0"
+            },
+            {
+                "id": "7388354b-a93c-44a7-a415-e11ece234579v2",
+                "name": "volcano1"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8BAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8BAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-2576b6d101da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+        "name": "Mars",
+        "dimension": "space",
+        "age": 1,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Mars_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+                "name": "Mars_star",
+                "tag": {
+                    "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+                "name": "Mars_star",
+                "tag": {
+                    "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+                "name": "Mars_sun"
+            },
+            {
+                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+                "name": "Mars_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+                "name": "1 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1",
+                        "name": "moonattr1",
+                        "moreAttributes": [
+                            {
+                                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1v1",
+                                "name": "moonattr1"
+                            },
+                            {
+                                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1v2",
+                                "name": "moonattr1"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v2",
+                        "name": "moonattr2",
+                        "moreAttributes": [
+                            {
+                                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1v1",
+                                "name": "moonattr1"
+                            },
+                            {
+                                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1v2",
+                                "name": "moonattr1"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+                "name": "2 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1",
+                        "name": "moonattr1",
+                        "moreAttributes": [
+                            {
+                                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1v1",
+                                "name": "moonattr1"
+                            },
+                            {
+                                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1v2",
+                                "name": "moonattr1"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v2",
+                        "name": "moonattr2",
+                        "moreAttributes": [
+                            {
+                                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1v1",
+                                "name": "moonattr1"
+                            },
+                            {
+                                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1v2",
+                                "name": "moonattr1"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1",
+            "name": "blue earth1",
+            "type": "earth1"
+        },
+        "additionalAttributes": [
+            {
+                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v1",
+                "name": "volcano1"
+            },
+            {
+                "id": "3f09ed0a-345b-4689-a6a2-25f3e216caf1v2",
+                "name": "volcano2"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8CAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8CAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-257a41ba01da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "1b7019da-780d-438e-949b-2565367cbf90",
+        "name": "Jupiter",
+        "dimension": "space",
+        "age": 2,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "1b7019da-780d-438e-949b-2565367cbf90",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Jupiter_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "1b7019da-780d-438e-949b-2565367cbf90",
+                "name": "Jupiter_star",
+                "tag": {
+                    "id": "1b7019da-780d-438e-949b-2565367cbf90",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "1b7019da-780d-438e-949b-2565367cbf90",
+                "name": "Jupiter_star",
+                "tag": {
+                    "id": "1b7019da-780d-438e-949b-2565367cbf90",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "1b7019da-780d-438e-949b-2565367cbf90",
+                "name": "Jupiter_sun"
+            },
+            {
+                "id": "1b7019da-780d-438e-949b-2565367cbf90",
+                "name": "Jupiter_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "1b7019da-780d-438e-949b-2565367cbf90",
+                "name": "2 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "1b7019da-780d-438e-949b-2565367cbf90v1",
+                        "name": "moonattr2",
+                        "moreAttributes": [
+                            {
+                                "id": "1b7019da-780d-438e-949b-2565367cbf90v1v1",
+                                "name": "moonattr2"
+                            },
+                            {
+                                "id": "1b7019da-780d-438e-949b-2565367cbf90v1v2",
+                                "name": "moonattr2"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "1b7019da-780d-438e-949b-2565367cbf90v2",
+                        "name": "moonattr3",
+                        "moreAttributes": [
+                            {
+                                "id": "1b7019da-780d-438e-949b-2565367cbf90v1v1",
+                                "name": "moonattr2"
+                            },
+                            {
+                                "id": "1b7019da-780d-438e-949b-2565367cbf90v1v2",
+                                "name": "moonattr2"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "1b7019da-780d-438e-949b-2565367cbf90",
+                "name": "3 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "1b7019da-780d-438e-949b-2565367cbf90v1",
+                        "name": "moonattr2",
+                        "moreAttributes": [
+                            {
+                                "id": "1b7019da-780d-438e-949b-2565367cbf90v1v1",
+                                "name": "moonattr2"
+                            },
+                            {
+                                "id": "1b7019da-780d-438e-949b-2565367cbf90v1v2",
+                                "name": "moonattr2"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "1b7019da-780d-438e-949b-2565367cbf90v2",
+                        "name": "moonattr3",
+                        "moreAttributes": [
+                            {
+                                "id": "1b7019da-780d-438e-949b-2565367cbf90v1v1",
+                                "name": "moonattr2"
+                            },
+                            {
+                                "id": "1b7019da-780d-438e-949b-2565367cbf90v1v2",
+                                "name": "moonattr2"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "1b7019da-780d-438e-949b-2565367cbf90",
+            "name": "blue earth2",
+            "type": "earth2"
+        },
+        "additionalAttributes": [
+            {
+                "id": "1b7019da-780d-438e-949b-2565367cbf90v1",
+                "name": "volcano2"
+            },
+            {
+                "id": "1b7019da-780d-438e-949b-2565367cbf90v2",
+                "name": "volcano3"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8DAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8DAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-257e0abb01da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+        "name": "Tatooine",
+        "dimension": "space",
+        "age": 3,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Tatooine_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+                "name": "Tatooine_star",
+                "tag": {
+                    "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+                "name": "Tatooine_star",
+                "tag": {
+                    "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+                "name": "Tatooine_sun"
+            },
+            {
+                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+                "name": "Tatooine_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+                "name": "3 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1",
+                        "name": "moonattr3",
+                        "moreAttributes": [
+                            {
+                                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1v1",
+                                "name": "moonattr3"
+                            },
+                            {
+                                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1v2",
+                                "name": "moonattr3"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv2",
+                        "name": "moonattr4",
+                        "moreAttributes": [
+                            {
+                                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1v1",
+                                "name": "moonattr3"
+                            },
+                            {
+                                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1v2",
+                                "name": "moonattr3"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+                "name": "4 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1",
+                        "name": "moonattr3",
+                        "moreAttributes": [
+                            {
+                                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1v1",
+                                "name": "moonattr3"
+                            },
+                            {
+                                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1v2",
+                                "name": "moonattr3"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv2",
+                        "name": "moonattr4",
+                        "moreAttributes": [
+                            {
+                                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1v1",
+                                "name": "moonattr3"
+                            },
+                            {
+                                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1v2",
+                                "name": "moonattr3"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5f",
+            "name": "blue earth3",
+            "type": "earth3"
+        },
+        "additionalAttributes": [
+            {
+                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv1",
+                "name": "volcano3"
+            },
+            {
+                "id": "f5e33bc1-d9b7-4864-a0ff-e4986a649d5fv2",
+                "name": "volcano4"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8EAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8EAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-257f649801da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "0d3910b7-1376-483e-919b-58decd143b67",
+        "name": "Endor",
+        "dimension": "space",
+        "age": 4,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "0d3910b7-1376-483e-919b-58decd143b67",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Endor_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "0d3910b7-1376-483e-919b-58decd143b67",
+                "name": "Endor_star",
+                "tag": {
+                    "id": "0d3910b7-1376-483e-919b-58decd143b67",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "0d3910b7-1376-483e-919b-58decd143b67",
+                "name": "Endor_star",
+                "tag": {
+                    "id": "0d3910b7-1376-483e-919b-58decd143b67",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "0d3910b7-1376-483e-919b-58decd143b67",
+                "name": "Endor_sun"
+            },
+            {
+                "id": "0d3910b7-1376-483e-919b-58decd143b67",
+                "name": "Endor_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "0d3910b7-1376-483e-919b-58decd143b67",
+                "name": "4 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "0d3910b7-1376-483e-919b-58decd143b67v1",
+                        "name": "moonattr4",
+                        "moreAttributes": [
+                            {
+                                "id": "0d3910b7-1376-483e-919b-58decd143b67v1v1",
+                                "name": "moonattr4"
+                            },
+                            {
+                                "id": "0d3910b7-1376-483e-919b-58decd143b67v1v2",
+                                "name": "moonattr4"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "0d3910b7-1376-483e-919b-58decd143b67v2",
+                        "name": "moonattr5",
+                        "moreAttributes": [
+                            {
+                                "id": "0d3910b7-1376-483e-919b-58decd143b67v1v1",
+                                "name": "moonattr4"
+                            },
+                            {
+                                "id": "0d3910b7-1376-483e-919b-58decd143b67v1v2",
+                                "name": "moonattr4"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "0d3910b7-1376-483e-919b-58decd143b67",
+                "name": "5 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "0d3910b7-1376-483e-919b-58decd143b67v1",
+                        "name": "moonattr4",
+                        "moreAttributes": [
+                            {
+                                "id": "0d3910b7-1376-483e-919b-58decd143b67v1v1",
+                                "name": "moonattr4"
+                            },
+                            {
+                                "id": "0d3910b7-1376-483e-919b-58decd143b67v1v2",
+                                "name": "moonattr4"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "0d3910b7-1376-483e-919b-58decd143b67v2",
+                        "name": "moonattr5",
+                        "moreAttributes": [
+                            {
+                                "id": "0d3910b7-1376-483e-919b-58decd143b67v1v1",
+                                "name": "moonattr4"
+                            },
+                            {
+                                "id": "0d3910b7-1376-483e-919b-58decd143b67v1v2",
+                                "name": "moonattr4"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "0d3910b7-1376-483e-919b-58decd143b67",
+            "name": "blue earth4",
+            "type": "earth4"
+        },
+        "additionalAttributes": [
+            {
+                "id": "0d3910b7-1376-483e-919b-58decd143b67v1",
+                "name": "volcano4"
+            },
+            {
+                "id": "0d3910b7-1376-483e-919b-58decd143b67v2",
+                "name": "volcano5"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8FAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8FAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-2581d9b001da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+        "name": "Dagobah",
+        "dimension": "space",
+        "age": 5,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Dagobah_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+                "name": "Dagobah_star",
+                "tag": {
+                    "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+                "name": "Dagobah_star",
+                "tag": {
+                    "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+                "name": "Dagobah_sun"
+            },
+            {
+                "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+                "name": "Dagobah_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+                "name": "5 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1",
+                        "name": "moonattr5",
+                        "moreAttributes": [
+                            {
+                                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1v1",
+                                "name": "moonattr5"
+                            },
+                            {
+                                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1v2",
+                                "name": "moonattr5"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "f20532e0-32d2-498c-8783-df41559d1ea8v2",
+                        "name": "moonattr6",
+                        "moreAttributes": [
+                            {
+                                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1v1",
+                                "name": "moonattr5"
+                            },
+                            {
+                                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1v2",
+                                "name": "moonattr5"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+                "name": "6 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1",
+                        "name": "moonattr5",
+                        "moreAttributes": [
+                            {
+                                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1v1",
+                                "name": "moonattr5"
+                            },
+                            {
+                                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1v2",
+                                "name": "moonattr5"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "f20532e0-32d2-498c-8783-df41559d1ea8v2",
+                        "name": "moonattr6",
+                        "moreAttributes": [
+                            {
+                                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1v1",
+                                "name": "moonattr5"
+                            },
+                            {
+                                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1v2",
+                                "name": "moonattr5"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "f20532e0-32d2-498c-8783-df41559d1ea8",
+            "name": "blue earth5",
+            "type": "earth5"
+        },
+        "additionalAttributes": [
+            {
+                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v1",
+                "name": "volcano5"
+            },
+            {
+                "id": "f20532e0-32d2-498c-8783-df41559d1ea8v2",
+                "name": "volcano6"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8GAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8GAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-2584466601da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+        "name": "Hoth",
+        "dimension": "space",
+        "age": 6,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Hoth_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+                "name": "Hoth_star",
+                "tag": {
+                    "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+                "name": "Hoth_star",
+                "tag": {
+                    "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+                "name": "Hoth_sun"
+            },
+            {
+                "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+                "name": "Hoth_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+                "name": "6 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1",
+                        "name": "moonattr6",
+                        "moreAttributes": [
+                            {
+                                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1v1",
+                                "name": "moonattr6"
+                            },
+                            {
+                                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1v2",
+                                "name": "moonattr6"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "e4978f16-9643-4cf6-b315-144b57604a5fv2",
+                        "name": "moonattr7",
+                        "moreAttributes": [
+                            {
+                                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1v1",
+                                "name": "moonattr6"
+                            },
+                            {
+                                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1v2",
+                                "name": "moonattr6"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+                "name": "7 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1",
+                        "name": "moonattr6",
+                        "moreAttributes": [
+                            {
+                                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1v1",
+                                "name": "moonattr6"
+                            },
+                            {
+                                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1v2",
+                                "name": "moonattr6"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "e4978f16-9643-4cf6-b315-144b57604a5fv2",
+                        "name": "moonattr7",
+                        "moreAttributes": [
+                            {
+                                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1v1",
+                                "name": "moonattr6"
+                            },
+                            {
+                                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1v2",
+                                "name": "moonattr6"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "e4978f16-9643-4cf6-b315-144b57604a5f",
+            "name": "blue earth6",
+            "type": "earth6"
+        },
+        "additionalAttributes": [
+            {
+                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv1",
+                "name": "volcano6"
+            },
+            {
+                "id": "e4978f16-9643-4cf6-b315-144b57604a5fv2",
+                "name": "volcano7"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8HAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8HAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-25869adb01da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "da15f462-07c0-45d4-a167-39762040e509",
+        "name": "Bespin",
+        "dimension": "space",
+        "age": 7,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "da15f462-07c0-45d4-a167-39762040e509",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Bespin_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "da15f462-07c0-45d4-a167-39762040e509",
+                "name": "Bespin_star",
+                "tag": {
+                    "id": "da15f462-07c0-45d4-a167-39762040e509",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "da15f462-07c0-45d4-a167-39762040e509",
+                "name": "Bespin_star",
+                "tag": {
+                    "id": "da15f462-07c0-45d4-a167-39762040e509",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "da15f462-07c0-45d4-a167-39762040e509",
+                "name": "Bespin_sun"
+            },
+            {
+                "id": "da15f462-07c0-45d4-a167-39762040e509",
+                "name": "Bespin_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "da15f462-07c0-45d4-a167-39762040e509",
+                "name": "7 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "da15f462-07c0-45d4-a167-39762040e509v1",
+                        "name": "moonattr7",
+                        "moreAttributes": [
+                            {
+                                "id": "da15f462-07c0-45d4-a167-39762040e509v1v1",
+                                "name": "moonattr7"
+                            },
+                            {
+                                "id": "da15f462-07c0-45d4-a167-39762040e509v1v2",
+                                "name": "moonattr7"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "da15f462-07c0-45d4-a167-39762040e509v2",
+                        "name": "moonattr8",
+                        "moreAttributes": [
+                            {
+                                "id": "da15f462-07c0-45d4-a167-39762040e509v1v1",
+                                "name": "moonattr7"
+                            },
+                            {
+                                "id": "da15f462-07c0-45d4-a167-39762040e509v1v2",
+                                "name": "moonattr7"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "da15f462-07c0-45d4-a167-39762040e509",
+                "name": "8 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "da15f462-07c0-45d4-a167-39762040e509v1",
+                        "name": "moonattr7",
+                        "moreAttributes": [
+                            {
+                                "id": "da15f462-07c0-45d4-a167-39762040e509v1v1",
+                                "name": "moonattr7"
+                            },
+                            {
+                                "id": "da15f462-07c0-45d4-a167-39762040e509v1v2",
+                                "name": "moonattr7"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "da15f462-07c0-45d4-a167-39762040e509v2",
+                        "name": "moonattr8",
+                        "moreAttributes": [
+                            {
+                                "id": "da15f462-07c0-45d4-a167-39762040e509v1v1",
+                                "name": "moonattr7"
+                            },
+                            {
+                                "id": "da15f462-07c0-45d4-a167-39762040e509v1v2",
+                                "name": "moonattr7"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "da15f462-07c0-45d4-a167-39762040e509",
+            "name": "blue earth7",
+            "type": "earth7"
+        },
+        "additionalAttributes": [
+            {
+                "id": "da15f462-07c0-45d4-a167-39762040e509v1",
+                "name": "volcano7"
+            },
+            {
+                "id": "da15f462-07c0-45d4-a167-39762040e509v2",
+                "name": "volcano8"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8IAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8IAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-2588dfcc01da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+        "name": "Spec%ial",
+        "dimension": "space",
+        "age": 8,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Spec%ial_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+                "name": "Spec%ial_star",
+                "tag": {
+                    "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+                "name": "Spec%ial_star",
+                "tag": {
+                    "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+                "name": "Spec%ial_sun"
+            },
+            {
+                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+                "name": "Spec%ial_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+                "name": "8 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1",
+                        "name": "moonattr8",
+                        "moreAttributes": [
+                            {
+                                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1v1",
+                                "name": "moonattr8"
+                            },
+                            {
+                                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1v2",
+                                "name": "moonattr8"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v2",
+                        "name": "moonattr9",
+                        "moreAttributes": [
+                            {
+                                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1v1",
+                                "name": "moonattr8"
+                            },
+                            {
+                                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1v2",
+                                "name": "moonattr8"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+                "name": "9 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1",
+                        "name": "moonattr8",
+                        "moreAttributes": [
+                            {
+                                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1v1",
+                                "name": "moonattr8"
+                            },
+                            {
+                                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1v2",
+                                "name": "moonattr8"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v2",
+                        "name": "moonattr9",
+                        "moreAttributes": [
+                            {
+                                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1v1",
+                                "name": "moonattr8"
+                            },
+                            {
+                                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1v2",
+                                "name": "moonattr8"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2",
+            "name": "blue earth8",
+            "type": "earth8"
+        },
+        "additionalAttributes": [
+            {
+                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v1",
+                "name": "volcano8"
+            },
+            {
+                "id": "7c055d33-efd6-424a-ad92-55bc0193a2f2v2",
+                "name": "volcano9"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8JAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8JAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-258b49e201da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    },
+    {
+        "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+        "name": "Earth",
+        "dimension": "space",
+        "age": 9,
+        "myBooleanProp": true,
+        "anotherPojo": {
+            "anotherProp": "myname",
+            "anotherIntProp": 55,
+            "person": {
+                "firstName": "A Person",
+                "lastName": "the last name",
+                "zipCode": 784298
+            }
+        },
+        "character": {
+            "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+            "name": "planet character",
+            "type": "Mars",
+            "homePlanet": 1,
+            "primaryFunction": "test function",
+            "star": {
+                "name": "Earth_star"
+            }
+        },
+        "stars": [
+            {
+                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+                "name": "Earth_star",
+                "tag": {
+                    "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+                    "name": "tag1"
+                }
+            },
+            {
+                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+                "name": "Earth_star",
+                "tag": {
+                    "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+                    "name": "tag2"
+                }
+            }
+        ],
+        "suns": [
+            {
+                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+                "name": "Earth_sun"
+            },
+            {
+                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+                "name": "Earth_sun"
+            }
+        ],
+        "moons": [
+            {
+                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+                "name": "9 moon",
+                "details": "12 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1",
+                        "name": "moonattr9",
+                        "moreAttributes": [
+                            {
+                                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1v1",
+                                "name": "moonattr9"
+                            },
+                            {
+                                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1v2",
+                                "name": "moonattr9"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v2",
+                        "name": "moonattr10",
+                        "moreAttributes": [
+                            {
+                                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1v1",
+                                "name": "moonattr9"
+                            },
+                            {
+                                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1v2",
+                                "name": "moonattr9"
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+                "name": "10 moon",
+                "details": "11 Craters",
+                "moonAdditionalAttributes": [
+                    {
+                        "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1",
+                        "name": "moonattr9",
+                        "moreAttributes": [
+                            {
+                                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1v1",
+                                "name": "moonattr9"
+                            },
+                            {
+                                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1v2",
+                                "name": "moonattr9"
+                            }
+                        ]
+                    },
+                    {
+                        "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v2",
+                        "name": "moonattr10",
+                        "moreAttributes": [
+                            {
+                                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1v1",
+                                "name": "moonattr9"
+                            },
+                            {
+                                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1v2",
+                                "name": "moonattr9"
+                            }
+                        ]
+                    }
+                ]
+            }
+        ],
+        "earth": {
+            "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1",
+            "name": "blue earth9",
+            "type": "earth9"
+        },
+        "additionalAttributes": [
+            {
+                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v1",
+                "name": "volcano9"
+            },
+            {
+                "id": "b3dc0b3b-5f7e-47a9-8a1a-557da00dc2c1v2",
+                "name": "volcano10"
+            }
+        ],
+        "tags": [
+            "tag1",
+            "tag2"
+        ],
+        "_rid": "8spdALApbH8KAAAAAAAAAA==",
+        "_self": "dbs/8spdAA==/colls/8spdALApbH8=/docs/8spdALApbH8KAAAAAAAAAA==/",
+        "_etag": "\"00000000-0000-0000-9a54-258d977d01da\"",
+        "_attachments": "attachments/",
+        "_ts": 1714408915
+    }
+]

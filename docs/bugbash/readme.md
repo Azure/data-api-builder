@@ -1,7 +1,7 @@
 ## Basic understanding of the Product:
-Basic Understanding of Cosmos DB No SQL: https://learn.microsoft.com/en-us/azure/cosmos-db/introduction
-Basic Understanding of GraphQL: https://graphql.org/learn/
-Basic Understanding of DAB: https://learn.microsoft.com/en-us/azure/data-api-builder/
+- Basic Understanding of Cosmos DB No SQL: https://learn.microsoft.com/en-us/azure/cosmos-db/introduction
+- Basic Understanding of GraphQL: https://graphql.org/learn/
+- Basic Understanding of DAB: https://learn.microsoft.com/en-us/azure/data-api-builder/
  
 ## Set Up
 1. Install Cosmos Db Emulator from here: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=windows%2Ccsharp&pivots=api-nosql#install-the-emulator \

@@ -425,11 +425,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }";
 
-        internal const string GRAPHQL_SCHEMA_WITH_CYCLE = @"
+        internal const string GRAPHQL_SCHEMA_WITH_CYCLE_ARRAY = @"
 type Character {
     id : ID,
     name : String,
-    star: Planet,
     moons: [Moon],
 }
 
@@ -446,6 +445,28 @@ type Moon {
     character: Character
 }
 ";
+
+        internal const string GRAPHQL_SCHEMA_WITH_CYCLE_OBJECT = @"
+type Character {
+    id : ID,
+    name : String,
+    moons: Moon,
+}
+
+type Planet @model(name:""Planet"") {
+    id : ID!,
+    name : String,
+    character: Character
+}
+
+type Moon {
+    id : ID,
+    name : String,
+    details : String,
+    character: Character
+}
+";
+
         [TestCleanup]
         public void CleanupAfterEachTest()
         {
@@ -2959,8 +2980,16 @@ type Moon {
             }
         }
 
+        /// <summary>
+        /// In CosmosDB NoSQL, we store data in the form of JSON.Practically, JSON can be very complex.
+        /// But DAB doesn't support JSON with circular references e.g if 'Character.Moon' is a valid JSON Path, the
+        /// 'Moon.Character' should not be there, DAB would throw an exception during the load itself.
+        /// </summary>
+        /// <exception cref="ApplicationException"></exception>
         [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public void ValidateGraphQLSchemaForCircularReference()
+        [DataRow(GRAPHQL_SCHEMA_WITH_CYCLE_OBJECT, DisplayName = "When Circular Reference is there with Object type (i.e. 'Moon' in 'Character' Entity")]
+        [DataRow(GRAPHQL_SCHEMA_WITH_CYCLE_ARRAY, DisplayName = "When Circular Reference is there with Array type (i.e. '[Moon]' in 'Character' Entity")]
+        public void ValidateGraphQLSchemaForCircularReference(string schema)
         {
             // Read the base config from the file system
             TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
@@ -2973,7 +3002,7 @@ type Moon {
             // Setup a mock file system, and use that one with the loader/provider for the config
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
-                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA_WITH_CYCLE) },
+                { @"../schema.gql", new MockFileData(schema) },
                 { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
                     new MockFileData(baseConfig.ToJson()) }
             });
@@ -2982,7 +3011,7 @@ type Moon {
 
             DataApiBuilderException exception =
                 Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
-            Assert.AreEqual("Circular reference detected in the schema for entity 'Character'.", exception.Message);
+            Assert.AreEqual("Circular reference detected in the provided GraphQL schema for entity 'Character'.", exception.Message);
             Assert.AreEqual(System.Net.HttpStatusCode.InternalServerError, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
         }

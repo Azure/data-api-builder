@@ -187,11 +187,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// 4. Check if we get previous entity with join information, if yes append it to the current entity also
         /// 5. Recursively call this function, to process the schema
         /// </summary>
-        /// <param name="fields"></param>
-        /// <param name="schemaDocument"></param>
-        /// <param name="currentPath"></param>
-        /// <param name="previousEntity">indicates the parent entity for which we are processing the schema.</param>
-        private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
+        /// <param name="fields">All the fields of an entity</param>
+        /// <param name="schemaDocument">Schema Documents, useful to get fields information of an entity</param>
+        /// <param name="currentPath">Generated path of an entity</param>
+        /// <param name="tableCounter">Counter used to generate table alias</param>
+        /// <param name="previousEntity">indicates the parent entity for which we are processing the schema.
+        /// It is useful to get the JOIN statement information and create further new statements</param>
+        /// <param name="visitedEntity"> Keeps a track of the path in an entity, to detect circular reference</param>
+        /// <remarks>It detects the circular reference in the schema while processing the schema and throws <seealso cref="DataApiBuilderException"/> </remarks>
+        private void ProcessSchema(
+            IReadOnlyList<FieldDefinitionNode> fields,
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
             IncrementingInteger tableCounter,
@@ -217,16 +222,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 }
 
                 // If the entity is already visited, then it is a circular reference
-                if (trackerForField.Contains(entityType))
+                if (!trackerForField.Add(entityType))
                 {
                     throw new DataApiBuilderException(
-                        message: $"Circular reference detected in the schema for entity '{entityType}'.",
+                        message: $"Circular reference detected in the provided GraphQL schema for entity '{entityType}'.",
                         statusCode: System.Net.HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                }
-                else
-                {
-                    trackerForField.Add(entityType);
                 }
 
                 string? alias = null;

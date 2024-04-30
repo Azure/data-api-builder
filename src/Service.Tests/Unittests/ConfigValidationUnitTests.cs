@@ -410,7 +410,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
@@ -664,8 +664,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
             string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "noBackingColumn", out discard)).Returns(false);
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "backingColumn", out discard)).Returns(true);
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), "noBackingColumn", out discard)).Returns(false);
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), "backingColumn", out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
@@ -795,7 +795,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
 
             string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);

@@ -576,6 +576,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Test One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship(string dbQuery)
+        {
+            string graphQLQueryName = "shrubs";
+            string graphQLQuery = @"query {
+                shrubs {
+                  items {
+                    fancyName
+                    fungus {
+                      habitat
+                  }
+                }
+              }
+            }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
         /// This deeply nests a many-to-one/one-to-many join multiple times to
         /// show that it still results in a valid query.
         /// </summary>

@@ -6,7 +6,7 @@
 ## Set Up
 1. Install Cosmos Db Emulator from here: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=windows%2Ccsharp&pivots=api-nosql#install-the-emulator \
 Alternatively, You can create an account on portal https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-create-account?tabs=azure-portal
-2. Upload this data to emulator or real account:
+2. Upload this data to emulator or real account: 
 3. Use this runtime config JSON to start: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
 
 ## Scenarios:

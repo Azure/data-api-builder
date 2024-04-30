@@ -128,6 +128,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await OneToOneJoinQuery(mySqlQuery);
         }
 
+        /// <summary>
+        /// Test query on One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('fancyName', `subq7`.`fancyName`, 'fungus', `subq7`.`fungus`)), JSON_ARRAY()) AS `data`
+                FROM (
+                    SELECT `table0`.`species` AS `fancyName`,
+                        `table1_subq`.`data` AS `fungus`
+                    FROM `trees` AS `table0`
+                    LEFT OUTER JOIN LATERAL(SELECT JSON_OBJECT('habitat', `subq6`.`habitat`) AS `data` FROM (
+                            SELECT `table1`.`habitat` AS `habitat`
+                            FROM `fungi` AS `table1`
+                            WHERE `table1`.`habitat` = `table0`.`species`
+                            ORDER BY `table1`.`habitat` ASC LIMIT 1
+                            ) AS `subq6`) AS `table1_subq` ON TRUE
+                    WHERE 1 = 1
+                    LIMIT 100
+                    ) AS `subq7`
+            ";
+
+            await OneToOneJoinQueryWithMappedFieldNamesInRelationship(mySqlQuery);
+        }
+
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {

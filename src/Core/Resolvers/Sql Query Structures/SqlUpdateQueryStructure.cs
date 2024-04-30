@@ -122,10 +122,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     Predicates.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(pkBackingColumn, param.Value)));
                 }
                 else // Unpack the input argument type as columns to update
-                if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
+                if (param.Key == UpdateAndPatchMutationBuilder.INPUT_ARGUMENT_NAME)
                 {
                     IDictionary<string, object?> updateFields =
-                        GQLMutArgumentToDictParams(context, UpdateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams);
+                        GQLMutArgumentToDictParams(context, UpdateAndPatchMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams);
 
                     foreach (KeyValuePair<string, object?> field in updateFields)
                     {

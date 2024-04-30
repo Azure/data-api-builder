@@ -314,7 +314,7 @@ namespace Azure.DataApiBuilder.Core.Services
         }
 
         /// <summary>
-        /// This function identifies is the value type is primitive or not.
+        /// This function identifies if the value type is primitive or not.
         /// </summary>
         public static bool IsPrimitiveType(SyntaxKind kind)
         {

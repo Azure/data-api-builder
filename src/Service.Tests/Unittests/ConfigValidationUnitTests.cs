@@ -1141,7 +1141,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitiesWithGraphQLExposedGenerateDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateEntitiesWithGraphQLExposedGenerateDuplicateQueries(DatabaseType databaseType)
         {
             // Entity Name: Book
             // pk_query: book_by_pk
@@ -1158,7 +1160,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "Book", bookWithUpperCase }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType);
         }
 
         /// <summary>
@@ -1181,7 +1183,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateStoredProcedureAndTableGeneratedDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateStoredProcedureAndTableGeneratedDuplicateQueries(DatabaseType databaseType)
         {
             // Entity Name: ExecuteBook
             // Entity Type: table
@@ -1199,7 +1203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "executeBook", bookTable },
                 { "Book_by_pk", bookByPkStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType);
         }
 
         /// <summary>
@@ -1224,7 +1228,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateStoredProcedureAndTableGeneratedDuplicateMutation()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateStoredProcedureAndTableGeneratedDuplicateMutation(DatabaseType databaseType)
         {
             // Entity Name: Book
             // Entity Type: table
@@ -1241,7 +1247,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "ExecuteBooks", bookTable },
                 { "AddBook", addBookStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType);
         }
 
         /// <summary>
@@ -1260,7 +1266,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ///  }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitiesWithNameCollisionInGraphQLTypeGenerateDuplicateQueriesCase()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateEntitiesWithNameCollisionInGraphQLTypeGenerateDuplicateQueriesCase(DatabaseType databaseType)
         {
             // Entity Name: book
             // pk_query: book_by_pk
@@ -1277,7 +1285,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
         }
 
         /// <summary>
@@ -1301,7 +1309,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ///  }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitiesWithCollisionsInSingularPluralNamesGenerateDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateEntitiesWithCollisionsInSingularPluralNamesGenerateDuplicateQueries(DatabaseType databaseType)
         {
             // Entity Name: book
             // pk_query: book_by_pk
@@ -1318,7 +1328,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
         }
 
         /// <summary>
@@ -1338,7 +1348,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitiesWithNameCollisionInSingularPluralTypeGeneratesDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateEntitiesWithNameCollisionInSingularPluralTypeGeneratesDuplicateQueries(DatabaseType databaseType)
         {
             SortedDictionary<string, Entity> entityCollection = new();
 
@@ -1354,7 +1366,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
         }
 
         /// <summary>
@@ -1398,9 +1410,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ///  }
         /// </summary>
         [TestMethod]
-        public void ValidateValidEntityDefinitionsDoesNotGenerateDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateValidEntityDefinitionsDoesNotGenerateDuplicateQueries(DatabaseType databaseType)
         {
-
             // Entity Name: Book
             // GraphQL is not exposed for this entity
             Entity bookWithUpperCase = GraphQLTestHelpers.GenerateEmptyEntity() with { GraphQL = new("", "", false) };
@@ -1441,7 +1454,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
 
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection));
+            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection));
         }
 
         /// <summary>
@@ -1495,11 +1508,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <param name="entityName">Entity name to construct the expected exception message</param>
-        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName)
+        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName, DatabaseType databaseType)
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-               action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection)));
+               action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection)));
 
             Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);

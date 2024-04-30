@@ -91,7 +91,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
             if (runtimeConfig.IsGraphQLEnabled)
             {
-                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.Entities);
+                ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(runtimeConfig.DataSource.DatabaseType, runtimeConfig.Entities);
             }
         }
     }
@@ -318,10 +318,11 @@ public class RuntimeConfigValidator : IConfigValidator
     /// create mutation name: createBook
     /// update mutation name: updateBook
     /// delete mutation name: deleteBook
+    /// patch mutation name: patchBook
     /// </summary>
     /// <param name="entityCollection">Entity definitions</param>
     /// <exception cref="DataApiBuilderException"></exception>
-    public void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(RuntimeEntities entityCollection)
+    public void ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(DatabaseType databaseType, RuntimeEntities entityCollection)
     {
         HashSet<string> graphQLOperationNames = new();
 
@@ -345,7 +346,8 @@ public class RuntimeConfigValidator : IConfigValidator
             }
             else
             {
-                // For entities (table/view) that have graphQL exposed, two queries and three mutations would be generated.
+                // For entities (table/view) that have graphQL exposed, two queries, three mutations for Relational databases (e.g. MYSQL, MSSQL etc.)
+                // and four mutations for CosmosDb_NoSQL would be generated.
                 // Primary Key Query: For fetching an item using its primary key.
                 // List Query: To fetch a paginated list of items.
                 // Query names for both these queries are determined.
@@ -356,12 +358,14 @@ public class RuntimeConfigValidator : IConfigValidator
                 string createMutationName = $"create{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
                 string updateMutationName = $"update{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
                 string deleteMutationName = $"delete{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
+                string patchMutationName = $"patch{GraphQLNaming.GetDefinedSingularName(entityName, entity)}";
 
                 if (!graphQLOperationNames.Add(pkQueryName)
                     || !graphQLOperationNames.Add(listQueryName)
                     || !graphQLOperationNames.Add(createMutationName)
                     || !graphQLOperationNames.Add(updateMutationName)
-                    || !graphQLOperationNames.Add(deleteMutationName))
+                    || !graphQLOperationNames.Add(deleteMutationName)
+                    || ((databaseType is DatabaseType.CosmosDB_NoSQL) && !graphQLOperationNames.Add(patchMutationName)))
                 {
                     containsDuplicateOperationNames = true;
                 }

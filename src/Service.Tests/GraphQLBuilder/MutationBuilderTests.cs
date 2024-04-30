@@ -1081,7 +1081,7 @@ type Foo @model(name:""Foo"") {{
             // 2. 1 Update mutation (MSSQL and CosmosDB)
             // 3. 1 Delete mutation (MSSQL and CosmosDB)
             // 4. 1 Patch mutation (CosmosDB only)
-            int totalExpectedMutations = 3 * entityNames.Length + (entityNames.Length/2);
+            int totalExpectedMutations = 3 * entityNames.Length + (entityNames.Length / 2);
             Assert.AreEqual(totalExpectedMutations, mutation.Fields.Count);
 
             for (int i = 0; i < entityNames.Length; i++)

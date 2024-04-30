@@ -113,7 +113,11 @@ public class DataApiBuilderException : Exception
         /// <summary>
         /// Invalid PK field(s) specified in the request.
         /// </summary>
-        InvalidIdentifierField
+        InvalidIdentifierField,
+        /// <summary>
+        /// Relationship Field's value not found
+        /// </summary>
+        RelationshipFieldNotFound
     }
 
     public HttpStatusCode StatusCode { get; }

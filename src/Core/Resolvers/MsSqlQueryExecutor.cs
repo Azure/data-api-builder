@@ -231,7 +231,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             DbDataReader dbDataReader, List<string>? args = null)
         {
             // From the first result set, we get the count(0/1) of records with given PK.
-            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReader(dbDataReader);
+            DbResultSet resultSetWithCountOfRowsWithGivenPk = await ExtractResultSetFromDbDataReaderAsync(dbDataReader);
             DbResultSetRow? resultSetRowWithCountOfRowsWithGivenPk = resultSetWithCountOfRowsWithGivenPk.Rows.FirstOrDefault();
             int numOfRecordsWithGivenPK;
 
@@ -249,7 +249,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
 
             // The second result set holds the records returned as a result of the executed update/insert operation.
-            DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReader(dbDataReader) : null;
+            DbResultSet? dbResultSet = await dbDataReader.NextResultAsync() ? await ExtractResultSetFromDbDataReaderAsync(dbDataReader) : null;
 
             if (dbResultSet is null)
             {

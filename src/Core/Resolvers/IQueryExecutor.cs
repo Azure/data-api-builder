@@ -35,6 +35,28 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             List<string>? args = null);
 
         /// <summary>
+        /// Executes sql text with the given parameters and
+        /// uses the function dataReaderHandler to process
+        /// the results from the DbDataReader and return into an object of type TResult.
+        /// This method is synchronous. It does not make use of async/await.
+        /// </summary>
+        /// <param name="sqltext">SQL text to be executed.</param>
+        /// <param name="parameters">The parameters used to execute the SQL text.</param>
+        /// <param name="dataReaderHandler">The function to invoke to handle the results
+        /// in the DbDataReader obtained after executing the query.</param>
+        /// <param name="httpContext">Current request httpContext.</param>
+        /// <param name="args">List of string arguments to the DbDataReader handler.</param>
+        /// <param name="dataSourceName">dataSourceName against which to run query. Can specify null or empty to run against default db.</param>
+        /// <returns>An object formed using the results of the query as returned by the given handler.</returns>
+        public TResult? ExecuteQuery<TResult>(
+            string sqltext,
+            IDictionary<string, DbConnectionParam> parameters,
+            Func<DbDataReader, List<string>?, TResult>? dataReaderHandler,
+            HttpContext? httpContext = null,
+            List<string>? args = null,
+            string dataSourceName = "");
+
+        /// <summary>
         /// Extracts the rows from the given DbDataReader to populate
         /// the JsonArray to be returned.
         /// </summary>
@@ -63,9 +85,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dbDataReader">A DbDataReader</param>
         /// <param name="args">List of columns to extract. Extracts all if unspecified.</param>
         /// <returns>Current Result Set in the DbDataReader.</returns>
-        public Task<DbResultSet> ExtractResultSetFromDbDataReader(
+        public Task<DbResultSet> ExtractResultSetFromDbDataReaderAsync(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
+
+        /// <summary>
+        /// Extracts the current Result Set of DbDataReader and format it
+        /// so it can be used as a parameter to query execution.
+        /// This method is synchronous. This does not make use of async await operations.
+        /// </summary>
+        /// <param name="dbDataReader">A DbDataReader</param>
+        /// <param name="args">List of columns to extract. Extracts all if unspecified.</param>
+        /// <returns>Current Result Set in the DbDataReader.</returns>
+        public DbResultSet ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null);
 
         /// <summary>
         /// Extracts the result set corresponding to the operation (update/insert) being executed.
@@ -87,7 +119,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dbDataReader">A DbDataReader.</param>
         /// <param name="args">List of string arguments if any.</param>
         /// <returns>A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.</returns>
-        public Task<Dictionary<string, object>> GetResultProperties(
+        public Task<Dictionary<string, object>> GetResultPropertiesAsync(
+                DbDataReader dbDataReader,
+                List<string>? args = null);
+
+        /// <summary>
+        /// Gets the result properties like RecordsAffected, HasRows in a dictionary.
+        /// This is a synchronous method. It does not make use of async/await.
+        /// </summary>
+        /// <param name="dbDataReader">A DbDataReader.</param>
+        /// <param name="args">List of string arguments if any.</param>
+        /// <returns>A dictionary of properties of the DbDataReader like RecordsAffected, HasRows.</returns>
+        public Dictionary<string, object> GetResultProperties(
                 DbDataReader dbDataReader,
                 List<string>? args = null);
 
@@ -97,6 +140,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// be reported to the user
         /// </summary>
         public Task<bool> ReadAsync(DbDataReader reader);
+
+        /// <summary>
+        /// Wrapper for DbDataReader.Read().
+        /// This will catch certain db errors and throw an exception which can
+        /// be reported to the user.
+        /// This method is synchronous. It does not make use of async/await.
+        /// </summary>
+        public bool Read(DbDataReader reader);
 
         /// <summary>
         /// Modified the properties of the supplied connection to support managed identity access.

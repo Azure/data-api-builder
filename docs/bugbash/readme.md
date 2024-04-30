@@ -1,17 +1,14 @@
-## Set Up
-
-Install CosmosDb Emulator from here
-How to test Mutation/Queries?
-Click on this Link (SWA App): GraphiQL create-react-app Example (5.azurestaticapps.net)
-
-How to test DB Policy feature? 
-For this, you need to set it up locally.
-
-Data Schema would look like this.
-Permission and configuration would look like this:
-
 ## Basic understanding of the Product:
-	
+Basic Understanding of Cosmos DB No SQL: https://learn.microsoft.com/en-us/azure/cosmos-db/introduction
+Basic Understanding of GraphQL: https://graphql.org/learn/
+Basic Understanding of DAB: https://learn.microsoft.com/en-us/azure/data-api-builder/
+ 
+## Set Up
+1. Install Cosmos Db Emulator from here: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=windows%2Ccsharp&pivots=api-nosql#install-the-emulator \
+Alternatively, You can create an account on portal https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-create-account?tabs=azure-portal
+2. Upload this data to emulator or real account:
+3. Use this runtime config JSON to start: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
+
 ## Scenarios:
 **Making connection to Cosmos DB**
 - [ ] You should be able to use DAB using Connection String.
@@ -34,3 +31,4 @@ Permission and configuration would look like this:
 - [ ]  Should be able to apply field level authorization using include/exclude fields
 - [ ]  Should be able to apply item level authorization by defining database policy. (Operation supported in the policy condition are `eq`, `neql`, `>` , `>=`, `<`, `<=`)
 
+To checkout more scenarios, you can refer the release notes: https://github.com/Azure/data-api-builder/releases

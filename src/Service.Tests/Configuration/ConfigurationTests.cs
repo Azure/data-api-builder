@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -2451,7 +2452,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 Assert.IsNotNull(mutationResponse);
                 SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
-                                                            message: "Cannot insert the value NULL into column 'publisher_id', table 'master.dbo.books'; column does not allow nulls. INSERT fails.");
+                                                            message: "Missing value for required column: publisher_id for entity: Book at level: 1.");
             }
         }
 
@@ -2934,6 +2935,63 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/books_view_all");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+            }
+        }
+
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public async Task TestErrorMessageWithoutKeyFieldsInConfig()
+        {
+            Dictionary<string, object> dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), "dummy");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
+            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), Options: dbOptions);
+            Entity entity = new(
+                Source: new("EntityName", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: false),
+                GraphQL: new("", ""),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+            );
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), entity, "EntityName");
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            File.WriteAllText(
+                CUSTOM_CONFIG,
+                configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+        };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query = @"{
+                    EntityName {
+                        items{
+                            id
+                            title
+                        }
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                ApplicationException ex = await Assert.ThrowsExceptionAsync<ApplicationException>(async () => await client.SendAsync(graphQLRequest));
+                Assert.AreEqual(ex.Message, "The entity 'Planet' was not found in the dab-config json");
             }
         }
 

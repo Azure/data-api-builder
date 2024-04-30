@@ -325,7 +325,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         }
 
         /// <summary>
-        /// Helper method to determine whether a field is a column or complex (relationship) field based on its syntax kind.
+        /// Helper method to determine whether a field is a column (or scalar) or complex (relationship) field based on its syntax kind.
         /// If the SyntaxKind for the field is not ObjectValue and ListValue, it implies we are dealing with a column/scalar field which
         /// has an IntValue, FloatValue, StringValue, BooleanValue or an EnumValue.
         /// </summary>
@@ -395,6 +395,65 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
             }
 
             return new(sourceTargetEntityNames[1], sourceTargetEntityNames[2]);
+        }
+
+        /// <summary>
+        /// Helper method to extract a hotchocolate field node object with the specified name from all the field node objects belonging to an input type object.  
+        /// </summary>
+        /// <param name="objectFieldNodes">List of field node objects belonging to an input type object</param>
+        /// <param name="fieldName"> Name of the field node object to extract from the list of all field node objects</param>
+        /// <exception cref="ArgumentException"></exception>
+        public static IValueNode GetFieldNodeForGivenFieldName(List<ObjectFieldNode> objectFieldNodes, string fieldName)
+        {
+            ObjectFieldNode? requiredFieldNode = objectFieldNodes.Where(fieldNode => fieldNode.Name.Value.Equals(fieldName)).FirstOrDefault();
+            if (requiredFieldNode != null)
+            {
+                return requiredFieldNode.Value;
+            }
+
+            throw new ArgumentException($"The provided field {fieldName} does not exist.");
+        }
+
+        /// <summary>
+        /// Helper method to determine if the relationship defined between the source entity and a particular target entity is an M:N relationship.
+        /// </summary>
+        /// <param name="sourceEntity">Source entity.</param>
+        /// <param name="relationshipName">Relationship name.</param>
+        /// <returns>true if the relationship between source and target entities has a cardinality of M:N.</returns>
+        public static bool IsMToNRelationship(Entity sourceEntity, string relationshipName)
+        {
+            return sourceEntity.Relationships is not null &&
+                sourceEntity.Relationships.TryGetValue(relationshipName, out EntityRelationship? relationshipInfo) &&
+                !string.IsNullOrWhiteSpace(relationshipInfo.LinkingObject);
+        }
+
+        /// <summary>
+        /// Helper method to get the name of the related entity for a given relationship name.
+        /// </summary>
+        /// <param name="entity">Entity object</param>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="relationshipName">Name of the relationship</param>
+        /// <returns>Name of the related entity</returns>
+        public static string GetRelationshipTargetEntityName(Entity entity, string entityName, string relationshipName)
+        {
+            if (entity.Relationships is null)
+            {
+                throw new DataApiBuilderException(message: $"Entity {entityName} has no relationships defined",
+                                                  statusCode: HttpStatusCode.InternalServerError,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+            }
+
+            if (entity.Relationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
+               && entityRelationship is not null)
+            {
+                return entityRelationship.TargetEntity;
+            }
+            else
+            {
+                throw new DataApiBuilderException(message: $"Entity {entityName} does not have a relationship named {relationshipName}",
+                                                  statusCode: HttpStatusCode.InternalServerError,
+                                                  subStatusCode: DataApiBuilderException.SubStatusCodes.RelationshipNotFound);
+            }
         }
     }
 }

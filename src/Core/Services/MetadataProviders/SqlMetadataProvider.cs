@@ -1130,31 +1130,53 @@ namespace Azure.DataApiBuilder.Core.Services
         /// In the future, mappings for SPs could be used for parameter renaming.
         /// We also handle logging the primary key information here since this is when we first have
         /// the exposed names suitable for logging.
+        /// As part of building the database query, when generating the output columns,
+        /// EntityBackingColumnsToExposedNames is looked at.
+        /// But, when linking entity details are not populated, the flow will fail
+        /// when generating the output columns.
+        /// Hence, mappings of exposed names to backing columns
+        /// and of backing columns to exposed names
+        /// are generated for linking entities as well.
         /// </summary>
         private void GenerateExposedToBackingColumnMapsForEntities()
         {
             foreach ((string entityName, Entity _) in _entities)
             {
-                try
+                GenerateExposedToBackingColumnMapUtil(entityName);
+            }
+
+            foreach ((string entityName, Entity _) in _linkingEntities)
+            {
+                GenerateExposedToBackingColumnMapUtil(entityName);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to generate the mappings of exposed names to
+        /// backing columns, and of backing columns to exposed names.
+        /// </summary>
+        /// <param name="entityName">Name of the entity</param>
+        private void GenerateExposedToBackingColumnMapUtil(string entityName)
+        {
+            try
+            {
+                // For StoredProcedures, result set definitions become the column definition.
+                Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
+                EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
+                EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
+                SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
+                foreach (string columnName in sourceDefinition.Columns.Keys)
                 {
-                    // For StoredProcedures, result set definitions become the column definition.
-                    Dictionary<string, string>? mapping = GetMappingForEntity(entityName);
-                    EntityBackingColumnsToExposedNames[entityName] = mapping is not null ? mapping : new();
-                    EntityExposedNamesToBackingColumnNames[entityName] = EntityBackingColumnsToExposedNames[entityName].ToDictionary(x => x.Value, x => x.Key);
-                    SourceDefinition sourceDefinition = GetSourceDefinition(entityName);
-                    foreach (string columnName in sourceDefinition.Columns.Keys)
+                    if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
                     {
-                        if (!EntityExposedNamesToBackingColumnNames[entityName].ContainsKey(columnName) && !EntityBackingColumnsToExposedNames[entityName].ContainsKey(columnName))
-                        {
-                            EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
-                            EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
-                        }
+                        EntityBackingColumnsToExposedNames[entityName].Add(columnName, columnName);
+                        EntityExposedNamesToBackingColumnNames[entityName].Add(columnName, columnName);
                     }
                 }
-                catch (Exception e)
-                {
-                    HandleOrRecordException(e);
-                }
+            }
+            catch (Exception e)
+            {
+                HandleOrRecordException(e);
             }
         }
 
@@ -1675,6 +1697,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     IEnumerable<List<ForeignKeyDefinition>> foreignKeys = relationshipData.TargetEntityToFkDefinitionMap.Values;
                     // If none of the inferred foreign keys have the referencing columns,
                     // it means metadata is still missing fail the bootstrap.
+
                     if (!foreignKeys.Any(fkList => fkList.Any(fk => fk.ReferencingColumns.Count() != 0)))
                     {
                         HandleOrRecordException(new NotSupportedException($"Some of the relationship information missing and could not be inferred for {sourceEntityName}."));
@@ -1699,7 +1722,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             // Extract all the rows in the current Result Set of DbDataReader.
             DbResultSet foreignKeysInfoWithProperties =
-                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
+                await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
 
             Dictionary<RelationShipPair, ForeignKeyDefinition> pairToFkDefinition = new();
 
@@ -1748,7 +1771,7 @@ namespace Azure.DataApiBuilder.Core.Services
         {
             // Extract all the rows in the current Result Set of DbDataReader.
             DbResultSet readOnlyFieldRowsWithProperties =
-                await QueryExecutor.ExtractResultSetFromDbDataReader(reader);
+                await QueryExecutor.ExtractResultSetFromDbDataReaderAsync(reader);
 
             List<string> readOnlyFields = new();
 
@@ -1910,6 +1933,52 @@ namespace Azure.DataApiBuilder.Core.Services
         public bool IsDevelopmentMode()
         {
             return _runtimeConfigProvider.GetConfig().IsDevelopmentMode();
+        }
+
+        /// <inheritdoc/>
+        public bool TryGetFKDefinition(
+            string sourceEntityName,
+            string targetEntityName,
+            string referencingEntityName,
+            string referencedEntityName,
+            [NotNullWhen(true)] out ForeignKeyDefinition? foreignKeyDefinition,
+            bool isMToNRelationship = false)
+        {
+            if (GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject? sourceDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencingEntityName, out DatabaseObject? referencingDbObject) &&
+                GetEntityNamesAndDbObjects().TryGetValue(referencedEntityName, out DatabaseObject? referencedDbObject))
+            {
+                DatabaseTable referencingDbTable = (DatabaseTable)referencingDbObject;
+                DatabaseTable referencedDbTable = (DatabaseTable)referencedDbObject;
+                SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+                RelationShipPair referencingReferencedPair;
+                List<ForeignKeyDefinition> fKDefinitions = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+
+                // At this point, we are sure that a valid foreign key definition would exist from the referencing entity
+                // to the referenced entity because we validate it during the startup that the Foreign key information
+                // has been inferred for all the relationships.
+                if (isMToNRelationship)
+                {
+
+                    foreignKeyDefinition = fKDefinitions.FirstOrDefault(
+                                                            fk => string.Equals(referencedDbTable.FullName, fk.Pair.ReferencedDbTable.FullName, StringComparison.OrdinalIgnoreCase)
+                                                            && fk.ReferencingColumns.Count > 0
+                                                            && fk.ReferencedColumns.Count > 0)!;
+                }
+                else
+                {
+                    referencingReferencedPair = new(referencingDbTable, referencedDbTable);
+                    foreignKeyDefinition = fKDefinitions.FirstOrDefault(
+                                                            fk => fk.Pair.Equals(referencingReferencedPair) &&
+                                                            fk.ReferencingColumns.Count > 0
+                                                            && fk.ReferencedColumns.Count > 0)!;
+                }
+
+                return true;
+            }
+
+            foreignKeyDefinition = null;
+            return false;
         }
     }
 }

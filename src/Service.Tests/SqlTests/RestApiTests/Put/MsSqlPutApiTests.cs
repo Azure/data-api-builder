@@ -49,7 +49,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Put
             },
             {
                 "PutOne_Update_Default_Test",
-                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
+                $"SELECT [id], [book_id], [content], [websiteuser_id] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE [id] = 568 AND [book_id] = 1 AND [content]='Good book to read' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

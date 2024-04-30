@@ -51,9 +51,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   ? DetermineExtraFieldsInResponse(findOperationResponse, context.FieldsToBeReturned)
                                                   : DetermineExtraFieldsInResponse(findOperationResponse.EnumerateArray().First(), context.FieldsToBeReturned);
 
+            uint defaultPageSize = runtimeConfig.DefaultPageSize();
+            uint maxPageSize = runtimeConfig.MaxPageSize();
+
             // If the results are not a collection or if the query does not have a next page
             // no nextLink is needed. So, the response is returned after removing the extra fields.
-            if (findOperationResponse.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(findOperationResponse, context.First))
+            if (findOperationResponse.ValueKind is not JsonValueKind.Array || !SqlPaginationUtil.HasNext(findOperationResponse, context.First, defaultPageSize, maxPageSize))
             {
                 // If there are no additional fields present, the response is returned directly. When there
                 // are extra fields, they are removed before returning the response.

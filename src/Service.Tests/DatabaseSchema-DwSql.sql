@@ -342,7 +342,9 @@ VALUES
     (7, 'Journal7', null, null);
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
+INSERT INTO trees(treeId, species, region, height) VALUES (4, 'test', 'Pacific Northwest', '0m');
 INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');
+INSERT INTO fungi(speciesid, region, habitat) VALUES (3, 'northeast', 'test');
 INSERT INTO type_table(id, short_types, int_types, long_types,
 string_types, nvarchar_string_types,
 single_types, float_types, decimal_types,

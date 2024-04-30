@@ -88,7 +88,7 @@ public abstract class RestRequestContext
     /// Based on request this property may or may not be populated.
     /// </summary>
 
-    public uint? First { get; set; }
+    public int? First { get; set; }
     /// <summary>
     /// Is the result supposed to be multiple values or not.
     /// </summary>

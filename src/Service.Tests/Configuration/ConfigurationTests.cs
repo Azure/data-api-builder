@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -73,7 +74,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         private const int RETRY_WAIT_SECONDS = 1;
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         public const string BOOK_ENTITY_JSON = @"
             {
@@ -557,7 +558,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// 1. Adds the property/value "Application Name=dab_oss_Major.Minor.Patch" when the env var DAB_APP_NAME_ENV is not set.
         /// 2. Adds the property/value "Application Name=dab_hosted_Major.Minor.Patch" when the env var DAB_APP_NAME_ENV is set to "dab_hosted".
         /// (DAB_APP_NAME_ENV is set in hosted scenario or when user sets the value.)
-        /// NOTE: "#pragma warning disable format" is used here to avoid removing intentional, readability promoting spacing in DataRow display names. 
+        /// NOTE: "#pragma warning disable format" is used here to avoid removing intentional, readability promoting spacing in DataRow display names.
         /// </summary>
         /// <param name="configProvidedConnString">connection string provided in the config.</param>
         /// <param name="expectedDabModifiedConnString">Updated connection string with Application Name.</param>
@@ -1207,10 +1208,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             }
         }
 
-        /// <summary> 
-        /// This test method checks a valid config's entities against 
-        /// the database and ensures they are valid. 
-        /// </summary> 
+        /// <summary>
+        /// This test method checks a valid config's entities against
+        /// the database and ensures they are valid.
+        /// </summary>
         [TestMethod("Validation passes for valid entities against database."), TestCategory(TestCategory.MSSQL)]
         public async Task TestSqlMetadataForValidConfigEntities()
         {
@@ -1232,12 +1233,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
             Assert.IsTrue(configValidator.ConfigValidationExceptions.IsNullOrEmpty());
         }
 
-        /// <summary> 
-        /// This test method checks a valid config's entities against 
-        /// the database and ensures they are valid. 
+        /// <summary>
+        /// This test method checks a valid config's entities against
+        /// the database and ensures they are valid.
         /// The config contains an entity source object not present in the database.
         /// It also contains an entity whose source is incorrectly specified as a stored procedure.
-        /// </summary> 
+        /// </summary>
         [TestMethod("Validation fails for invalid entities against database."), TestCategory(TestCategory.MSSQL)]
         public async Task TestSqlMetadataForInvalidConfigEntities()
         {
@@ -1394,7 +1395,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// This test method validates a sample DAB runtime config file against DAB's JSON schema definition.
-        /// It asserts that the validation is successful and there are no validation failures. 
+        /// It asserts that the validation is successful and there are no validation failures.
         /// It also verifies that the expected log message is logged.
         /// </summary>
         [TestMethod("Validates the config file schema."), TestCategory(TestCategory.MSSQL)]
@@ -1915,7 +1916,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         /// {
         ///     "multiple-mutations": null
         /// }
-        /// 
+        ///
         /// 2. Multiple Mutations section is empty.
         /// {
         ///     "multiple-mutations": {}
@@ -1934,7 +1935,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         ///         "create": {}
         ///     }
         /// }
-        /// 
+        ///
         /// For all the above mentioned scenarios, the expected value for MultipleMutationOptions field is null.
         /// </summary>
         /// <param name="baseConfig">Base Config Json string.</param>
@@ -1953,25 +1954,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
         }
 
         /// <summary>
-        /// Sanity check to validate that DAB engine starts successfully when used with a config file without the multiple 
+        /// Sanity check to validate that DAB engine starts successfully when used with a config file without the multiple
         /// mutations feature flag section.
-        /// The runtime graphql section of the config file used looks like this: 
+        /// The runtime graphql section of the config file used looks like this:
         ///
         /// "graphql": {
         ///    "path": "/graphql",
         ///    "allow-introspection": true
         ///  }
-        /// 
-        /// Without the multiple mutations feature flag section, DAB engine should be able to 
+        ///
+        /// Without the multiple mutations feature flag section, DAB engine should be able to
         ///  1. Successfully deserialize the config file without multiple mutation section.
         ///  2. Process REST and GraphQL API requests.
-        /// 
+        ///
         /// </summary>
         [TestMethod]
         [TestCategory(TestCategory.MSSQL)]
         public async Task SanityTestForRestAndGQLRequestsWithoutMultipleMutationFeatureFlagSection()
         {
-            // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the            
+            // The configuration file is constructed by merging hard-coded JSON strings to simulate the scenario where users manually edit the
             // configuration file (instead of using CLI).
             string configJson = TestHelper.AddPropertiesToJson(TestHelper.BASE_CONFIG, BOOK_ENTITY_JSON);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(configJson, out RuntimeConfig deserializedConfig, logger: null, GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL)));
@@ -1993,7 +1994,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                     HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                     Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
 
-                    // Perform a GraphQL API request to validate that DAB engine executes GraphQL requests successfully. 
+                    // Perform a GraphQL API request to validate that DAB engine executes GraphQL requests successfully.
                     string query = @"{
                         book_by_pk(id: 1) {
                            id,
@@ -2282,7 +2283,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
         /// <summary>
         /// Multiple mutation operations are disabled through the configuration properties.
-        /// 
+        ///
         /// Test to validate that when multiple-create is disabled:
         /// 1. Including a relationship field in the input for create mutation for an entity returns an exception as when multiple mutations are disabled,
         /// we don't add fields for relationships in the input type schema and hence users should not be able to do insertion in the related entities.
@@ -2451,7 +2452,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
 
                 Assert.IsNotNull(mutationResponse);
                 SqlTestHelper.TestForErrorInGraphQLResponse(response: mutationResponse.ToString(),
-                                                            message: "Cannot insert the value NULL into column 'publisher_id', table 'master.dbo.books'; column does not allow nulls. INSERT fails.");
+                                                            message: "Missing value for required column: publisher_id for entity: Book at level: 1.");
             }
         }
 
@@ -2934,6 +2935,70 @@ namespace Azure.DataApiBuilder.Service.Tests.Configuration
                 HttpRequestMessage restRequest = new(HttpMethod.Get, "/api/books_view_all");
                 HttpResponseMessage restResponse = await client.SendAsync(restRequest);
                 Assert.AreEqual(HttpStatusCode.OK, restResponse.StatusCode);
+            }
+        }
+
+        /// <summary>
+        /// When you query, DAB loads schema and check for defined entities in the config file which get load during DAB initialization, and
+        /// it fails during this check if entity is not defined in the config file. In this test case, we are testing the error message is appropriate.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public async Task TestErrorMessageWithoutKeyFieldsInConfig()
+        {
+            Dictionary<string, object> dbOptions = new();
+            HyphenatedNamingPolicy namingPolicy = new();
+
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), "dummy");
+            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
+
+            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), Options: dbOptions);
+
+            // Add a dummy entity in config file just to make sure the config file is valid.
+            Entity entity = new(
+                Source: new("EntityName", EntitySourceType.Table, null, null),
+                Rest: new(Enabled: false),
+                GraphQL: new("", ""),
+                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
+                Relationships: null,
+                Mappings: null
+            );
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), entity, "EntityName");
+
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // When you query, DAB loads schema and check for defined entities in the config file and
+                // it fails during that, since entity is not defined in the config file.
+                string query = @"{
+                    Planet {
+                        items{
+                            id
+                        }
+                    }
+                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () => await client.SendAsync(graphQLRequest));
+                Assert.AreEqual("The entity 'Planet' was not found in the runtime config.", ex.Message);
+                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
+                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
             }
         }
 

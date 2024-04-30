@@ -22,6 +22,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class CosmosMutationEngine : IMutationEngine
     {
+        private const int PATCH_OPERATIONS_LIMIT = 10;
+
         private readonly CosmosClientProvider _clientProvider;
         private readonly IMetadataProviderFactory _metadataProviderFactory;
         private readonly IAuthorizationResolver _authorizationResolver;
@@ -65,13 +67,23 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName = metadataProvider.GetEntityName(graphQLType);
             AuthorizeMutation(context, queryArgs, entityName, resolver.OperationType);
 
-            ItemResponse<JObject>? response = resolver.OperationType switch
+            JObject result;
+            if (resolver.OperationType == EntityActionOperation.Patch)
             {
-                EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
-                EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
-                EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
-                _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
-            };
+                result = await HandlePatchAsync(queryArgs, container);
+            }
+            else
+            {
+                ItemResponse<JObject>? response = resolver.OperationType switch
+                {
+                    EntityActionOperation.UpdateGraphQL => await HandleUpdateAsync(queryArgs, container),
+                    EntityActionOperation.Create => await HandleCreateAsync(queryArgs, container),
+                    EntityActionOperation.Delete => await HandleDeleteAsync(queryArgs, container),
+                    _ => throw new NotSupportedException($"unsupported operation type: {resolver.OperationType}")
+                };
+
+                result = response.Resource;
+            }
 
             string roleName = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
 
@@ -88,7 +100,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
             }
 
-            return response.Resource;
+            return result;
         }
 
         /// <inheritdoc/>
@@ -112,16 +124,27 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             bool isAuthorized = mutationOperation switch
             {
                 EntityActionOperation.UpdateGraphQL =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: EntityActionOperation.Update, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName,
+                        roleName: clientRole,
+                        operation: EntityActionOperation.Update,
+                        columns: inputArgumentKeys),
+                EntityActionOperation.Patch =>
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName,
+                        roleName: clientRole,
+                        operation: EntityActionOperation.Update,
+                        columns: inputArgumentKeys),
                 EntityActionOperation.Create =>
-                    _authorizationResolver.AreColumnsAllowedForOperation(entityName, roleName: clientRole, operation: mutationOperation, inputArgumentKeys),
+                    _authorizationResolver.AreColumnsAllowedForOperation(entityName,
+                        roleName: clientRole,
+                        operation: mutationOperation,
+                        columns: inputArgumentKeys),
                 EntityActionOperation.Delete => true,// Field level authorization is not supported for delete mutations. A requestor must be authorized
                                                      // to perform the delete operation on the entity to reach this point.
                 _ => throw new DataApiBuilderException(
-                                        message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
-                                        statusCode: HttpStatusCode.BadRequest,
-                                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
-                                        ),
+                                         message: "Invalid operation for GraphQL Mutation, must be Create, UpdateGraphQL, or Delete",
+                                         statusCode: HttpStatusCode.BadRequest,
+                                         subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest
+                                         ),
             };
             if (!isAuthorized)
             {
@@ -235,6 +258,114 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
+        /// Refer to https://learn.microsoft.com/azure/cosmos-db/partial-document-update for more details on patch operations
+        /// </summary>
+        /// <exception cref="InvalidDataException"></exception>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private static async Task<JObject> HandlePatchAsync(IDictionary<string, object?> queryArgs, Container container)
+        {
+            string? partitionKey = null;
+            string? id = null;
+
+            if (queryArgs.TryGetValue(QueryBuilder.ID_FIELD_NAME, out object? idObj))
+            {
+                id = idObj?.ToString();
+            }
+
+            if (string.IsNullOrEmpty(id))
+            {
+                throw new InvalidDataException("id field is mandatory");
+            }
+
+            if (queryArgs.TryGetValue(QueryBuilder.PARTITION_KEY_FIELD_NAME, out object? partitionKeyObj))
+            {
+                partitionKey = partitionKeyObj?.ToString();
+            }
+
+            if (string.IsNullOrEmpty(partitionKey))
+            {
+                throw new InvalidDataException("Partition Key field is mandatory");
+            }
+
+            object? item = queryArgs[MutationBuilder.ITEM_INPUT_ARGUMENT_NAME];
+
+            JObject? input;
+            // Variables were provided to the mutation
+            if (item is Dictionary<string, object?>)
+            {
+                input = (JObject?)ParseVariableInputItem(item);
+            }
+            else
+            {
+                // An inline argument was set
+                input = (JObject?)ParseInlineInputItem(item);
+            }
+
+            if (input is null)
+            {
+                throw new InvalidDataException("Input Item field is invalid");
+            }
+
+            // This would contain the patch operations to be applied on the document
+            List<PatchOperation> patchOperations = new();
+            GeneratePatchOperations(input, "", patchOperations);
+
+            if (patchOperations.Count <= 10)
+            {
+                return (await container.PatchItemAsync<JObject>(id, new PartitionKey(partitionKey), patchOperations)).Resource;
+            }
+
+            // maximum 10 patch operations can be applied in a single patch request,
+            // Hence dividing into multiple patch request, if it is requested for more than 10 item at a time.
+            TransactionalBatch batch = container.CreateTransactionalBatch(new PartitionKey(partitionKey));
+            int numberOfBatches = -1;
+            for (int counter = 0; counter < patchOperations.Count; counter += PATCH_OPERATIONS_LIMIT)
+            {
+                // Get next 10 patch operations from the list
+                List<PatchOperation> chunk = patchOperations.GetRange(counter, Math.Min(10, patchOperations.Count - counter));
+                batch = batch.PatchItem(id, chunk);
+                numberOfBatches++;
+            }
+
+            TransactionalBatchResponse response = await batch.ExecuteAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new DataApiBuilderException(
+                        message: "Failed to patch the item",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+            }
+
+            return response.GetOperationResultAtIndex<JObject>(numberOfBatches).Resource;
+        }
+
+        /// <summary>
+        /// This method generates the patch operations for the input JObject by traversing the JObject recursively.
+        /// e.g. if the input JObject is { "a": { "b": "c" } },
+        /// the generated patch operation would be "set /a/b c"
+        /// </summary>
+        /// <param name="jObject">JObject needs to be traversed</param>
+        /// <param name="currentPath">Current Position of the json token</param>
+        /// <param name="patchOperations">Generated Patch Operation</param>
+        private static void GeneratePatchOperations(JObject jObject, string currentPath, List<PatchOperation> patchOperations)
+        {
+            foreach (JProperty property in jObject.Properties())
+            {
+                string newPath = currentPath + "/" + property.Name;
+
+                if (property.Value.Type != JTokenType.Array && property.Value.Type == JTokenType.Object)
+                {
+                    // Skip generating JPaths for array-type properties
+                    GeneratePatchOperations((JObject)property.Value, newPath, patchOperations);
+                }
+                else
+                {
+                    patchOperations.Add(PatchOperation.Set(newPath, property.Value));
+                }
+            }
+        }
+
+        /// <summary>
         /// The method is for parsing the mutation input object with nested inner objects when input is passed in as variables.
         /// </summary>
         /// <param name="item"></param>
@@ -270,7 +401,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (item is ObjectFieldNode node)
             {
-                createInput.Add(new JProperty(node.Name.Value, ParseInlineInputItem(node.Value.Value)));
+                if (TypeHelper.IsPrimitiveType(node.Value.Kind))
+                {
+                    createInput
+                        .Add(new JProperty(
+                            node.Name.Value,
+                            ParseInlineInputItem(TypeHelper.GetValue(node.Value))));
+                }
+                else
+                {
+                    createInput.Add(new JProperty(node.Name.Value, ParseInlineInputItem(node.Value.Value)));
+
+                }
+
                 return createInput;
             }
 
@@ -278,7 +421,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 foreach (ObjectFieldNode subfield in nodeList)
                 {
-                    createInput.Add(new JProperty(subfield.Name.Value, ParseInlineInputItem(subfield.Value.Value)));
+                    if (TypeHelper.IsPrimitiveType(subfield.Value.Kind))
+                    {
+                        createInput
+                            .Add(new JProperty(
+                                subfield.Name.Value,
+                                ParseInlineInputItem(TypeHelper.GetValue(subfield.Value))));
+                    }
+                    else
+                    {
+                        createInput.Add(new JProperty(subfield.Name.Value, ParseInlineInputItem(subfield.Value.Value)));
+                    }
                 }
 
                 return createInput;
@@ -287,14 +440,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // For nested array objects
             if (item is List<IValueNode> nodeArray)
             {
-                JArray jarrayObj = new();
+                JArray jArrayObj = new();
 
                 foreach (IValueNode subfield in nodeArray)
                 {
-                    jarrayObj.Add(ParseInlineInputItem(subfield.Value));
+                    if (TypeHelper.IsPrimitiveType(subfield.Kind))
+                    {
+                        jArrayObj.Add(ParseInlineInputItem(TypeHelper.GetValue(subfield)));
+                    }
+                    else
+                    {
+                        jArrayObj.Add(ParseInlineInputItem(subfield.Value));
+                    }
                 }
 
-                return jarrayObj;
+                return jArrayObj;
             }
 
             return item;

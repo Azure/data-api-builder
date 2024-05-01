@@ -109,9 +109,9 @@ update Comic --config "dab-config.MySql.json" --permissions "authenticated:creat
 update series --config "dab-config.MySql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.MySql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.MySql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
-update Shrub --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
+update Shrub --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName" --relationship fungus --cardinality one --target.entity Fungus --relationship.fields "species:habitat"
 update Fungus --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
-update Fungus --config "dab-config.MySql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
+update Fungus --config "dab-config.MySql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'" --relationship Shrub --cardinality one --target.entity Shrub --relationship.fields "habitat:species"
 update books_view_all --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete" --rest true --graphql true
 update stocks_view_selected --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"
 update books_publishers_view_composite --config "dab-config.MySql.json" --permissions "authenticated:create,read,update,delete"

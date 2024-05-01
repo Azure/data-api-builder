@@ -378,7 +378,8 @@ namespace Azure.DataApiBuilder.Core.Services
                 targetEntityName: targetEntityName,
                 referencingEntityName: referencingEntityName,
                 referencedEntityName: referencedEntityName,
-                foreignKeyDefinition: out ForeignKeyDefinition? fkDefinition))
+                foreignKeyDefinition: out ForeignKeyDefinition? fkDefinition,
+                isMToNRelationship: false))
             {
                 // This should not be hit ideally.
                 throw new DataApiBuilderException(

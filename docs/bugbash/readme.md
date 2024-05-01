@@ -18,9 +18,21 @@ Alternatively, You can create an account on portal https://learn.microsoft.com/e
 ![image](https://github.com/Azure/data-api-builder/assets/6362382/0edb0b0f-6fe8-42b5-baf5-daa063fb382c)
 
 ### Data API Builder(DAB)
-1. Follow this for quick start: https://learn.microsoft.com/en-us/azure/data-api-builder/quickstart-nosql#install-the-data-api-builder-cli
-2. Schema file: https://github.com/Azure/data-api-builder/blob/users/sourabhjain/bugbash/docs/bugbash/schema.gql
-3. Use this runtime config JSON to start: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
+
+**Download below files:**
+- Schema file: https://github.com/Azure/data-api-builder/blob/users/sourabhjain/bugbash/docs/bugbash/schema.gql
+- Runtime Config JSON: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
+
+**Run DAB**
+Follow this for quick start: https://learn.microsoft.com/en-us/azure/data-api-builder/quickstart-nosql#install-the-data-api-builder-cli \
+OR Alternatively, run following command: \
+1. Install latest DAB package: `dotnet tool install --global Microsoft.DataApiBuilder --version 0.13.0-rc`
+2. OR, Update to the latest package: `dotnet tool update --global Microsoft.DataApiBuilder --version 0.13.0-rc`
+3. Confirm if it is installed `dotnet tool list --global`
+   ![image](https://github.com/Azure/data-api-builder/assets/6362382/63f77ab1-db94-4d4c-abb9-2df164b256e2)
+4. `dab init --database-type "cosmosdb_nosql" --graphql-schema schema.gql -c dab-config.CosmosDb_NoSql.json`
+
+
 
 ## Scenarios:
 **Making connection to Cosmos DB**

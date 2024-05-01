@@ -314,7 +314,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(INT_TYPE, "0")]
         [DataRow(INT_TYPE, "-9999")]
         [DataRow(INT_TYPE, "null")]
-        [DataRow(UUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
+        [DataRow(UUID_TYPE, "\"3a1483a5-9ac2-4998-bcf3-78a28078c6ac\"")]
         [DataRow(UUID_TYPE, "null")]
         [DataRow(LONG_TYPE, "0")]
         [DataRow(LONG_TYPE, "9000000000000000000")]
@@ -379,8 +379,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string expectedResult = await GetDatabaseResultAsync(expectedResultDbQuery);
 
             PerformTestEqualsForExtendedTypes(type, expectedResult, actual.ToString());
-
-            ////await ResetDbStateAsync();
         }
 
         /// <summary>

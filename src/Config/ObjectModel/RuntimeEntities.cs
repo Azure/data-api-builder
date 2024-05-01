@@ -5,6 +5,7 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 using Azure.DataApiBuilder.Config.Converters;
+using Azure.DataApiBuilder.Service.Exceptions;
 using Humanizer;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -22,7 +23,7 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
 
     /// <summary>
     /// Creates a new instance of the <see cref="RuntimeEntities"/> class using a collection of entities.
-    /// 
+    ///
     /// The constructor will apply default values for the entities for GraphQL and REST.
     /// </summary>
     /// <param name="entities">The collection of entities to map to RuntimeEntities.</param>
@@ -67,7 +68,9 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
             }
             else
             {
-                throw new ApplicationException($"The entity '{key}' was not found in the dab-config json");
+                throw new DataApiBuilderException(message: $"The entity '{key}' was not found in the runtime config.",
+                    statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
             }
         }
     }
@@ -148,7 +151,7 @@ public record RuntimeEntities : IEnumerable<KeyValuePair<string, Entity>>
         else if (nameCorrectedEntity.Source.Type is EntitySourceType.StoredProcedure && (nameCorrectedEntity.Rest.Methods is null || nameCorrectedEntity.Rest.Methods.Length == 0))
         {
             // REST Method field is relevant only for stored procedures. For an entity backed by a table/view, all HTTP verbs are enabled by design
-            // unless configured otherwise through the config file. An entity backed by a stored procedure also supports all HTTP verbs but only POST is 
+            // unless configured otherwise through the config file. An entity backed by a stored procedure also supports all HTTP verbs but only POST is
             // enabled by default unless otherwise specified.
             // When the Methods property is configured in the config file, the parser correctly parses and populates the methods configured.
             // However, when absent in the config file, REST methods that are enabled by default needs to be populated.

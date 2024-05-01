@@ -436,7 +436,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
             {
                 "FindTestWithDifferentMappingAfterSingleKeyPaginationAndOrderBy",
                 $"SELECT TOP 101 [treeId], [species] AS [fancyName], [region], [height] FROM { _integrationMappingTable } " +
-                $"WHERE [trees].[treeId] < 2 " +
+                $"WHERE [trees].[species] > 'Pseudotsuga menziesii' " +
                 $"ORDER BY [trees].[species] asc, [trees].[treeId] asc " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES"
             },

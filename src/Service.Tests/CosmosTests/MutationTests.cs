@@ -729,6 +729,351 @@ type Planet @model(name:""Planet"") {
             }
         }
 
+        [TestMethod]
+        public async Task CanPatchItemWithoutVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
+            // Executing path with updating "existing" field and "adding" a new field
+            const string newName = "new_name";
+            mutation = $@"
+mutation {{
+    patchPlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
+        id
+        name
+        stars
+        {{
+            id
+        }}
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreEqual(id, response.GetProperty("stars")[0].GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task CanPatchItemWithVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name"
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            // Executing path with updating "existing" field and "adding" a new field
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
+    patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+        stars
+        {
+            id
+        }
+     }
+}";
+            var update = new
+            {
+                name = "new_name",
+                stars = new[] { new { id = "TestStar" } }
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreEqual("TestStar", response.GetProperty("stars")[0].GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task CanPatchNestedItemWithVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name",
+                character = new
+                {
+                    id = "characterId",
+                    name = "characterName",
+                    homePlanet = 1,
+                    star = new
+                    {
+                        id = "starId",
+                        name = "starName",
+                        tag = new
+                        {
+                            id = "tagId",
+                            name = "tagName"
+                        }
+                    }
+                }
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            // Executing path with updating "existing" field and "adding" a new field
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
+    patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+        character
+        {
+            id
+            name
+            type
+            homePlanet
+            star
+            {
+                id
+                name
+                tag
+                {
+                    id
+                    name
+                }
+            }
+        }
+        stars
+        {
+            id
+        }
+     }
+}";
+            var update = new
+            {
+                name = "new_name",
+                character = new
+                {
+                    id = "characterId",
+                    name = "characterName",
+                    type = "characterType",
+                    homePlanet = 2,
+                    star = new
+                    {
+                        id = "starId",
+                        name = "starName1",
+                        tag = new
+                        {
+                            id = "tagId",
+                            name = "tagName"
+                        }
+                    }
+                },
+                stars = new[] { new { id = "TestStar" } }
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreEqual("characterType", response.GetProperty("character").GetProperty("type").GetString());
+            Assert.AreEqual("characterName", response.GetProperty("character").GetProperty("name").GetString());
+            Assert.AreEqual(2, response.GetProperty("character").GetProperty("homePlanet").GetInt32());
+            Assert.AreEqual("starName1", response.GetProperty("character").GetProperty("star").GetProperty("name").GetString());
+            Assert.AreEqual("TestStar", response.GetProperty("stars")[0].GetProperty("id").GetString());
+        }
+
+        /// <summary>
+        ///  Patch Operation has limitation of executing/patching only 10 attributes at a time, internally which is 10 patch operation.
+        ///  In DAB, we are supporting multiple patch operations in a single patch operation by executing them in a Transactional Batch.
+        /// </summary>
+        [TestMethod]
+        public async Task CanPatchMoreThan10AttributesInAnItemWithVariables()
+        {
+            string roleName = "anonymous";
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name",
+                character = new
+                {
+                    id = "characterId",
+                    name = "characterName",
+                    type = "characterType",
+                    homePlanet = 1,
+                    star = new
+                    {
+                        id = "starId",
+                        name = "starName",
+                        tag = new
+                        {
+                            id = "tagId",
+                            name = "tagName"
+                        }
+                    }
+                },
+                age = 10,
+                dimension = "my dimension",
+                tags = new[] { "tag1", "tag2", "tag3" },
+                stars = new[]
+                {
+                    new { id = "TestStar1" },
+                    new { id = "TestStar2" },
+                },
+                moons = new[]
+                {
+                    new {
+                        id = "TestMoon1",
+                        moonAdditionalAttributes = new[]
+                        {
+                            new { id = "moonAdditionalAttributes1" },
+                            new { id = "moonAdditionalAttributes2" }
+                        }
+                    },
+                    new { id = "TestMoon2",
+                        moonAdditionalAttributes = new[]
+                        {
+                            new { id = "moonAdditionalAttributes3" },
+                            new { id = "moonAdditionalAttributes4" }
+                        } }
+                },
+                suns = new[]
+                {
+                    new { id = "TestSun1" },
+                    new { id = "TestSun2" },
+                }
+            };
+
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } },
+                authToken: authToken,
+                clientRoleHeader: roleName);
+
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
+    patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+        age
+        dimension
+        character
+        {
+            id
+            name
+            type
+            homePlanet
+            star
+            {
+                id
+                name
+                tag
+                {
+                    id
+                    name
+                }
+            }
+        }
+        tags
+        stars
+        {
+            id
+        }
+        moons
+        {
+            id
+            moonAdditionalAttributes
+            {
+                id
+            }
+        }
+        suns
+        {
+            id
+        }
+    }
+}";
+            var update = new
+            {
+                name = "test_name", // Patch1
+                character = new
+                {
+                    id = "characterId1", // Patch2
+                    name = "characterName1", // Patch3
+                    type = "characterType1", // Patch4
+                    homePlanet = 11, // Patch5
+                    star = new
+                    {
+                        id = "starId1", // Patch6
+                        name = "starName1", // Patch7
+                        tag = new
+                        {
+                            id = "tagId1", // Patch8
+                            name = "tagName1" // Patch9
+                        }
+                    }
+                },
+                tags = new[] { "tag4", "tag5", "tag6" }, // Patch10
+                stars = new[] // Patch11
+                {
+                    new { id = "TestStar3" },
+                    new { id = "TestStar4" },
+                },
+                moons = new[] // Patch12
+                {
+                    new {
+                        id = "TestMoon11",
+                        moonAdditionalAttributes = new[]
+                        {
+                            new { id = "moonAdditionalAttributes11" },
+                            new { id = "moonAdditionalAttributes21" }
+                        }
+                    },
+                    new { id = "TestMoon21",
+                        moonAdditionalAttributes = new[]
+                        {
+                            new { id = "moonAdditionalAttributes31" },
+                            new { id = "moonAdditionalAttributes41" }
+                        } }
+                }
+            };
+
+            JsonElement patchResponse = await ExecuteGraphQLRequestAsync(
+                "patchPlanet",
+                mutation,
+                variables: new()
+                {
+                    { "id", id },
+                    { "partitionKeyValue", id },
+                    { "item", update }
+                },
+                authToken: authToken,
+                clientRoleHeader: roleName);
+
+            // This information should be same as original input
+            Assert.AreEqual(patchResponse.GetProperty("id").GetString(), input.id);
+            Assert.AreEqual(patchResponse.GetProperty("age").GetInt32(), input.age);
+            Assert.AreEqual(patchResponse.GetProperty("dimension").GetString(), input.dimension);
+            // Asserting updated information
+            Assert.AreEqual(patchResponse.GetProperty("name").GetString(), update.name);
+            Assert.AreEqual(patchResponse.GetProperty("character").ToString(), JsonSerializer.Serialize(update.character));
+            Assert.AreEqual(patchResponse.GetProperty("tags").ToString(), JsonSerializer.Serialize(update.tags));
+            Assert.AreEqual(patchResponse.GetProperty("stars").ToString(), JsonSerializer.Serialize(update.stars));
+            Assert.AreEqual(patchResponse.GetProperty("moons").ToString(), JsonSerializer.Serialize(update.moons));
+        }
+
         /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>

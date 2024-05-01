@@ -86,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLMutationTests
         [TestMethod]
         public async Task InsertMutationFailingDatabasePolicy()
         {
-            string errorMessage = "Could not insert row with given values.";
+            string errorMessage = "Could not insert row with given values for entity: Publisher";
             string msSqlQuery = @"
                 SELECT count(*) as count
                    FROM [publishers]

@@ -438,8 +438,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string routeAfterPathBase)
         {
 
-            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
             // this means we have a non empty primary key route which we save. Otherwise, save
@@ -452,7 +451,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityPath = entityPathAndPKRoute[0];
             string primaryKeyRoute = entityPathAndPKRoute.Length == maxNumberOfElementsFromSplit ? entityPathAndPKRoute[1] : string.Empty;
 
-            if (!sqlMetadataProvider.TryGetEntityNameFromPath(entityPath, out string? entityName))
+            if (!runtimeConfig.TryGetEntityNameFromPath(entityPath, out string? entityName))
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid Entity path: {entityPath}.",
@@ -460,7 +459,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            return (entityName, primaryKeyRoute);
+            return (entityName!, primaryKeyRoute);
         }
 
         /// <summary>

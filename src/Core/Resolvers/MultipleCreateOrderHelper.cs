@@ -64,7 +64,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            if (sourceDbObject.GetType() != typeof(DatabaseTable) || targetDbObject.GetType() != typeof(DatabaseTable) )
+            if (sourceDbObject.GetType() != typeof(DatabaseTable) || targetDbObject.GetType() != typeof(DatabaseTable))
             {
                 throw new DataApiBuilderException(
                 message: $"Cannot execute multiple-create for relationship: {relationshipName} at level: {nestingLevel} because currently DAB supports" +

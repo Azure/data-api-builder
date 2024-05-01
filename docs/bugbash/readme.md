@@ -49,6 +49,7 @@ OR Alternatively, run following command: \
 - [ ] Should able to read item with different filters (*With different operators like `eq`, `neq`, `lt`, `gt`, `lte`, `gte`, `contains`, `notcontains`, `startwith`, `endswith`*)
 - [ ] Should able to read item in particular order (*`Order By`*)
 - [ ] Should able to read item with filters have *`AND`* and *`OR`* condition
+- [ ] Should able to read items from multiple pages.
 
 **Authorization**
 - [ ]  Should honor the given permissions assign to a role in Runtime Config file (*i.e. dab-config.CosmosDb_NoSql.json*)

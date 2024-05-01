@@ -146,11 +146,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             JsonDocument document2 = JsonDocument.Parse(jsonResult2);
 
             Mock<IQueryEngine> sqlQueryEngine = new();
-            sqlQueryEngine.Setup(x => x.ExecuteAsync(It.IsAny<FindRequestContext>())).Returns(Task.FromResult(document1));
-
             Mock<IQueryEngine> cosmosQueryEngine = new();
-            cosmosQueryEngine.Setup(x => x.ExecuteAsync(It.IsAny<FindRequestContext>())).Returns(Task.FromResult(document2));
-
             Mock<IQueryEngineFactory> queryEngineFactory = new();
             queryEngineFactory.Setup(x => x.GetQueryEngine(DatabaseType.MySQL)).Returns(sqlQueryEngine.Object);
             queryEngineFactory.Setup(x => x.GetQueryEngine(DatabaseType.CosmosDB_NoSQL)).Returns(cosmosQueryEngine.Object);
@@ -185,6 +181,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             string outParam;
             Dictionary<string, string> _pathToEntityMock = new() { { ENTITYNAME1, ENTITYNAME1 }, { ENTITYNAME2, ENTITYNAME2 } };
 
+            FindRequestContext findRequestContext1 = new(ENTITYNAME1, databaseObject1.Object, true);
+            FindRequestContext findRequestContext2 = new(ENTITYNAME2, databaseObject2.Object, true);
+            sqlQueryEngine.Setup(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITYNAME1))).Returns(Task.FromResult(document1));
+            cosmosQueryEngine.Setup(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITYNAME2))).Returns(Task.FromResult(document2));
             sqlMetadataProviderDb1.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
             sqlMetadataProviderDb2.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam))
                                .Callback(new metaDataCallback((string entityPath, out string entity) => _ = _pathToEntityMock.TryGetValue(entityPath, out entity)))
@@ -216,10 +216,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
             Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should be invoked for multi-source query as entity belongs to sql db.");
             Assert.AreEqual(0, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should not be invoked for multi-source query as entity belongs to sql db.");
-
+            sqlQueryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITYNAME1)), Times.Once);
+            cosmosQueryEngine.Verify(x => x.ExecuteAsync(It.IsAny<FindRequestContext>()), Times.Never);
             IActionResult result = await restService.ExecuteAsync(ENTITYNAME2, EntityActionOperation.Read, null);
             Assert.AreEqual(1, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should be invoked for multi-source query as entity belongs to cosmos db.");
             Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should not be invoked again for multi-source query as entity2 belongs to cosmos db.");
+            sqlQueryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITYNAME1)), Times.Once);
+            cosmosQueryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITYNAME2)), Times.Once);
         }
 
         /// <summary>

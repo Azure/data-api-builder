@@ -23,7 +23,8 @@ Alternatively, You can create an account on portal https://learn.microsoft.com/e
 - Schema file: https://github.com/Azure/data-api-builder/blob/users/sourabhjain/bugbash/docs/bugbash/schema.gql
 - Runtime Config JSON: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
 
-**Run DAB**
+**Run DAB** \
+\
 Follow this for quick start: https://learn.microsoft.com/en-us/azure/data-api-builder/quickstart-nosql#install-the-data-api-builder-cli \
 OR Alternatively, run following command: \
 1. Install latest DAB package: `dotnet tool install --global Microsoft.DataApiBuilder --version 0.13.0-rc`

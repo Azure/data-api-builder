@@ -5,7 +5,7 @@
  
 ## Set Up
 1. Install Cosmos Db Emulator from here: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=windows%2Ccsharp&pivots=api-nosql#install-the-emulator \
-Alternatively, You can create an account on portal https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-create-account?tabs=azure-portal
+Alternatively, You can create an account on portal https://learn.microsoft.com/en-us/azure/cosmos-db/try-free?tabs=nosql
 2. Create a database (as `graphqldb`) and container(as `planet`)
 3. Upload this data to emulator or real account: https://github.com/Azure/data-api-builder/blob/users/sourabhjain/bugbash/docs/bugbash/mydata.json
 

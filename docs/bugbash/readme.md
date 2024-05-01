@@ -30,9 +30,8 @@ OR Alternatively, run following command: \
 2. OR, Update to the latest package: `dotnet tool update --global Microsoft.DataApiBuilder --version 0.13.0-rc`
 3. Confirm if it is installed `dotnet tool list --global`
    ![image](https://github.com/Azure/data-api-builder/assets/6362382/63f77ab1-db94-4d4c-abb9-2df164b256e2)
-4. `dab init --database-type "cosmosdb_nosql" --graphql-schema schema.gql -c dab-config.CosmosDb_NoSql.json`
-
-
+4. Go to the same location where you have above 2 files downloaded and run `dab start`
+5. Open https://localhost:5000/graphql
 
 ## Scenarios:
 **Making connection to Cosmos DB**

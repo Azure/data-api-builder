@@ -57,3 +57,6 @@ OR Alternatively, run following command: \
 - [ ]  Should be able to apply item level authorization by defining database policy. (Operation supported in the policy condition are `eq`, `neql`, `>` , `>=`, `<`, `<=`)
 
 To checkout more scenarios, you can refer the release notes: https://github.com/Azure/data-api-builder/releases
+
+## Where to report the bug?
+Tou can put your findings  at https://microsoftapc-my.sharepoint.com/:x:/g/personal/sourabhjain_microsoft_com/ESkNLFvEfSNHp6s3RUkLV7MBEqRBmb1YK2j4sJsTdiy-wQ?e=2ltHN4

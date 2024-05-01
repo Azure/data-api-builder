@@ -31,6 +31,10 @@ public class DataApiBuilderException : Exception
         /// </summary>
         EntityNotFound,
         /// <summary>
+        /// The relationship for a pair of source/target entities does not exist.
+        /// </summary>
+        RelationshipNotFound,
+        /// <summary>
         /// Request failed authentication. i.e. No/Invalid JWT token
         /// </summary>
         AuthenticationChallenge,
@@ -109,7 +113,11 @@ public class DataApiBuilderException : Exception
         /// <summary>
         /// Invalid PK field(s) specified in the request.
         /// </summary>
-        InvalidIdentifierField
+        InvalidIdentifierField,
+        /// <summary>
+        /// Relationship Field's value not found
+        /// </summary>
+        RelationshipFieldNotFound
     }
 
     public HttpStatusCode StatusCode { get; }

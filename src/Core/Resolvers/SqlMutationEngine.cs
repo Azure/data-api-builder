@@ -14,6 +14,7 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Resolvers.Sql_Query_Structures;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -25,6 +26,7 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
@@ -42,6 +44,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly RuntimeConfigProvider _runtimeConfigProvider;
         public const string IS_UPDATE_RESULT_SET = "IsUpdateResultSet";
         private const string TRANSACTION_EXCEPTION_ERROR_MSG = "An unexpected error occurred during the transaction execution";
+        public const string SINGLE_INPUT_ARGUEMENT_NAME = "item";
+        public const string MULTIPLE_INPUT_ARGUEMENT_NAME = "items";
 
         private static DataApiBuilderException _dabExceptionWithTransactionErrorMessage = new(message: TRANSACTION_EXCEPTION_ERROR_MSG,
                                                                                             statusCode: HttpStatusCode.InternalServerError,
@@ -95,6 +99,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutation(context, parameters, entityName, mutationOperation);
+
+            // Multiple create mutation request is validated to ensure that the request is valid semantically.
+            string inputArgumentName = IsPointMutation(context) ? MutationBuilder.ITEM_INPUT_ARGUMENT_NAME : MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
+            if (parameters.TryGetValue(inputArgumentName, out object? param) && mutationOperation is EntityActionOperation.Create)
+            {
+                IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
+                MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext = new(
+                    entityName: entityName,
+                    parentEntityName: string.Empty,
+                    columnsDerivedFromParentEntity: new(),
+                    columnsToBeDerivedFromEntity: new());
+                MultipleMutationInputValidator multipleMutationInputValidator = new(sqlMetadataProviderFactory: _sqlMetadataProviderFactory, runtimeConfigProvider: _runtimeConfigProvider);
+                multipleMutationInputValidator.ValidateGraphQLValueNode(
+                    schema: schemaForArgument,
+                    context: context,
+                    parameters: param,
+                    nestingLevel: 0,
+                    multipleMutationEntityInputValidationContext: multipleMutationEntityInputValidationContext);
+            }
 
             // The presence of READ permission is checked in the current role (with which the request is executed) as well as Anonymous role. This is because, for GraphQL requests,
             // READ permission is inherited by other roles from Anonymous role when present.
@@ -156,6 +179,41 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             result = GetDbOperationResultJsonDocument("success");
                         }
                     }
+                    // This code block contains logic for handling multiple create mutation operations.
+                    else if (mutationOperation is EntityActionOperation.Create && _runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled())
+                    {
+                        bool isPointMutation = IsPointMutation(context);
+
+                        List<IDictionary<string, object?>> primaryKeysOfCreatedItems = PerformMultipleCreateOperation(
+                                    entityName,
+                                    context,
+                                    parameters,
+                                    sqlMetadataProvider,
+                                    !isPointMutation);
+
+                        // For point create multiple mutation operation, a single item is created in the
+                        // table backing the top level entity. So, the PK of the created item is fetched and
+                        // used when calling the query engine to process the selection set.
+                        // For many type multiple create operation, one or more than one item are created
+                        // in the table backing the top level entity. So, the PKs of the created items are
+                        // fetched and used when calling the query engine to process the selection set.
+                        // Point multiple create mutation and many type multiple create mutation are calling different
+                        // overloaded method ("ExecuteAsync") of the query engine to process the selection set.
+                        if (isPointMutation)
+                        {
+                            result = await queryEngine.ExecuteAsync(
+                                        context,
+                                        primaryKeysOfCreatedItems[0],
+                                        dataSourceName);
+                        }
+                        else
+                        {
+                            result = await queryEngine.ExecuteMultipleCreateFollowUpQueryAsync(
+                                        context,
+                                        primaryKeysOfCreatedItems,
+                                        dataSourceName);
+                        }
+                    }
                     else
                     {
                         DbResultSetRow? mutationResultRow =
@@ -191,6 +249,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                     transactionScope.Complete();
                 }
+
             }
             // All the exceptions that can be thrown by .Complete() and .Dispose() methods of transactionScope
             // derive from TransactionException. Hence, TransactionException acts as a catch-all.
@@ -795,6 +854,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             GetHttpContext());
                     queryString = queryBuilder.Build(insertQueryStruct);
                     queryParameters = insertQueryStruct.Parameters;
+
                     break;
                 case EntityActionOperation.Update:
                     SqlUpdateStructure updateStructure = new(
@@ -870,7 +930,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     await queryExecutor.ExecuteQueryAsync(
                         queryString,
                         queryParameters,
-                        queryExecutor.ExtractResultSetFromDbDataReader,
+                        queryExecutor.ExtractResultSetFromDbDataReaderAsync,
                         dataSourceName,
                         GetHttpContext(),
                         primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
@@ -914,13 +974,899 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     await queryExecutor.ExecuteQueryAsync(
                         sqltext: queryString,
                         parameters: queryParameters,
-                        dataReaderHandler: queryExecutor.ExtractResultSetFromDbDataReader,
+                        dataReaderHandler: queryExecutor.ExtractResultSetFromDbDataReaderAsync,
                         httpContext: GetHttpContext(),
                         dataSourceName: dataSourceName);
                 dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new()) : null;
             }
 
             return dbResultSetRow;
+        }
+
+        /// <summary>
+        /// Performs the given GraphQL create mutation operation.
+        /// </summary>
+        /// <param name="entityName">Name of the top level entity</param>
+        /// <param name="mutationInputParamsFromGQLContext">Multiple Create mutation's input parameters retrieved from GraphQL context</param>
+        /// <param name="sqlMetadataProvider">SqlMetadaprovider</param>
+        /// <param name="context">Hotchocolate's context for the graphQL request.</param>
+        /// <param name="isMultipleInputType">Boolean indicating whether the create operation is for multiple items.</param>
+        /// <returns>Primary keys of the created records (in the top level entity).</returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private List<IDictionary<string, object?>> PerformMultipleCreateOperation(
+                string entityName,
+                IMiddlewareContext context,
+                IDictionary<string, object?> mutationInputParamsFromGQLContext,
+                ISqlMetadataProvider sqlMetadataProvider,
+                bool isMultipleInputType = false)
+        {
+            // rootFieldName can be either "item" or "items" depending on whether the operation
+            // is point multiple create or many-type multiple create. 
+            string rootFieldName = isMultipleInputType ? MULTIPLE_INPUT_ARGUEMENT_NAME : SINGLE_INPUT_ARGUEMENT_NAME;
+
+            // Parse the hotchocolate input parameters into .net object types
+            object? parsedInputParams = GQLMultipleCreateArgumentToDictParams(context, rootFieldName, mutationInputParamsFromGQLContext);
+
+            if (parsedInputParams is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "The input for multiple create mutation operation cannot be null",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            // List of Primary keys of the created records in the top level entity.
+            // Each dictionary in the list corresponds to the PKs of a single record.
+            // For point multiple create operation, only one entry will be present.
+            List<IDictionary<string, object?>> primaryKeysOfCreatedItemsInTopLevelEntity = new();
+
+            if (!mutationInputParamsFromGQLContext.TryGetValue(rootFieldName, out object? unparsedInputFieldsForRootField)
+                || unparsedInputFieldsForRootField is null)
+            {
+                throw new DataApiBuilderException(
+                    message: $"Mutation Request should contain the expected argument: {rootFieldName} in the input",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            if (isMultipleInputType)
+            {
+                // For a many type multiple create operation, after parsing the hotchocolate input parameters, the resultant data structure is a list of dictionaries.
+                // Each entry in the list corresponds to the input parameters for a single input item.
+                // The fields belonging to the inputobjecttype are converted to
+                // 1. Scalar input fields: Key - Value pair of field name and field value.
+                // 2. Object type input fields: Key - Value pair of relationship name and a dictionary of parameters (takes place for 1:1, N:1 relationship types)
+                // 3. List type input fields: key - Value pair of relationship name and a list of dictionary of parameters (takes place for 1:N, M:N relationship types) 
+                List<IDictionary<string, object?>> parsedMutationInputFields = (List<IDictionary<string, object?>>)parsedInputParams;
+
+                // For many type multiple create operation, the "parameters" dictionary is a key pair of <"items", List<IValueNode>>.
+                // Ideally, the input provided for "items" field should not be any other type than List<IValueNode>
+                // as HotChocolate will detect and throw errors before the execution flow reaches here.
+                // However, this acts as a guard to ensure that the right input type for "items" field is used.
+                if (unparsedInputFieldsForRootField is not List<IValueNode> unparsedInputForRootField)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Unsupported type used with {rootFieldName} in the create mutation input",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                // In the following loop, the input elements in "parsedInputList" are iterated and processed.
+                // idx tracks the index number to fetch the corresponding unparsed hotchocolate input parameters from "paramList".
+                // Both parsed and unparsed input parameters are necessary for successfully determing the order of insertion
+                // among the entities involved in the multiple create mutation request.
+                int itemsIndex = 0;
+
+                // Consider a mutation request such as the following
+                // mutation{
+                //  createbooks(items: [
+                //                {
+                //                    title: "Harry Potter and the Chamber of Secrets",
+                //                    publishers: { name: "Bloomsbury" }
+                //                 },
+                //                 {
+                //                    title: "Educated",
+                //                    publishers: { name: "Random House"}
+                //                 }
+                //     ]){
+                //      items{
+                //         id
+                //         title 
+                //         publisher_id 
+                //      }
+                //   }
+                // }
+                // In the above mutation, each element in the 'items' array forms the 'parsedInputList'.
+                // items[itemsIndex].Key -> field(s) in the input such as 'title' and 'publishers' (type: string)
+                // items[itemsIndex].Value -> field value(s) for each corresponding field (type: object?)
+                // items[0] -> object with title 'Harry Potter and the Chamber of Secrets'
+                // items[1] -> object with title 'Educated'
+                // The processing logic is distinctly executed for each object in `items'.
+                foreach (IDictionary<string, object?> parsedMutationInputField in parsedMutationInputFields)
+                {
+                    MultipleCreateStructure multipleCreateStructure = new(
+                        entityName: entityName,
+                        parentEntityName: string.Empty,
+                        inputMutParams: parsedMutationInputField);
+
+                    Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItem = new();
+
+                    IValueNode? unparsedFieldNodeForCurrentItem = unparsedInputForRootField[itemsIndex];
+                    if (unparsedFieldNodeForCurrentItem is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Error when processing the mutation request",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
+                    ProcessMultipleCreateInputField(context, unparsedFieldNodeForCurrentItem.Value, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
+
+                    // Ideally the CurrentEntityCreatedValues should not be null. CurrentEntityCreatedValues being null indicates that the create operation
+                    // has failed and that will result in an exception being thrown.
+                    // This condition acts as a guard against having to deal with null values during selection set resolution.
+                    if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
+                    {
+                        primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFieldValues(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
+                    }
+
+                    itemsIndex++;
+                }
+            }
+            else
+            {
+                // Consider a mutation request such as the following
+                // mutation{
+                //  createbook(item:{
+                //              title: "Harry Potter and the Chamber of Secrets",
+                //              publishers: {
+                //                  name: "Bloomsbury"
+                //                }})
+                //  {
+                //     id
+                //     title
+                //     publisher_id
+                //  }
+                // For the above mutation request, the parsedInputParams will be a dictionary with the following key value pairs
+                //
+                // Key          Value
+                // title        Harry Potter and the Chamber of Secrets
+                // publishers   Dictionary<name, Bloomsbury>
+                IDictionary<string, object?> parsedInputFields = (IDictionary<string, object?>)parsedInputParams;
+
+                // For point multiple create operation, the "parameters" dictionary is a key pair of <"item", List<ObjectFieldNode>>.
+                // The value field retrieved using the key "item" cannot be of any other type.
+                // Ideally, this condition should never be hit, because such cases should be caught by Hotchocolate but acts as a guard against using any other types with "item" field
+                if (unparsedInputFieldsForRootField is not List<ObjectFieldNode> unparsedInputFields)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Unsupported type used with {rootFieldName} in the create mutation input",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                MultipleCreateStructure multipleCreateStructure = new(
+                    entityName: entityName,
+                    parentEntityName: entityName,
+                    inputMutParams: parsedInputFields);
+
+                ProcessMultipleCreateInputField(context, unparsedInputFields, sqlMetadataProvider, multipleCreateStructure, nestingLevel: 0);
+
+                if (multipleCreateStructure.CurrentEntityCreatedValues is not null)
+                {
+                    primaryKeysOfCreatedItemsInTopLevelEntity.Add(FetchPrimaryKeyFieldValues(sqlMetadataProvider, entityName, multipleCreateStructure.CurrentEntityCreatedValues));
+                }
+            }
+
+            return primaryKeysOfCreatedItemsInTopLevelEntity;
+        }
+
+        /// <summary>
+        /// 1. Identifies the order of insertion into tables involved in the create mutation request.
+        /// 2. Builds and executes the necessary database queries to insert all the data into appropriate tables.
+        /// </summary>
+        /// <param name="context">Hotchocolate's context for the graphQL request.</param>
+        /// <param name="unparsedInputFields">Mutation input parameter from GQL Context for the current item being processed</param>
+        /// <param name="sqlMetadataProvider">SqlMetadataprovider for the given database type.</param>
+        /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request</param>
+        private void ProcessMultipleCreateInputField(
+            IMiddlewareContext context,
+            object? unparsedInputFields,
+            ISqlMetadataProvider sqlMetadataProvider,
+            MultipleCreateStructure multipleCreateStructure,
+            int nestingLevel)
+        {
+
+            if (multipleCreateStructure.InputMutParams is null || unparsedInputFields is null)
+            {
+                throw new DataApiBuilderException(
+                        message: "The input for a multiple create mutation operation cannot be null.",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            // For One - Many and Many - Many relationship types, processing logic is distinctly executed for each
+            // object in the input list.
+            // So, when the input parameters is of list type, we iterate over the list
+            // and call the same method for each element.
+            if (multipleCreateStructure.InputMutParams.GetType().GetGenericTypeDefinition() == typeof(List<>))
+            {
+                List<IDictionary<string, object?>> parsedInputItems = (List<IDictionary<string, object?>>)multipleCreateStructure.InputMutParams;
+                List<IValueNode> unparsedInputFieldList = (List<IValueNode>)unparsedInputFields;
+                int parsedInputItemIndex = 0;
+
+                foreach (IDictionary<string, object?> parsedInputItem in parsedInputItems)
+                {
+                    MultipleCreateStructure multipleCreateStructureForCurrentItem = new(
+                        entityName: multipleCreateStructure.EntityName,
+                        parentEntityName: multipleCreateStructure.ParentEntityName,
+                        inputMutParams: parsedInputItem,
+                        isLinkingTableInsertionRequired: multipleCreateStructure.IsLinkingTableInsertionRequired)
+                    {
+                        CurrentEntityParams = multipleCreateStructure.CurrentEntityParams,
+                        LinkingTableParams = multipleCreateStructure.LinkingTableParams
+                    };
+
+                    Dictionary<string, Dictionary<string, object?>> primaryKeysOfCreatedItems = new();
+                    IValueNode? nodeForCurrentInput = unparsedInputFieldList[parsedInputItemIndex];
+                    if (nodeForCurrentInput is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "Error when processing the mutation request",
+                            statusCode: HttpStatusCode.BadRequest,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                    }
+
+                    ProcessMultipleCreateInputField(context, nodeForCurrentInput.Value, sqlMetadataProvider, multipleCreateStructureForCurrentItem, nestingLevel);
+                    parsedInputItemIndex++;
+                }
+            }
+            else
+            {
+                if (unparsedInputFields is not List<ObjectFieldNode> parameterNodes)
+                {
+                    throw new DataApiBuilderException(
+                        message: "Error occurred while processing the mutation request",
+                        statusCode: HttpStatusCode.BadRequest,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+                }
+
+                string entityName = multipleCreateStructure.EntityName;
+                Entity entity = _runtimeConfigProvider.GetConfig().Entities[entityName];
+
+                // Classifiy the relationship fields (if present in the input request) into referencing and referenced relationships and
+                // populate multipleCreateStructure.ReferencingRelationships and multipleCreateStructure.ReferencedRelationships respectively.
+                DetermineReferencedAndReferencingRelationships(context, multipleCreateStructure, sqlMetadataProvider, entity.Relationships, parameterNodes);
+                PopulateCurrentAndLinkingEntityParams(multipleCreateStructure, sqlMetadataProvider, entity.Relationships);
+
+                SourceDefinition currentEntitySourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
+                currentEntitySourceDefinition.SourceEntityRelationshipMap.TryGetValue(entityName, out RelationshipMetadata? currentEntityRelationshipMetadata);
+
+                // Process referenced relationships
+                foreach ((string relationshipName, object? relationshipFieldValue) in multipleCreateStructure.ReferencedRelationships)
+                {
+                    string relatedEntityName = GraphQLUtils.GetRelationshipTargetEntityName(entity, entityName, relationshipName);
+                    MultipleCreateStructure referencedRelationshipMultipleCreateStructure = new(entityName: relatedEntityName, parentEntityName: entityName, inputMutParams: relationshipFieldValue);
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, relationshipName);
+                    ProcessMultipleCreateInputField(context, node.Value, sqlMetadataProvider, referencedRelationshipMultipleCreateStructure, nestingLevel + 1);
+
+                    if (sqlMetadataProvider.TryGetFKDefinition(
+                                                    sourceEntityName: entityName,
+                                                    targetEntityName: relatedEntityName,
+                                                    referencingEntityName: entityName,
+                                                    referencedEntityName: relatedEntityName,
+                                                    out ForeignKeyDefinition? foreignKeyDefinition,
+                                                    isMToNRelationship: false))
+                    {
+                        PopulateReferencingFields(
+                            sqlMetadataProvider: sqlMetadataProvider,
+                            multipleCreateStructure: multipleCreateStructure,
+                            fkDefinition: foreignKeyDefinition,
+                            computedRelationshipFields: referencedRelationshipMultipleCreateStructure.CurrentEntityCreatedValues,
+                            isLinkingTable: false,
+                            entityName: relatedEntityName);
+                    }
+                }
+
+                multipleCreateStructure.CurrentEntityCreatedValues = BuildAndExecuteInsertDbQueries(
+                                                                          sqlMetadataProvider: sqlMetadataProvider,
+                                                                          entityName: entityName,
+                                                                          parentEntityName: entityName,
+                                                                          parameters: multipleCreateStructure.CurrentEntityParams!,
+                                                                          sourceDefinition: currentEntitySourceDefinition,
+                                                                          isLinkingEntity: false,
+                                                                          nestingLevel: nestingLevel);
+
+                //Perform an insertion in the linking table if required
+                if (multipleCreateStructure.IsLinkingTableInsertionRequired)
+                {
+                    if (multipleCreateStructure.LinkingTableParams is null)
+                    {
+                        multipleCreateStructure.LinkingTableParams = new Dictionary<string, object?>();
+                    }
+
+                    // Consider the mutation request:
+                    // mutation{
+                    //     createbook(item: {
+                    //         title: "Book Title",
+                    //         publisher_id: 1234,
+                    //         authors: [
+                    //             {...} ,
+                    //             {...}
+                    //         ]
+                    //      }) {
+                    //          ...
+                    //      }
+                    // There exists two relationships for a linking table.
+                    // 1. Relationship between the parent entity (Book) and the linking table.
+                    // 2. Relationship between the current entity (Author) and the linking table.
+                    // To construct the insert database query for the linking table, relationship fields from both the
+                    // relationships are required. 
+
+                    // Populate Current entity's relationship fields
+                    List<ForeignKeyDefinition> foreignKeyDefinitions = currentEntityRelationshipMetadata!.TargetEntityToFkDefinitionMap[multipleCreateStructure.ParentEntityName];
+                    ForeignKeyDefinition fkDefinition = foreignKeyDefinitions[0];
+                    PopulateReferencingFields(sqlMetadataProvider, multipleCreateStructure, fkDefinition, multipleCreateStructure.CurrentEntityCreatedValues, isLinkingTable: true);
+
+                    string linkingEntityName = GraphQLUtils.GenerateLinkingEntityName(multipleCreateStructure.ParentEntityName, entityName);
+                    SourceDefinition linkingTableSourceDefinition = sqlMetadataProvider.GetSourceDefinition(linkingEntityName);
+
+                    _ = BuildAndExecuteInsertDbQueries(
+                            sqlMetadataProvider: sqlMetadataProvider,
+                            entityName: linkingEntityName,
+                            parentEntityName: entityName,
+                            parameters: multipleCreateStructure.LinkingTableParams!,
+                            sourceDefinition: linkingTableSourceDefinition,
+                            isLinkingEntity: true,
+                            nestingLevel: nestingLevel);
+                }
+
+                // Process referencing relationships
+                foreach ((string relationshipFieldName, object? relationshipFieldValue) in multipleCreateStructure.ReferencingRelationships)
+                {
+                    string relatedEntityName = GraphQLUtils.GetRelationshipTargetEntityName(entity, entityName, relationshipFieldName);
+                    MultipleCreateStructure referencingRelationshipMultipleCreateStructure = new(entityName: relatedEntityName,
+                                                                                                 parentEntityName: entityName,
+                                                                                                 inputMutParams: relationshipFieldValue,
+                                                                                                 isLinkingTableInsertionRequired: GraphQLUtils.IsMToNRelationship(entity, relationshipFieldName));
+                    IValueNode node = GraphQLUtils.GetFieldNodeForGivenFieldName(parameterNodes, relationshipFieldName);
+
+                    // Many-Many relationships are marked as Referencing relationships
+                    // because the linking table insertion can happen only
+                    // when records have been successfully created in both the entities involved in the relationship.
+                    // The entities involved do not derive any fields from each other. Only the linking table derives the
+                    // primary key fields from the entities involved in the relationship.
+                    // For a M:N relationships, the referencing fields are populated in LinkingTableParams whereas for  
+                    // a 1:N relationship, referencing fields will be populated in CurrentEntityParams.
+                    if (sqlMetadataProvider.TryGetFKDefinition(
+                            sourceEntityName: entityName,
+                            targetEntityName: relatedEntityName,
+                            referencingEntityName: relatedEntityName,
+                            referencedEntityName: entityName,
+                            out ForeignKeyDefinition? referencingEntityFKDefinition,
+                            isMToNRelationship: referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired))
+                    {
+                        PopulateReferencingFields(
+                            sqlMetadataProvider: sqlMetadataProvider,
+                            multipleCreateStructure: referencingRelationshipMultipleCreateStructure,
+                            fkDefinition: referencingEntityFKDefinition,
+                            computedRelationshipFields: multipleCreateStructure.CurrentEntityCreatedValues,
+                            isLinkingTable: referencingRelationshipMultipleCreateStructure.IsLinkingTableInsertionRequired,
+                            entityName: entityName);
+                    }
+
+                    ProcessMultipleCreateInputField(context, node.Value, sqlMetadataProvider, referencingRelationshipMultipleCreateStructure, nestingLevel + 1);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Builds and executes the insert database query necessary for creating an item in the table
+        /// the entity.
+        /// </summary>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="entityName">Current entity name</param>
+        /// <param name="parentEntityName">Parent entity name</param>
+        /// <param name="parameters">Dictionary containing the data ncessary to create a record in the table</param>
+        /// <param name="sourceDefinition">Entity's source definition object</param>
+        /// <param name="isLinkingEntity">Indicates whether the entity is a linking entity</param>
+        /// <param name="nestingLevel">Current depth of nesting in the multiple-create request</param>
+        /// <returns>Created record in the database as a dictionary</returns>
+        private Dictionary<string, object?> BuildAndExecuteInsertDbQueries(ISqlMetadataProvider sqlMetadataProvider,
+                                                                           string entityName,
+                                                                           string parentEntityName,
+                                                                           IDictionary<string, object?> parameters,
+                                                                           SourceDefinition sourceDefinition,
+                                                                           bool isLinkingEntity,
+                                                                           int nestingLevel)
+        {
+            SqlInsertStructure sqlInsertStructure = new(
+                                                     entityName: entityName,
+                                                     sqlMetadataProvider: sqlMetadataProvider,
+                                                     authorizationResolver: _authorizationResolver,
+                                                     gQLFilterParser: _gQLFilterParser,
+                                                     mutationParams: parameters,
+                                                     httpContext: GetHttpContext(),
+                                                     isLinkingEntity: isLinkingEntity);
+
+            IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
+            IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
+
+            // When the entity is a linking entity, the parent entity's name is used to get the
+            // datasource name. Otherwise, the entity's name is used.
+            string dataSourceName = isLinkingEntity ? _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(parentEntityName)
+                                                    : _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(entityName);
+            string queryString = queryBuilder.Build(sqlInsertStructure);
+            Dictionary<string, DbConnectionParam> queryParameters = sqlInsertStructure.Parameters;
+
+            List<string> exposedColumnNames = new();
+            if (sqlMetadataProvider.TryGetExposedFieldToBackingFieldMap(entityName, out IReadOnlyDictionary<string, string>? exposedFieldToBackingFieldMap))
+            {
+                exposedColumnNames = exposedFieldToBackingFieldMap.Keys.ToList();
+            }
+
+            DbResultSet? dbResultSet;
+            DbResultSetRow? dbResultSetRow;
+            dbResultSet = queryExecutor.ExecuteQuery(
+                queryString,
+                queryParameters,
+                queryExecutor.ExtractResultSetFromDbDataReader,
+                GetHttpContext(),
+                exposedColumnNames.IsNullOrEmpty() ? sourceDefinition.Columns.Keys.ToList() : exposedColumnNames,
+                dataSourceName);
+
+            dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
+            if (dbResultSetRow is null || dbResultSetRow.Columns.Count == 0)
+            {
+                if (isLinkingEntity)
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Could not insert row with given values in the linking table joining entities: {entityName} and {parentEntityName} at nesting level : {nestingLevel}",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                }
+                else
+                {
+                    if (dbResultSetRow is null)
+                    {
+                        throw new DataApiBuilderException(
+                            message: "No data returned back from database.",
+                            statusCode: HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabaseOperationFailed);
+                    }
+                    else
+                    {
+                        throw new DataApiBuilderException(
+                            message: $"Could not insert row with given values for entity: {entityName} at nesting level : {nestingLevel}",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.DatabasePolicyFailure);
+                    }
+                }
+            }
+
+            return dbResultSetRow.Columns;
+        }
+
+        /// <summary>
+        /// Helper method to extract the primary key fields from all the fields of the entity.
+        /// </summary>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="entityName">Name of the entity</param>
+        /// <param name="createdValuesForEntityItem">Field::Value dictionary of entity created in the database.</param>
+        /// <returns>Primary Key fields</returns>
+        private static Dictionary<string, object?> FetchPrimaryKeyFieldValues(ISqlMetadataProvider sqlMetadataProvider, string entityName, Dictionary<string, object?> createdValuesForEntityItem)
+        {
+            Dictionary<string, object?> pkFields = new();
+            SourceDefinition sourceDefinition = sqlMetadataProvider.GetSourceDefinition(entityName);
+            foreach (string primaryKey in sourceDefinition.PrimaryKey)
+            {
+                if (sqlMetadataProvider.TryGetExposedColumnName(entityName, primaryKey, out string? name)
+                    && createdValuesForEntityItem.TryGetValue(name, out object? value)
+                    && value != null)
+                {
+                    pkFields.Add(primaryKey, value);
+                }
+                else
+                {
+                    throw new DataApiBuilderException(message: $"Primary key field {name} has null value but it is expected to have a non-null value",
+                                                      statusCode: HttpStatusCode.InternalServerError,
+                                                      subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+                }
+            }
+
+            return pkFields;
+        }
+
+        /// <summary>
+        /// Helper method to populate the referencing fields in LinkingEntityParams or CurrentEntityParams depending on whether the current entity is a linking entity or not. 
+        /// </summary>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database.</param>
+        /// <param name="fkDefinition">Foreign Key metadata constructed during engine start-up.</param>
+        /// <param name="multipleCreateStructure">Wrapper object assisting with the multiple create operation.</param>
+        /// <param name="computedRelationshipFields">Relationship fields obtained as a result of creation of current or parent entity item.</param>
+        /// <param name="isLinkingTable">Indicates whether referencing fields are populated for a linking entity.</param>
+        /// <param name="entityName">Name of the entity.</param>
+        private static void PopulateReferencingFields(ISqlMetadataProvider sqlMetadataProvider, MultipleCreateStructure multipleCreateStructure, ForeignKeyDefinition fkDefinition, Dictionary<string, object?>? computedRelationshipFields, bool isLinkingTable, string? entityName = null)
+        {
+            if (computedRelationshipFields is null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < fkDefinition.ReferencingColumns.Count; i++)
+            {
+                string referencingColumnName = fkDefinition.ReferencingColumns[i];
+                string referencedColumnName = fkDefinition.ReferencedColumns[i];
+                string exposedReferencedColumnName;
+                if (isLinkingTable)
+                {
+                    multipleCreateStructure.LinkingTableParams![referencingColumnName] = computedRelationshipFields[referencedColumnName];
+                }
+                else
+                {
+                    if (entityName is not null
+                        && sqlMetadataProvider.TryGetExposedColumnName(entityName, referencedColumnName, out string? exposedColumnName))
+                    {
+                        exposedReferencedColumnName = exposedColumnName;
+                    }
+                    else
+                    {
+                        exposedReferencedColumnName = referencedColumnName;
+                    }
+
+                    multipleCreateStructure.CurrentEntityParams![referencingColumnName] = computedRelationshipFields[exposedReferencedColumnName];
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method that looks at the input fields of a given entity and
+        /// identifies, classifies the related entities into referenced and referencing entities.
+        /// </summary>
+        /// <param name="context">Hotchocolate context</param>
+        /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing
+        /// the multiple create mutation operation</param>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="topLevelEntityRelationships">Relationship metadata of the source entity</param>
+        /// <param name="sourceEntityFields">Field object nodes of the source entity</param>
+        private static void DetermineReferencedAndReferencingRelationships(
+            IMiddlewareContext context,
+            MultipleCreateStructure multipleCreateStructure,
+            ISqlMetadataProvider sqlMetadataProvider,
+            Dictionary<string, EntityRelationship>? topLevelEntityRelationships,
+            List<ObjectFieldNode> sourceEntityFields)
+        {
+
+            if (topLevelEntityRelationships is null)
+            {
+                return;
+            }
+
+            // Ideally, this condition should not become true.
+            // The input parameters being null should be caught earlier in the flow.
+            // Nevertheless, this check is added as a guard against cases where the input parameters are null
+            // and is not caught.
+            if (multipleCreateStructure.InputMutParams is null)
+            {
+                throw new DataApiBuilderException(
+                    message: "The mutation parameters cannot be null.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+
+            foreach ((string relationshipName, object? relationshipFieldValues) in (Dictionary<string, object?>)multipleCreateStructure.InputMutParams)
+            {
+                if (topLevelEntityRelationships.TryGetValue(relationshipName, out EntityRelationship? entityRelationship)
+                    && entityRelationship is not null)
+                {
+                    // The linking object not being null indicates that the relationship is a many-to-many relationship.
+                    // For M:N realtionship, new item(s) have to be created in the linking table
+                    // in addition to the source and target tables.
+                    // Creation of item(s) in the linking table is handled when processing the target entity.
+                    // To be able to create item(s) in the linking table, PKs of the source and target items are required.
+                    // Indirectly, the target entity depends on the PKs of the source entity.
+                    // Hence, the target entity is added as a referencing entity.
+                    if (!string.IsNullOrWhiteSpace(entityRelationship.LinkingObject))
+                    {
+                        multipleCreateStructure.ReferencingRelationships.Add(new Tuple<string, object?>(relationshipName, relationshipFieldValues) { });
+                        continue;
+                    }
+
+                    string targetEntityName = entityRelationship.TargetEntity;
+                    Dictionary<string, IValueNode?> columnDataInSourceBody = MultipleCreateOrderHelper.GetBackingColumnDataFromFields(context, multipleCreateStructure.EntityName, sourceEntityFields, sqlMetadataProvider);
+                    IValueNode? targetNode = GraphQLUtils.GetFieldNodeForGivenFieldName(objectFieldNodes: sourceEntityFields, fieldName: relationshipName);
+
+                    // In this function call, nestingLevel parameter is set as 0 which might not be accurate.
+                    // However, it is irrelevant because nestingLevel is used only for logging error messages
+                    // and we do not expect any errors to occur here.
+                    // All errors are expected to be caught during request validation.
+                    string referencingEntityName = MultipleCreateOrderHelper.GetReferencingEntityName(
+                                                                                    context: context,
+                                                                                    sourceEntityName: multipleCreateStructure.EntityName,
+                                                                                    targetEntityName: targetEntityName,
+                                                                                    relationshipName: relationshipName,
+                                                                                    metadataProvider: sqlMetadataProvider,
+                                                                                    nestingLevel: 0,
+                                                                                    columnDataInSourceBody: columnDataInSourceBody,
+                                                                                    targetNodeValue: targetNode);
+
+                    if (string.Equals(multipleCreateStructure.EntityName, referencingEntityName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        multipleCreateStructure.ReferencedRelationships.Add(new Tuple<string, object?>(relationshipName, relationshipFieldValues) { });
+                    }
+                    else
+                    {
+                        multipleCreateStructure.ReferencingRelationships.Add(new Tuple<string, object?>(relationshipName, relationshipFieldValues) { });
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Helper method which traverses the input fields for a given record and populates the fields/values into the appropriate data structures
+        /// storing the field/values belonging to the current entity and the linking entity.
+        /// Consider the below multiple create mutation request 
+        /// mutation{
+        /// createbook(item: {
+        ///        title: "Harry Potter and the Goblet of Fire",
+        ///        publishers:{
+        ///            name: "Bloomsbury"
+        ///        }
+        ///        authors:[
+        ///             {
+        ///                name: "J.K Rowling",
+        ///                birthdate: "1965-07-31",
+        ///                royalty_percentage: 100.0
+        ///             }
+        ///        ]})
+        ///   {
+        ///           ...
+        ///   }
+        ///  The mutation request consists of fields belonging to the
+        ///  1. Top Level Entity - Book:
+        ///     a) Title
+        ///  2. Related Entity - Publisher, Author
+        ///  In M:N relationship, the field(s)(e.g. royalty_percentage) belonging to the
+        ///  linking entity(book_author_link) is a property of the related entity's input object.
+        ///  So, this method identifies and populates 
+        ///  1.  multipleCreateStructure.CurrentEntityParams with the current entity's fields.
+        ///  2.  multipleCreateStructure.LinkingEntityParams with the linking entity's fields.
+        /// </summary>
+        /// <param name="multipleCreateStructure">Wrapper object for the current entity for performing the multiple create mutation operation</param>
+        /// <param name="sqlMetadataProvider">SqlMetadaProvider object for the given database</param>
+        /// <param name="topLevelEntityRelationships">Relationship metadata of the source entity</param>
+        private static void PopulateCurrentAndLinkingEntityParams(
+                MultipleCreateStructure multipleCreateStructure,
+                ISqlMetadataProvider sqlMetadataProvider,
+                Dictionary<string, EntityRelationship>? topLevelEntityRelationships)
+        {
+
+            if (multipleCreateStructure.InputMutParams is null)
+            {
+                return;
+            }
+
+            foreach ((string fieldName, object? fieldValue) in (Dictionary<string, object?>)multipleCreateStructure.InputMutParams)
+            {
+                if (topLevelEntityRelationships is not null && topLevelEntityRelationships.ContainsKey(fieldName))
+                {
+                    continue;
+                }
+
+                if (sqlMetadataProvider.TryGetBackingColumn(multipleCreateStructure.EntityName, fieldName, out _))
+                {
+                    multipleCreateStructure.CurrentEntityParams[fieldName] = fieldValue;
+                }
+                else
+                {
+                    multipleCreateStructure.LinkingTableParams[fieldName] = fieldValue;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Parse the mutation parameters from Hotchocolate input types to Dictionary of field names and values.
+        /// </summary>
+        /// <param name="context">GQL middleware context used to resolve the values of arguments</param>
+        /// <param name="rootFieldName">GQL field from which to extract the parameters. It is either "item" or "items".</param>
+        /// <param name="mutationParameters">Dictionary of mutation parameters</param>
+        /// <returns>Parsed input mutation parameters.</returns>
+        internal static object? GQLMultipleCreateArgumentToDictParams(
+                IMiddlewareContext context,
+                string rootFieldName,
+                IDictionary<string, object?> mutationParameters)
+        {
+            if (mutationParameters.TryGetValue(rootFieldName, out object? inputParameters))
+            {
+                IObjectField fieldSchema = context.Selection.Field;
+                IInputField itemsArgumentSchema = fieldSchema.Arguments[rootFieldName];
+                InputObjectType inputObjectType = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
+                return GQLMultipleCreateArgumentToDictParamsHelper(context, inputObjectType, inputParameters);
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Expected root mutation input field: '{rootFieldName}'.",
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest,
+                    statusCode: HttpStatusCode.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Helper function to parse the mutation parameters from Hotchocolate input types to
+        /// Dictionary of field names and values. The parsed input types will not contain
+        /// any hotchocolate types such as IValueNode, ObjectFieldNode, etc.
+        /// For multiple create mutation, the input types of a field can be a scalar, object or list type.
+        /// This function recursively parses each input type.
+        /// Consider the following multiple create mutation requests:
+        /// 1. mutation pointMultipleCreateExample{
+        ///      createbook(
+        ///         item: {
+        ///            title: "Harry Potter and the Goblet of Fire",
+        ///            publishers: { name: "Bloomsbury" },
+        ///            authors: [{ name: "J.K Rowling", birthdate: "1965-07-31", royalty_percentage: 100.0 }],
+        ///            reviews: [ {content: "Great book" }, {content: "Wonderful read"}]
+        ///         })
+        ///      {
+        ///         //selection set (not relevant in this function)
+        ///      }
+        ///    }
+        ///    
+        /// 2. mutation manyMultipleCreateExample{  
+        ///      createbooks(
+        ///        items:[{ fieldName0: "fieldValue0"},{fieldNameN: "fieldValueN"}]){  
+        ///           //selection set (not relevant in this function)  
+        ///        }  
+        ///      }  
+        /// </summary>
+        /// <param name="context">GQL middleware context used to resolve the values of arguments.</param>
+        /// <param name="inputObjectType">Type of the input object field.</param>
+        /// <param name="inputParameters">Mutation input parameters retrieved from IMiddleware context</param>
+        /// <returns>Parsed mutation parameters as either
+        /// 1. Dictionary<string, object?> or
+        /// 2. List<Dictionary<string, object?>>
+        /// </returns>
+        internal static object? GQLMultipleCreateArgumentToDictParamsHelper(
+            IMiddlewareContext context,
+            InputObjectType inputObjectType,
+            object? inputParameters)
+        {
+            // This condition is met for input types that accept an array of values
+            // where the mutation input field is 'items' such as 
+            // 1. Many-type multiple create operation ---> createbooks, createBookmarks_Multiple:
+            // For the mutation manyMultipleCreateExample (outlined in the method summary),
+            // the following conditions will evalaute to true for root field 'items'.
+            // 2. Input types for 1:N and M:N relationships:
+            // For the mutation pointMultipleCreateExample (outlined in the method summary),
+            // the following condition will evaluate to true for fields 'authors' and 'reviews'.
+            // For both the cases, each element in the input object can be a combination of
+            // scalar and relationship fields.
+            // The parsing logic is run distinctly for each element by recursively calling the same function.
+            // Each parsed input result is stored in a list and finally this list is returned.
+            if (inputParameters is List<IValueNode> inputFields)
+            {
+                List<IDictionary<string, object?>> parsedInputFieldItems = new();
+                foreach (IValueNode inputField in inputFields)
+                {
+                    object? parsedInputFieldItem = GQLMultipleCreateArgumentToDictParamsHelper(
+                                            context: context,
+                                            inputObjectType: inputObjectType,
+                                            inputParameters: inputField.Value);
+                    if (parsedInputFieldItem is not null)
+                    {
+                        parsedInputFieldItems.Add((IDictionary<string, object?>)parsedInputFieldItem);
+                    }
+                }
+
+                return parsedInputFieldItems;
+            }
+
+            // This condition is met when the mutation input is a single item where the
+            // mutation input field is 'item' such as
+            // 1. Point multiple create operation --> createbook.
+            // For the mutation pointMultipleCreateExample (outlined in the method summary),
+            // the following condition will evaluate to true for root field 'item'.
+            // The inputParameters will contain ObjectFieldNode objects for
+            // fields : ['title', 'publishers', 'authors', 'reviews']
+            // 2. Relationship fields that are of object type:
+            // For the mutation pointMultipleCreateExample (outlined in the method summary),
+            // when processing the field 'publishers'. For 'publishers' field, 
+            // inputParameters will contain ObjectFieldNode objects for fields: ['name']
+            else if (inputParameters is List<ObjectFieldNode> inputFieldNodes)
+            {
+                Dictionary<string, object?> parsedInputFields = new();
+                foreach (ObjectFieldNode inputFieldNode in inputFieldNodes)
+                {
+                    string fieldName = inputFieldNode.Name.Value;
+                    // For the mutation pointMultipleCreateExample (outlined in the method summary),
+                    // the following condition will evaluate to true for fields 'authors' and 'reviews'.
+                    // Fields 'authors'/'reviews' can again consist of combination of scalar and relationship fields.
+                    // So, the input object type for 'authors'/'reviews' is fetched and the same function is
+                    // invoked with the fetched input object type again to parse the input fields of 'authors'/'reviews'.
+                    if (inputFieldNode.Value.Kind == SyntaxKind.ListValue)
+                    {
+                        parsedInputFields.Add(
+                            fieldName,
+                            GQLMultipleCreateArgumentToDictParamsHelper(
+                                context,
+                                GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
+                                inputFieldNode.Value.Value));
+                    }
+                    // For the mutation pointMultipleCreateExample (outlined in the method summary),
+                    // the following condition will evaluate to true for fields 'publishers'.
+                    // Field 'publishers' can again consist of combination of scalar and relationship fields.
+                    // So, the input object type for 'publishers' is fetched and the same function is
+                    // invoked with the fetched input object type again to parse the input fields of 'publishers'.
+                    else if (inputFieldNode.Value.Kind == SyntaxKind.ObjectValue)
+                    {
+                        parsedInputFields.Add(
+                            fieldName,
+                            GQLMultipleCreateArgumentToDictParamsHelper(
+                                context,
+                                GetInputObjectTypeForAField(fieldName, inputObjectType.Fields),
+                                inputFieldNode.Value.Value));
+                    }
+                    // The flow enters this block for all scalar input fields.
+                    else
+                    {
+                        object? fieldValue = ExecutionHelper.ExtractValueFromIValueNode(
+                            value: inputFieldNode.Value,
+                            argumentSchema: inputObjectType.Fields[fieldName],
+                            variables: context.Variables);
+
+                        parsedInputFields.Add(fieldName, fieldValue);
+                    }
+                }
+
+                return parsedInputFields;
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: "Unsupported input type found in the mutation request",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Extracts the InputObjectType for a given field.
+        /// Consider the following multiple create mutation 
+        /// mutation multipleCreateExample{  
+        ///  createbook(
+        ///    item: {
+        ///      title: "Harry Potter and the Goblet of Fire", 
+        ///      publishers: { name: "Bloomsbury" },  
+        ///      authors: [{ name: "J.K Rowling", birthdate: "1965-07-31", royalty_percentage: 100.0 }]}){  
+        ///        selection set (not relevant in this function)  
+        ///      }
+        ///   }  
+        /// }
+        /// When parsing this mutation request, the flow will reach this function two times.
+        /// 1. For the field 'publishers'.
+        ///    - The function will get invoked with params
+        ///         fieldName: 'publishers',
+        ///         fields: All the fields present in CreateBookInput input object
+        ///    - The function will return `CreatePublisherInput`
+        /// 2. For the field 'authors'.
+        ///     - The function will get invoked with params
+        ///         fieldName: 'authors',
+        ///         fields: All the fields present in CreateBookInput input object
+        ///     - The function will return `CreateAuthorInput`
+        /// </summary>
+        /// <param name="fieldName">Field name for which the input object type is to be extracted.</param>
+        /// <param name="fields">Fields present in the input object type.</param>
+        /// <returns>The input object type for the given field.</returns>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private static InputObjectType GetInputObjectTypeForAField(string fieldName, FieldCollection<InputField> fields)
+        {
+            if (fields.TryGetField(fieldName, out IInputField? field))
+            {
+                return ExecutionHelper.InputObjectTypeFromIInputField(field);
+            }
+
+            throw new ArgumentException($"Field {fieldName} not found in the list of fields provided.");
         }
 
         /// <summary>
@@ -957,7 +1903,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 resultProperties = await queryExecutor.ExecuteQueryAsync(
                     sqltext: queryString,
                     parameters: queryParameters,
-                    dataReaderHandler: queryExecutor.GetResultProperties,
+                    dataReaderHandler: queryExecutor.GetResultPropertiesAsync,
                     httpContext: GetHttpContext(),
                     dataSourceName: dataSourceName);
 
@@ -1225,7 +2171,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                         title: "book #1",
         ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
         ///                         publishers: { name: "Macmillan publishers" },
-        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.6 }]
         ///                     })
         ///                 {
         ///                     id
@@ -1236,13 +2182,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         ///                         title: "book #1",
         ///                         reviews: [{ content: "Good book." }, { content: "Great book." }],
         ///                         publishers: { name: "Macmillan publishers" },
-        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", author_name: "Dan Brown" }]
+        ///                         authors: [{ birthdate: "1997-09-03", name: "Red house authors", royal_percentage: 4.9 }]
         ///                     },
         ///                     {
         ///                         title: "book #2",
         ///                         reviews: [{ content: "Awesome book." }, { content: "Average book." }],
         ///                         publishers: { name: "Pearson Education" },
-        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", author_name: "William Shakespeare" }]
+        ///                         authors: [{ birthdate: "1990-11-04", name: "Penguin Random House", royal_percentage: 8.2  }]
         ///                     }])
         ///                 {
         ///                     items{

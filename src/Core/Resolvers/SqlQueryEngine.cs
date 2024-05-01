@@ -12,6 +12,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -86,6 +87,44 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 return new Tuple<JsonDocument?, IMetadata?>(
                     await ExecuteAsync(structure, dataSourceName),
+                    structure.PaginationMetadata);
+            }
+        }
+
+        /// <summary>
+        /// Executes the given IMiddlewareContext of the GraphQL query and
+        /// expecting a single Json and its related pagination metadata back.
+        /// This method is used for the selection set resolution of multiple create mutation operation.
+        /// </summary>
+        /// <param name="context">HotChocolate Request Pipeline context containing request metadata</param>
+        /// <param name="parameters">PKs of the created items</param>
+        /// <param name="dataSourceName">Name of datasource for which to set access token. Default dbName taken from config if empty</param>
+        public async Task<Tuple<JsonDocument?, IMetadata?>> ExecuteMultipleCreateFollowUpQueryAsync(IMiddlewareContext context, List<IDictionary<string, object?>> parameters, string dataSourceName)
+        {
+
+            string entityName = GraphQLUtils.GetEntityNameFromContext(context);
+
+            SqlQueryStructure structure = new(
+                context,
+                parameters,
+                _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName),
+                _authorizationResolver,
+                _runtimeConfigProvider,
+                _gQLFilterParser,
+                new IncrementingInteger(),
+                entityName,
+                isMultipleCreateOperation: true);
+
+            if (structure.PaginationMetadata.IsPaginated)
+            {
+                return new Tuple<JsonDocument?, IMetadata?>(
+                    SqlPaginationUtil.CreatePaginationConnectionFromJsonDocument(await ExecuteAsync(structure, dataSourceName, isMultipleCreateOperation: true), structure.PaginationMetadata),
+                    structure.PaginationMetadata);
+            }
+            else
+            {
+                return new Tuple<JsonDocument?, IMetadata?>(
+                    await ExecuteAsync(structure, dataSourceName, isMultipleCreateOperation: true),
                     structure.PaginationMetadata);
             }
         }
@@ -254,15 +293,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // <summary>
         // Given the SqlQueryStructure structure, obtains the query text and executes it against the backend.
         // </summary>
-        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName)
+        private async Task<JsonDocument?> ExecuteAsync(SqlQueryStructure structure, string dataSourceName, bool isMultipleCreateOperation = false)
         {
             RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             DatabaseType databaseType = runtimeConfig.GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
 
+            string queryString;
+
             // Open connection and execute query using _queryExecutor
-            string queryString = queryBuilder.Build(structure);
+            if (isMultipleCreateOperation)
+            {
+                structure.IsMultipleCreateOperation = true;
+                queryString = queryBuilder.Build(structure);
+            }
+            else
+            {
+                queryString = queryBuilder.Build(structure);
+            }
 
             // Global Cache enablement check
             if (runtimeConfig.CanUseCache())

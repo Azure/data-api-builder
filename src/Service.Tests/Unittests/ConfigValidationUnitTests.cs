@@ -410,7 +410,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 x.ParseSchemaAndDbTableName("TEST_SOURCE_LINK")).Returns(("dbo", "TEST_SOURCE_LINK"));
 
             string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
@@ -664,8 +664,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
             string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "noBackingColumn", out discard)).Returns(false);
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), "backingColumn", out discard)).Returns(true);
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), "noBackingColumn", out discard)).Returns(false);
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), "backingColumn", out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
@@ -795,7 +795,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
 
             string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetBackingColumn(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
+            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
 
             Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
             _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
@@ -1141,7 +1141,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitiesWithGraphQLExposedGenerateDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateEntitiesWithGraphQLExposedGenerateDuplicateQueries(DatabaseType databaseType)
         {
             // Entity Name: Book
             // pk_query: book_by_pk
@@ -1158,7 +1160,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "Book", bookWithUpperCase }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "Book", databaseType);
         }
 
         /// <summary>
@@ -1181,7 +1183,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateStoredProcedureAndTableGeneratedDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateStoredProcedureAndTableGeneratedDuplicateQueries(DatabaseType databaseType)
         {
             // Entity Name: ExecuteBook
             // Entity Type: table
@@ -1199,7 +1203,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "executeBook", bookTable },
                 { "Book_by_pk", bookByPkStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "executeBook", databaseType);
         }
 
         /// <summary>
@@ -1224,7 +1228,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateStoredProcedureAndTableGeneratedDuplicateMutation()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateStoredProcedureAndTableGeneratedDuplicateMutation(DatabaseType databaseType)
         {
             // Entity Name: Book
             // Entity Type: table
@@ -1241,7 +1247,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "ExecuteBooks", bookTable },
                 { "AddBook", addBookStoredProcedure }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "ExecuteBooks", databaseType);
         }
 
         /// <summary>
@@ -1260,7 +1266,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ///  }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitiesWithNameCollisionInGraphQLTypeGenerateDuplicateQueriesCase()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateEntitiesWithNameCollisionInGraphQLTypeGenerateDuplicateQueriesCase(DatabaseType databaseType)
         {
             // Entity Name: book
             // pk_query: book_by_pk
@@ -1277,7 +1285,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
         }
 
         /// <summary>
@@ -1301,7 +1309,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ///  }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitiesWithCollisionsInSingularPluralNamesGenerateDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateEntitiesWithCollisionsInSingularPluralNamesGenerateDuplicateQueries(DatabaseType databaseType)
         {
             // Entity Name: book
             // pk_query: book_by_pk
@@ -1318,7 +1328,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 { "book", book },
                 { "book_alt", book_alt }
             };
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
         }
 
         /// <summary>
@@ -1338,7 +1348,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// }
         /// </summary>
         [TestMethod]
-        public void ValidateEntitiesWithNameCollisionInSingularPluralTypeGeneratesDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateEntitiesWithNameCollisionInSingularPluralTypeGeneratesDuplicateQueries(DatabaseType databaseType)
         {
             SortedDictionary<string, Entity> entityCollection = new();
 
@@ -1354,7 +1366,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             entityCollection.Add("book_alt", book_alt);
             entityCollection.Add("book", book);
-            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt");
+            ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(entityCollection, "book_alt", databaseType);
         }
 
         /// <summary>
@@ -1398,9 +1410,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         ///  }
         /// </summary>
         [TestMethod]
-        public void ValidateValidEntityDefinitionsDoesNotGenerateDuplicateQueries()
+        [DataRow(DatabaseType.MySQL)] // Relational Database
+        [DataRow(DatabaseType.CosmosDB_NoSQL)] // Non Relational Database
+        public void ValidateValidEntityDefinitionsDoesNotGenerateDuplicateQueries(DatabaseType databaseType)
         {
-
             // Entity Name: Book
             // GraphQL is not exposed for this entity
             Entity bookWithUpperCase = GraphQLTestHelpers.GenerateEmptyEntity() with { GraphQL = new("", "", false) };
@@ -1441,7 +1454,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             };
 
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection));
+            configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection));
         }
 
         /// <summary>
@@ -1495,11 +1508,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         /// <param name="entityCollection">Entity definitions</param>
         /// <param name="entityName">Entity name to construct the expected exception message</param>
-        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName)
+        private static void ValidateExceptionForDuplicateQueriesDueToEntityDefinitions(SortedDictionary<string, Entity> entityCollection, string entityName, DatabaseType databaseType)
         {
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
             DataApiBuilderException dabException = Assert.ThrowsException<DataApiBuilderException>(
-               action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(new(entityCollection)));
+               action: () => configValidator.ValidateEntitiesDoNotGenerateDuplicateQueriesOrMutation(databaseType, new(entityCollection)));
 
             Assert.AreEqual(expected: $"Entity {entityName} generates queries/mutation that already exist", actual: dabException.Message);
             Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
@@ -2360,6 +2373,68 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 $"Config has a sql datasource and member {nameof(runtimeConfig.SqlDataSourceUsed)} must be marked as true.");
             Assert.IsFalse(runtimeConfig.CosmosDataSourceUsed,
                 $"Config does not have a cosmos datasource and member {nameof(runtimeConfig.CosmosDataSourceUsed)} must be marked as false.");
+        }
+
+        /// <summary>
+        /// Test to validate pagination options.
+        /// NOTE: Changing the default values of default page size and max page size would be a breaking change.
+        /// </summary>
+        /// <param name="exceptionExpected">Should there be an exception.</param>
+        /// <param name="defaultPageSize">default page size to go into config.</param>
+        /// <param name="maxPageSize">max page size to go into config.</param>
+        /// <param name="expectedExceptionMessage">expected exception message in case there is exception.</param>
+        /// <param name="expectedDefaultPageSize">expected default page size from config.</param>
+        /// <param name="expectedMaxPageSize">expected max page size from config.</param>
+        [DataTestMethod]
+        [DataRow(false, null, null, "", (int)PaginationOptions.DEFAULT_PAGE_SIZE, (int)PaginationOptions.MAX_PAGE_SIZE,
+            DisplayName = "MaxPageSize should be 100,000 and DefaultPageSize should be 100 when no value provided in config.")]
+        [DataRow(false, 1000, 10000, "", 1000, 10000,
+            DisplayName = "Valid inputs of MaxPageSize and DefaultPageSize must be accepted and set in the config.")]
+        [DataRow(false, -1, 10000, "", 10000, 10000,
+            DisplayName = "DefaultPageSize should be the same as MaxPageSize when DefaultPageSize is -1 in config.")]
+        [DataRow(false, 100, -1, "", 100, Int32.MaxValue,
+            DisplayName = "MaxPageSize should be assigned UInt32.MaxValue when MaxPageSize is -1 in config.")]
+        [DataRow(true, 100, -3, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
+            DisplayName = "MaxPageSize cannot be negative")]
+        [DataRow(true, -3, 100, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
+            DisplayName = "DefaultPageSize cannot be negative")]
+        [DataRow(true, 100, 0, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
+            DisplayName = "MaxPageSize cannot be 0")]
+        [DataRow(true, 0, 100, "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
+            DisplayName = "DefaultPageSize cannot be 0")]
+        [DataRow(true, 101, 100, "Pagination options invalid. The default page size cannot be greater than max page size",
+            DisplayName = "DefaultPageSize cannot be greater than MaxPageSize")]
+        public void ValidatePaginationOptionsInConfig(
+            bool exceptionExpected,
+            int? defaultPageSize,
+            int? maxPageSize,
+            string expectedExceptionMessage,
+            int? expectedDefaultPageSize = null,
+            int? expectedMaxPageSize = null)
+        {
+            try
+            {
+                RuntimeConfig runtimeConfig = new(
+                    Schema: "UnitTestSchema",
+                    DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                    Runtime: new(
+                        Rest: new(),
+                        GraphQL: new(),
+                        Host: new(Cors: null, Authentication: null),
+                        Pagination: new PaginationOptions(defaultPageSize, maxPageSize)
+                    ),
+                    Entities: new(new Dictionary<string, Entity>()));
+
+                Assert.AreEqual((uint)expectedDefaultPageSize, runtimeConfig.DefaultPageSize());
+                Assert.AreEqual((uint)expectedMaxPageSize, runtimeConfig.MaxPageSize());
+            }
+            catch (DataApiBuilderException dabException)
+            {
+                Assert.IsTrue(exceptionExpected);
+                Assert.AreEqual(expectedExceptionMessage, dabException.Message);
+                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
+                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
+            }
         }
 
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()

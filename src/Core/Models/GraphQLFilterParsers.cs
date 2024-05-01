@@ -16,7 +16,6 @@ using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using static Azure.DataApiBuilder.Core.Authorization.AuthorizationResolver;
-using static Azure.DataApiBuilder.Core.Resolvers.CosmosQueryStructure;
 
 namespace Azure.DataApiBuilder.Core.Models;
 
@@ -272,12 +271,12 @@ public class GQLFilterParser
     }
 
     /// <summary>
-    /// For CosmosDB, a nested filter represents a join between
-    /// the parent entity being filtered and the related entity representing the
-    /// non-scalar filter input. This function:
-    /// 1. Recursively parses any more(possibly nested) filters.
-    /// 2. Adds join predicates between the related entities.
-    /// 3. Adds the subquery to the existing list of predicates.
+    /// For CosmosDB, a nested filter represents an EXISTS clause with a subquery.
+    /// This function:
+    /// 1. Defines the Exists Query structure
+    /// 2. Recursively parses any more(possibly nested) filters on the Exists sub query.
+    /// 3. Adds join predicates between the related entities to the Exists sub query.
+    /// 4. Adds the Exists subquery to the existing list of predicates.
     /// </summary>
     /// <param name="ctx">The middleware context.</param>
     /// <param name="filterField">The nested filter field.</param>
@@ -285,7 +284,9 @@ public class GQLFilterParser
     /// <param name="columnName">Current Column Name</param>
     /// <param name="entityType">Current Entity Type</param>
     /// <param name="predicates">The predicates parsed so far.</param>
-    /// <param name="queryStructure">The query structure of the entity being filtered.</param>
+    /// <param name="queryStructure">The query structure of the entity being filtered, it would be modified to contain EXIST predicates</param>
+    /// <param name="metadataProvider"> Cosmos Metadata Provider, to get metadata information for a given entity </param>
+    /// <exception cref="DataApiBuilderException">
     private void HandleNestedFilterForCosmos(
         IMiddlewareContext ctx,
         IInputField filterField,
@@ -296,28 +297,9 @@ public class GQLFilterParser
         CosmosQueryStructure queryStructure,
         ISqlMetadataProvider metadataProvider)
     {
-        string entityName = metadataProvider.GetEntityName(entityType);
-
-        HashSet<CosmosJoinStructure>? jstruct = queryStructure.Joins?.ToHashSet();
-
-        string? tableAlias = null;
-        foreach (CosmosJoinStructure join in jstruct ?? new HashSet<CosmosJoinStructure>())
-        {
-            if (join.DbObject.Name == columnName)
-            {
-                tableAlias = join.TableAlias;
-                break;
-            }
-        }
-
-        if (string.IsNullOrEmpty(tableAlias))
-        {
-            tableAlias = $"table{_tableCounter?.Next()}";
-        }
-
         // Validate that the field referenced in the nested input filter can be accessed.
         bool entityAccessPermitted = queryStructure.AuthorizationResolver.AreRoleAndOperationDefinedForEntity(
-            entityIdentifier: entityName,
+            entityIdentifier: entityType,
             roleName: GetHttpContextFromMiddlewareContext(ctx).Request.Headers[CLIENT_ROLE_HEADER],
             operation: EntityActionOperation.Read);
 
@@ -329,43 +311,40 @@ public class GQLFilterParser
                 subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
         }
 
-        IDictionary<string, object?> subParameters = new Dictionary<string, object?>();
-        CosmosQueryStructure comosQueryStructure =
-            new(
-                context: ctx,
-                parameters: subParameters,
-                metadataProvider: metadataProvider,
-                authorizationResolver: queryStructure.AuthorizationResolver,
-                gQLFilterParser: this,
-                counter: queryStructure.Counter);
+        List<Predicate> predicatesForExistsQuery = new();
+        CosmosExistsQueryStructure existsQuery = new(
+            ctx,
+            new Dictionary<string, object?>(),
+            _configProvider,
+            metadataProvider,
+            queryStructure.AuthorizationResolver,
+            this,
+            queryStructure.Counter,
+            predicatesForExistsQuery);
 
-        comosQueryStructure.DatabaseObject.SchemaName = queryStructure.SourceAlias;
-        comosQueryStructure.DatabaseObject.Name = tableAlias;
-        comosQueryStructure.SourceAlias = tableAlias;
-        comosQueryStructure.EntityName = entityName;
+        existsQuery.DatabaseObject.SchemaName = $"{queryStructure.SourceAlias}.{columnName}";
+        existsQuery.DatabaseObject.Name = existsQuery.SourceAlias;
+        existsQuery.EntityName = metadataProvider.GetEntityName(entityType);
 
-        PredicateOperand joinpredicate = new(
-            Parse(
-                ctx: ctx,
-                filterArgumentSchema: filterField,
-                fields: subfields,
-                queryStructure: comosQueryStructure));
-        predicates.Push(joinpredicate);
+        // Recursively parse and obtain the predicates for the Exists clause subquery
+        Predicate existsQueryFilterPredicate = Parse(ctx,
+                filterField,
+                subfields,
+                existsQuery);
 
-        queryStructure.Joins ??= new Stack<CosmosJoinStructure>();
-        if (comosQueryStructure.Joins is not null and { Count: > 0 })
-        {
-            queryStructure.Joins = comosQueryStructure.Joins;
-        }
+        predicatesForExistsQuery.Push(existsQueryFilterPredicate);
 
-        queryStructure
-            .Joins
-            .Push(new CosmosJoinStructure(
-                        DbObject: new DatabaseTable(schemaName: queryStructure.SourceAlias, tableName: columnName),
-                        TableAlias: tableAlias));
+        // The right operand is the SqlExistsQueryStructure.
+        PredicateOperand right = new(existsQuery);
+
+        // Create a new unary Exists Predicate
+        Predicate existsPredicate = new(left: null, PredicateOperation.EXISTS, right);
+
+        // Add it to the rest of the existing predicates.
+        predicates.Push(new PredicateOperand(existsPredicate));
 
         // Add all parameters from the exists subquery to the main queryStructure.
-        foreach ((string key, DbConnectionParam value) in comosQueryStructure.Parameters)
+        foreach ((string key, DbConnectionParam value) in existsQuery.Parameters)
         {
             queryStructure.Parameters.Add(key, value);
         }
@@ -541,7 +520,7 @@ public class GQLFilterParser
         BaseQueryStructure baseQuery,
         PredicateOperation op)
     {
-        if (fields.Count == 0 && (baseQuery is CosmosQueryStructure cosmosQueryStructure && cosmosQueryStructure.Joins?.Count == 0))
+        if (fields.Count == 0)
         {
             return Predicate.MakeFalsePredicate();
         }

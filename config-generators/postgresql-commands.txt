@@ -16,6 +16,10 @@ update stocks_price --config "dab-config.PostgreSql.json" --permissions "TestNes
 add Tree --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete"
 add Shrub --config "dab-config.PostgreSql.json" --source trees --permissions "anonymous:create,read,update,delete" --rest plants
 add Fungus --config "dab-config.PostgreSql.json" --source fungi --permissions "anonymous:create,read,update,delete" --graphql "fungus:fungi"
+add User_NonAutogenRelationshipColumn --config "dab-config.PostgreSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add UserProfile --config "dab-config.PostgreSql.json" --source "user_profiles" --permissions "anonymous:*" --rest true --graphql true
+add User_AutogenRelationshipColumn --config "dab-config.PostgreSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
+add User_AutogenToNonAutogenRelationshipColumn --config "dab-config.PostgreSql.json" --source "users" --permissions "anonymous:*" --rest true --graphql true
 add books_view_all --config "dab-config.PostgreSql.json" --source books_view_all --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add books_view_with_mapping --config "dab-config.PostgreSql.json" --source books_view_with_mapping --source.type "view" --source.key-fields "id" --permissions "anonymous:*" --rest true --graphql true
 add stocks_view_selected --config "dab-config.PostgreSql.json" --source stocks_view_selected --source.type "view" --source.key-fields "categoryid,pieceid" --permissions "anonymous:*" --rest true --graphql true
@@ -108,9 +112,9 @@ update Comic --config "dab-config.PostgreSql.json" --permissions "authenticated:
 update series --config "dab-config.PostgreSql.json" --relationship comics --target.entity Comic --cardinality many
 update Broker --config "dab-config.PostgreSql.json" --permissions "authenticated:create,update,read,delete" --graphql false
 update Tree --config "dab-config.PostgreSql.json" --rest true --graphql false --permissions "authenticated:create,read,update,delete" --map "species:Scientific Name,region:United State's Region"
-update Shrub --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName"
+update Shrub --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "species:fancyName" --relationship fungus --cardinality one --target.entity Fungus --relationship.fields "species:habitat"
 update Fungus --config "dab-config.PostgreSql.json" --permissions "authenticated:create,read,update,delete" --map "spores:hazards" --rest true
-update Fungus --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'"
+update Fungus --config "dab-config.PostgreSql.json" --permissions "policy_tester_01:read" --fields.include "*" --policy-database "@item.region ne 'northeast'" --relationship Shrub --cardinality one --target.entity Shrub --relationship.fields "habitat:species"
 update books_view_with_mapping --config "dab-config.PostgreSql.json" --map "id:book_id"
 update BookWebsitePlacement --config "dab-config.PostgreSql.json" --relationship books --target.entity Book --cardinality one
 update SupportedType --config "dab-config.PostgreSql.json" --map "id:typeid" --permissions "authenticated:create,read,delete,update" 
@@ -124,6 +128,9 @@ update Journal --config "dab-config.PostgreSql.json" --permissions "policy_teste
 update Journal --config "dab-config.PostgreSql.json" --permissions "policy_tester_update_noread:delete" --fields.include "*" --policy-database "@item.id eq 1"
 update Journal --config "dab-config.PostgreSql.json" --permissions "authorizationHandlerTester:read"
 update ArtOfWar --config "dab-config.PostgreSql.json" --permissions "authenticated:*" --map "DetailAssessmentAndPlanning:始計,WagingWar:作戰,StrategicAttack:謀攻,NoteNum:┬─┬ノ( º _ ºノ)"
+update User_NonAutogenRelationshipColumn --config "dab-config.PostgreSql.json" --relationship UserProfile_NonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "username:username"
+update User_AutogenRelationshipColumn --config "dab-config.PostgreSql.json" --relationship UserProfile_AutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid:profileid"
+update User_AutogenToNonAutogenRelationshipColumn --config "dab-config.PostgreSql.json" --relationship UserProfile_AutogenToNonAutogenRelationshipColumn --target.entity UserProfile --cardinality one --relationship.fields "userid,username:userid,username"
 update Sales --config "dab-config.PostgreSql.json" --permissions "authenticated:*"
 update Bookmarks --config "dab-config.PostgreSql.json" --permissions "authenticated:*"
 update MappedBookmarks --config "dab-config.PostgreSql.json" --permissions "authenticated:*" --map "id:bkid,bkname:name"

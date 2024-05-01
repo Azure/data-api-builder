@@ -14,7 +14,12 @@
     GraphQL: {
       Enabled: true,
       Path: /graphql,
-      AllowIntrospection: true
+      AllowIntrospection: true,
+      MultipleMutationOptions: {
+        MultipleCreateOptions: {
+          Enabled: true
+        }
+      }
     },
     Host: {
       Cors: {
@@ -241,12 +246,78 @@
                 }
               }
             ]
+          },
+          {
+            Role: role_multiple_create_policy_tester,
+            Actions: [
+              {
+                Action: Read
+              },
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Create,
+                Policy: {
+                  Database: @item.name ne 'Test'
+                }
+              }
+            ]
           }
         ],
         Relationships: {
           books: {
             Cardinality: Many,
             TargetEntity: Book
+          }
+        }
+      }
+    },
+    {
+      Publisher_MM: {
+        Source: {
+          Object: publishers_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: Publisher_MM,
+          Plural: Publishers_MM,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          books_mm: {
+            Cardinality: Many,
+            TargetEntity: Book_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              publisher_id
+            ]
           }
         }
       }
@@ -793,6 +864,29 @@
                 Action: Delete
               }
             ]
+          },
+          {
+            Role: role_multiple_create_policy_tester,
+            Actions: [
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Create,
+                Policy: {
+                  Database: @item.title ne 'Test'
+                }
+              },
+              {
+                Action: Read,
+                Policy: {
+                  Database: @item.publisher_id ne 1234
+                }
+              }
+            ]
           }
         ],
         Mappings: {
@@ -826,6 +920,78 @@
           },
           websiteplacement: {
             TargetEntity: BookWebsitePlacement
+          }
+        }
+      }
+    },
+    {
+      Book_MM: {
+        Source: {
+          Object: books_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: book_mm,
+          Plural: books_mm,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          authors: {
+            Cardinality: Many,
+            TargetEntity: Author_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              id
+            ],
+            LinkingObject: book_author_link_mm,
+            LinkingSourceFields: [
+              book_id
+            ],
+            LinkingTargetFields: [
+              author_id
+            ]
+          },
+          publishers: {
+            TargetEntity: Publisher_MM,
+            SourceFields: [
+              publisher_id
+            ],
+            TargetFields: [
+              id
+            ]
+          },
+          reviews: {
+            Cardinality: Many,
+            TargetEntity: Review_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              book_id
+            ]
           }
         }
       }
@@ -934,6 +1100,59 @@
       }
     },
     {
+      Author_MM: {
+        Source: {
+          Object: authors_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: author_mm,
+          Plural: authors_mm,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          books: {
+            Cardinality: Many,
+            TargetEntity: Book_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              id
+            ],
+            LinkingObject: book_author_link_mm,
+            LinkingSourceFields: [
+              author_id
+            ],
+            LinkingTargetFields: [
+              book_id
+            ]
+          }
+        }
+      }
+    },
+    {
       Revenue: {
         Source: {
           Object: revenues,
@@ -1015,11 +1234,97 @@
                 Action: Delete
               }
             ]
+          },
+          {
+            Role: role_multiple_create_policy_tester,
+            Actions: [
+              {
+                Action: Update
+              },
+              {
+                Action: Delete
+              },
+              {
+                Action: Create,
+                Policy: {
+                  Database: @item.content ne 'Great'
+                }
+              },
+              {
+                Action: Read,
+                Policy: {
+                  Database: @item.websiteuser_id ne 1
+                }
+              }
+            ]
           }
         ],
         Relationships: {
           books: {
             TargetEntity: Book
+          },
+          website_users: {
+            TargetEntity: WebsiteUser,
+            SourceFields: [
+              websiteuser_id
+            ],
+            TargetFields: [
+              id
+            ]
+          }
+        }
+      }
+    },
+    {
+      Review_MM: {
+        Source: {
+          Object: reviews_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: review_mm,
+          Plural: reviews_mm,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          books: {
+            TargetEntity: Book_MM,
+            SourceFields: [
+              book_id
+            ],
+            TargetFields: [
+              id
+            ]
+          },
+          website_users: {
+            TargetEntity: WebsiteUser_MM,
+            SourceFields: [
+              websiteuser_id
+            ],
+            TargetFields: [
+              id
+            ]
           }
         }
       }
@@ -1213,7 +1518,65 @@
               }
             ]
           }
-        ]
+        ],
+        Relationships: {
+          reviews: {
+            Cardinality: Many,
+            TargetEntity: Review,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              websiteuser_id
+            ]
+          }
+        }
+      }
+    },
+    {
+      WebsiteUser_MM: {
+        Source: {
+          Object: website_users_mm,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: websiteuser_mm,
+          Plural: websiteusers_mm,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          },
+          {
+            Role: authenticated,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          reviews: {
+            Cardinality: Many,
+            TargetEntity: Review_MM,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              websiteuser_id
+            ]
+          }
+        }
       }
     },
     {
@@ -1466,6 +1829,17 @@
         ],
         Mappings: {
           species: fancyName
+        },
+        Relationships: {
+          fungus: {
+            TargetEntity: Fungus,
+            SourceFields: [
+              species
+            ],
+            TargetFields: [
+              habitat
+            ]
+          }
         }
       }
     },
@@ -1537,6 +1911,17 @@
         ],
         Mappings: {
           spores: hazards
+        },
+        Relationships: {
+          Shrub: {
+            TargetEntity: Shrub,
+            SourceFields: [
+              habitat
+            ],
+            TargetFields: [
+              species
+            ]
+          }
         }
       }
     },
@@ -2069,6 +2454,230 @@
             ]
           }
         ]
+      }
+    },
+    {
+      User_NonAutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_NonAutogenRelationshipColumn,
+          Plural: User_NonAutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_NonAutogenRelationshipColumn: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              username
+            ],
+            TargetFields: [
+              username
+            ]
+          }
+        }
+      }
+    },
+    {
+      UserProfile: {
+        Source: {
+          Object: user_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: UserProfile,
+          Plural: UserProfiles,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      User_AutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_AutogenRelationshipColumn,
+          Plural: User_AutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_AutogenRelationshipColumn: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              userid
+            ],
+            TargetFields: [
+              profileid
+            ]
+          }
+        }
+      }
+    },
+    {
+      User_AutogenToNonAutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_AutogenToNonAutogenRelationshipColumn,
+          Plural: User_AutogenToNonAutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_AutogenToNonAutogenRelationshipColumn: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              userid,
+              username
+            ],
+            TargetFields: [
+              userid,
+              username
+            ]
+          }
+        }
+      }
+    },
+    {
+      User_RepeatedReferencingColumnToOneEntity: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_RepeatedReferencingColumnToOneEntity,
+          Plural: User_RepeatedReferencingColumnToOneEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              username,
+              username
+            ],
+            TargetFields: [
+              profilepictureurl,
+              username
+            ]
+          }
+        }
+      }
+    },
+    {
+      UserProfile_RepeatedReferencingColumnToTwoEntities: {
+        Source: {
+          Object: user_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: UserProfile_RepeatedReferencingColumnToTwoEntities,
+          Plural: UserProfile_RepeatedReferencingColumnToTwoEntities,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          book: {
+            TargetEntity: Book,
+            SourceFields: [
+              userid
+            ],
+            TargetFields: [
+              id
+            ]
+          },
+          publisher: {
+            TargetEntity: Publisher,
+            SourceFields: [
+              userid
+            ],
+            TargetFields: [
+              id
+            ]
+          }
+        }
       }
     },
     {

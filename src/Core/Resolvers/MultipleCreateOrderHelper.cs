@@ -64,6 +64,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
+            if (sourceDbObject.GetType() != typeof(DatabaseTable) || targetDbObject.GetType() != typeof(DatabaseTable) )
+            {
+                throw new DataApiBuilderException(
+                message: $"Cannot execute multiple-create for relationship: {relationshipName} at level: {nestingLevel} because currently DAB supports" +
+                $"multiple-create only for entities backed by tables.",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
+            }
+
             DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
             DatabaseTable targetDbTable = (DatabaseTable)targetDbObject;
             if (sourceDbTable.Equals(targetDbTable))
@@ -71,8 +80,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 //  DAB does not yet support multiple-create for self referencing relationships where both the source and
                 //  target entities are backed by same database table.
                 throw new DataApiBuilderException(
-                message: $"Multiple-create for relationship: {relationshipName} at level: {nestingLevel} is not supported because " +
-                $"source entity: {sourceEntityName} and target entity: {targetEntityName} are backed by the same database table.",
+                message: $"Multiple-create for relationship: {relationshipName} at level: {nestingLevel} is not supported because the " +
+                $"source entity: {sourceEntityName} and the target entity: {targetEntityName} are backed by the same database table.",
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }
@@ -87,7 +96,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (TryDetermineReferencingEntityBasedOnEntityRelationshipMetadata(
                     sourceEntityName: sourceEntityName,
                     targetEntityName: targetEntityName,
-                    sourceDbObject: sourceDbObject,
+                    sourceDbTable: sourceDbTable,
                     referencingEntityName: out string? referencingEntityNameBasedOnEntityMetadata))
             {
                 return referencingEntityNameBasedOnEntityMetadata;
@@ -123,18 +132,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="sourceEntityName">Source entity name.</param>
         /// <param name="targetEntityName">Target entity name.</param>
-        /// <param name="sourceDbObject">Database object for source entity.</param>
+        /// <param name="sourceDbTable">Database table for source entity.</param>
         /// <param name="referencingEntityName">Stores the determined referencing entity name to be returned to the caller.</param>
         /// <returns>True when the referencing entity name can be determined based on the foreign key constraint defined in the database;
         /// else false.</returns>
         private static bool TryDetermineReferencingEntityBasedOnEntityRelationshipMetadata(
             string sourceEntityName,
             string targetEntityName,
-            DatabaseObject sourceDbObject,
+            DatabaseTable sourceDbTable,
             [NotNullWhen(true)] out string? referencingEntityName)
         {
-            DatabaseTable sourceDbTable = (DatabaseTable)sourceDbObject;
-            SourceDefinition sourceDefinition = sourceDbObject.SourceDefinition;
+            SourceDefinition sourceDefinition = sourceDbTable.SourceDefinition;
 
             List<ForeignKeyDefinition> targetEntityForeignKeys = sourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
             HashSet<string> referencingEntityNames = new();

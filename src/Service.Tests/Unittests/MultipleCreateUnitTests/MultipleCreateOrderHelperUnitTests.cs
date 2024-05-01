@@ -390,7 +390,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Different source and target entities backed by the same database table 'books'.
             ValidateExceptionForSelfReferencingRelationship(sourceEntityName: "Book", targetEntityName: "BookNF");
         }
-        
         #endregion
 
         #region Helpers
@@ -443,7 +442,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.AreEqual($"Multiple-create for relationship: testRelationship at level: 1 is not supported because " +
                 $"source entity: {sourceEntityName} and target entity: {targetEntityName} are backed by same database table.", ex.Message);
         }
-        
         #endregion
 
         #region Setup

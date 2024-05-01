@@ -2198,16 +2198,7 @@
             Role: anonymous,
             Actions: [
               {
-                Action: Read
-              },
-              {
-                Action: Create
-              },
-              {
-                Action: Update
-              },
-              {
-                Action: Delete
+                Action: *
               }
             ]
           }

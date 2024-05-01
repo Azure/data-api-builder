@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (isMNRelationship)
             {
-                // For M:N relationships,'neither the source nor the target entity act as the referenced entity.
+                // For M:N relationships, neither the source nor the target entity act as the referencing entity.
                 // Instead, the linking table act as the referencing entity.
                 return string.Empty;
             }

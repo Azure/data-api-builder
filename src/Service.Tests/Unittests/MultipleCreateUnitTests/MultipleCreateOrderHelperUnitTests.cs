@@ -390,6 +390,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             // Different source and target entities backed by the same database table 'books'.
             ValidateExceptionForSelfReferencingRelationship(sourceEntityName: "Book", targetEntityName: "BookNF");
         }
+        
         #endregion
 
         #region Helpers

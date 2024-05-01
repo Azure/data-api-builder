@@ -104,6 +104,34 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             await OneToOneJoinQuery(msSqlQuery);
         }
 
+        /// <summary>
+        /// Test query on One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        {
+            string msSqlQuery = @"
+                SELECT TOP 100 [table0].[species] AS [fancyName]
+                    ,JSON_QUERY([table1_subq].[data]) AS [fungus]
+                FROM [dbo].[trees] AS [table0]
+                OUTER APPLY (
+                    SELECT TOP 1 [table1].[habitat] AS [habitat]
+                    FROM [dbo].[fungi] AS [table1]
+                    WHERE [table1].[habitat] = [table0].[species]
+                    ORDER BY [table1].[habitat] ASC
+                    FOR JSON PATH
+                        ,INCLUDE_NULL_VALUES
+                        ,WITHOUT_ARRAY_WRAPPER
+                    ) AS [table1_subq]([data])
+                WHERE 1 = 1
+                FOR JSON PATH
+                    ,INCLUDE_NULL_VALUES";
+
+            await OneToOneJoinQueryWithMappedFieldNamesInRelationship(msSqlQuery);
+        }
+
         [TestMethod]
         public async Task QueryWithSingleColumnPrimaryKey()
         {

@@ -318,8 +318,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Build and join predicates with separator (" AND " by default)
         /// </summary>
-        protected string Build(List<Predicate> predicates, string separator = " AND ")
+        /// <param name="predicates">List of predicates to be added</param>
+        /// <param name="separator">Operator to be used with the list of predicates. Default value: AND</param>
+        /// <param name="isMultipleCreateOperation">Indicates whether the predicates are being formed for a multiple create operation. Default value: false.</param>
+        protected string Build(List<Predicate> predicates, string separator = " AND ", bool isMultipleCreateOperation = false)
         {
+            if (isMultipleCreateOperation)
+            {
+                return "(" + string.Join(separator, predicates.Select(p => Build(p))) + ")";
+            }
+
             return string.Join(separator, predicates.Select(p => Build(p)));
         }
 

@@ -441,19 +441,6 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             );
         }
 
-        /// <summary>
-        /// Helper method to determine if the relationship defined between the source entity and a particular target entity is an M:N relationship.
-        /// </summary>
-        /// <param name="sourceEntity">Source entity.</param>
-        /// <param name="relationshipName">Relationship name.</param>
-        /// <returns>true if the relationship between source and target entities has a cardinality of M:N.</returns>
-        private static bool IsMToNRelationship(Entity sourceEntity, string relationshipName)
-        {
-            return sourceEntity.Relationships is not null &&
-                sourceEntity.Relationships.TryGetValue(relationshipName, out EntityRelationship? relationshipInfo) &&
-                !string.IsNullOrWhiteSpace(relationshipInfo.LinkingObject);
-        }
-
         private static ITypeNode GenerateListType(ITypeNode type, ITypeNode fieldType)
         {
             // Look at the inner type of the list type, eg: [Bar]'s inner type is Bar

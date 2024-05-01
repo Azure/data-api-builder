@@ -19,7 +19,8 @@ Alternatively, You can create an account on portal https://learn.microsoft.com/e
 
 ### Data API Builder(DAB)
 1. Follow this for quick start: https://learn.microsoft.com/en-us/azure/data-api-builder/quickstart-nosql#install-the-data-api-builder-cli
-2. Use this runtime config JSON to start: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
+2. Schema file: https://github.com/Azure/data-api-builder/blob/users/sourabhjain/bugbash/docs/bugbash/schema.gql
+3. Use this runtime config JSON to start: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
 
 ## Scenarios:
 **Making connection to Cosmos DB**

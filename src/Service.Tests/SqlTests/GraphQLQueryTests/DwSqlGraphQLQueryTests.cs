@@ -98,6 +98,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Test query on One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        {
+            string dwSqlQuery = @"
+                SELECT COALESCE('['+STRING_AGG('{'+N'""fancyName"":' + ISNULL('""' + STRING_ESCAPE([fancyName],'json') + '""','null')+','+N'""fungus"":' + ISNULL([fungus],'null')+'}',', ')+']','[]')
+                FROM (
+                    SELECT TOP 100 [table0].[species] AS [fancyName], 
+                        (SELECT TOP 1 '{""habitat"":""' + STRING_ESCAPE([table1].[habitat], 'json') + '""}'
+                         FROM [dbo].[fungi] AS [table1]
+                         WHERE [table0].[species] = [table1].[habitat] AND [table1].[habitat] = [table0].[species]
+                         ORDER BY [table1].[speciesid] ASC) AS [fungus]
+                    FROM [dbo].[trees] AS [table0]
+                    WHERE 1 = 1
+                    ORDER BY [table0].[treeId] ASC
+                ) AS [table0]";
+
+            await OneToOneJoinQueryWithMappedFieldNamesInRelationship(dwSqlQuery);
+        }
+
+        /// <summary>
         /// Test getting a single item by use of primary key
         /// <summary>
         [TestMethod]

@@ -19,7 +19,7 @@ namespace Azure.DataApiBuilder.Core.Services
     {
         /// <summary>
         /// Maps .NET Framework types to DbType enum
-        /// Not Adding a hard mapping for System.DateTime to DbType.DateTime as 
+        /// Not Adding a hard mapping for System.DateTime to DbType.DateTime as
         /// Hotchocolate only has Hotchocolate.Types.DateTime for DbType.DateTime/DateTime2/DateTimeOffset,
         /// which throws error when inserting/updating dateTime values due to type mismatch.
         /// Therefore, seperate logic exists for proper mapping conversion in BaseSqlQueryStructure.
@@ -292,6 +292,37 @@ namespace Azure.DataApiBuilder.Core.Services
         public static bool TryGetDbTypeFromSqlDbDateTimeType(SqlDbType sqlDbType, [NotNullWhen(true)] out DbType dbType)
         {
             return _sqlDbDateTimeTypeToDbType.TryGetValue(sqlDbType, out dbType);
+        }
+
+        /// <summary>
+        /// This function identifies the value type and converts that data in return.
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns>Identify the value type and convert that data in return</returns>
+        public static object? GetValue(IValueNode node)
+        {
+            SyntaxKind valueKind = node.Kind;
+            return valueKind switch
+            {
+                SyntaxKind.IntValue => Convert.ToInt32(node.Value), // spec
+                SyntaxKind.FloatValue => Convert.ToDouble(node.Value), // spec
+                SyntaxKind.BooleanValue => Convert.ToBoolean(node.Value), // spec
+                SyntaxKind.StringValue => Convert.ToString(node.Value), // spec
+                SyntaxKind.NullValue => null, // spec
+                _ => Convert.ToString(node.Value)
+            };
+        }
+
+        /// <summary>
+        /// This function identifies if the value type is primitive or not.
+        /// </summary>
+        public static bool IsPrimitiveType(SyntaxKind kind)
+        {
+            return (kind is SyntaxKind.IntValue) ||
+                (kind is SyntaxKind.FloatValue) ||
+                (kind is SyntaxKind.BooleanValue) ||
+                (kind is SyntaxKind.StringValue) ||
+                (kind is SyntaxKind.NullValue);
         }
     }
 }

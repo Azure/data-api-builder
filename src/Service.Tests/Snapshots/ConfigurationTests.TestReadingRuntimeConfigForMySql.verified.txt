@@ -1279,6 +1279,17 @@
         ],
         Mappings: {
           species: fancyName
+        },
+        Relationships: {
+          fungus: {
+            TargetEntity: Fungus,
+            SourceFields: [
+              species
+            ],
+            TargetFields: [
+              habitat
+            ]
+          }
         }
       }
     },
@@ -1350,6 +1361,17 @@
         ],
         Mappings: {
           spores: hazards
+        },
+        Relationships: {
+          Shrub: {
+            TargetEntity: Shrub,
+            SourceFields: [
+              habitat
+            ],
+            TargetFields: [
+              species
+            ]
+          }
         }
       }
     },

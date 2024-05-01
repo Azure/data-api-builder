@@ -505,16 +505,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     {
                         EntityPathToEntityName[path] = entityName;
 
-                        // Add the entity path to runtime config and verify against other entities.
-                        if (runtimeConfig.TryGetEntityNameFromPath(path, out _))
-                        {
-                            // this entity path is already in use by another entity.
-                            throw new DataApiBuilderException(
-                                message: $"Entity path {path} is already in use by another entity.",
-                                statusCode: HttpStatusCode.ServiceUnavailable,
-                                subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                        }
-
+                        // add the entity path name to the entity name mapping to the runtime config for multi-db resolution.
                         runtimeConfig.TryAddEntityPathNameToEntityName(path, entityName);
                     }
                 }

@@ -24,27 +24,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await InitializeTestFixture();
         }
 
-        protected override string MakeQueryOnTypeTable(List<string> columnsToQuery, int id)
+        protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)
         {
-            return MakeQueryOnTypeTable(columnsToQuery, filterValue: id.ToString(), filterField: "id");
+            return MakeQueryOnTypeTable(queryFields, filterValue: id.ToString(), filterField: "id");
         }
 
         protected override string MakeQueryOnTypeTable(
-            List<string> queriedColumns,
+            List<DabField> queryFields,
             string filterValue = "1",
             string filterOperator = "=",
             string filterField = "1",
             string orderBy = "id",
             string limit = "1")
         {
-            string columnsToQuery = string.Join(", ", queriedColumns.Select(c => $"\"{c}\" , {ProperlyFormatTypeTableColumn(c)}"));
-            string formattedSelect = limit.Equals("1") ? "SELECT JSON_OBJECT(" + columnsToQuery + @") AS `data`" :
-                "SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(" + columnsToQuery + @")), '[]') AS `data`";
+            string jsonResultProperties = string.Join(", ", queryFields.Select(field => $"\"{field.Alias}\" , {ProperlyFormatTypeTableColumn(field.BackingColumnName)}"));
+            string formattedSelect = limit.Equals("1") ? "SELECT JSON_OBJECT(" + jsonResultProperties + @") AS `data`" :
+                "SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(" + jsonResultProperties + @")), '[]') AS `data`";
 
             return @"
                 " + formattedSelect + @"
                 FROM (
-                    SELECT " + string.Join(", ", queriedColumns) + @"
+                    SELECT " + string.Join(", ", queryFields.Select(field => field.BackingColumnName)) + @"
                     FROM type_table AS `table0`
                     WHERE " + filterField + " " + filterOperator + " " + filterValue + @"
                     ORDER BY " + orderBy + @" asc

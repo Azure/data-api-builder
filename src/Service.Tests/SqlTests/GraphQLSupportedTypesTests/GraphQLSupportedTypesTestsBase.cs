@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string graphQLQueryName = "supportedType_by_pk";
             string gqlQuery = "{ supportedType_by_pk(typeid: " + id + ") { " + field + " } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id);
+            string dbQuery = MakeQueryOnTypeTable(new List<DabField> { new(field) }, id);
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -173,7 +173,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 }
             }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, filterValue: sqlValue, filterOperator: queryOperator, filterField: field, orderBy: field, limit: "100");
+            string dbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, filterValue: sqlValue, filterOperator: queryOperator, filterField: field, orderBy: field, limit: "100");
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -369,16 +369,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "createSupportedType";
-            string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ " + field + " } }";
-
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
+            string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ typeid, " + field + " } }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            Assert.IsTrue(
+                condition: actual.GetProperty("typeid").TryGetInt32(out int insertedRecordId),
+                message: "Error: GraphQL mutation result indicates issue during record creation.");
+            string expectedResultDbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, id: insertedRecordId);
+            string expectedResult = await GetDatabaseResultAsync(expectedResultDbQuery);
 
-            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
+            PerformTestEqualsForExtendedTypes(type, expectedResult, actual.ToString());
 
-            await ResetDbStateAsync();
+            ////await ResetDbStateAsync();
         }
 
         /// <summary>
@@ -431,16 +433,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "createSupportedType";
-            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ createSupportedType (item: {" + field + ": $param }){ " + field + " } }";
-
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
+            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ createSupportedType (item: {" + field + ": $param }){ typeid, " + field + " } }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true, new() { { "param", value } });
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            Assert.IsTrue(
+                condition: actual.GetProperty("typeid").TryGetInt32(out int insertedRecordId),
+                message: "Error: GraphQL mutation result indicates issue during record creation.");
+            string expectedResultDbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, id: insertedRecordId);
+            string expectedResult = await GetDatabaseResultAsync(expectedResultDbQuery);
 
-            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
-
-            await ResetDbStateAsync();
+            PerformTestEqualsForExtendedTypes(type, expectedResult, actual.ToString());
         }
 
         [DataTestMethod]
@@ -494,16 +496,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
-            string gqlQuery = "mutation{ updateSupportedType (typeid: 1, item: {" + field + ": " + value + " }){ " + field + " } }";
+            string gqlQuery = "mutation{ updateSupportedType (typeid: 1, item: {" + field + ": " + value + " }){ type " + field + " } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
+            string dbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, id: 1);
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
 
-            await ResetDbStateAsync();
+            //await ResetDbStateAsync();
         }
 
         [DataTestMethod]
@@ -531,14 +533,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string graphQLQueryName = "updateSupportedType";
             string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ updateSupportedType (typeid: 1, item: {" + field + ": $param }){ " + field + " } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
+            string dbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, id: 1);
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true, new() { { "param", value } });
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
 
-            await ResetDbStateAsync();
+            //await ResetDbStateAsync();
         }
 
         #endregion
@@ -824,14 +826,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         protected abstract string MakeQueryOnTypeTable(
-            List<string> queriedColumns,
+            List<DabField> queryFields,
             string filterValue = "1",
             string filterOperator = "=",
             string filterField = "1",
             string orderBy = "id",
             string limit = "1");
 
-        protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
+        protected abstract string MakeQueryOnTypeTable(List<DabField> queryFields, int id);
         protected virtual bool IsSupportedType(string type)
         {
             return true;

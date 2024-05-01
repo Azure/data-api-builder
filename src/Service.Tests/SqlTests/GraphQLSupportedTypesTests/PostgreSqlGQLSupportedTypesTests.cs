@@ -24,13 +24,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await InitializeTestFixture();
         }
 
-        protected override string MakeQueryOnTypeTable(List<string> columnsToQuery, int id)
+        protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)
         {
-            return MakeQueryOnTypeTable(columnsToQuery, filterValue: id.ToString(), filterField: "id");
+            return MakeQueryOnTypeTable(queryFields, filterValue: id.ToString(), filterField: "id");
         }
 
         protected override string MakeQueryOnTypeTable(
-            List<string> queriedColumns,
+            List<DabField> queryFields,
             string filterValue = "1",
             string filterOperator = "=",
             string filterField = "1",
@@ -42,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             return @"
                 " + formattedSelect + @"
                 FROM
-                  (SELECT " + string.Join(", ", queriedColumns.Select(c => ProperlyFormatTypeTableColumn(c) + $" AS {c}")) + @"
+                  (SELECT " + string.Join(", ", queryFields.Select(field => ProperlyFormatTypeTableColumn(field.BackingColumnName) + $" AS {field.Alias}")) + @"
                    FROM public.type_table AS table0
                    WHERE " + filterField + " " + filterOperator + " " + filterValue + @"
                    ORDER BY " + orderBy + @" asc

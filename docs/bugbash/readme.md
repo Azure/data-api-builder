@@ -4,6 +4,8 @@
 - Basic Understanding of DAB: https://learn.microsoft.com/en-us/azure/data-api-builder/
  
 ## Set Up
+
+### Cosmos DB Account
 1. Install Cosmos Db Emulator from here: https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-develop-emulator?tabs=windows%2Ccsharp&pivots=api-nosql#install-the-emulator \
 Alternatively, You can create an account on portal https://learn.microsoft.com/en-us/azure/cosmos-db/try-free?tabs=nosql
 2. Create a database (as `graphqldb`) and container(as `planet`)
@@ -15,7 +17,9 @@ Alternatively, You can create an account on portal https://learn.microsoft.com/e
 **Upload Data in Portal:**
 ![image](https://github.com/Azure/data-api-builder/assets/6362382/0edb0b0f-6fe8-42b5-baf5-daa063fb382c)
 
-3. Use this runtime config JSON to start: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
+### Data API Builder(DAB)
+1. Follow this for quick start: https://learn.microsoft.com/en-us/azure/data-api-builder/quickstart-nosql#install-the-data-api-builder-cli
+2. Use this runtime config JSON to start: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
 
 ## Scenarios:
 **Making connection to Cosmos DB**

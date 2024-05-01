@@ -72,7 +72,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 //  target entities are backed by same database table.
                 throw new DataApiBuilderException(
                 message: $"Multiple-create for relationship: {relationshipName} at level: {nestingLevel} is not supported because " +
-                $"source entity: {sourceEntityName} and target entity: {targetEntityName} are backed by same database table.",
+                $"source entity: {sourceEntityName} and target entity: {targetEntityName} are backed by the same database table.",
                 statusCode: HttpStatusCode.BadRequest,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.NotSupported);
             }

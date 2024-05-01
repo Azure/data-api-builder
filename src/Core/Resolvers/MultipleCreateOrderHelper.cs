@@ -31,7 +31,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// 1. 1:N - Target entity is the referencing entity
         /// 2. N:1 - Source entity is the referencing entity
         /// 3. 1:1 - Determined based on foreign key constraint/request input data.
-        /// 4. M:N - None of the source/target entity is the referencing entity. Instead, linking table act as the referencing table.
+        /// 4. M:N - None of the source/target entity is the referencing entity. Instead, linking table acts as the referencing entity.
         /// </summary>
         /// <param name="context">GraphQL request context.</param>
         /// <param name="relationshipName">Configured relationship name in the config file b/w source and target entity.</param>

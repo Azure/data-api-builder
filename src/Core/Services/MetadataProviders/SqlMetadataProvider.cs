@@ -1792,13 +1792,9 @@ namespace Azure.DataApiBuilder.Core.Services
                         // Second entry: Referencing table: Target entity, Referenced table: Source entity
                         if (!TryGetValidatedFKs(fKDefinitionsToTarget, out List<ForeignKeyDefinition> validatedFKDefinitionsToTarget))
                         {
-                            HandleOrRecordException(
-                                new DataApiBuilderException(
-                                    message: $"Cannot support multiple-create due to mismatch in the metadata inferred from the database and the " +
-                                    $"metadata inferred from the config for a relationship defined between the  source entity: {sourceEntityName} and" +
-                                    $" target entity: {targetEntityName}.",
-                                    statusCode: HttpStatusCode.BadRequest,
-                                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization));
+                            _logger.LogWarning("Cannot support multiple-create due to mismatch in the metadata inferred from the database and the " +
+                                "metadata inferred from the config for a relationship defined between the  source entity: {sourceEntityName} and " +
+                                "target entity: {targetEntityName}.", sourceEntityName, targetEntityName);
                         }
 
                         relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;

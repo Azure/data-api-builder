@@ -100,10 +100,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutation(context, parameters, entityName, mutationOperation);
 
-            // Multiple create mutation request is validated to ensure that the request is valid semantically.
             string inputArgumentName = IsPointMutation(context) ? MutationBuilder.ITEM_INPUT_ARGUMENT_NAME : MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
-            if (parameters.TryGetValue(inputArgumentName, out object? param) && mutationOperation is EntityActionOperation.Create)
+            if (_runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled() &&
+                parameters.TryGetValue(inputArgumentName, out object? param) &&
+                mutationOperation is EntityActionOperation.Create)
             {
+                // Multiple create mutation request is validated to ensure that the request is valid semantically.
                 IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
                 MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext = new(
                     entityName: entityName,
@@ -2034,7 +2036,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             string inputArgumentName = MutationBuilder.ITEM_INPUT_ARGUMENT_NAME;
             string clientRole = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
-            if (mutationOperation is EntityActionOperation.Create)
+            if (mutationOperation is EntityActionOperation.Create && _runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled())
             {
                 if (!IsPointMutation(context))
                 {

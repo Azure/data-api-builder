@@ -120,7 +120,11 @@ static public class Utf8JsonReaderExtensions
                     string? envValue = Environment.GetEnvironmentVariable(envVar);
 
                     // Write the value of the environment variable to the JSON writer
-                    if (bool.TryParse(envValue, out bool boolValue))
+                    if (envValue == "null")
+                    {
+                        writer.WriteNullValue();
+                    }
+                    else if (bool.TryParse(envValue, out bool boolValue))
                     {
                         writer.WriteBooleanValue(boolValue);
                     }

@@ -292,7 +292,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Environment.SetEnvironmentVariable("ENV_NUMBER", "123");
             Environment.SetEnvironmentVariable("ENV_FLOAT", "123.45");
             Environment.SetEnvironmentVariable("ENV_BOOLEAN", "true");
-            Environment.SetEnvironmentVariable("ENV_NULL", null);
+            Environment.SetEnvironmentVariable("ENV_NULL", "null");
 
             // Create input JSON with environment variable placeholders
             string inputJson = @"

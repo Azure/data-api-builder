@@ -3,7 +3,9 @@
 
 using System.IO.Abstractions;
 using System.Net;
+using System.Text.Json;
 using System.Text.RegularExpressions;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -16,8 +18,6 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
-using Azure.DataApiBuilder.Config.Converters;
-using System.Text.Json;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -198,7 +198,8 @@ public class RuntimeConfigValidator : IConfigValidator
         string? jsonData = _fileSystem.File.ReadAllText(configFilePath);
 
         // The config file may contain some environment variables that need to be replaced before validation.
-        try{
+        try
+        {
             jsonData = Utf8JsonReaderExtensions.ReplaceEnvVarsInJson(jsonData);
         }
         catch (JsonException e)

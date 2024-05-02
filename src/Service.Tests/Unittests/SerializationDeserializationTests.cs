@@ -313,11 +313,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             }";
 
             // Call the method under test
-            string outputJson=null;
-            try{
+            string outputJson = null;
+            try
+            {
                 outputJson = Utf8JsonReaderExtensions.ReplaceEnvVarsInJson(inputJson);
             }
-            catch(JsonException e){
+            catch (JsonException e)
+            {
                 Assert.Fail("Unexpected Failure. " + e.Message);
             }
 
@@ -362,7 +364,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             catch (JsonException ex)
             {
                 Assert.AreEqual("Failed to replace environment variables in given JSON. "
-                    +"Expected end of string, but instead reached end of data. LineNumber: 0 | BytePositionInLine: 38.", ex.Message);
+                    + "Expected end of string, but instead reached end of data. LineNumber: 0 | BytePositionInLine: 38.", ex.Message);
             }
         }
 
@@ -386,7 +388,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             catch (JsonException ex)
             {
                 Assert.AreEqual("Failed to replace environment variables in given JSON. "
-                    +"Environment variable 'MISSING_ENV_VAR' is not set.", ex.Message);
+                    + "Environment variable 'MISSING_ENV_VAR' is not set.", ex.Message);
             }
         }
 

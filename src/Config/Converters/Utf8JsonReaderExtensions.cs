@@ -48,7 +48,8 @@ static public class Utf8JsonReaderExtensions
     /// </summary>
     /// <param name="inputJson">The JSON string to process.</param>
     /// <exception cref="JsonException">Thrown when the input is null or when an error occurs while processing the JSON.</exception>
-    public static string? ReplaceEnvVarsInJson(string? inputJson){
+    public static string? ReplaceEnvVarsInJson(string? inputJson)
+    {
         try
         {
             if (inputJson is null)

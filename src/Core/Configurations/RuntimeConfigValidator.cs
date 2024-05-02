@@ -16,6 +16,8 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Microsoft.Extensions.Logging;
+using Azure.DataApiBuilder.Config.Converters;
+using System.Text.Json;
 
 namespace Azure.DataApiBuilder.Core.Configurations;
 
@@ -193,7 +195,18 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     public async Task<JsonSchemaValidationResult> ValidateConfigSchema(RuntimeConfig runtimeConfig, string configFilePath, ILoggerFactory loggerFactory)
     {
-        string jsonData = _fileSystem.File.ReadAllText(configFilePath);
+        string? jsonData = _fileSystem.File.ReadAllText(configFilePath);
+
+        // The config file may contain some environment variables that need to be replaced before validation.
+        try{
+            jsonData = Utf8JsonReaderExtensions.ReplaceEnvVarsInJson(jsonData);
+        }
+        catch (JsonException e)
+        {
+            _logger.LogError(e.Message);
+            return new JsonSchemaValidationResult(isValid: false, errors: null);
+        }
+
         ILogger<JsonConfigSchemaValidator> jsonConfigValidatorLogger = loggerFactory.CreateLogger<JsonConfigSchemaValidator>();
         JsonConfigSchemaValidator jsonConfigSchemaValidator = new(jsonConfigValidatorLogger, _fileSystem);
 
@@ -205,7 +218,7 @@ public class RuntimeConfigValidator : IConfigValidator
             return new JsonSchemaValidationResult(isValid: false, errors: null);
         }
 
-        return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData);
+        return await jsonConfigSchemaValidator.ValidateJsonConfigWithSchemaAsync(jsonSchema, jsonData!);
     }
 
     /// <summary>

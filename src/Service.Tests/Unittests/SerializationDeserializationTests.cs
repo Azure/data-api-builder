@@ -7,10 +7,12 @@ using System.Data;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.Converters;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders.Converters;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.Unittests
 {
@@ -274,6 +276,118 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             deserializedDatabaseTable.Equals(_databaseTable);
             VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.SourceDefinition, _databaseTable.SourceDefinition, "FirstName");
             VerifySourceDefinitionSerializationDeserialization(deserializedDatabaseTable.TableDefinition, _databaseTable.TableDefinition, "FirstName");
+        }
+
+        /// <summary>
+        /// This test sets environment variables of different data types,
+        /// creates an input JSON string with placeholders for these environment variables,
+        /// and then calls TryGetEnvVarsReplacedJson to replace the placeholders with the actual environment variable values.
+        /// The output JSON is then compared with the expected JSON to verify that the placeholders were replaced correctly.
+        /// </summary>
+        [TestMethod]
+        public void TestEnvVariableReplacementWithDifferentDataTypes()
+        {
+            // Set environment variables
+            Environment.SetEnvironmentVariable("ENV_STRING", "Hello");
+            Environment.SetEnvironmentVariable("ENV_NUMBER", "123");
+            Environment.SetEnvironmentVariable("ENV_FLOAT", "123.45");
+            Environment.SetEnvironmentVariable("ENV_BOOLEAN", "true");
+            Environment.SetEnvironmentVariable("ENV_NULL", null);
+
+            // Create input JSON with environment variable placeholders
+            string inputJson = @"
+            {
+                ""stringKey"": ""@env('ENV_STRING')"",
+                ""numberKey"": ""@env('ENV_NUMBER')"",
+                ""floatKey"": ""@env('ENV_FLOAT')"",
+                ""booleanKey"": ""@env('ENV_BOOLEAN')"",
+                ""nullKey"": ""@env('ENV_NULL')"",
+                ""arrayKey"": [""@env('ENV_STRING')"", ""@env('ENV_NUMBER')"", ""@env('ENV_FLOAT')"", ""@env('ENV_BOOLEAN')"", ""@env('ENV_NULL')""],
+                ""objectKey"": {
+                    ""stringKey"": ""@env('ENV_STRING')"",
+                    ""numberKey"": ""@env('ENV_NUMBER')"",
+                    ""floatKey"": ""@env('ENV_FLOAT')"",
+                    ""booleanKey"": ""@env('ENV_BOOLEAN')"",
+                    ""nullKey"": ""@env('ENV_NULL')""
+                }
+            }";
+
+            // Call the method under test
+            string outputJson=null;
+            try{
+                outputJson = Utf8JsonReaderExtensions.ReplaceEnvVarsInJson(inputJson);
+            }
+            catch(JsonException e){
+                Assert.Fail("Unexpected Failure. " + e.Message);
+            }
+
+            // Create expected JSON
+            string expectedJson = @"
+            {
+                ""stringKey"": ""Hello"",
+                ""numberKey"": 123,
+                ""floatKey"": 123.45,
+                ""booleanKey"": true,
+                ""nullKey"": null,
+                ""arrayKey"": [""Hello"", 123, 123.45, true, null],
+                ""objectKey"": {
+                    ""stringKey"": ""Hello"",
+                    ""numberKey"": 123,
+                    ""floatKey"": 123.45,
+                    ""booleanKey"": true,
+                    ""nullKey"": null
+                }
+            }";
+
+            // Compare the output JSON with the expected JSON
+            Assert.IsTrue(JToken.DeepEquals(JToken.Parse(expectedJson), JToken.Parse(outputJson)));
+        }
+
+        /// <summary>
+        /// This test checks that the ReplaceEnvVarsInJson method throws a JsonException when given an invalid JSON string.
+        /// The test asserts that the exception's message matches the expected error message.
+        /// </summary>
+        [TestMethod]
+        public void TestEnvVariableReplacementWithInvalidJson()
+        {
+            // Create an invalid JSON string
+            string inputJson = @"{ ""stringKey"": ""@env('ENV_STRING')', }";
+
+            // Call the method under test and expect a JsonException
+            try
+            {
+                Utf8JsonReaderExtensions.ReplaceEnvVarsInJson(inputJson);
+                Assert.Fail("Expected a JsonException to be thrown");
+            }
+            catch (JsonException ex)
+            {
+                Assert.AreEqual("Failed to replace environment variables in given JSON. "
+                    +"Expected end of string, but instead reached end of data. LineNumber: 0 | BytePositionInLine: 38.", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// This test validates that the `ReplaceEnvVarsInJson` method throws a JsonException when
+        /// it encounters a placeholder for an unset environment variable in the provided JSON string.
+        /// The test asserts that the exception's message matches the expected error message.
+        /// </summary>
+        [TestMethod]
+        public void TestEnvVariableReplacementWithMissingEnvVar()
+        {
+            // Create a JSON string with a placeholder for the missing environment variable
+            string inputJson = @"{ ""stringKey"": ""@env('MISSING_ENV_VAR')"" }";
+
+            // Call the method under test and expect a JsonException
+            try
+            {
+                Utf8JsonReaderExtensions.ReplaceEnvVarsInJson(inputJson);
+                Assert.Fail("Expected a JsonException to be thrown");
+            }
+            catch (JsonException ex)
+            {
+                Assert.AreEqual("Failed to replace environment variables in given JSON. "
+                    +"Environment variable 'MISSING_ENV_VAR' is not set.", ex.Message);
+            }
         }
 
         private void InitializeObjects()

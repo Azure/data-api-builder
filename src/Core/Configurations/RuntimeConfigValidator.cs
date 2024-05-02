@@ -873,42 +873,24 @@ public class RuntimeConfigValidator : IConfigValidator
                     }
                 }
 
-                // In all kinds of relationships, if sourceFields are included they must be valid columns in the backend.
-                if (relationship.SourceFields is not null)
+                try
                 {
-                    GetFieldsNotBackedByColumnsInDB(
-                        fields: relationship.SourceFields,
+                    ValidateSourceAndTargetFieldsAsBackingColumns(
                         invalidColumns: invalidColumns,
+                        sourceFields: relationship.SourceFields,
+                        targetFields: relationship.TargetFields,
+                        relationshipName: relationshipName,
                         entityName: entityName,
+                        targetEntityName: relationship.TargetEntity,
                         sqlMetadataProvider: sqlMetadataProvider);
-
-                    if (invalidColumns.Count > 0)
-                    {
-                        HandleOrRecordException(new DataApiBuilderException(
-                            message: $"Entity: {entityName} has a relationship: {relationshipName} with source fields: {string.Join(",", invalidColumns)} that " +
-                                $"do not exist as columns in entity: {entityName}.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                    }
                 }
-
-                // In all kinds of relationships, if targetFields are included they must be valid columns in the backend.
-                if (relationship.TargetFields is not null)
+                catch (Exception)
                 {
-                    GetFieldsNotBackedByColumnsInDB(
-                        fields: relationship.TargetFields,
-                        invalidColumns: invalidColumns,
-                        entityName: relationship.TargetEntity,
-                        sqlMetadataProvider: sqlMetadataProvider);
-
-                    if (invalidColumns.Count > 0)
-                    {
-                        HandleOrRecordException(new DataApiBuilderException(
-                            message: $"Entity: {entityName} has a relationship: {relationshipName} with target fields: {string.Join(",", invalidColumns)} that " +
-                                $"do not exist as columns in entity: {relationship.TargetEntity}.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                    }
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Unable to validate source and target fields as backing columns in the DB, please check" +
+                            $"the validity of your connection string.",
+                        statusCode: HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
                 // Linking object exists and we therefore have a many-many relationship. Validation here differs from one-many and many-one in that
@@ -1071,6 +1053,67 @@ public class RuntimeConfigValidator : IConfigValidator
                         targetColumns
                         );
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handles the validation of source and target fields as valid backing columns in the DB.
+    /// We put the logic for both source and target fields into a single function here for readability
+    /// when catching exceptions in the caller related to being unable to lookup the backing columns.
+    /// This happens when validation is called with a mal formed connection string.
+    /// </summary>
+    /// <param name="invalidColumns">List in which to aggregate the invalid fields.</param>
+    /// <param name="sourceFields">List of the backing source fields to check for existence in backing DB.</param>
+    /// <param name="targetFields">List of the backing target fields to check for existence in backing DB.</param>
+    /// <param name="relationshipName">Name of the relationship.</param>
+    /// <param name="entityName">The name of the entity that we check for backing columns.</param>
+    /// <param name="targetEntityName">Name of the target entity.</param>
+    /// <param name="sqlMetadataProvider">The sqlMetadataProvider used to lookup if the backing fields are valid columns in DB.</param>
+    private void ValidateSourceAndTargetFieldsAsBackingColumns(
+        List<string> invalidColumns,
+        string[]? sourceFields,
+        string[]? targetFields,
+        string relationshipName,
+        string entityName,
+        string targetEntityName,
+        ISqlMetadataProvider sqlMetadataProvider)
+    {
+        // In all kinds of relationships, if sourceFields are included they must be valid columns in the backend.
+        if (sourceFields is not null)
+        {
+            GetFieldsNotBackedByColumnsInDB(
+                invalidColumns: invalidColumns,
+                fields: sourceFields!,
+                entityName: entityName,
+                sqlMetadataProvider: sqlMetadataProvider);
+
+            if (invalidColumns.Count > 0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Entity: {entityName} has a relationship: {relationshipName} with source fields: {string.Join(",", invalidColumns)} that " +
+                        $"do not exist as columns in entity: {entityName}.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+        }
+
+        // In all kinds of relationships, if targetFields are included they must be valid columns in the backend.
+        if (targetFields is not null)
+        {
+            GetFieldsNotBackedByColumnsInDB(
+                fields: targetFields,
+                invalidColumns: invalidColumns,
+                entityName: targetEntityName,
+                sqlMetadataProvider: sqlMetadataProvider);
+
+            if (invalidColumns.Count > 0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                    message: $"Entity: {entityName} has a relationship: {relationshipName} with target fields: {string.Join(",", invalidColumns)} that " +
+                        $"do not exist as columns in entity: {targetEntityName}.",
+                    statusCode: HttpStatusCode.ServiceUnavailable,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
             }
         }
     }

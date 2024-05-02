@@ -767,6 +767,32 @@
       }
     },
     {
+      BookNF: {
+        Source: {
+          Object: books,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: bookNF,
+          Plural: booksNF,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       BookWebsitePlacement: {
         Source: {
           Object: book_website_placements,

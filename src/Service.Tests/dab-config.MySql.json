@@ -1355,6 +1355,16 @@
       ],
       "mappings": {
         "species": "fancyName"
+      },
+      "relationships": {
+        "fungus": {
+          "cardinality": "one",
+          "target.entity": "Fungus",
+          "source.fields": [ "species" ],
+          "target.fields": [ "habitat" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "Fungus": {
@@ -1427,6 +1437,16 @@
       ],
       "mappings": {
         "spores": "hazards"
+      },
+      "relationships": {
+        "shrub": {
+          "cardinality": "one",
+          "target.entity": "Shrub",
+          "source.fields": [ "habitat" ],
+          "target.fields": [ "species" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "books_view_all": {
@@ -1926,6 +1946,154 @@
         }
       ]
     },
+    "User_NonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_NonAutogenRelationshipColumn",
+          "plural": "User_NonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_NonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "username"
+          ],
+          "target.fields": [
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "UserProfile": {
+      "source": {
+        "object": "user_profiles",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "UserProfile",
+          "plural": "UserProfiles"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
+    "User_AutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenRelationshipColumn",
+          "plural": "User_AutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "userid"
+          ],
+          "target.fields": [
+            "profileid"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
+    "User_AutogenToNonAutogenRelationshipColumn": {
+      "source": {
+        "object": "users",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "User_AutogenToNonAutogenRelationshipColumn",
+          "plural": "User_AutogenToNonAutogenRelationshipColumns"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "UserProfile_AutogenToNonAutogenRelationshipColumn": {
+          "cardinality": "one",
+          "target.entity": "UserProfile",
+          "source.fields": [
+            "userid",
+            "username"
+          ],
+          "target.fields": [
+            "userid",
+            "username"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
+    },
     "GQLmappings": {
       "source": {
         "object": "GQLmappings",
@@ -2080,13 +2248,13 @@
             {
               "action": "create",
               "fields": {
-                  "include": [
-                      "*"
-                  ],
-                  "exclude": [
-                      "current_date",
-                      "next_date"
-                  ]
+                "include": [
+                  "*"
+                ],
+                "exclude": [
+                  "current_date",
+                  "next_date"
+                ]
               }
             },
             "read",

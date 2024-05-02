@@ -92,13 +92,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform
                 // the insertion.
-                $"SELECT [id], [content], [book_id] FROM { _tableWithCompositePrimaryKey } " +
+                $"SELECT [id], [content], [book_id], [websiteuser_id] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [book_id] = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "InsertOneInDefaultTestTable",
-                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
+                $"SELECT [id], [book_id], [content], [websiteuser_id] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS + 1} AND [book_id] = 2 AND [content] = 'Its a classic' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

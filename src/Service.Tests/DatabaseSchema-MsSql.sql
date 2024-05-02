@@ -19,14 +19,20 @@ DROP PROCEDURE IF EXISTS update_book_title;
 DROP PROCEDURE IF EXISTS get_authors_history_by_first_name;
 DROP PROCEDURE IF EXISTS insert_and_display_all_books_for_given_publisher;
 DROP TABLE IF EXISTS book_author_link;
+DROP TABLE IF EXISTS book_author_link_mm;
 DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS reviews_mm;
 DROP TABLE IF EXISTS authors;
+DROP TABLE IF EXISTS authors_mm;
 DROP TABLE IF EXISTS book_website_placements;
 DROP TABLE IF EXISTS website_users;
+DROP TABLE IF EXISTS website_users_mm;
 DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS books_mm;
 DROP TABLE IF EXISTS players;
 DROP TABLE IF EXISTS clubs;
 DROP TABLE IF EXISTS publishers;
+DROP TABLE IF EXISTS publishers_mm;
 DROP TABLE IF EXISTS [foo].[magazines];
 DROP TABLE IF EXISTS [bar].[magazines];
 DROP TABLE IF EXISTS stocks_price;
@@ -52,6 +58,8 @@ DROP TABLE IF EXISTS fte_data;
 DROP TABLE IF EXISTS intern_data;
 DROP TABLE IF EXISTS books_sold;
 DROP TABLE IF EXISTS default_with_function_table;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS user_profiles;
 DROP SCHEMA IF EXISTS [foo];
 DROP SCHEMA IF EXISTS [bar];
 COMMIT;
@@ -64,7 +72,18 @@ CREATE TABLE publishers(
     name varchar(max) NOT NULL
 );
 
+CREATE TABLE publishers_mm(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(max) NOT NULL
+);
+
 CREATE TABLE books(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    title varchar(max) NOT NULL,
+    publisher_id int NOT NULL
+);
+
+CREATE TABLE books_mm(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     title varchar(max) NOT NULL,
     publisher_id int NOT NULL
@@ -93,7 +112,18 @@ CREATE TABLE website_users(
     username text NULL
 );
 
+CREATE TABLE website_users_mm(
+    id int PRIMARY KEY,
+    username text NULL
+);
+
 CREATE TABLE authors(
+    id int IDENTITY(5001, 1) PRIMARY KEY,
+    name varchar(max) NOT NULL,
+    birthdate varchar(max) NOT NULL
+);
+
+CREATE TABLE authors_mm(
     id int IDENTITY(5001, 1) PRIMARY KEY,
     name varchar(max) NOT NULL,
     birthdate varchar(max) NOT NULL
@@ -103,10 +133,26 @@ CREATE TABLE reviews(
     book_id int,
     id int IDENTITY(5001, 1),
     content varchar(max) DEFAULT('Its a classic') NOT NULL,
+    websiteuser_id INT DEFAULT 1,
+    PRIMARY KEY(book_id, id)
+);
+
+CREATE TABLE reviews_mm(
+    book_id int,
+    id int IDENTITY(5001, 1),
+    content varchar(max) DEFAULT('Its a classic') NOT NULL,
+    websiteuser_id INT DEFAULT 1,
     PRIMARY KEY(book_id, id)
 );
 
 CREATE TABLE book_author_link(
+    book_id int NOT NULL,
+    author_id int NOT NULL,
+    royalty_percentage float DEFAULT 0 NULL,
+    PRIMARY KEY(book_id, author_id)
+);
+
+CREATE TABLE book_author_link_mm(
     book_id int NOT NULL,
     author_id int NOT NULL,
     royalty_percentage float DEFAULT 0 NULL,
@@ -313,6 +359,19 @@ CREATE TABLE default_with_function_table
     default_date_string DATETIME DEFAULT '1999-01-08 10:23:54'
 )
 
+CREATE TABLE users (
+    userid INT PRIMARY KEY IDENTITY,
+    username NVARCHAR(50) UNIQUE,
+    email NVARCHAR(100)
+);
+
+CREATE TABLE user_profiles (
+    profileid INT PRIMARY KEY IDENTITY,
+    username NVARCHAR(50) UNIQUE,
+    profilepictureurl NVARCHAR(255),
+	userid INT
+);
+
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk
 FOREIGN KEY (publisher_id)
@@ -374,6 +433,10 @@ SET IDENTITY_INSERT publishers ON
 INSERT INTO publishers(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
 SET IDENTITY_INSERT publishers OFF
 
+SET IDENTITY_INSERT publishers_mm ON
+INSERT INTO publishers_mm(id, name) VALUES (1234, 'Big Company'), (2345, 'Small Town Publisher'), (2323, 'TBD Publishing One'), (2324, 'TBD Publishing Two Ltd'), (1940, 'Policy Publisher 01'), (1941, 'Policy Publisher 02'), (1156, 'The First Publisher');
+SET IDENTITY_INSERT publishers_mm OFF
+
 SET IDENTITY_INSERT clubs ON
 INSERT INTO clubs(id, name) VALUES (1111, 'Manchester United'), (1112, 'FC Barcelona'), (1113, 'Real Madrid');
 SET IDENTITY_INSERT clubs OFF
@@ -381,6 +444,10 @@ SET IDENTITY_INSERT clubs OFF
 SET IDENTITY_INSERT authors ON
 INSERT INTO authors(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
 SET IDENTITY_INSERT authors OFF
+
+SET IDENTITY_INSERT authors_mm ON
+INSERT INTO authors_mm(id, name, birthdate) VALUES (123, 'Jelte', '2001-01-01'), (124, 'Aniruddh', '2002-02-02'), (125, 'Aniruddh', '2001-01-01'), (126, 'Aaron', '2001-01-01');
+SET IDENTITY_INSERT authors_mm OFF
 
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (1, 'Incompatible GraphQL Name', 'Compatible GraphQL Name');
 INSERT INTO GQLmappings(__column1, __column2, column3) VALUES (3, 'Old Value', 'Record to be Updated');
@@ -435,6 +502,24 @@ VALUES (1, 'Awesome book', 1234),
 (14, 'Before Sunset', 1234);
 SET IDENTITY_INSERT books OFF
 
+SET IDENTITY_INSERT books_mm ON
+INSERT INTO books_mm(id, title, publisher_id)
+VALUES (1, 'Awesome book', 1234),
+(2, 'Also Awesome book', 1234),
+(3, 'Great wall of china explained', 2345),
+(4, 'US history in a nutshell', 2345),
+(5, 'Chernobyl Diaries', 2323),
+(6, 'The Palace Door', 2324),
+(7, 'The Groovy Bar', 2324),
+(8, 'Time to Eat', 2324),
+(9, 'Policy-Test-01', 1940),
+(10, 'Policy-Test-02', 1940),
+(11, 'Policy-Test-04', 1941),
+(12, 'Time to Eat 2', 1941),
+(13, 'Before Sunrise', 1234),
+(14, 'Before Sunset', 1234);
+SET IDENTITY_INSERT books_mm OFF
+
 SET IDENTITY_INSERT players ON
 INSERT INTO players(id, [name], current_club_id, new_club_id)
 VALUES (1, 'Cristiano Ronaldo', 1113, 1111),
@@ -446,10 +531,18 @@ INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 
 SET IDENTITY_INSERT book_website_placements OFF
 
 INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
+INSERT INTO book_author_link_mm(book_id, author_id) VALUES (1, 123), (2, 124), (3, 123), (3, 124), (4, 123), (4, 124), (5, 126);
+
+INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
+INSERT INTO website_users_mm(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
 
 SET IDENTITY_INSERT reviews ON
 INSERT INTO reviews(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
 SET IDENTITY_INSERT reviews OFF
+
+SET IDENTITY_INSERT reviews_mm ON
+INSERT INTO reviews_mm(id, book_id, content) VALUES (567, 1, 'Indeed a great book'), (568, 1, 'I loved it'), (569, 1, 'best book I read in years');
+SET IDENTITY_INSERT reviews_mm OFF
 
 SET IDENTITY_INSERT type_table ON
 INSERT INTO type_table(id,
@@ -491,7 +584,7 @@ VALUES
     (6, 'Journal6', 'green', null),
     (7, 'Journal7', null, null);
 
-INSERT INTO website_users(id, username) VALUES (1, 'George'), (2, NULL), (3, ''), (4, 'book_lover_95'), (5, 'null');
+
 INSERT INTO [foo].[magazines](id, title, issue_number) VALUES (1, 'Vogue', 1234), (11, 'Sports Illustrated', NULL), (3, 'Fitness', NULL);
 INSERT INTO [bar].[magazines](upc, comic_name, issue) VALUES (0, 'NotVogue', 0);
 INSERT INTO brokers([ID Number], [First Name], [Last Name]) VALUES (1, 'Michael', 'Burry'), (2, 'Jordan', 'Belfort');
@@ -507,8 +600,11 @@ INSERT INTO stocks(categoryid, pieceid, categoryName) VALUES (1, 1, 'SciFi'), (2
 INSERT INTO stocks_price(categoryid, pieceid, price, is_wholesale_price) VALUES (2, 1, 100.57, 1), (1, 1, 42.75, 0), (100, 99, NULL, NULL);
 INSERT INTO stocks_price(categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100.57, 1);
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
+INSERT INTO trees(treeId, species, region, height) VALUES (4, 'test', 'Pacific Northwest', '0m');
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');
+INSERT INTO fungi(speciesid, region, habitat) VALUES (3, 'northeast', 'test');
+
 
 SET IDENTITY_INSERT authors_history ON
 INSERT INTO authors_history(id, first_name, middle_name, last_name, year_of_publish, books_published)
@@ -536,6 +632,9 @@ INSERT INTO revenues(id, category, revenue, accessible_role) VALUES (1, 'Book', 
 (3, 'Journals', 20000, 'Authenticated'), (4, 'Series', 40000, 'Authenticated');
 
 INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GETDATE());
+
+INSERT INTO users (username, email) VALUES ('john_doe', 'john.doe@example.com'), ('jane_smith', 'jane.smith@example.com');
+INSERT INTO user_profiles (username, profilepictureurl, userid) VALUES ('john_doe', 'https://example.com/profiles/john_doe.jpg', 1), ('jane_smith', 'https://example.com/profiles/jane_smith.jpg', 2);
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');

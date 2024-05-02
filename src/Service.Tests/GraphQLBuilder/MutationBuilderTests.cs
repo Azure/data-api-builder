@@ -1053,6 +1053,7 @@ type Foo @model(name:""Foo"") {{
                 new string[] { "anonymous", "authenticated" });
             DocumentNode root = Utf8GraphQLParser.Parse(gql);
 
+            int totalExpectedMutations = 0;
             for (int i = 0; i < entityNames.Length; i++)
             {
                 Entity entity = (singularNames is not null)
@@ -1061,6 +1062,14 @@ type Foo @model(name:""Foo"") {{
                 entityNameToEntity.TryAdd(entityNames[i], entity);
                 entityNameToDatabaseType.TryAdd(entityNames[i], i % 2 == 0 ? DatabaseType.CosmosDB_NoSQL : DatabaseType.MSSQL);
 
+                // The permissions are setup for create, update, delete and patch(only for cosmos) operations.
+                // So create, update, delete and patch(only for cosmos) mutations should get generated.
+                // A Check to validate that the count of mutations generated is -
+                // 1. 1 Create mutation (MSSQL and CosmosDB)
+                // 2. 1 Update mutation (MSSQL and CosmosDB)
+                // 3. 1 Delete mutation (MSSQL and CosmosDB)
+                // 4. 1 Patch mutation (CosmosDB only)
+                totalExpectedMutations += (i % 2 == 0 ? 4 : 3);
             }
 
             DocumentNode mutationRoot = MutationBuilder.Build(
@@ -1074,13 +1083,6 @@ type Foo @model(name:""Foo"") {{
             ObjectTypeDefinitionNode mutation = GetMutationNode(mutationRoot);
             Assert.IsNotNull(mutation);
 
-            // The permissions are setup for create, update and delete operations.
-            // So create, update and delete mutations should get generated.
-            // A Check to validate that the count of mutations generated is 3 -
-            // 1. 1 Create mutation
-            // 2. 1 Update mutation
-            // 3. 1 Delete mutation
-            int totalExpectedMutations = 3 * entityNames.Length;
             Assert.AreEqual(totalExpectedMutations, mutation.Fields.Count);
 
             for (int i = 0; i < entityNames.Length; i++)
@@ -1105,6 +1107,16 @@ type Foo @model(name:""Foo"") {{
                 Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedDeleteMutationName));
                 FieldDefinitionNode deleteMutation = mutation.Fields.First(f => f.Name.Value == expectedDeleteMutationName);
                 Assert.AreEqual(expectedDeleteMutationDescription, deleteMutation.Description.Value);
+
+                if (entityNameToDatabaseType[entityNames[i]] == DatabaseType.CosmosDB_NoSQL)
+                {
+                    // Name and Description validations for Patch mutation
+                    string expectedPatchMutationName = $"patch{expectedNames[i]}";
+                    string expectedPatchMutationDescription = $"Updates a {expectedNames[i]}";
+                    Assert.AreEqual(1, mutation.Fields.Count(f => f.Name.Value == expectedPatchMutationName));
+                    FieldDefinitionNode patchMutation = mutation.Fields.First(f => f.Name.Value == expectedPatchMutationName);
+                    Assert.AreEqual(expectedPatchMutationDescription, patchMutation.Description.Value);
+                }
             }
         }
 

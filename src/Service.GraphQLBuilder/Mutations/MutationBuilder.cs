@@ -79,6 +79,10 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         AddMutations(dbEntityName, operation: EntityActionOperation.Create, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName, IsMultipleCreateOperationEnabled);
                         AddMutations(dbEntityName, operation: EntityActionOperation.Update, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
                         AddMutations(dbEntityName, operation: EntityActionOperation.Delete, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
+                        if (databaseTypes[dbEntityName] is DatabaseType.CosmosDB_NoSQL)
+                        {
+                            AddMutations(dbEntityName, operation: EntityActionOperation.Patch, entityPermissionsMap, name, inputs, objectTypeDefinitionNode, root, databaseTypes[dbEntityName], entities, mutationFields, returnEntityName);
+                        }
                     }
                 }
             }
@@ -147,10 +151,44 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                         mutationFields.AddRange(createMutationNodes);
                         break;
                     case EntityActionOperation.Update:
-                        mutationFields.Add(UpdateMutationBuilder.Build(name, inputs, objectTypeDefinitionNode, root, entities, dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));
+                        // Generate Mutation operation for Patch and Update both for CosmosDB
+                        mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
+                            name,
+                            inputs,
+                            objectTypeDefinitionNode,
+                            root,
+                            entities,
+                            dbEntityName,
+                            databaseType,
+                            returnEntityName,
+                            rolesAllowedForMutation));
+
+                        if (databaseType is DatabaseType.CosmosDB_NoSQL)
+                        {
+                            mutationFields.Add(UpdateAndPatchMutationBuilder.Build(
+                            name,
+                            inputs,
+                            objectTypeDefinitionNode,
+                            root,
+                            entities,
+                            dbEntityName,
+                            databaseType,
+                            returnEntityName,
+                            rolesAllowedForMutation,
+                            EntityActionOperation.Patch,
+                            operationNamePrefix: "patch"));
+                        }
+
                         break;
                     case EntityActionOperation.Delete:
-                        mutationFields.Add(DeleteMutationBuilder.Build(name, objectTypeDefinitionNode, entities[dbEntityName], dbEntityName, databaseType, returnEntityName, rolesAllowedForMutation));
+                        mutationFields.Add(DeleteMutationBuilder.Build(
+                            name,
+                            objectTypeDefinitionNode,
+                            entities[dbEntityName],
+                            dbEntityName,
+                            databaseType,
+                            returnEntityName,
+                            rolesAllowedForMutation));
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(paramName: "action", message: "Invalid argument value provided.");
@@ -191,6 +229,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
                 string s when s.StartsWith(EntityActionOperation.Execute.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Execute,
                 string s when s.StartsWith(EntityActionOperation.Create.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Create,
                 string s when s.StartsWith(EntityActionOperation.Update.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.UpdateGraphQL,
+                string s when s.StartsWith(EntityActionOperation.Patch.ToString(), StringComparison.OrdinalIgnoreCase) => EntityActionOperation.Patch,
                 _ => EntityActionOperation.Delete
             };
         }

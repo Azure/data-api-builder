@@ -821,6 +821,32 @@
         }
       }
     },
+    "BookNF": {
+      "source": {
+        "object": "books",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "bookNF",
+          "plural": "booksNF"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
     "BookWebsitePlacement": {
       "source": {
         "object": "book_website_placements",

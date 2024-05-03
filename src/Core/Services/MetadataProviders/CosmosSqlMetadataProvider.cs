@@ -207,10 +207,10 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             foreach (FieldDefinitionNode field in fields)
             {
                 // Create a tracker to keep track of visited entities to detect circular references
-                HashSet<string> trackerForField = new();
+                HashSet<string> trackerForFields = new();
                 if (visitedEntities is not null)
                 {
-                    trackerForField = visitedEntities;
+                    trackerForFields = visitedEntities;
                 }
 
                 // If the entity is build-in type, do not go further to check circular reference
@@ -221,7 +221,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                 string entityType = field.Type.NamedType().Name.Value;
                 // If the entity is already visited, then it is a circular reference
-                if (!trackerForField.Add(entityType))
+                if (!trackerForFields.Add(entityType))
                 {
                     throw new DataApiBuilderException(
                         message: $"Circular reference detected in the provided GraphQL schema for entity '{entityType}'.",
@@ -276,7 +276,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
                     tableCounter: tableCounter,
                     parentEntity: isArrayType ? currentEntity : null,
-                    visitedEntities: trackerForField);
+                    visitedEntities: trackerForFields);
             }
         }
 

@@ -193,7 +193,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// <param name="tableCounter">Counter used to generate table alias</param>
         /// <param name="parentEntity">indicates the parent entity for which we are processing the schema.
         /// It is useful to get the JOIN statement information and create further new statements</param>
-        /// <param name="visitedEntity"> Keeps a track of the path in an entity, to detect circular reference</param>
+        /// <param name="visitedEntities"> Keeps a track of the path in an entity, to detect circular reference</param>
         /// <remarks>It detects the circular reference in the schema while processing the schema and throws <seealso cref="DataApiBuilderException"/> </remarks>
         private void ProcessSchema(
             IReadOnlyList<FieldDefinitionNode> fields,
@@ -201,16 +201,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             string currentPath,
             IncrementingInteger tableCounter,
             EntityDbPolicyCosmosModel? parentEntity = null,
-            HashSet<string>? visitedEntity = null)
+            HashSet<string>? visitedEntities = null)
         {
             // Traverse the fields and add them to the path
             foreach (FieldDefinitionNode field in fields)
             {
                 // Create a tracker to keep track of visited entities to detect circular references
                 HashSet<string> trackerForField = new();
-                if (visitedEntity is not null)
+                if (visitedEntities is not null)
                 {
-                    trackerForField = visitedEntity;
+                    trackerForField = visitedEntities;
                 }
 
                 string entityType = field.Type.NamedType().Name.Value;
@@ -277,7 +277,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
                     tableCounter: tableCounter,
                     parentEntity: isArrayType ? currentEntity : null,
-                    visitedEntity: trackerForField);
+                    visitedEntities: trackerForField);
             }
         }
 

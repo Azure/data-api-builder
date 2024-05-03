@@ -3003,8 +3003,7 @@ type Moon {
             MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
             {
                 { @"../schema.gql", new MockFileData(schema) },
-                { FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME,
-                    new MockFileData(baseConfig.ToJson()) }
+                { DEFAULT_CONFIG_FILE_NAME, new MockFileData(baseConfig.ToJson()) }
             });
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader);
@@ -3012,7 +3011,7 @@ type Moon {
             DataApiBuilderException exception =
                 Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
             Assert.AreEqual("Circular reference detected in the provided GraphQL schema for entity 'Character'.", exception.Message);
-            Assert.AreEqual(System.Net.HttpStatusCode.InternalServerError, exception.StatusCode);
+            Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
         }
 

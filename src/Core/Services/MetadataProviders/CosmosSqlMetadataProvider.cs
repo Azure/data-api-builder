@@ -187,24 +187,46 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
         /// 4. Check if we get previous entity with join information, if yes append it to the current entity also
         /// 5. Recursively call this function, to process the schema
         /// </summary>
-        /// <param name="fields"></param>
-        /// <param name="schemaDocument"></param>
-        /// <param name="currentPath"></param>
-        /// <param name="previousEntity">indicates the parent entity for which we are processing the schema.</param>
-        private void ProcessSchema(IReadOnlyList<FieldDefinitionNode> fields,
+        /// <param name="fields">All the fields of an entity</param>
+        /// <param name="schemaDocument">Schema Documents, useful to get fields information of an entity</param>
+        /// <param name="currentPath">Generated path of an entity</param>
+        /// <param name="tableCounter">Counter used to generate table alias</param>
+        /// <param name="parentEntity">indicates the parent entity for which we are processing the schema.
+        /// It is useful to get the JOIN statement information and create further new statements</param>
+        /// <param name="visitedEntities"> Keeps a track of the path in an entity, to detect circular reference</param>
+        /// <remarks>It detects the circular reference in the schema while processing the schema and throws <seealso cref="DataApiBuilderException"/> </remarks>
+        private void ProcessSchema(
+            IReadOnlyList<FieldDefinitionNode> fields,
             Dictionary<string, ObjectTypeDefinitionNode> schemaDocument,
             string currentPath,
             IncrementingInteger tableCounter,
-            EntityDbPolicyCosmosModel? previousEntity = null)
+            EntityDbPolicyCosmosModel? parentEntity = null,
+            HashSet<string>? visitedEntities = null)
         {
             // Traverse the fields and add them to the path
             foreach (FieldDefinitionNode field in fields)
             {
-                string entityType = field.Type.NamedType().Name.Value;
-                // If the entity is not in the runtime config, skip it
-                if (!_runtimeConfig.Entities.ContainsKey(entityType))
+                // Create a tracker to keep track of visited entities to detect circular references
+                HashSet<string> trackerForFields = new();
+                if (visitedEntities is not null)
+                {
+                    trackerForFields = visitedEntities;
+                }
+
+                // If the entity is build-in type, do not go further to check circular reference
+                if (GraphQLUtils.IsBuiltInType(field.Type))
                 {
                     continue;
+                }
+
+                string entityType = field.Type.NamedType().Name.Value;
+                // If the entity is already visited, then it is a circular reference
+                if (!trackerForFields.Add(entityType))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"Circular reference detected in the provided GraphQL schema for entity '{entityType}'.",
+                        statusCode: System.Net.HttpStatusCode.InternalServerError,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
                 }
 
                 string? alias = null;
@@ -235,15 +257,15 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                         });
                 }
 
-                if (previousEntity is not null)
+                if (parentEntity is not null)
                 {
                     if (string.IsNullOrEmpty(currentEntity.JoinStatement))
                     {
-                        currentEntity.JoinStatement = previousEntity.JoinStatement;
+                        currentEntity.JoinStatement = parentEntity.JoinStatement;
                     }
                     else
                     {
-                        currentEntity.JoinStatement = previousEntity.JoinStatement + " JOIN " + currentEntity.JoinStatement;
+                        currentEntity.JoinStatement = parentEntity.JoinStatement + " JOIN " + currentEntity.JoinStatement;
                     }
                 }
 
@@ -253,7 +275,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     schemaDocument: schemaDocument,
                     currentPath: isArrayType ? $"{alias}" : $"{currentPath}.{field.Name.Value}",
                     tableCounter: tableCounter,
-                    previousEntity: isArrayType ? currentEntity : null);
+                    parentEntity: isArrayType ? currentEntity : null,
+                    visitedEntities: trackerForFields);
             }
         }
 

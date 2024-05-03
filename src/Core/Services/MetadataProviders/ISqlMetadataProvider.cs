@@ -92,11 +92,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// try to get the exposed name associated
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.
+        /// If an entity name is provided that does not exist
+        /// as metadata in this metadata provider, a DataApiBuilderException
+        /// is thrown.
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>
         /// <param name="backingFieldName">The field used for the lookup in the mapping.</param>
         /// <param name="name">Out parameter in which we will save exposed name.</param>
         /// <returns>True if exists, false otherwise.</returns>
+        /// <throws>DataApiBuilderException if entity name not found.</throws>
         bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name);
 
         /// <summary>

@@ -164,7 +164,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         // If the ConfigValidationExceptions list doesn't contain a DataApiBuilderException with connection string error message,
         // then only we run the metadata validation.
-        if (!ConfigValidationExceptions.Any(x => x.Message.Equals(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
+        if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
         {
             await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
         }
@@ -884,11 +884,11 @@ public class RuntimeConfigValidator : IConfigValidator
                         targetEntityName: relationship.TargetEntity,
                         sqlMetadataProvider: sqlMetadataProvider);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
                     HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Unable to validate source and target fields as backing columns in the DB, please check" +
-                            $"the validity of your connection string.",
+                        message: $"Unable to validate source and target fields as backing columns in the DB due to: {ex.Message} \n" +
+                        $"please check the validity of your connection string.",
                         statusCode: HttpStatusCode.InternalServerError,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }

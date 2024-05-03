@@ -13,6 +13,9 @@ namespace Cli.Tests
 
         public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
 
+        public const string SAMPLE_TEST_NON_WORKING_CONN_STRING = "Server=XXXXX;Persist Security Info=False;User ID=<USERHERE>;" +
+            "Password=<PWD HERE>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=5;";
+
         // test schema for cosmosDB
         public const string TEST_SCHEMA_FILE = "test-schema.gql";
         public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
@@ -104,6 +107,8 @@ namespace Cli.Tests
               ""description"": ""This is a sample data source description""
             }
         ";
+
+
 
         public const string RUNTIME_SECTION = @"
           ""runtime"": {
@@ -1064,6 +1069,682 @@ namespace Cli.Tests
           }
         }
       }";
+
+        public const string CONFIG_WITH_NON_WORKING_CONN_STRING = @"
+        {
+  ""$schema"": ""https://dataapibuilder.azureedge.net/schemas/v0.5.34/dab.draft.schema.json"",
+  ""data-source"": {
+    ""database-type"": ""mssql"",
+    ""options"": {
+      ""set-session-context"": false
+    },
+    ""connection-string"": ""Server=XXXXX;Persist Security Info=False;User ID=<USERHERE>;Password=<PWD HERE> ;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=5;""
+  },
+  ""runtime"": {
+    ""rest"": {
+      ""enabled"": true,
+      ""path"": ""/api""
+    },
+    ""graphql"": {
+      ""allow-introspection"": true,
+      ""enabled"": true,
+      ""path"": ""/graphql""
+    },
+    ""host"": {
+      ""mode"": ""development"",
+      ""cors"": {
+        ""origins"": [],
+        ""allow-credentials"": false
+      },
+      ""authentication"": {
+        ""provider"": ""StaticWebApps""
+      }
+    }
+  },
+  ""entities"": {
+    ""Publisher"": {
+      ""source"": {
+        ""object"": ""publishers"",
+        ""type"": ""table"",
+        ""key-fields"": [ ""id"" ]
+      },
+      ""graphql"": {
+        ""enabled"": true,
+        ""type"": {
+          ""singular"": ""Publisher"",
+          ""plural"": ""Publishers""
+        }
+      },
+      ""rest"": {
+        ""enabled"": true
+      },
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [
+            {
+              ""action"": ""read""
+            }
+          ]
+        },
+        {
+          ""role"": ""authenticated"",
+          ""actions"": [
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""read""
+            },
+            {
+              ""action"": ""update""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_01"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id eq 1940""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_02"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id ne 1940""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_03"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id ne 1940""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_04"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id eq 1940""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_06"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id eq 1940""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""database_policy_tester"",
+          ""actions"": [
+            {
+              ""action"": ""create"",
+              ""policy"": {
+                ""database"": ""@item.name ne 'New publisher'""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""policy"": {
+                ""database"": ""@item.id ne 1234""
+              }
+            },
+            {
+              ""action"": ""read"",
+              ""policy"": {
+                ""database"": ""@item.id ne 1234 or @item.id gt 1940""
+              }
+            }
+          ]
+        }
+      ],
+      ""relationships"": {
+        ""books"": {
+          ""cardinality"": ""many"",
+          ""target.entity"": ""Book"",
+          ""source.fields"": [ ""id"" ],
+          ""target.fields"": [ ""publisher_id"" ],
+          ""linking.source.fields"": [],
+          ""linking.target.fields"": []
+        }
+      }
+    },
+    ""Book"": {
+      ""source"": {
+        ""object"": ""books"",
+        ""type"": ""table"",
+        ""key-fields"": [ ""id"" ]
+      },
+      ""graphql"": {
+        ""enabled"": true,
+        ""type"": {
+          ""singular"": ""book"",
+          ""plural"": ""books""
+        }
+      },
+      ""rest"": {
+        ""enabled"": true
+      },
+      ""permissions"": [
+        {
+          ""role"": ""anonymous"",
+          ""actions"": [
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""read""
+            },
+            {
+              ""action"": ""update""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""authenticated"",
+          ""actions"": [
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""read""
+            },
+            {
+              ""action"": ""update""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_01"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.title eq 'Policy-Test-01'""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_02"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.title ne 'Policy-Test-01'""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_03"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.title eq 'Policy-Test-01'""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_04"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.title ne 'Policy-Test-01'""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_05"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id ne 9""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_06"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id ne 10""
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""delete""
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_07"",
+          ""actions"": [
+            {
+              ""action"": ""delete"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id ne 9""
+              }
+            },
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id ne 9""
+              }
+            },
+            {
+              ""action"": ""create""
+            }
+          ]
+        },
+        {
+          ""role"": ""policy_tester_08"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              }
+            },
+            {
+              ""action"": ""delete"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id eq 9""
+              }
+            },
+            {
+              ""action"": ""update"",
+              ""fields"": {
+                ""exclude"": [],
+                ""include"": [
+                  ""*""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.id eq 9""
+              }
+            },
+            {
+              ""action"": ""create""
+            }
+          ]
+        },
+        {
+          ""role"": ""test_role_with_noread"",
+          ""actions"": [
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""update""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""test_role_with_excluded_fields"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [
+                  ""publisher_id""
+                ]
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""update""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        },
+        {
+          ""role"": ""test_role_with_policy_excluded_fields"",
+          ""actions"": [
+            {
+              ""action"": ""read"",
+              ""fields"": {
+                ""exclude"": [
+                  ""publisher_id""
+                ]
+              },
+              ""policy"": {
+                ""database"": ""@item.title ne 'Test'""
+              }
+            },
+            {
+              ""action"": ""create""
+            },
+            {
+              ""action"": ""update""
+            },
+            {
+              ""action"": ""delete""
+            }
+          ]
+        }
+      ],
+      ""mappings"": {
+        ""id"": ""id"",
+        ""title"": ""title""
+      },
+      ""relationships"": {
+        ""publishers"": {
+          ""cardinality"": ""one"",
+          ""target.entity"": ""Publisher"",
+          ""source.fields"": [ ""publisher_id"" ],
+          ""target.fields"": [ ""id"" ],
+          ""linking.source.fields"": [],
+          ""linking.target.fields"": []
+        }
+      }
+    }
+
+  }
+}
+";
 
         /// <summary>
         /// Creates basic initialization options for MS SQL config.

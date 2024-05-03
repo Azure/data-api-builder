@@ -219,12 +219,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             VerifyRelationShipPair(expectedForeignKeyDefinition.Pair, currentForeignKeyDefinition.Pair);
         }
 
-        /// <summary>
-        /// See https://github.com/dotnet/runtime/issues/41920#issuecomment-688497802
-        /// for mitigation. Ignoring. This test will fail until the issue is fixed.
-        /// </summary>
         [TestMethod]
-        [Ignore]
         public void TestColumnDefinitionNegativeCases()
         {
             InitializeObjects();
@@ -261,8 +256,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// <summary>
         /// Validates serialization and deserilization of Dictionary containing DatabaseTable
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict
+        /// [Test Ignored] See https://github.com/dotnet/runtime/issues/41920#issuecomment-688497802
+        /// for mitigation. Ignoring. This test will fail until the issue is fixed.
         /// </summary>
         [TestMethod]
+        [Ignore]
         public void TestDictionaryDatabaseObjectSerializationDeserialization()
         {
             InitializeObjects();

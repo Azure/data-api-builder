@@ -2981,7 +2981,7 @@ type Moon {
         }
 
         /// <summary>
-        /// In CosmosDB NoSQL, we store data in the form of JSON.Practically, JSON can be very complex.
+        /// In CosmosDB NoSQL, we store data in the form of JSON. Practically, JSON can be very complex.
         /// But DAB doesn't support JSON with circular references e.g if 'Character.Moon' is a valid JSON Path, then
         /// 'Moon.Character' should not be there, DAB would throw an exception during the load itself.
         /// </summary>

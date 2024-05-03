@@ -214,10 +214,7 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, string>? backingColumnsToExposedNamesMap;
             if (!EntityBackingColumnsToExposedNames.TryGetValue(entityName, out backingColumnsToExposedNamesMap))
             {
-                throw new DataApiBuilderException(
-                    message: $"Initialization of metadata incomplete for entity: {entityName}",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
             }
 
             return backingColumnsToExposedNamesMap.TryGetValue(backingFieldName, out name);
@@ -229,10 +226,7 @@ namespace Azure.DataApiBuilder.Core.Services
             Dictionary<string, string>? exposedNamesToBackingColumnsMap;
             if (!EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out exposedNamesToBackingColumnsMap))
             {
-                throw new DataApiBuilderException(
-                    message: $"Initialization of metadata incomplete for entity: {entityName}",
-                    statusCode: HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
             }
 
             return exposedNamesToBackingColumnsMap.TryGetValue(field, out name);

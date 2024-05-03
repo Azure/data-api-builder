@@ -93,7 +93,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.
         /// If an entity name is provided that does not exist
-        /// as metadata in this metadata provider, a DataApiBuilderException
+        /// as metadata in this metadata provider, a KeyNotFoundException
         /// is thrown.
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>
@@ -109,7 +109,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.
         /// If an entity name is provided that does not exist
-        /// as metadata in this metadata provider, a DataApiBuilderException
+        /// as metadata in this metadata provider, a KeyNotFoundException
         /// is thrown.
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>

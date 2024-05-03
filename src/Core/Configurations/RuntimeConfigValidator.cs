@@ -884,7 +884,7 @@ public class RuntimeConfigValidator : IConfigValidator
                         targetEntityName: relationship.TargetEntity,
                         sqlMetadataProvider: sqlMetadataProvider);
                 }
-                catch (Exception ex)
+                catch (KeyNotFoundException ex)
                 {
                     HandleOrRecordException(new DataApiBuilderException(
                         message: $"Unable to validate source and target fields as backing columns in the DB due to: {ex.Message} \n" +

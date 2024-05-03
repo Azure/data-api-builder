@@ -13,9 +13,6 @@ namespace Cli.Tests
 
         public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
 
-        public const string SAMPLE_TEST_NON_WORKING_CONN_STRING = "Server=XXXXX;Persist Security Info=False;User ID=<USERHERE>;" +
-            "Password=<PWD HERE>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=5;";
-
         // test schema for cosmosDB
         public const string TEST_SCHEMA_FILE = "test-schema.gql";
         public const string DAB_DRAFT_SCHEMA_TEST_PATH = "https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json";
@@ -107,8 +104,6 @@ namespace Cli.Tests
               ""description"": ""This is a sample data source description""
             }
         ";
-
-
 
         public const string RUNTIME_SECTION = @"
           ""runtime"": {

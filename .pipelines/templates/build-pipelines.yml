@@ -50,7 +50,7 @@ steps:
     echo "##vso[task.setvariable variable=\$id]$schemaId"
   displayName: Set dab version
 
-# The .NET CLI commands in proceeding tasks use the .NET SDK version specified here.
+# The .NET CLI commands in proceeding tasks use the .NET SDK version specified ("selected") here.
 # Per Microsoft Learn Docs, "Selecting the .NET SDK version is independent from 
 # specifying the runtime version a project targets."
 - task: UseDotNet@2

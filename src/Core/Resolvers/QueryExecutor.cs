@@ -128,7 +128,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     if (DbExceptionParser.IsTransientException((DbException)e) && retryAttempt < _maxRetryCount + 1)
                     {
-                        throw e;
+                        throw;
                     }
                     else
                     {
@@ -503,11 +503,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 {
                     JsonElement result =
                         JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(dbResultSetRow.Columns));
-                    resultArray.Add(result);
+                    // FromJsonElement() added to address .NET8 regression where the .Add() throws:
+                    // System.InvalidOperationException: "The element cannot be an object or array."
+                    resultArray.Add(FromJsonElement(result));
                 }
             }
 
             return resultArray;
+        }
+
+        /// <summary>
+        /// Regression in .NET8 due to added validation per:
+        /// https://github.com/dotnet/runtime/issues/94842
+        /// This is a suggested workaround per:
+        /// https://github.com/dotnet/runtime/issues/70427#issuecomment-1150960366
+        /// </summary>
+        /// <param name="element">Input JsonElement to convert to JsonNode</param>
+        /// <returns>JsonNode with underlying type: JsonArray, JsonObject, or JsonValue</returns>
+        private static JsonNode? FromJsonElement(JsonElement element)
+        {
+            return element.ValueKind switch
+            {
+                JsonValueKind.Array => JsonArray.Create(element),
+                JsonValueKind.Object => JsonObject.Create(element),
+                _ => JsonValue.Create(element)
+            };
         }
 
         /// <inheritdoc />

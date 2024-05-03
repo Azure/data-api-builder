@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.IdentityModel.Tokens.Jwt;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -361,8 +360,6 @@ namespace Azure.DataApiBuilder.Service
                 }
             });
 
-            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-
             app.UseAuthentication();
 
             app.UseClientRoleHeaderAuthenticationMiddleware();
@@ -466,6 +463,7 @@ namespace Azure.DataApiBuilder.Service
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
                     {
+                        options.MapInboundClaims = false;
                         options.Audience = authOptions.Jwt!.Audience;
                         options.Authority = authOptions.Jwt!.Issuer;
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()

@@ -106,9 +106,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 
-        src/out/tests/net6.0/dab-config.DwSql.json
-        src/out/tests/net8.0/dab-config.DwSql.json
+      targetFiles: 'src/out/tests/*/dab-config.DwSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: 'Run DwSql Integration Tests'
@@ -242,9 +240,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 
-        src/out/tests/net6.0/dab-config.DwSql.json
-        src/out/tests/net8.0/dab-config.DwSql.json
+      targetFiles: 'src/out/tests/*/dab-config.DwSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: 'Run DwSql Integration Tests'

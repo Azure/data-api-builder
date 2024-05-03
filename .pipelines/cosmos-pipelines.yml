@@ -96,7 +96,9 @@ steps:
   inputs:
     folderPath: '$(System.DefaultWorkingDirectory)'
     fileType: 'json'
-    targetFiles: 'src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json'
+    targetFiles: 
+      src/out/tests/net6.0/dab-config.CosmosDb_NoSql.json
+      src/out/tests/net8.0/dab-config.CosmosDb_NoSql.json
 
 - task: DotNetCoreCLI@2
   displayName: 'Run CosmosDb_NoSql Integration Tests'

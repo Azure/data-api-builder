@@ -110,7 +110,9 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
+      targetFiles: 
+        src/out/tests/net6.0/dab-config.MsSql.json
+        src/out/tests/net8.0/dab-config.MsSql.json
 
   - task: DotNetCoreCLI@2
     displayName: 'Run MsSql Integration Tests'
@@ -244,7 +246,9 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
+      targetFiles: 
+        src/out/tests/net6.0/dab-config.MsSql.json
+        src/out/tests/net8.0/dab-config.MsSql.json
 
   - task: DotNetCoreCLI@2
     displayName: 'Run MsSql Integration Tests'

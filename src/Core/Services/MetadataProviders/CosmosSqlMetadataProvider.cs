@@ -213,14 +213,13 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     trackerForField = visitedEntities;
                 }
 
-                string entityType = field.Type.NamedType().Name.Value;
-
-                // If the entity is not in the runtime config, skip it
-                if (!_runtimeConfig.Entities.ContainsKey(entityType))
+                // If the entity is build-in type, do not go further to check circular reference
+                if (GraphQLUtils.IsBuiltInType(field.Type))
                 {
                     continue;
                 }
 
+                string entityType = field.Type.NamedType().Name.Value;
                 // If the entity is already visited, then it is a circular reference
                 if (!trackerForField.Add(entityType))
                 {

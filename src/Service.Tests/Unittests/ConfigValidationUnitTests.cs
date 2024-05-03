@@ -565,7 +565,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             MockFileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
-            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
+            RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object, isValidateOnly: true);
             Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()

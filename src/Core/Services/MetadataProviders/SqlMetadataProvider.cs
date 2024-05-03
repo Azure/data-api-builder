@@ -226,7 +226,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc />
         public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
-            return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
+            Dictionary<string, string>? exposedNamesToBackingColumnsMap;
+            if (!EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out exposedNamesToBackingColumnsMap))
+            {
+                throw new DataApiBuilderException(
+                    message: $"Initialization of metadata incomplete for entity: {entityName}",
+                    statusCode: HttpStatusCode.InternalServerError,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            return exposedNamesToBackingColumnsMap.TryGetValue(field, out name);
         }
 
         /// <inheritdoc />

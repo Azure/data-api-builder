@@ -55,7 +55,7 @@ public class ValidateConfigTests
     /// metadata are called.
     /// </summary>
     [TestMethod]
-    public void TestErrorMessageFromConfigWithFieldsDefinedInRelationshipAndNonWorkingConnectionString()
+    public void TestErrorHandlingForRelationshipValidationWithNonWorkingConnectionString()
     {
         // Arrange
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_NON_WORKING_CONN_STRING);

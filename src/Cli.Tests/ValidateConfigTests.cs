@@ -58,7 +58,7 @@ public class ValidateConfigTests
     public void TestErrorHandlingForRelationshipValidationWithNonWorkingConnectionString()
     {
         // Arrange
-        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_NON_WORKING_CONN_STRING);
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, COMPLETE_CONFIG_WITH_RELATIONSHIPS_NON_WORKING_CONN_STRING);
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
         StringWriter writer = new();
         // Capture console output to get error messaging.

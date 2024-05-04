@@ -1065,7 +1065,7 @@ namespace Cli.Tests
         }
       }";
 
-        public const string CONFIG_WITH_NON_WORKING_CONN_STRING = @"
+        public const string COMPLETE_CONFIG_WITH_RELATIONSHIPS_NON_WORKING_CONN_STRING = @"
         {
   ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
   ""data-source"": {

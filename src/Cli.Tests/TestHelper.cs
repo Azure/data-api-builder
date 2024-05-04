@@ -1067,7 +1067,7 @@ namespace Cli.Tests
 
         public const string CONFIG_WITH_NON_WORKING_CONN_STRING = @"
         {
-  ""$schema"": ""https://dataapibuilder.azureedge.net/schemas/v0.5.34/dab.draft.schema.json"",
+  ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
   ""data-source"": {
     ""database-type"": ""mssql"",
     ""options"": {

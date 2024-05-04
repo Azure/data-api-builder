@@ -47,23 +47,28 @@ public class ValidateConfigTests
     }
 
     /// <summary>
-    /// This method validates that the correct error messaging occurs when a config
-    /// with an invalid connection string is used that has relationship fields defined.
+    /// This method verifies that the relationship validation does not cause unhandled
+    /// exceptions, and that the errors generated include the expected messaging.
     /// This case is a regression test due to the metadata needed not always being
     /// populated in the SqlMetadataProvider if for example a bad connection string
     /// is given. The error messages occur then when functions that depend on this
     /// metadata are called.
     /// </summary>
     [TestMethod]
-    public void TestErrorMessageFromConfigWithNonWorkingConnectionString()
+    public void TestErrorMessageFromConfigWithFieldsDefinedInRelationshipAndNonWorkingConnectionString()
     {
+        // Arrange
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, CONFIG_WITH_NON_WORKING_CONN_STRING);
         ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
         StringWriter writer = new();
         // Capture console output to get error messaging.
         Console.SetOut(writer);
+
+        // Act
         ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
         string errorMessage = writer.ToString();
+
+        // Assert
         Assert.IsTrue(errorMessage.Contains("Unable to validate source and target fields as backing columns in the DB due to"));
     }
 

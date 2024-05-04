@@ -1159,7 +1159,6 @@ namespace Cli.Tests
         }
       }
     }
-
   }
 }
 ";

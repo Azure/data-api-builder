@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="backingFieldName">The field used for the lookup in the mapping.</param>
         /// <param name="name">Out parameter in which we will save exposed name.</param>
         /// <returns>True if exists, false otherwise.</returns>
-        /// <throws>DataApiBuilderException if entity name not found.</throws>
+        /// <throws>KeyNotFoundException if entity name not found.</throws>
         bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name);
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="field">The field used for the lookup in the mapping.</param>
         /// <param name="name"/>Out parameter in which we will save backing column name.<param>
         /// <returns>True if exists, false otherwise.</returns>
-        /// <throws>DataApiBuilderException if entity name not found.</throws>
+        /// <throws>KeyNotFoundException if entity name not found.</throws>
         bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name);
 
         /// <summary>

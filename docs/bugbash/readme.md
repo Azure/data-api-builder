@@ -41,9 +41,15 @@ OR Alternatively, run following command: \
 
 **Mutation Operation**
 - [ ] Should be able to Create a simple/complex Item \
-      <ins>Sample Code to refer:</ins> \
-      a) _Using Variable:_ https://github.com/Azure/data-api-builder/blob/d618c21ce6f5e9d842ecf09278ecd56d041ecc24/src/Service.Tests/CosmosTests/MutationTests.cs#L60 
-      b) _Without Using Variable:_ https://github.com/Azure/data-api-builder/blob/d618c21ce6f5e9d842ecf09278ecd56d041ecc24/src/Service.Tests/CosmosTests/MutationTests.cs#L97
+      <ins>e.g.</ins>
+
+      mutation {
+        createPlanet (item: {id: "id", name: "name", stars: [{ id: "starId" }] }) {
+         id
+         name
+        }
+      }
+      
 - [ ] Should be able to Delete an item
 - [ ] Should be able to Update an item (*Expectation is, it will replace the existing item, with the new item*)
 - [ ] Should be able to Patch an item (*Expectation is, it will update only passed information*)

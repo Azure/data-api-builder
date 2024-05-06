@@ -1077,7 +1077,7 @@ public class RuntimeConfigValidator : IConfigValidator
         {
             GetFieldsNotBackedByColumnsInDB(
                 invalidColumns: invalidColumns,
-                fields: relationship.SourceFields!,
+                fields: relationship.SourceFields,
                 entityName: entityName,
                 sqlMetadataProvider: sqlMetadataProvider);
 
@@ -1095,8 +1095,8 @@ public class RuntimeConfigValidator : IConfigValidator
         if (relationship.TargetFields is not null)
         {
             GetFieldsNotBackedByColumnsInDB(
-                fields: relationship.TargetFields,
                 invalidColumns: invalidColumns,
+                fields: relationship.TargetFields,
                 entityName: relationship.TargetEntity,
                 sqlMetadataProvider: sqlMetadataProvider);
 

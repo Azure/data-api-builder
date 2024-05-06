@@ -37,8 +37,9 @@ OR Alternatively, run following command: \
 ## Scenarios:
 **Making connection to Cosmos DB**
 - [ ] You should be able to use DAB using Connection String.
-- [ ] You should be able to use DAB using Managed Identity (ref, how to set up RBAC for Cosmos DB https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac)
-
+- [ ] You should be able to use DAB using Managed Identity (ref, how to set up RBAC for Cosmos DB https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac) \
+      _**Note:** Applicable only when you are using DAB from Azure resources i.e SWA, in that case follow this setup https://learn.microsoft.com/en-us/azure/data-api-builder/quickstart-azure-cosmos-db-nosql#configure-the-database-connection_
+      
 **Mutation Operation**
 - [ ] Should be able to Create a simple/complex Item
 

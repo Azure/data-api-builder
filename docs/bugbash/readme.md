@@ -17,7 +17,7 @@ Alternatively, You can create an account on portal https://learn.microsoft.com/e
 **Upload Data in Portal:**
 ![image](https://github.com/Azure/data-api-builder/assets/6362382/0edb0b0f-6fe8-42b5-baf5-daa063fb382c)
 
-### Data API Builder(DAB)
+### Data API Builder(DAB) [Release 0.13.0-rc]
 
 **Download below files:**
 - Schema file: https://github.com/Azure/data-api-builder/blob/users/sourabhjain/bugbash/docs/bugbash/schema.gql
@@ -40,7 +40,10 @@ OR Alternatively, run following command: \
 - [ ] You should be able to use DAB using Managed Identity (ref, how to set up RBAC for Cosmos DB https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac)
 
 **Mutation Operation**
-- [ ] Should be able to Create a simple/complex Item
+- [ ] Should be able to Create a simple/complex Item \
+      <ins>Sample Code to refer:</ins> \
+      a) _Using Variable:_ https://github.com/Azure/data-api-builder/blob/d618c21ce6f5e9d842ecf09278ecd56d041ecc24/src/Service.Tests/CosmosTests/MutationTests.cs#L60 
+      b) _Without Using Variable:_ https://github.com/Azure/data-api-builder/blob/d618c21ce6f5e9d842ecf09278ecd56d041ecc24/src/Service.Tests/CosmosTests/MutationTests.cs#L97
 - [ ] Should be able to Delete an item
 - [ ] Should be able to Update an item (*Expectation is, it will replace the existing item, with the new item*)
 - [ ] Should be able to Patch an item (*Expectation is, it will update only passed information*)

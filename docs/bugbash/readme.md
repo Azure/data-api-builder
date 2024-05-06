@@ -82,8 +82,42 @@ OR Alternatively, run following command: \
 
 **Query Operation**
 - [ ] Should able to read item with different filters (*With different operators like `eq`, `neq`, `lt`, `gt`, `lte`, `gte`, `contains`, `notcontains`, `startwith`, `endswith`*)
+
+       planets(first: 10, filter: {character: {star: {name: {eq: "Earth_star"}}}})
+           {
+               items {
+                   name
+               }
+           }
+       }
+    
 - [ ] Should able to read item in particular order (*`Order By`*)
+
+      planets (first: 10, after: null, orderBy: {id: ASC, name: null }) {
+          items {
+              id
+              name
+          },
+          endCursor,
+          hasNextPage
+      }
+
 - [ ] Should able to read item with filters have *`AND`* and *`OR`* condition
+
+      planets(first: 10, filter: {
+                   and: [
+                       { additionalAttributes: {name: {eq: ""volcano1""}}}
+                       { moons: {name: {eq: ""1 moon""}}}
+                       { moons: {details: {contains: ""11""}}}
+                   ]   
+                })
+           {
+               items {
+                   name
+               }
+           }
+       }
+      
 - [ ] Should able to read items from multiple pages.
 
 **Authorization**

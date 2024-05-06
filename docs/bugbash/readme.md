@@ -40,8 +40,7 @@ OR Alternatively, run following command: \
 - [ ] You should be able to use DAB using Managed Identity (ref, how to set up RBAC for Cosmos DB https://learn.microsoft.com/en-us/azure/cosmos-db/how-to-setup-rbac)
 
 **Mutation Operation**
-- [ ] Should be able to Create a simple/complex Item \
-      <ins>e.g.</ins>
+- [ ] Should be able to Create a simple/complex Item
 
       mutation {
         createPlanet (item: {id: "id", name: "name", stars: [{ id: "starId" }] }) {
@@ -51,8 +50,35 @@ OR Alternatively, run following command: \
       }
       
 - [ ] Should be able to Delete an item
+      
+       mutation {
+        deletePlanet (id: "id", _partitionKeyValue: "id") {
+            id
+            name
+        }
+      }
+
+      
 - [ ] Should be able to Update an item (*Expectation is, it will replace the existing item, with the new item*)
+
+       mutation {
+         updatePlanet (id: "id", _partitionKeyValue: "id", item: { id: "id", name: "newName", stars: [{ id: "starId" }] }) {
+          id
+          name
+      }
+      
 - [ ] Should be able to Patch an item (*Expectation is, it will update only passed information*)
+
+       mutation {
+           patchPlanet (id: "id", _partitionKeyValue: "id", item: {{name: "newName", stars: [{{ id: "starId" }}] }}) {{
+               id
+               name
+               stars
+               {
+                   id
+               }
+           }
+       }
 
 **Query Operation**
 - [ ] Should able to read item with different filters (*With different operators like `eq`, `neq`, `lt`, `gt`, `lte`, `gte`, `contains`, `notcontains`, `startwith`, `endswith`*)

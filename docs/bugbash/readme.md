@@ -129,6 +129,21 @@ OR Alternatively, run following command: \
 - [ ]  Should be able to apply field level authorization using include/exclude fields
 - [ ]  Should be able to apply item level authorization by defining database policy. (Operation supported in the policy condition are `eq`, `neql`, `>` , `>=`, `<`, `<=`)
 
+**Caching**
+- [ ] Should cache the response:
+      Add below configuration in _dab-config.json_:
+      
+      "runtime": {
+        ...
+        "cache": {
+          "enabled": true,
+          "ttl-seconds": 10 //default is 5 sec
+        }
+      }
+      
+     Perform same operation "multiple times", you should get the same response for the configured cached time.
+
+
 To checkout more scenarios, you can refer the release notes: https://github.com/Azure/data-api-builder/releases
 
 ## Where to report the bug?

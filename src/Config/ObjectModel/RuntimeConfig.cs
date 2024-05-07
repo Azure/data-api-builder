@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
@@ -161,7 +162,7 @@ public record RuntimeConfig
         return _entityPathNameToEntityName.TryAdd(entityPathName, entityName);
     }
 
-    public bool TryGetEntityNameFromPath(string entityPathName, out string? entityName)
+    public bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
     {
         return _entityPathNameToEntityName.TryGetValue(entityPathName, out entityName);
     }

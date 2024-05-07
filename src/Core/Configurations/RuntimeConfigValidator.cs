@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.IO.Abstractions;
+using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -873,7 +874,7 @@ public class RuntimeConfigValidator : IConfigValidator
                     }
                 }
 
-                try
+                if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
                 {
                     ValidateSourceAndTargetFieldsAsBackingColumns(
                         entityName: entityName,
@@ -881,13 +882,6 @@ public class RuntimeConfigValidator : IConfigValidator
                         relationship: relationship,
                         sqlMetadataProvider: sqlMetadataProvider,
                         invalidColumns: invalidColumns);
-                }
-                catch (KeyNotFoundException ex)
-                {
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Unable to validate source and target fields as backing columns in the DB due to: {ex.Message}",
-                        statusCode: HttpStatusCode.InternalServerError,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
                 }
 
                 // Linking object exists and we therefore have a many-many relationship. Validation here differs from one-many and many-one in that
@@ -1056,9 +1050,6 @@ public class RuntimeConfigValidator : IConfigValidator
 
     /// <summary>
     /// Handles the validation of source and target fields as valid backing columns in the DB.
-    /// We put the logic for both source and target fields into a single function here for readability
-    /// when catching exceptions in the caller related to being unable to lookup the backing columns.
-    /// This happens when validation is called with a mal formed connection string.
     /// </summary>
     /// <param name="relationshipName">Name of the relationship.</param>
     /// <param name="entityName">The name of the entity that we check for backing columns.</param>

@@ -51,8 +51,7 @@ public class ValidateConfigTests
     /// exceptions, and that the errors generated include the expected messaging.
     /// This case is a regression test due to the metadata needed not always being
     /// populated in the SqlMetadataProvider if for example a bad connection string
-    /// is given. The error messages occur then when functions that depend on this
-    /// metadata are called.
+    /// is given.
     /// </summary>
     [TestMethod]
     public void TestErrorHandlingForRelationshipValidationWithNonWorkingConnectionString()
@@ -69,7 +68,7 @@ public class ValidateConfigTests
         string errorMessage = writer.ToString();
 
         // Assert
-        Assert.IsTrue(errorMessage.Contains("Unable to validate source and target fields as backing columns in the DB due to"));
+        Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
     }
 
     /// <summary>

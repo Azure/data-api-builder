@@ -14,6 +14,9 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
     [DebuggerDisplay("{EntityName} - {RelationshipName}")]
     public class EntityRelationshipKey
     {
+        /// <summary>
+        /// Source entity name which contains the relationship configuration.
+        /// </summary>
         public string EntityName { get; set; }
         public string RelationshipName { get; set; }
 
@@ -35,7 +38,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel
                 return false;
             }
 
-            return EntityName == other.EntityName && RelationshipName == other.RelationshipName;
+            return EntityName.Equals(other.EntityName) && RelationshipName.Equals(other.RelationshipName);
         }
 
         public override int GetHashCode()

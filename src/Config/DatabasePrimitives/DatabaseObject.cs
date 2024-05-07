@@ -291,11 +291,6 @@ public class ForeignKeyDefinition
     public RelationshipRole ReferencedEntityRole { get; init; } = RelationshipRole.None;
 
     /// <summary>
-    /// Identifies the source of the relationship (represented by a ForeignKeyDefinition object)
-    /// </summary>
-    public RelationshipDefinitionSource Source { get; set; } = RelationshipDefinitionSource.Config;
-
-    /// <summary>
     /// The relationship name defined for the relationship in the runtime config.
     /// </summary>
     public string RelationshipName { get; init; } = string.Empty;

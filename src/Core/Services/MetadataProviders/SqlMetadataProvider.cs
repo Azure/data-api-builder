@@ -1801,9 +1801,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 {
                     foreignKeyDefinition = new()
                     {
-                        // This function resolves foreign key definitions from the database
-                        // so we explicitly persist that information here.
-                        Source = RelationshipDefinitionSource.DatabaseSchema,
                         Pair = pair
                     };
                     pairToFkDefinition.Add(pair, foreignKeyDefinition);

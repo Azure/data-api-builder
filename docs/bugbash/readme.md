@@ -32,7 +32,8 @@ OR Alternatively, run following command: \
 3. Confirm if it is installed `dotnet tool list --global`
    ![image](https://github.com/Azure/data-api-builder/assets/6362382/63f77ab1-db94-4d4c-abb9-2df164b256e2)
 4. Go to the same location where you have above 2 files downloaded and run `dab start`
-5. Open https://localhost:5000/graphql
+   a) If it fails with address in use run ```netstat -a -n -o | find "5000"``` and kill that process from task manager.
+6. Open https://localhost:5000/graphql
 
 ## Scenarios:
 **Making connection to Cosmos DB**

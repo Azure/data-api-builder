@@ -33,7 +33,8 @@ OR Alternatively, run following command: \
    ![image](https://github.com/Azure/data-api-builder/assets/6362382/63f77ab1-db94-4d4c-abb9-2df164b256e2)
 4. Go to the same location where you have above 2 files downloaded and run `dab start`
    a) If it fails with address in use run ```netstat -a -n -o | find "5000"``` and kill that process from task manager.
-6. Open https://localhost:5000/graphql
+6. Open https://localhost:5001/graphql
+![image](https://github.com/Azure/data-api-builder/assets/6362382/8d9fd376-454a-4f02-b2de-2e35a3014dcc)
 
 ## Scenarios:
 **Making connection to Cosmos DB**

@@ -21,7 +21,7 @@ Alternatively, You can create an account on portal https://learn.microsoft.com/e
 
 **Download below files:**
 - Schema file: https://github.com/Azure/data-api-builder/blob/users/sourabhjain/bugbash/docs/bugbash/schema.gql
-- Runtime Config JSON: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json
+- Runtime Config JSON: https://github.com/Azure/data-api-builder/blob/main/src/Service.Tests/dab-config.CosmosDb_NoSql.json (rename it to dab-config.json)
 
 **Run DAB** \
 \

@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             ForeignKeyDefinition deserializedForeignKeyDefinition = JsonSerializer.Deserialize<ForeignKeyDefinition>(serializedForeignKeyDefinition, _options);
 
             List<FieldInfo> fieldMetadata = typeof(ForeignKeyDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
-            Assert.AreEqual(expected: 8, actual: fieldMetadata.Count);
+            Assert.AreEqual(expected: 7, actual: fieldMetadata.Count);
 
             Assert.IsTrue(foreignKeyDefinition.Equals(deserializedForeignKeyDefinition));
             VerifyRelationShipPair(pair, deserializedForeignKeyDefinition.Pair);

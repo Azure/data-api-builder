@@ -122,6 +122,7 @@ OR Alternatively, run following command: \
        }
       
 - [ ] Should able to read items from multiple pages.
+ref. this test to run this scenario: https://github.com/Azure/data-api-builder/blob/348849346d67341c34d0c7928a00b71919cfed35/src/Service.Tests/CosmosTests/QueryTests.cs#L192
 
 **Authorization**
 - [ ]  Should honor the given permissions assign to a role in Runtime Config file (*i.e. dab-config.CosmosDb_NoSql.json*)

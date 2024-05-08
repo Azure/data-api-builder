@@ -166,7 +166,6 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateEntityRelationshipsInConfigWithoutDBMetadata(runtimeConfig);
         await ValidateEntityRelationshipsInConfigWithGeneratedMetadata(runtimeConfig, loggerFactory);
         
-
         if (validationResult.IsValid && !ConfigValidationExceptions.Any())
         {
             return true;

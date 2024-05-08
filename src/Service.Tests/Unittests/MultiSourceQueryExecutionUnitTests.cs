@@ -133,12 +133,11 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         }
 
         /// <summary>
-        /// Validates successful execution of a query against multiple sources for graphql scenario.
-        /// 1. Tries to use a built schema to execute a query against multiple sources.
-        /// 2. Mocks a config and maps two entities to two different data sources.
-        /// 3. Mocks a query engine for each data source and returns a result for each request.
-        /// 4. Validates that when a query is triggered, the correct query engine is used to execute the query.
-        /// 5. Validates that the executeasync method of the correct query engine is invoked for the request.
+        /// Validates successful execution of a query against multiple sources for rest scenario.
+        /// 1. Mocks a config and maps two entities to two different data sources.
+        /// 2. Mocks a query engine for each data source and returns a result for each request.
+        /// 3. Validates that when a query is triggered, the correct query engine is used to execute the query.
+        /// 4. Validates that the executeasync method of the correct query engine is invoked for the request.
         /// </summary>
         [TestMethod]
         public async Task TestMultiSourceQueryRest()
@@ -219,11 +218,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
             Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should be invoked for multi-source query as entity belongs to sql db.");
             Assert.AreEqual(0, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should not be invoked for multi-source query as entity belongs to sql db.");
             sqlQueryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITY_NAME_1)), Times.Once);
-            cosmosQueryEngine.Verify(x => x.ExecuteAsync(It.IsAny<FindRequestContext>()), Times.Never);
+
             IActionResult result = await restService.ExecuteAsync(ENTITY_NAME_2, EntityActionOperation.Read, null);
             Assert.AreEqual(1, cosmosQueryEngine.Invocations.Count, "Cosmos query engine should be invoked for multi-source query as entity belongs to cosmos db.");
             Assert.AreEqual(1, sqlQueryEngine.Invocations.Count, "Sql query engine should not be invoked again for multi-source query as entity2 belongs to cosmos db.");
-            sqlQueryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITY_NAME_1)), Times.Once);
             cosmosQueryEngine.Verify(x => x.ExecuteAsync(It.Is<FindRequestContext>(ctx => ctx.EntityName == ENTITY_NAME_2)), Times.Once);
         }
 

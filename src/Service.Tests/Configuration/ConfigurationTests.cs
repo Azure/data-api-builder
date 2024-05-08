@@ -1271,7 +1271,8 @@ type Moon {
                     configValidatorLogger.Object,
                     isValidateOnly: true);
 
-            await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+            configValidator.ValidateEntityRelationshipsInConfigWithoutDBMetadata(configProvider.GetConfig());
+            await configValidator.ValidateEntityRelationshipsInConfigWithGeneratedMetadata(configProvider.GetConfig(), mockLoggerFactory);
             Assert.IsTrue(configValidator.ConfigValidationExceptions.IsNullOrEmpty());
         }
 
@@ -1337,7 +1338,8 @@ type Moon {
 
             ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
 
-            await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+            configValidator.ValidateEntityRelationshipsInConfigWithoutDBMetadata(configProvider.GetConfig());
+            await configValidator.ValidateEntityRelationshipsInConfigWithGeneratedMetadata(configProvider.GetConfig(), mockLoggerFactory);
 
             Assert.IsTrue(configValidator.ConfigValidationExceptions.Any());
             Assert.AreEqual(2, configValidator.ConfigValidationExceptions.Count);
@@ -1418,7 +1420,8 @@ type Moon {
 
             try
             {
-                await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
+                configValidator.ValidateEntityRelationshipsInConfigWithoutDBMetadata(configProvider.GetConfig());
+                await configValidator.ValidateEntityRelationshipsInConfigWithGeneratedMetadata(configProvider.GetConfig(), mockLoggerFactory);
             }
             catch
             {

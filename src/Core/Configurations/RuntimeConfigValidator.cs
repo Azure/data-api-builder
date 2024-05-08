@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.IO.Abstractions;
-using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
@@ -163,12 +162,10 @@ public class RuntimeConfigValidator : IConfigValidator
         ValidateConfigProperties();
         ValidatePermissionsInConfig(runtimeConfig);
 
-        // If the ConfigValidationExceptions list doesn't contain a DataApiBuilderException with connection string error message,
-        // then only we run the metadata validation.
-        if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
-        {
-            await ValidateEntitiesMetadata(runtimeConfig, loggerFactory);
-        }
+        _logger.LogInformation("Validating entity relationships.");
+        ValidateEntityRelationshipsInConfigWithoutDBMetadata(runtimeConfig);
+        await ValidateEntityRelationshipsInConfigWithGeneratedMetadata(runtimeConfig, loggerFactory);
+        
 
         if (validationResult.IsValid && !ConfigValidationExceptions.Any())
         {
@@ -210,9 +207,117 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// This method runs validates the entities metadata against the database objects.
+    /// Validates the semantic correctness of an Entity's relationships in the
+    /// runtime configuration when metadata from the backend DB is not required.
+    /// Validating Cases:
+    /// 1. Entities not defined in the config cannot be used in a relationship.
+    /// 2. Entities with graphQL disabled cannot be used in a relationship with another entity.
     /// </summary>
-    public async Task ValidateEntitiesMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
+    /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
+    public void ValidateEntityRelationshipsInConfigWithoutDBMetadata(RuntimeConfig runtimeConfig)
+    {
+        // Loop through each entity in the config and verify its relationship.
+        foreach ((string entityName, Entity entity) in runtimeConfig.Entities)
+        {
+            // Skipping relationship validation if entity has no relationship
+            // or if graphQL is disabled.
+            if (entity.Relationships is null || !entity.GraphQL.Enabled)
+            {
+                continue;
+            }
+
+            if (entity.Source.Type is not EntitySourceType.Table && entity.Relationships is not null
+                && entity.Relationships.Count > 0)
+            {
+                HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Cannot define relationship for entity: {entityName}",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+            }
+
+            string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
+
+            foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
+            {
+                // Validate if entity referenced in relationship is defined in the config.
+                if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Validation to ensure that an entity with graphQL disabled cannot be referenced in a relationship by other entities
+                EntityGraphQLOptions targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
+                if (!targetEntityGraphQLDetails.Enabled)
+                {
+                    HandleOrRecordException(new DataApiBuilderException(
+                        message: $"Entity: {relationship.TargetEntity} is disabled for GraphQL.",
+                        statusCode: HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                }
+
+                // Linking object is null and therefore we have a many-one or a one-many relationship. These relationships
+                // must be validated separately from many-many relationships. In one-many and many-one relationships, the count
+                // of source and target fields need to match, or if one is null the other must be as well.
+                // If both of these sets of fields are null, foreign key information, inferred from the database metadata,
+                // will be used to define the relationship.
+                // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships
+                if (string.IsNullOrWhiteSpace(relationship.LinkingObject))
+                {
+                    // Validation to ensure that source and target fields are both null or both not null.
+                    if (relationship.SourceFields is null ^ relationship.TargetFields is null)
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has a relationship: {relationshipName}, which has source and target fields " +
+                                $"where one is null and the other is not.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+
+                    // In one-one, one-many, or many-one relationships when both source and target are non null their size must match.
+                    if ((relationship.SourceFields is not null && relationship.TargetFields is not null) &&
+                        relationship.SourceFields.Length != relationship.TargetFields.Length)
+                    {
+                        HandleOrRecordException(new DataApiBuilderException(
+                            message: $"Entity: {entityName} has a relationship: {relationshipName}, which has {relationship.SourceFields.Length} source fields defined, " +
+                                $"but {relationship.TargetFields.Length} target fields defined.",
+                            statusCode: HttpStatusCode.ServiceUnavailable,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
+                    }
+                }
+
+                // Linking object exists and we therefore have a many-many relationship. Validation here differs from one-many and many-one in that
+                // the source and target fields are now only indirectly related through the linking object. Therefore, it is the source and linkingSource
+                // along with the target and linkingTarget fields that must match, respectively. Source and linkingSource fields provide the relationship
+                // from the source entity to the linkingObject while target and linkingTarget fields provide the relationship from the target entity to the
+                // linkingObject.
+                // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships#many-to-many-relationship
+                if (!string.IsNullOrWhiteSpace(relationship.LinkingObject))
+                {
+                    ValidateFieldsAndAssociatedLinkingFields(
+                        fields: relationship.SourceFields,
+                        linkingFields: relationship.LinkingSourceFields,
+                        fieldType: "source",
+                        entityName: entityName,
+                        relationshipName: relationshipName);
+                    ValidateFieldsAndAssociatedLinkingFields(
+                        fields: relationship.TargetFields,
+                        linkingFields: relationship.LinkingTargetFields,
+                        fieldType: "target",
+                        entityName: entityName,
+                        relationshipName: relationshipName);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// This method validates the entities relationships against the database objects using
+    /// metadata from the backend DB generated by this function.
+    /// </summary>
+    public async Task ValidateEntityRelationshipsInConfigWithGeneratedMetadata(RuntimeConfig runtimeConfig, ILoggerFactory loggerFactory)
     {
         QueryManagerFactory queryManagerFactory = new(
             runtimeConfigProvider: _runtimeConfigProvider,
@@ -226,11 +331,15 @@ public class RuntimeConfigValidator : IConfigValidator
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
             fileSystem: _fileSystem,
             isValidateOnly: _isValidateOnly);
-
         await metadataProviderFactory.InitializeAsync();
+
         ConfigValidationExceptions.AddRange(metadataProviderFactory.GetAllMetadataExceptions());
 
-        ValidateRelationshipsInConfig(runtimeConfig, metadataProviderFactory);
+        // Validation below relies on metadata being populated from backend, only execute when there were no connection errors
+        if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
+        {
+            ValidateEntityRelationshipsInConfigWithProvidedMetadata(runtimeConfig, metadataProviderFactory);
+        }
     }
 
     /// <summary>
@@ -781,22 +890,19 @@ public class RuntimeConfigValidator : IConfigValidator
     }
 
     /// <summary>
-    /// Validates the semantic correctness of an Entity's relationship metadata
-    /// in the runtime configuration.
-    /// Validating Cases:
-    /// 1. Entities not defined in the config cannot be used in a relationship.
-    /// 2. Entities with graphQL disabled cannot be used in a relationship with another entity.
-    /// 3. If the LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields are not
+    /// Validates the semantic correctness of an Entity's relationships in the
+    /// runtime configuration against the metadata collected from the backend DB
+    /// that is provided to this function via use of the MetadataProviderFactory.
+    /// Validating Cases using DB metadata:
+    /// 1. If the LinkingSourceFields or sourceFields and LinkingTargetFields or targetFields are not
     /// specified in the config for the given linkingObject, then the underlying database should
     /// contain a foreign key relationship between the source and target entity.
-    /// 4. If linkingObject is null, and either of SourceFields or targetFields is null, then foreignKey pair
+    /// 2. If linkingObject is null, and either of SourceFields or targetFields is null, then foreignKey pair
     /// between source and target entity must be defined in the DB.
     /// </summary>
     /// <exception cref="DataApiBuilderException">Throws exception whenever some validation fails.</exception>
-    public void ValidateRelationshipsInConfig(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
+    public void ValidateEntityRelationshipsInConfigWithProvidedMetadata(RuntimeConfig runtimeConfig, IMetadataProviderFactory sqlMetadataProviderFactory)
     {
-        _logger.LogInformation("Validating entity relationships.");
-
         // To avoid creating many lists of invalid columns we instantiate before looping through entities.
         // List.Clear() is O(1) so clearing the list, for re-use, inside of the loops is fine.
         List<string> invalidColumns = new();
@@ -811,100 +917,17 @@ public class RuntimeConfigValidator : IConfigValidator
                 continue;
             }
 
-            if (entity.Source.Type is not EntitySourceType.Table && entity.Relationships is not null
-                && entity.Relationships.Count > 0)
-            {
-                HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Cannot define relationship for entity: {entityName}",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-            }
-
             string databaseName = runtimeConfig.GetDataSourceNameFromEntityName(entityName);
             ISqlMetadataProvider sqlMetadataProvider = sqlMetadataProviderFactory.GetMetadataProvider(databaseName);
 
             foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
             {
-                // Validate if entity referenced in relationship is defined in the config.
-                if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
-                {
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                }
-
-                // Validation to ensure that an entity with graphQL disabled cannot be referenced in a relationship by other entities
-                EntityGraphQLOptions targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
-                if (!targetEntityGraphQLDetails.Enabled)
-                {
-                    HandleOrRecordException(new DataApiBuilderException(
-                        message: $"Entity: {relationship.TargetEntity} is disabled for GraphQL.",
-                        statusCode: HttpStatusCode.ServiceUnavailable,
-                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                }
-
-                // Linking object is null and therefore we have a many-one or a one-many relationship. These relationships
-                // must be validated separately from many-many relationships. In one-many and many-one relationships, the count
-                // of source and target fields need to match, or if one is null the other must be as well.
-                // If both of these sets of fields are null, foreign key information, inferred from the database metadata,
-                // will be used to define the relationship.
-                // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships
-                if (string.IsNullOrWhiteSpace(relationship.LinkingObject))
-                {
-                    // Validation to ensure that source and target fields are both null or both not null.
-                    if (relationship.SourceFields is null ^ relationship.TargetFields is null)
-                    {
-                        HandleOrRecordException(new DataApiBuilderException(
-                            message: $"Entity: {entityName} has a relationship: {relationshipName}, which has source and target fields " +
-                                $"where one is null and the other is not.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                    }
-
-                    // In one-one, one-many, or many-one relationships when both source and target are non null their size must match.
-                    if ((relationship.SourceFields is not null && relationship.TargetFields is not null) &&
-                        relationship.SourceFields.Length != relationship.TargetFields.Length)
-                    {
-                        HandleOrRecordException(new DataApiBuilderException(
-                            message: $"Entity: {entityName} has a relationship: {relationshipName}, which has {relationship.SourceFields.Length} source fields defined, " +
-                                $"but {relationship.TargetFields.Length} target fields defined.",
-                            statusCode: HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError));
-                    }
-                }
-
-                if (!ConfigValidationExceptions.Any(x => x.Message.StartsWith(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE)))
-                {
-                    ValidateSourceAndTargetFieldsAsBackingColumns(
-                        entityName: entityName,
-                        relationshipName: relationshipName,
-                        relationship: relationship,
-                        sqlMetadataProvider: sqlMetadataProvider,
-                        invalidColumns: invalidColumns);
-                }
-
-                // Linking object exists and we therefore have a many-many relationship. Validation here differs from one-many and many-one in that
-                // the source and target fields are now only indirectly related through the linking object. Therefore, it is the source and linkingSource
-                // along with the target and linkingTarget fields that must match, respectively. Source and linkingSource fields provide the relationship
-                // from the source entity to the linkingObject while target and linkingTarget fields provide the relationship from the target entity to the
-                // linkingObject.
-                // see: https://learn.microsoft.com/en-us/azure/data-api-builder/relationships#many-to-many-relationship
-                if (!string.IsNullOrWhiteSpace(relationship.LinkingObject))
-                {
-                    ValidateFieldsAndAssociatedLinkingFields(
-                        fields: relationship.SourceFields,
-                        linkingFields: relationship.LinkingSourceFields,
-                        fieldType: "source",
-                        entityName: entityName,
-                        relationshipName: relationshipName);
-                    ValidateFieldsAndAssociatedLinkingFields(
-                        fields: relationship.TargetFields,
-                        linkingFields: relationship.LinkingTargetFields,
-                        fieldType: "target",
-                        entityName: entityName,
-                        relationshipName: relationshipName);
-                }
+                ValidateSourceAndTargetFieldsAsBackingColumns(
+                    entityName: entityName,
+                    relationshipName: relationshipName,
+                    relationship: relationship,
+                    sqlMetadataProvider: sqlMetadataProvider,
+                    invalidColumns: invalidColumns);
 
                 // Validation to ensure DatabaseObject is correctly inferred from the entity name.
                 DatabaseObject? sourceObject, targetObject;

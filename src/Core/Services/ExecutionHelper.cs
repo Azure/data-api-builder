@@ -284,6 +284,8 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Extracts the value from an IValueNode. That includes extracting the value of the variable
         /// if the IValueNode is a variable and extracting the correct type from the IValueNode
+        /// NOTE: If value is of type IntValueNode and the target type is either FLOAT_TYPE or DECIMAL_TYPE,
+        /// then the integer value needs to be converted to a double or a decimal, respectively. 
         /// </summary>
         /// <param name="value">the IValueNode from which to extract the value</param>
         /// <param name="argumentSchema">describes the schema of the argument that the IValueNode represents</param>

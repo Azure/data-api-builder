@@ -196,7 +196,7 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
+                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replaceEnvVar: true))
                 {
                     try
                     {

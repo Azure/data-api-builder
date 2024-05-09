@@ -21,26 +21,21 @@ if ($isReleaseBuild -eq 'true')
 }
 
 # Generating hash for DAB packages
+$dotnetTargetFrameworks = "net6.0", "net8.0"
 $RIDs = "win-x64", "linux-x64", "osx-x64"
-foreach ($RID in $RIDs) {
-    $fileName = "dab_$RID-$DabVersion.zip"
-    $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$RID/$fileName"
-    $download_url = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$fileName"
-    $fileHashInfo = Get-FileHash $filePath
-    $hash = $fileHashInfo.Hash
-    switch ($RID) {
-        "win-x64"{
-            $win_file_hash = $hash
-            $download_url_win = $download_url
-        }
-        "linux-x64"{
-            $linux_file_hash = $hash
-            $download_url_linux = $download_url
-        }
-        "osx-x64"{ 
-            $osx_file_hash = $hash
-            $download_url_osx = $download_url
-        }
+[hashtable]$frameworkPlatformDownloadMetadata = @{}
+[hashtable]$frameworkPlatformFileHashMetadata = @{}
+
+foreach ($targetFramework in $dotnetTargetFrameworks)
+{
+    foreach ($RID in $RIDs) {
+        $fileName = "dab_${targetFramework}_${RID}-${DabVersion}.zip"
+        $filePath = "$BuildOutputDir/publish/$BuildConfiguration/$targetFramework/$RID/$fileName"
+        $download_url = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$fileName"
+        $fileHashInfo = Get-FileHash $filePath
+        $hash = $fileHashInfo.Hash
+        $frameworkPlatformDownloadMetadata.Add("${targetFramework}_${RID}", $download_url)
+        $frameworkPlatformFileHashMetadata.Add("${targetFramework}_${RID}", $hash)
     }
 }
 
@@ -52,6 +47,7 @@ $nuget_file_hash = $fileHashInfo.Hash
 $download_url_nuget = "https://github.com/Azure/data-api-builder/releases/download/$versionTag/$nugetFileName"
 
 # Creating new block to insert latest version 
+# String substitution requires hashtable to be wrapped in $( $hashtable['key'] ) to avoid parsing issues.
 $latestBlock = @'
 {
     "version": "latest",
@@ -59,17 +55,29 @@ $latestBlock = @'
     "releaseType": "${releaseType}",
     "releaseDate": "${releaseDate}",
     "files": {
-        "linux-x64":{
-            "url": "${download_url_linux}",
-            "sha": "${linux_file_hash}"
+        "linux-x64-net6":{
+            "url": "$($frameworkPlatformDownloadMetadata["net6.0_linux-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net6.0_linux-x64"])"
         },
-        "win-x64":{
-            "url": "${download_url_win}",
-            "sha": "${win_file_hash}"
+        "linux-x64-net8":{
+            "url": "$($frameworkPlatformDownloadMetadata["net8.0_linux-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_linux-x64"])"
         },
-        "osx-x64":{
-            "url": "${download_url_osx}",
-            "sha": "${osx_file_hash}"
+        "win-x64-net6":{
+            "url": "$($frameworkPlatformDownloadMetadata["net6.0_win-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net6.0_win-x64"])"
+        },
+        "win-x64-net8":{
+            "url": "$($frameworkPlatformDownloadMetadata["net8.0_win-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_win-x64"])"
+        },
+        "osx-x64-net6":{
+            "url": "$($frameworkPlatformDownloadMetadata["net6.0_osx-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net6.0_osx-x64"])"
+        },
+        "osx-x64-net8":{
+            "url": "$($frameworkPlatformDownloadMetadata["net8.0_osx-x64"])",
+            "sha": "$($frameworkPlatformFileHashMetadata["net8.0_osx-x64"])"
         },
         "nuget": {
             "url": "${download_url_nuget}",

@@ -635,8 +635,8 @@ namespace Azure.DataApiBuilder.Service
                 if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    runtimeConfigValidator.ValidateEntityRelationshipsInConfigWithoutDBMetadata(runtimeConfig);
-                    runtimeConfigValidator.ValidateEntityRelationshipsInConfigWithProvidedMetadata(runtimeConfig, sqlMetadataProviderFactory!);
+                    runtimeConfigValidator.ValidateRelationshipConfigCorrectness(runtimeConfig);
+                    runtimeConfigValidator.ValidateRelationships(runtimeConfig, sqlMetadataProviderFactory!);
                 }
 
                 // OpenAPI document creation is only attempted for REST supporting database types.

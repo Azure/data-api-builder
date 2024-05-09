@@ -145,16 +145,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(queryBuilder);
             queryManagerFactory.Setup(x => x.GetQueryExecutor(It.IsAny<DatabaseType>())).Returns(queryExecutor);
 
+            RuntimeConfig loadedConfig = provider.GetConfig();
+            loadedConfig.TryAddEntityPathNameToEntityName(entityName, entityName);
+
             Mock<ISqlMetadataProvider> sqlMetadataProvider = new();
-            string outParam;
-            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam)).Returns(true);
-            Dictionary<string, string> _pathToEntityMock = new() { { entityName, entityName } };
-            sqlMetadataProvider.Setup(x => x.TryGetEntityNameFromPath(It.IsAny<string>(), out outParam))
-                               .Callback(new metaDataCallback((string entityPath, out string entity) => _ = _pathToEntityMock.TryGetValue(entityPath, out entity)))
-                               .Returns((string entityPath, out string entity) => _pathToEntityMock.TryGetValue(entityPath, out entity));
-
-            metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(sqlMetadataProvider.Object);
-
             Mock<IAuthorizationService> authorizationService = new();
             DefaultHttpContext context = new();
             httpContextAccessor.Setup(_ => _.HttpContext).Returns(context);

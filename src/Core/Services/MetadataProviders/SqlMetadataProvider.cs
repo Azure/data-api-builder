@@ -1800,14 +1800,19 @@ namespace Azure.DataApiBuilder.Core.Services
                     // that this source is related to.
                     foreach ((string targetEntityName, List<ForeignKeyDefinition> fKDefinitionsToTarget) in relationshipData.TargetEntityToFkDefinitionMap)
                     {
-                        // 
                         // Scenario 1: When a FK constraint is defined between source and target entities in the database.
                         // In this case, there will be exactly one ForeignKeyDefinition with the right pair of Referencing and Referenced tables. 
                         // Scenario 2: When no FK constraint is defined between source and target entities, but the relationship fields are configured through config file
                         // In this case, two entries will be created. 
                         // First entry: Referencing table: Source entity, Referenced table: Target entity
-                        // Second entry: Referencing table: Target entity, Referenced table: Source entity 
-                        List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = GetValidatedFKs(fKDefinitionsToTarget);
+                        // Second entry: Referencing table: Target entity, Referenced table: Source entity
+                        if (!TryGetValidatedFKs(fKDefinitionsToTarget, out List<ForeignKeyDefinition> validatedFKDefinitionsToTarget))
+                        {
+                            _logger.LogWarning("Cannot support multiple-create due to mismatch in the metadata inferred from the database and the " +
+                                "metadata inferred from the config for a relationship defined between the  source entity: {sourceEntityName} and " +
+                                "target entity: {targetEntityName}.", sourceEntityName, targetEntityName);
+                        }
+
                         relationshipData.TargetEntityToFkDefinitionMap[targetEntityName] = validatedFKDefinitionsToTarget;
                     }
                 }
@@ -1823,11 +1828,14 @@ namespace Azure.DataApiBuilder.Core.Services
         /// the pair of (source, target) entities.
         /// </summary>
         /// <param name="fKDefinitionsToTarget">List of FK definitions defined from source to target.</param>
-        /// <returns>List of validated FK definitions from source to target.</returns>
-        private List<ForeignKeyDefinition> GetValidatedFKs(
-            List<ForeignKeyDefinition> fKDefinitionsToTarget)
+        /// <param name="validatedFKDefinitionsToTarget">Stores the validate FK definitions to be returned to the caller.</param>
+        /// <returns>true if valid foreign key definitions could be determined successfully, else return false.</returns>
+        private bool TryGetValidatedFKs(
+            List<ForeignKeyDefinition> fKDefinitionsToTarget, out List<ForeignKeyDefinition> validatedFKDefinitionsToTarget)
         {
-            List<ForeignKeyDefinition> validatedFKDefinitionsToTarget = new();
+            // Returns true only for MsSql for now when multiple-create is enabled.
+            bool isMultipleCreateEnabled = _runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled();
+            validatedFKDefinitionsToTarget = new();
             foreach (ForeignKeyDefinition fKDefinitionToTarget in fKDefinitionsToTarget)
             {
                 // This code block adds FK definitions between source and target entities when there is an FK constraint defined
@@ -1835,7 +1843,7 @@ namespace Azure.DataApiBuilder.Core.Services
 
                 // Add the referencing and referenced columns for this foreign key definition for the target.
                 if (PairToFkDefinition is not null &&
-                    PairToFkDefinition.TryGetValue(fKDefinitionToTarget.Pair, out ForeignKeyDefinition? inferredFKDefinition))
+                    PairToFkDefinition.TryGetValue(fKDefinitionToTarget.Pair, out ForeignKeyDefinition? dbFKDefinition))
                 {
                     // Being here indicates that we inferred an FK constraint for the current foreign key definition.
                     // The count of referencing and referenced columns being > 0 indicates that source.fields and target.fields 
@@ -1843,13 +1851,31 @@ namespace Azure.DataApiBuilder.Core.Services
                     // In this scenario, higher precedence is given to the fields configured through the config file. So, the existing FK definition is retained as is.
                     if (fKDefinitionToTarget.ReferencingColumns.Count > 0 && fKDefinitionToTarget.ReferencedColumns.Count > 0)
                     {
-                        validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
+                        if (isMultipleCreateEnabled)
+                        {
+                            if (!AreFKDefinitionsEqual(dbFKDefinition: dbFKDefinition, configFKDefinition: fKDefinitionToTarget))
+                            {
+                                return false;
+                            }
+                            else
+                            {
+                                // If multiple-create is enabled, preferenced is given to relationship metadata (source.fields/target.fields)
+                                // inferred from the database.
+                                validatedFKDefinitionsToTarget.Add(dbFKDefinition);
+                            }
+                        }
+                        else
+                        {
+                            // If multiple-create is not enabled, preferenced is given to relationship metadata (source.fields/target.fields)
+                            // inferred from the config.
+                            validatedFKDefinitionsToTarget.Add(fKDefinitionToTarget);
+                        }
                     }
                     // The count of referenced and referencing columns being = 0 indicates that source.fields and target.fields 
                     // are not configured through the config file. In this case, the FK fields inferred from the database are populated.
                     else
                     {
-                        validatedFKDefinitionsToTarget.Add(inferredFKDefinition);
+                        validatedFKDefinitionsToTarget.Add(dbFKDefinition);
                     }
                 }
                 else
@@ -1889,7 +1915,45 @@ namespace Azure.DataApiBuilder.Core.Services
                 }
             }
 
-            return validatedFKDefinitionsToTarget;
+            return true;
+        }
+
+        /// <summary>
+        /// Helper method to compare two foreign key definitions inferred from the database and the config for equality on the basis of the
+        /// referencing -> referenced column mappings present in them.
+        /// The equality ensures that both the foreign key definitions have:
+        /// 1. Same set of referencing and referenced tables,
+        /// 2. Same number of referencing/referenced columns,
+        /// 3. Same mappings from referencing -> referenced column.
+        /// </summary>
+        /// <param name="dbFKDefinition">Foreign key definition inferred from the database.</param>
+        /// <param name="configFKDefinition">Foreign key definition generated based on relationship metadata provided in the config.</param>
+        /// <returns>true if all the above mentioned conditions are met, else false.</returns>
+        private static bool AreFKDefinitionsEqual(ForeignKeyDefinition dbFKDefinition, ForeignKeyDefinition configFKDefinition)
+        {
+            if (!dbFKDefinition.Pair.Equals(configFKDefinition.Pair) || dbFKDefinition.ReferencingColumns.Count != configFKDefinition.ReferencingColumns.Count)
+            {
+                return false;
+            }
+
+            Dictionary<string, string> referencingToReferencedColumnsInDb = dbFKDefinition.ReferencingColumns.Zip(
+                dbFKDefinition.ReferencedColumns, (key, value) => new { Key = key, Value = value }).ToDictionary(item => item.Key, item => item.Value);
+
+            // Traverse through each (referencing, referenced) columns pair in the foreign key definition sourced from the config.
+            for (int idx = 0; idx < configFKDefinition.ReferencingColumns.Count; idx++)
+            {
+                string referencingColumnNameInDb = configFKDefinition.ReferencingColumns[idx];
+                if (!referencingToReferencedColumnsInDb.TryGetValue(referencingColumnNameInDb, out string? referencedColumnNameInDb)
+                    || !referencedColumnNameInDb.Equals(configFKDefinition.ReferencedColumns[idx]))
+                {
+                    // This indicates that either there is no mapping defined for referencingColumnName in the second foreign key definition
+                    // or the referencing -> referenced column mapping in the second foreign key definition do not match the mapping in the first foreign key definition.
+                    // In both the cases, it is implied that the two foreign key definitions do not match.
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>

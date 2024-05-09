@@ -76,8 +76,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
 
-        private Dictionary<string, string> EntityPathToEntityName { get; } = new();
-
         protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 
         /// <summary>
@@ -225,12 +223,6 @@ namespace Azure.DataApiBuilder.Core.Services
         public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
             return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
-        }
-
-        /// <inheritdoc />
-        public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
-        {
-            return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
         }
 
         /// <inheritdoc />
@@ -510,7 +502,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (!string.IsNullOrEmpty(path))
                     {
-                        EntityPathToEntityName[path] = entityName;
+                        // add the entity path name to the entity name mapping to the runtime config for multi-db resolution.
+                        runtimeConfig.TryAddEntityPathNameToEntityName(path, entityName);
                     }
                 }
                 catch (Exception e)

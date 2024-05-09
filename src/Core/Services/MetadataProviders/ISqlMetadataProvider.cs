@@ -119,15 +119,6 @@ namespace Azure.DataApiBuilder.Core.Services
         bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name);
 
         /// <summary>
-        /// Try to obtain the name of the Entity that has the provided Path. If It
-        /// exists save in out param, and return true, otherwise return false.
-        /// </summary>
-        /// <param name="entityPathName">Entity's path as seen in a request.</param>
-        /// <param name="entityName">Name of the associated entity.</param>
-        /// <returns>True if exists, otherwise false.</returns>
-        bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName);
-
-        /// <summary>
         /// Obtains the underlying database type.
         /// </summary>
         /// <returns></returns>

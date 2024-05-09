@@ -370,7 +370,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
         /// <summary>
         /// This test validates that the `ReplaceEnvVarsInJson` method throws a JsonException when
-        /// it encounters a placeholder for an unset environment variable in the provided JSON string.
+        /// it encounters a reference to an unset environment variable in the provided JSON string.
         /// The test asserts that the exception's message matches the expected error message.
         /// </summary>
         [TestMethod]

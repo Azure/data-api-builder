@@ -47,6 +47,31 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// This method verifies that the relationship validation does not cause unhandled
+    /// exceptions, and that the errors generated include the expected messaging.
+    /// This case is a regression test due to the metadata needed not always being
+    /// populated in the SqlMetadataProvider if for example a bad connection string
+    /// is given.
+    /// </summary>
+    [TestMethod]
+    public void TestErrorHandlingForRelationshipValidationWithNonWorkingConnectionString()
+    {
+        // Arrange
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, COMPLETE_CONFIG_WITH_RELATIONSHIPS_NON_WORKING_CONN_STRING);
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+        StringWriter writer = new();
+        // Capture console output to get error messaging.
+        Console.SetOut(writer);
+
+        // Act
+        ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!);
+        string errorMessage = writer.ToString();
+
+        // Assert
+        Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
+    }
+
+    /// <summary>
     /// Validates that the IsConfigValid method returns false when a config is passed with
     /// both rest and graphQL disabled globally.
     /// </summary>

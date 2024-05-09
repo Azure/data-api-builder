@@ -216,13 +216,25 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc />
         public bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name)
         {
-            return EntityBackingColumnsToExposedNames[entityName].TryGetValue(backingFieldName, out name);
+            Dictionary<string, string>? backingColumnsToExposedNamesMap;
+            if (!EntityBackingColumnsToExposedNames.TryGetValue(entityName, out backingColumnsToExposedNamesMap))
+            {
+                throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
+            }
+
+            return backingColumnsToExposedNamesMap.TryGetValue(backingFieldName, out name);
         }
 
         /// <inheritdoc />
         public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
-            return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
+            Dictionary<string, string>? exposedNamesToBackingColumnsMap;
+            if (!EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out exposedNamesToBackingColumnsMap))
+            {
+                throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
+            }
+
+            return exposedNamesToBackingColumnsMap.TryGetValue(field, out name);
         }
 
         /// <inheritdoc />

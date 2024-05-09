@@ -92,11 +92,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// try to get the exposed name associated
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.
+        /// If an entity name is provided that does not exist
+        /// as metadata in this metadata provider, a KeyNotFoundException
+        /// is thrown.
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>
         /// <param name="backingFieldName">The field used for the lookup in the mapping.</param>
         /// <param name="name">Out parameter in which we will save exposed name.</param>
         /// <returns>True if exists, false otherwise.</returns>
+        /// <throws>KeyNotFoundException if entity name not found.</throws>
         bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name);
 
         /// <summary>
@@ -104,21 +108,16 @@ namespace Azure.DataApiBuilder.Core.Services
         /// try to get the underlying backing column name associated
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.
+        /// If an entity name is provided that does not exist
+        /// as metadata in this metadata provider, a KeyNotFoundException
+        /// is thrown.
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>
         /// <param name="field">The field used for the lookup in the mapping.</param>
         /// <param name="name"/>Out parameter in which we will save backing column name.<param>
         /// <returns>True if exists, false otherwise.</returns>
+        /// <throws>KeyNotFoundException if entity name not found.</throws>
         bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name);
-
-        /// <summary>
-        /// Try to obtain the name of the Entity that has the provided Path. If It
-        /// exists save in out param, and return true, otherwise return false.
-        /// </summary>
-        /// <param name="entityPathName">Entity's path as seen in a request.</param>
-        /// <param name="entityName">Name of the associated entity.</param>
-        /// <returns>True if exists, otherwise false.</returns>
-        bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName);
 
         /// <summary>
         /// Obtains the underlying database type.

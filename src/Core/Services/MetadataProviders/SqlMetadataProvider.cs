@@ -69,8 +69,6 @@ namespace Azure.DataApiBuilder.Core.Services
 
         private Dictionary<string, Dictionary<string, string>> EntityExposedNamesToBackingColumnNames { get; } = new();
 
-        private Dictionary<string, string> EntityPathToEntityName { get; } = new();
-
         protected IAbstractQueryManagerFactory QueryManagerFactory { get; init; }
 
         /// <summary>
@@ -211,19 +209,25 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <inheritdoc />
         public bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name)
         {
-            return EntityBackingColumnsToExposedNames[entityName].TryGetValue(backingFieldName, out name);
+            Dictionary<string, string>? backingColumnsToExposedNamesMap;
+            if (!EntityBackingColumnsToExposedNames.TryGetValue(entityName, out backingColumnsToExposedNamesMap))
+            {
+                throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
+            }
+
+            return backingColumnsToExposedNamesMap.TryGetValue(backingFieldName, out name);
         }
 
         /// <inheritdoc />
         public bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name)
         {
-            return EntityExposedNamesToBackingColumnNames[entityName].TryGetValue(field, out name);
-        }
+            Dictionary<string, string>? exposedNamesToBackingColumnsMap;
+            if (!EntityExposedNamesToBackingColumnNames.TryGetValue(entityName, out exposedNamesToBackingColumnsMap))
+            {
+                throw new KeyNotFoundException($"Initialization of metadata incomplete for entity: {entityName}");
+            }
 
-        /// <inheritdoc />
-        public virtual bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
-        {
-            return EntityPathToEntityName.TryGetValue(entityPathName, out entityName);
+            return exposedNamesToBackingColumnsMap.TryGetValue(field, out name);
         }
 
         /// <inheritdoc />
@@ -503,7 +507,8 @@ namespace Azure.DataApiBuilder.Core.Services
 
                     if (!string.IsNullOrEmpty(path))
                     {
-                        EntityPathToEntityName[path] = entityName;
+                        // add the entity path name to the entity name mapping to the runtime config for multi-db resolution.
+                        runtimeConfig.TryAddEntityPathNameToEntityName(path, entityName);
                     }
                 }
                 catch (Exception e)

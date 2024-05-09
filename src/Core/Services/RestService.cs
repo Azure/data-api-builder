@@ -212,17 +212,18 @@ namespace Azure.DataApiBuilder.Core.Services
         private async Task<IActionResult> DispatchQuery(RestRequestContext context, DatabaseType databaseType)
         {
             IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(databaseType);
-            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(context.EntityName);
 
             if (context is FindRequestContext findRequestContext)
             {
                 using JsonDocument? restApiResponse = await queryEngine.ExecuteAsync(findRequestContext);
-                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
-                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(defaultDataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
+                return restApiResponse is null ? SqlResponseHelpers.FormatFindResult(JsonDocument.Parse("[]").RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext())
+                                               : SqlResponseHelpers.FormatFindResult(restApiResponse.RootElement.Clone(), findRequestContext, _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName), _runtimeConfigProvider.GetConfig(), GetHttpContext());
             }
             else if (context is StoredProcedureRequestContext storedProcedureRequestContext)
             {
-                return await queryEngine.ExecuteAsync(storedProcedureRequestContext, defaultDataSourceName);
+                return await queryEngine.ExecuteAsync(storedProcedureRequestContext, dataSourceName);
             }
             else
             {
@@ -237,10 +238,10 @@ namespace Azure.DataApiBuilder.Core.Services
         private Task<IActionResult?> DispatchMutation(RestRequestContext context, DatabaseType databaseType)
         {
             IMutationEngine mutationEngine = _mutationEngineFactory.GetMutationEngine(databaseType);
-            string defaultDataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
+            string dataSourceName = _runtimeConfigProvider.GetConfig().GetDataSourceNameFromEntityName(context.EntityName);
             return context switch
             {
-                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, defaultDataSourceName),
+                StoredProcedureRequestContext => mutationEngine.ExecuteAsync((StoredProcedureRequestContext)context, dataSourceName),
                 _ => mutationEngine.ExecuteAsync(context)
             };
         }
@@ -437,8 +438,7 @@ namespace Azure.DataApiBuilder.Core.Services
         public (string, string) GetEntityNameAndPrimaryKeyRouteFromRoute(string routeAfterPathBase)
         {
 
-            string dataSourceName = _runtimeConfigProvider.GetConfig().DefaultDataSourceName;
-            ISqlMetadataProvider sqlMetadataProvider = _sqlMetadataProviderFactory.GetMetadataProvider(dataSourceName);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
             // Split routeAfterPath on the first occurrence of '/', if we get back 2 elements
             // this means we have a non empty primary key route which we save. Otherwise, save
@@ -451,7 +451,7 @@ namespace Azure.DataApiBuilder.Core.Services
             string entityPath = entityPathAndPKRoute[0];
             string primaryKeyRoute = entityPathAndPKRoute.Length == maxNumberOfElementsFromSplit ? entityPathAndPKRoute[1] : string.Empty;
 
-            if (!sqlMetadataProvider.TryGetEntityNameFromPath(entityPath, out string? entityName))
+            if (!runtimeConfig.TryGetEntityNameFromPath(entityPath, out string? entityName))
             {
                 throw new DataApiBuilderException(
                     message: $"Invalid Entity path: {entityPath}.",
@@ -459,7 +459,7 @@ namespace Azure.DataApiBuilder.Core.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.EntityNotFound);
             }
 
-            return (entityName, primaryKeyRoute);
+            return (entityName!, primaryKeyRoute);
         }
 
         /// <summary>

@@ -207,7 +207,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
     /// <summary>
     /// Validates the semantic correctness of an Entity's relationships in the
-    /// runtime configuration when metadata from the backend DB is not required.
+    /// runtime configuration without cross referencing DB metadata.
     /// Validating Cases:
     /// 1. Entities not defined in the config cannot be used in a relationship.
     /// 2. Entities with graphQL disabled cannot be used in a relationship with another entity.

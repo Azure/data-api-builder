@@ -1915,7 +1915,12 @@ namespace Azure.DataApiBuilder.Core.Services
                     }
                     else
                     {
-                        validatedFKDefinitionsToTarget.Add(databaseResolvedFkDefinition);
+                        // When the configured relationship doesn't override the database FK constraint,
+                        // DAB can consolidate the referenced and referencing columns from the database FK definition
+                        // into the configResolvedFkDefinition object.
+                        configResolvedFkDefinition.ReferencedColumns = databaseResolvedFkDefinition.ReferencedColumns;
+                        configResolvedFkDefinition.ReferencingColumns = databaseResolvedFkDefinition.ReferencingColumns;
+                        validatedFKDefinitionsToTarget.Add(configResolvedFkDefinition);
 
                         // Save additional metadata for use when processing requests on self-joined/referencing entities.
                         // Since the configResolvedFkDefinition has additional metadata populated, DAB supplements that
@@ -1925,8 +1930,6 @@ namespace Azure.DataApiBuilder.Core.Services
                             EntityRelationshipKey entityToFkDefKey = new(
                                 entityName: configResolvedFkDefinition.SourceEntityName,
                                 relationshipName: configResolvedFkDefinition.RelationshipName);
-                            configResolvedFkDefinition.ReferencedColumns = databaseResolvedFkDefinition.ReferencedColumns;
-                            configResolvedFkDefinition.ReferencingColumns = databaseResolvedFkDefinition.ReferencingColumns;
                             RelationshipToFkDefinition.TryAdd(entityToFkDefKey, configResolvedFkDefinition);
                         }
                     }

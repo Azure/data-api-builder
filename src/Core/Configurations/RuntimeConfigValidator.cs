@@ -239,7 +239,7 @@ public class RuntimeConfigValidator : IConfigValidator
             foreach ((string relationshipName, EntityRelationship relationship) in entity.Relationships!)
             {
                 // Validate if entity referenced in relationship is defined in the config.
-                if (!runtimeConfig.Entities.ContainsKey(relationship.TargetEntity))
+                if (!runtimeConfig.Entities.TryGetValue(relationship.TargetEntity, out Entity? targetEntity))
                 {
                     HandleOrRecordException(new DataApiBuilderException(
                         message: $"Entity: {relationship.TargetEntity} used for relationship is not defined in the config.",
@@ -248,8 +248,8 @@ public class RuntimeConfigValidator : IConfigValidator
                 }
 
                 // Validation to ensure that an entity with graphQL disabled cannot be referenced in a relationship by other entities
-                EntityGraphQLOptions targetEntityGraphQLDetails = runtimeConfig.Entities[relationship.TargetEntity].GraphQL;
-                if (!targetEntityGraphQLDetails.Enabled)
+                EntityGraphQLOptions? targetEntityGraphQLDetails = targetEntity is not null ? targetEntity.GraphQL : null;
+                if (targetEntityGraphQLDetails is not null && !targetEntityGraphQLDetails.Enabled)
                 {
                     HandleOrRecordException(new DataApiBuilderException(
                         message: $"Entity: {relationship.TargetEntity} is disabled for GraphQL.",

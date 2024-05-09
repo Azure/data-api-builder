@@ -1591,7 +1591,7 @@ query {
         }
 
         /// <summary>
-        /// Validates that DAB evaluates the self-joining relationship "child_accounts "for the entity dbo_DimAccounts.
+        /// Validates that DAB evaluates the self-joining relationship "child_accounts" for the entity dbo_DimAccounts.
         /// The database schema defines a foreign key relationship between the dbo_DimAccount table and itself:
         /// Referencing field: ParentAccountKey | Referenced field: AccountKey
         /// The field child_accounts represents the one-to-many relationship entry:

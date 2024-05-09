@@ -9,7 +9,7 @@ namespace Azure.DataApiBuilder.Config.ObjectModel;
 /// create join predicates for self-referencing relationships.
 /// In non self-join relationships, DAB uses the ForeignKeyDefinition.RelationShipPair
 /// to determine the referencing/referenced entity. RelationShipPair isn't sufficient
-/// for self-join relationships because it the DatabaseObjects used to represent the pair
+/// for self-join relationships because the DatabaseObjects used to represent the pair
 /// reference the same object: e.g. both Referenced/Referencing entity would point to 'dbo.MyTable'
 /// </summary>
 public enum RelationshipRole

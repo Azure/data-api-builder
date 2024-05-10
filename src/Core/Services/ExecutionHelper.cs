@@ -284,8 +284,6 @@ namespace Azure.DataApiBuilder.Service.Services
         /// <summary>
         /// Extracts the value from an IValueNode. That includes extracting the value of the variable
         /// if the IValueNode is a variable and extracting the correct type from the IValueNode
-        /// NOTE: If value is of type IntValueNode and the target type is either FLOAT_TYPE or DECIMAL_TYPE,
-        /// then the integer value needs to be converted to a double or a decimal, respectively. 
         /// </summary>
         /// <param name="value">the IValueNode from which to extract the value</param>
         /// <param name="argumentSchema">describes the schema of the argument that the IValueNode represents</param>
@@ -321,8 +319,8 @@ namespace Azure.DataApiBuilder.Service.Services
                 SupportedHotChocolateTypes.INT_TYPE => ((IntValueNode)value).ToInt32(),
                 SupportedHotChocolateTypes.LONG_TYPE => ((IntValueNode)value).ToInt64(),
                 SupportedHotChocolateTypes.SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
-                SupportedHotChocolateTypes.FLOAT_TYPE => value is IntValueNode intValueNode ? intValueNode.ToDouble() : ((FloatValueNode)value).ToDouble(),
-                SupportedHotChocolateTypes.DECIMAL_TYPE => value is IntValueNode intValueNode ? intValueNode.ToDecimal() : ((FloatValueNode)value).ToDecimal(),
+                SupportedHotChocolateTypes.FLOAT_TYPE => float.Parse(value.Value!.ToString()!),
+                SupportedHotChocolateTypes.DECIMAL_TYPE => decimal.Parse(value.Value!.ToString()!),
                 SupportedHotChocolateTypes.UUID_TYPE => Guid.TryParse(value.Value!.ToString(), out Guid guidValue) ? guidValue : value.Value,
                 _ => value.Value
             };

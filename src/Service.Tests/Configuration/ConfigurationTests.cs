@@ -662,13 +662,11 @@ type Moon {
         /// <param name="configProvidedConnString">connection string provided in the config.</param>
         /// <param name="expectedDabModifiedConnString">Updated connection string with Application Name.</param>
         /// <param name="dabEnvOverride">Whether DAB_APP_NAME_ENV is set in environment. (Always present in hosted scenario or if user supplies value.)</param>
-        #pragma warning disable format
         [DataTestMethod]
-        [DataRow("Host=foo;Username=testuser;", "Host=foo;Username=testuser;Application Name=", false, DisplayName = "[PGSQL|DAB OSS]:Addition of 'ApplicationName' property to connection string.]")]
-        [DataRow("Host=foo;Username=testuser;", "Host=foo;Username=testuser;Application Name=", true, DisplayName = "[PGSQL|DAB OSS]:Addition of 'ApplicationName' property to connection string.]")]
-        [DataRow("Host=foo;Username=testuser;Application Name=UserAppName", "Host=foo;Username=testuser;Application Name=UserAppName,", false, DisplayName = "[PGSQL|DAB OSS]:Addition of 'ApplicationName' property to connection string.]")]
-        [DataRow("Host=foo;Username=testuser;Application Name=UserAppName", "Host=foo;Username=testuser;Application Name=UserAppName,", true, DisplayName = "[PGSQL|DAB OSS]:Addition of 'ApplicationName' property to connection string.]")]
-        #pragma warning restore format
+        [DataRow("Host=foo;Username=testuser;", "Host=foo;Username=testuser;Application Name=", false, DisplayName = "[PGSQL]:DAB adds version 'dab_oss_major_minor_patch' to non-provided connection string property 'ApplicationName']")]
+        [DataRow("Host=foo;Username=testuser;", "Host=foo;Username=testuser;Application Name=", true, DisplayName = "[PGSQL]:DAB adds DAB_APP_NAME_ENV value 'dab_hosted' and version suffix '_major_minor_patch' to non-provided connection string property 'ApplicationName'.]")]
+        [DataRow("Host=foo;Username=testuser;Application Name=UserAppName", "Host=foo;Username=testuser;Application Name=UserAppName,", false, DisplayName = "[PGSQL]:DAB appends version 'dab_oss_major_minor_patch' to user supplied 'Application Name' property.]")]
+        [DataRow("Host=foo;Username=testuser;Application Name=UserAppName", "Host=foo;Username=testuser;Application Name=UserAppName,", true, DisplayName = "[PGSQL]:DAB appends version string 'dab_hosted' and version suffix '_major_minor_patch' to user supplied 'ApplicationName' property.]")]
         public void PgSqlConnStringSupplementedWithAppNameProperty(
             string configProvidedConnString,
             string expectedDabModifiedConnString,

@@ -170,3 +170,7 @@ update series --config "dab-config.PostgreSql.json" --permissions "TestNestedFil
 update series --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterOneMany_ColumnForbidden:read"
 update series --config "dab-config.PostgreSql.json" --permissions "TestNestedFilterOneMany_EntityReadForbidden:read"
 update DefaultBuiltInFunction --config "dab-config.PostgreSql.json" --permissions "anonymous:create" --fields.exclude "current_date,next_date"
+add dbo_DimAccount --config "dab-config.PostgreSql.json" --source "dimaccount" --permissions "anonymous:*" --rest true --graphql true
+update dbo_DimAccount --config "dab-config.PostgreSql.json" --map "parentaccountkey:ParentAccountKey,accountkey:AccountKey" 
+update dbo_DimAccount --config "dab-config.PostgreSql.json" --relationship parent_account --target.entity dbo_DimAccount --cardinality one --relationship.fields "parentaccountkey:accountkey"
+update dbo_DimAccount --config "dab-config.PostgreSql.json" --relationship child_accounts --target.entity dbo_DimAccount --cardinality many --relationship.fields "accountkey:parentaccountkey"

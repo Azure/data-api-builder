@@ -386,8 +386,7 @@ public class IncrementingInteger
 }
 
 /// <summary>
-/// A simple class that is used to hold the information about joins that
-/// are part of a SQL query.
+/// Holds the information about joins that are part of a SQL query.
 /// <summary>
 /// <param name="DbObject">The name of the database object containing table metadata like joined tables.</param>
 /// <param name="TableAlias">The alias of the table that is joined with.</param>

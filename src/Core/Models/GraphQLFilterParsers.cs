@@ -425,9 +425,9 @@ public class GQLFilterParser
         // Add JoinPredicates to the subquery query structure so a predicate connecting
         // the outer table is added to the where clause of subquery
         existsQuery.AddJoinPredicatesForRelatedEntity(
-            queryStructure.EntityName,
-            queryStructure.SourceAlias,
-            existsQuery);
+            targetEntityName: queryStructure.EntityName,
+            relatedSourceAlias: queryStructure.SourceAlias,
+            subQuery: existsQuery);
 
         // The right operand is the SqlExistsQueryStructure.
         PredicateOperand right = new(existsQuery);

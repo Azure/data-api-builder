@@ -37,6 +37,7 @@ DROP TABLE IF EXISTS books_sold;
 DROP TABLE IF EXISTS default_with_function_table;
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_profiles;
+DROP TABLE IF EXISTS dimaccount;
 
 CREATE TABLE publishers(
     id int AUTO_INCREMENT PRIMARY KEY,
@@ -251,6 +252,23 @@ CREATE TABLE user_profiles (
     profilepictureurl NVARCHAR(255),
     userid INT
 );
+
+CREATE TABLE dimaccount (
+    AccountKey INT AUTO_INCREMENT NOT NULL,
+    ParentAccountKey INT,
+    PRIMARY KEY (AccountKey)
+);
+
+ALTER TABLE dimaccount
+ADD CONSTRAINT FK_DimAccount_DimAccount
+FOREIGN KEY (ParentAccountKey)
+REFERENCES dimaccount (AccountKey);
+
+INSERT INTO dimaccount(AccountKey, ParentAccountKey)
+VALUES (1, null),
+(2, 1),
+(3, 2),
+(4, 2);
 
 ALTER TABLE books
 ADD CONSTRAINT book_publisher_fk

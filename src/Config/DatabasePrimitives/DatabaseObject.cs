@@ -242,7 +242,9 @@ public class ViewDefinition : SourceDefinition { }
 public class RelationshipMetadata
 {
     /// <summary>
-    /// Dictionary of target entity name to ForeignKeyDefinition.
+    /// Dictionary tracking ForeignKeyDefinitions for a given target entity.
+    /// key: {targetEntityName}
+    /// value: [{ForeignKeyDefinition},{...}]
     /// </summary>
     [JsonInclude]
     public Dictionary<string, List<ForeignKeyDefinition>> TargetEntityToFkDefinitionMap { get; private set; }
@@ -271,9 +273,28 @@ public class ColumnDefinition
     }
 }
 
-[DebuggerDisplay("ReferencingDbTable = {Pair.ReferencingDbTable.FullName} (Count = {ReferencingColumns.Count}), ReferencedDbTable = {Pair.ReferencedDbTable.FullName} (Count = {ReferencedColumns.Count})")]
+[DebuggerDisplay("Relationship: {RelationshipName} ReferencingDbTable = {Pair.ReferencingDbTable.FullName} (Count = {ReferencingColumns.Count}), ReferencedDbTable = {Pair.ReferencedDbTable.FullName} (Count = {ReferencedColumns.Count})")]
 public class ForeignKeyDefinition
 {
+    public string SourceEntityName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Identifies whether the referencing entity is the target, source, or linking entity.
+    /// Enables Resolve{Target/Source}Columns() functions to return the correct columns.
+    /// </summary>
+    public RelationshipRole ReferencingEntityRole { get; init; } = RelationshipRole.None;
+
+    /// <summary>
+    /// Identifies whether the referenced entity is the target, source, or linking entity.
+    /// Enables Resolve{Target/Source}Columns() functions to return the correct columns.
+    /// </summary>
+    public RelationshipRole ReferencedEntityRole { get; init; } = RelationshipRole.None;
+
+    /// <summary>
+    /// The relationship name defined for the relationship in the runtime config.
+    /// </summary>
+    public string RelationshipName { get; init; } = string.Empty;
+
     /// <summary>
     /// The referencing and referenced table pair.
     /// </summary>
@@ -292,6 +313,56 @@ public class ForeignKeyDefinition
     /// table are implicitly assumed to be the foreign key columns.
     /// </summary>
     public List<string> ReferencingColumns { get; set; } = new();
+
+    /// <summary>
+    /// Resolves the target columns based on the role of the referencing and referenced entities.
+    /// The role of the referencing and referenced entities is important because
+    /// target entity can either be the "referenced" or "referencing" entity.
+    /// </summary>
+    /// <returns>List of the target entity's columns</returns>
+    /// <exception cref="Exception">Raised when the ForeignKeyDefinition represents a relationship
+    /// between a source (source fields) and linking object (linking source fields).</exception>
+    public List<string> ResolveTargetColumns()
+    {
+        if (ReferencingEntityRole == RelationshipRole.Target)
+        {
+            return ReferencingColumns;
+        }
+        else if (ReferencedEntityRole == RelationshipRole.Target)
+        {
+            return ReferencedColumns;
+        }
+        else
+        {
+            throw new Exception(
+                message: "Unable to resolve target columns because this ForeignKeyDefinition relates a target entity and linking object.");
+        }
+    }
+
+    /// <summary>
+    /// Resolves the source columns based on the role of the referencing and referenced entities.
+    /// The role of the referencing and referenced entities is important because
+    /// source entity can either be the "referenced" or "referencing" entity.
+    /// </summary>
+    /// <returns>List of the source entity's columns</returns>
+    /// <exception cref="Exception">Raised when the ForeignKeyDefinition represents a relationship
+    /// between a target (target columns) and linking object (linking target fields).</exception>
+    public List<string> ResolveSourceColumns()
+    {
+        if (ReferencingEntityRole == RelationshipRole.Source)
+        {
+            return ReferencingColumns;
+        }
+        else if (ReferencedEntityRole == RelationshipRole.Source)
+        {
+            return ReferencedColumns;
+        }
+        else
+        {
+            throw new Exception(
+                message: "Unable to resolve source columns because this ForeignKeyDefinition relates a source entity and linking object.");
+        }
+    }
 
     public override bool Equals(object? other)
     {
@@ -316,12 +387,27 @@ public class ForeignKeyDefinition
 [DebuggerDisplay("ReferencingDbTable = {ReferencingDbTable.FullName}, ReferencedDbTable = {ReferencedDbTable.FullName}")]
 public class RelationShipPair
 {
+    /// <summary>
+    /// Relationship name specified in the runtime config.
+    /// </summary>
+    public string RelationshipName { get; set; } = string.Empty;
+
     public RelationShipPair() { }
 
     public RelationShipPair(
+    DatabaseTable referencingDbObject,
+    DatabaseTable referencedDbObject)
+    {
+        ReferencingDbTable = referencingDbObject;
+        ReferencedDbTable = referencedDbObject;
+    }
+
+    public RelationShipPair(
+        string relationshipName,
         DatabaseTable referencingDbObject,
         DatabaseTable referencedDbObject)
     {
+        RelationshipName = relationshipName;
         ReferencingDbTable = referencingDbObject;
         ReferencedDbTable = referencedDbObject;
     }

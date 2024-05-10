@@ -45,6 +45,8 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition => throw new NotImplementedException();
 
+        public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinition { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+
         private Dictionary<string, List<FieldDefinitionNode>> _graphQLTypeToFieldsMap = new();
 
         public DocumentNode GraphQLSchemaRoot { get; set; }

@@ -709,7 +709,7 @@ type Moon {
         /// Validates that DAB doesn't append nor modify
         /// - the 'Application Name' or 'App' properties in MySQL database connection strings.
         /// - the 'Application Name' property in
-        /// CosmosDB_PostgreSQl, CosmosDB_NoSQL database connection strings.
+        /// CosmosDB_PostgreSQL, CosmosDB_NoSQL database connection strings.
         /// This test validates that this behavior holds true when the DAB_APP_NAME_ENV environment variable
         /// - is set (dabEnvOverride==true) -> (DAB hosted)
         /// - is not set (dabEnvOverride==false) -> (DAB OSS).

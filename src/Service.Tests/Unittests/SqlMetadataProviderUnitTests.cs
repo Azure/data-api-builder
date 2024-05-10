@@ -166,8 +166,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("")]
         public async Task CheckExceptionForBadConnectionStringForPgSql(string connectionString)
         {
+
+            // For strings that are an invalid format for the connection string builder, need to
+            // redirect std error to a string writer for comparison to expected error messaging later.
+            StringWriter sw = new();
+            Console.SetError(sw);
+
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString, sw);
         }
 
         /// <summary>

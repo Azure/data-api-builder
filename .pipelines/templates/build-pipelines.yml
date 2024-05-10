@@ -82,7 +82,7 @@ steps:
     command: custom
     custom: format
     projects: '$(solution)'
-    arguments: '--verify-no-changes'
+    arguments: '--verify-no-changes -v d'
 
 # Use dotnet pack command to build the project because we want to generate build output
 # in the correct location that pack command will be using. This build output location

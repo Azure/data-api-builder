@@ -31,7 +31,17 @@ jobs:
   steps:
   - task: NuGetAuthenticate@1
     displayName: 'NuGet Authenticate'
+  
+  # The .NET CLI commands in proceeding tasks use the .NET SDK version specified ("selected") here.
+  # Per Microsoft Learn Docs, "Selecting the .NET SDK version is independent from 
+  # specifying the runtime version a project targets."
+  - task: UseDotNet@2
+    displayName: Setup .NET SDK v8.0.x
+    inputs:
+      packageType: sdk
+      version: 8.0.x
 
+  # Preserving .NET 6 for multi-targeting support
   - task: UseDotNet@2
     displayName: Setup .NET SDK v6.0.x
     inputs:
@@ -100,7 +110,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
+      targetFiles: 'src/out/tests/*/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: 'Run MsSql Integration Tests'
@@ -164,7 +174,17 @@ jobs:
 
   - task: NuGetAuthenticate@1
     displayName: 'NuGet Authenticate'
+  
+  # The .NET CLI commands in proceeding tasks use the .NET SDK version specified ("selected") here.
+  # Per Microsoft Learn Docs, "Selecting the .NET SDK version is independent from 
+  # specifying the runtime version a project targets."
+  - task: UseDotNet@2
+    displayName: Setup .NET SDK v8.0.x
+    inputs:
+      packageType: sdk
+      version: 8.0.x
 
+  # Preserving .NET 6 for multi-targeting support
   - task: UseDotNet@2
     displayName: Setup .NET SDK v6.0.x
     inputs:
@@ -224,7 +244,7 @@ jobs:
     inputs:
       folderPath: '$(System.DefaultWorkingDirectory)'
       fileType: 'json'
-      targetFiles: 'src/out/tests/net6.0/dab-config.MsSql.json'
+      targetFiles: 'src/out/tests/*/dab-config.MsSql.json'
 
   - task: DotNetCoreCLI@2
     displayName: 'Run MsSql Integration Tests'

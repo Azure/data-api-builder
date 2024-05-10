@@ -11,7 +11,7 @@ class StringLogger : ILogger
 {
     public List<string> Messages { get; } = new();
 
-    public IDisposable BeginScope<TState>(TState state)
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         return new Mock<IDisposable>().Object;
     }

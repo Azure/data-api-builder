@@ -46,9 +46,9 @@ public class StaticWebAppsAuthentication
         StaticWebAppsClientPrincipal principal = new();
         try
         {
-            if (context.Request.Headers.TryGetValue(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, out StringValues headerPayload))
+            if (context.Request.Headers.TryGetValue(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, out StringValues headerPayload) && headerPayload.Count == 1)
             {
-                string data = headerPayload[0];
+                string data = headerPayload.ToString();
                 byte[] decoded = Convert.FromBase64String(data);
                 string json = Encoding.UTF8.GetString(decoded);
                 principal = JsonSerializer.Deserialize<StaticWebAppsClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new();

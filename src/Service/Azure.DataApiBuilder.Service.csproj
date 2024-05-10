@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
         <Configurations>Debug;Release;Docker</Configurations>
         <OutputPath>$(BaseOutputPath)\engine</OutputPath>
         <RuntimeIdentifiers>win-x64;linux-x64;osx-x64</RuntimeIdentifiers>

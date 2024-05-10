@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -1226,11 +1227,16 @@ namespace Azure.DataApiBuilder.Service.Tests.Authorization
                 ["src1"] = new { endpoint = "https://graph.microsoft.com/v1.0/users/{userID}/getMemberObjects" }
             };
 
+            // Without this change, newest Microsoft.IdentityModel (8+) package will throw an error:
+            // System.ArgumentException: IDX11025: Cannot serialize object of type: '<>f__AnonymousType0`1[System.String]' into property: 'src1'.
+            // https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/issues/2397
+            JsonElement serializedDistributedClaims = JsonSerializer.SerializeToElement(distributedClaimSources);
+
             Dictionary<string, object?> claimsCollection = new()
             {
                 { "scp", "scope1 scope2 scope3" },
                 { "groups", "src1" },
-                { "_claim_sources", distributedClaimSources},
+                { "_claim_sources", serializedDistributedClaims },
                 { "wids", new List<string>() { "d74b8d81-39eb-4201-bd9f-9f1c4011e3c9", "18d14519-c4da-4ad4-936d-9a2de69d33cf", "9e513fc0-e8af-43b1-a6c7-949edb1967a3" } },
                 { "int_array", new List<int>() { 1, 2, 3 } },
                 { "bool_array", new List<bool>() { true, false, true } },

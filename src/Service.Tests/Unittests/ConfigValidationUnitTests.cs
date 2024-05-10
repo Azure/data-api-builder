@@ -262,13 +262,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             );
 
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
-            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
-            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
             // Assert that expected exception is thrown. Entity used in relationship is Invalid
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                configValidator.ValidateRelationshipConfigCorrectness(runtimeConfig));
             Assert.AreEqual($"Entity: {sampleRelationship.TargetEntity} used for relationship is not defined in the config.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         }
@@ -325,13 +322,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             );
 
             RuntimeConfigValidator configValidator = InitializeRuntimeConfigValidator();
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
-            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
-            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
 
             // Exception should be thrown as we cannot use an entity (with graphQL disabled) in a relationship.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                configValidator.ValidateRelationshipConfigCorrectness(runtimeConfig));
             Assert.AreEqual($"Entity: {sampleRelationship.TargetEntity} is disabled for GraphQL.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
         }
@@ -417,7 +411,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Exception thrown as foreignKeyPair not found in the DB.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"Could not find relationship between Linking Object: TEST_SOURCE_LINK"
                 + $" and entity: {relationshipEntity}.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -435,7 +429,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Since, we have defined the relationship in Database,
             // the engine was able to find foreign key relation and validation will pass.
-            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
+            configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object);
         }
 
         /// <summary>
@@ -498,7 +492,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             // Exception is thrown as foreignKey pair is not specified in the config, nor defined
             // in the database.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual($"Could not find relationship between entities:"
                 + $" SampleEntity1 and SampleEntity2.", ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
@@ -518,7 +512,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // No Exception is thrown as foreignKey Pair was found in the DB between
             // source and target entity.
-            configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object);
+            configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object);
         }
 
         /// <summary>
@@ -566,7 +560,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
             {
@@ -581,16 +574,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
             };
 
-            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
-                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
-
-            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
-            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
-
             // Exception is thrown since sourceFields and targetFields do not match in either their existence,
             // or their length.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                configValidator.ValidateRelationshipConfigCorrectness(runtimeConfig));
             Assert.AreEqual(expectedExceptionMessage, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -672,7 +659,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             // Exception is thrown since either source or target field does not exist as a valid backing column in their respective entity.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                configValidator.ValidateRelationships(runtimeConfig, _metadataProviderFactory.Object));
             Assert.AreEqual(expectedExceptionMessage, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
@@ -776,7 +763,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfigProvider provider = new(loader) { IsLateConfigured = true };
             RuntimeConfigValidator configValidator = new(provider, fileSystem, new Mock<ILogger<RuntimeConfigValidator>>().Object);
-            Mock<ISqlMetadataProvider> _sqlMetadataProvider = new();
 
             Dictionary<string, DatabaseObject> mockDictionaryForEntityDatabaseObject = new()
             {
@@ -791,19 +777,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 }
             };
 
-            _sqlMetadataProvider.Setup<Dictionary<string, DatabaseObject>>(x =>
-                x.EntityToDatabaseObject).Returns(mockDictionaryForEntityDatabaseObject);
-
-            string discard;
-            _sqlMetadataProvider.Setup(x => x.TryGetExposedColumnName(It.IsAny<string>(), It.IsAny<string>(), out discard)).Returns(true);
-
-            Mock<IMetadataProviderFactory> _metadataProviderFactory = new();
-            _metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(_sqlMetadataProvider.Object);
-
             // Exception is thrown since linkingSourceFields and linkingTargetFields do not match in either their existence,
             // or their length.
             DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() =>
-                configValidator.ValidateRelationshipsInConfig(runtimeConfig, _metadataProviderFactory.Object));
+                configValidator.ValidateRelationshipConfigCorrectness(runtimeConfig));
             Assert.AreEqual(expectedExceptionMessage, ex.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);

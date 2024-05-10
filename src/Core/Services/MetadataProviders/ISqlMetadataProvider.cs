@@ -72,6 +72,13 @@ namespace Azure.DataApiBuilder.Core.Services
         // of referencing and referenced tables.
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; }
 
+        /// <summary>
+        /// Maps {entityName, relationshipName} to the ForeignKeyDefinition defined for (currently) self-join relationships.
+        /// The ForeignKeyDefinition denotes referencing/referenced fields and whether the referencing/referenced fields
+        /// apply to the target or source entity as defined in the relationship config.
+        /// </summary>
+        public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinition { get; set; }
+
         public List<Exception> SqlMetadataExceptions { get; }
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }

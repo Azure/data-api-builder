@@ -135,3 +135,6 @@ update Sales --config "dab-config.MySql.json" --permissions "authenticated:*"
 update Bookmarks --config "dab-config.MySql.json" --permissions "authenticated:*"
 update MappedBookmarks --config "dab-config.MySql.json" --permissions "authenticated:*" --map "id:bkid,bkname:name"
 update DefaultBuiltInFunction --config "dab-config.MySql.json" --permissions "anonymous:create" --fields.exclude "current_date,next_date"
+add dbo_DimAccount --config "dab-config.MySql.json" --source "dimaccount" --permissions "anonymous:*" --rest true --graphql true
+update dbo_DimAccount --config "dab-config.MySql.json" --relationship parent_account --target.entity dbo_DimAccount --cardinality one --relationship.fields "ParentAccountKey:AccountKey"
+update dbo_DimAccount --config "dab-config.MySql.json" --relationship child_accounts --target.entity dbo_DimAccount --cardinality many --relationship.fields "AccountKey:ParentAccountKey"

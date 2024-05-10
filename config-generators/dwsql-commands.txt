@@ -156,3 +156,6 @@ update GetBook --config "dab-config.DwSql.json" --permissions "authenticated:exe
 update CountBooks --config "dab-config.DwSql.json" --permissions "authenticated:execute"
 update Sales --config "dab-config.DwSql.json" --permissions "authenticated:*"
 update GetAuthorsHistoryByFirstName --config "dab-config.DwSql.json" --permissions "authenticated:execute"
+add dbo_DimAccount --config "dab-config.DwSql.json" --source "DimAccount" --permissions "anonymous:*" --rest true --graphql true
+update dbo_DimAccount --config "dab-config.DwSql.json" --relationship parent_account --target.entity dbo_DimAccount --cardinality one --relationship.fields "ParentAccountKey:AccountKey"
+update dbo_DimAccount --config "dab-config.DwSql.json" --relationship child_accounts --target.entity dbo_DimAccount --cardinality many --relationship.fields "AccountKey:ParentAccountKey"

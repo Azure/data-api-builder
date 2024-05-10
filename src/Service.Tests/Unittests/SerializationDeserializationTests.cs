@@ -256,8 +256,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// <summary>
         /// Validates serialization and deserilization of Dictionary containing DatabaseTable
         /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
+        /// Temporarily ignore test for .net6 due to npgsql issue.
         /// </summary>
         [TestMethod]
+#if NET6_0
+        [Ignore]
+#endif
         public void TestDictionaryDatabaseObjectSerializationDeserialization()
         {
             InitializeObjects();

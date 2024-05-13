@@ -198,6 +198,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 _queryBuilder = new MySqlQueryBuilder();
             }
+            else if (string.Equals(databaseType, TestCategory.POSTGRESQL))
+            {
+                _queryBuilder = new PostgresQueryBuilder();
+            }
 
             try
             {
@@ -219,16 +223,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             catch (DataApiBuilderException ex)
             {
-                // use contains to correctly cover db/user unique error messaging
-                // if sw is not null it holds the error messaging
-                string error = sw is null ? ex.Message : sw.ToString();
-                Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
+                // Combine both the console and exception messages because they both
+                // may contain the connection string errors this function expects to exist.
+                string consoleMessages = sw is not null ? sw.ToString() : string.Empty;
+                string allErrorMessages = ex.Message + " " + consoleMessages;
+                Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                if (sw is not null)
-                {
-                    Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
-                }
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();

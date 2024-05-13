@@ -1,6 +1,6 @@
 # Support
 
-Data API builder is an open-source project with contributions from Microsoft and the community to build a configuration-based engine in a Docker-friendly container that easily adds a secure and feature-rich Data API over databases. Data API builder is not a Microsoft product and, as a result, is not supported by Microsoft as a product would be.
+Data API builder is an open-source project with contributions from Microsoft and the community to build a configuration-based engine in a Docker-friendly container that easily adds a secure and feature-rich Data API over databases. 
 
 ## How to file issues and get help
 

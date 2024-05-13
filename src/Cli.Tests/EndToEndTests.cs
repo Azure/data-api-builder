@@ -178,7 +178,7 @@ public class EndToEndTests
     [DataRow(CliBool.None, "cosmosdb_nosql", DatabaseType.CosmosDB_NoSQL, DisplayName = "Init command without '--graphql.multiple-create.enabled' option for cosmosdb_nosql database type")]
     public void TestEnablingMultipleCreateOperation(CliBool isMultipleCreateEnabled, string dbType, DatabaseType expectedDbType)
     {
-        List<string> args = new() { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", SAMPLE_TEST_CONN_STRING, "--database-type", dbType };
+        List<string> args = new() { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--connection-string", dbType == "postgresql" ? SAMPLE_TEST_PGSQL_CONN_STRING : SAMPLE_TEST_CONN_STRING, "--database-type", dbType };
 
         if (string.Equals("cosmosdb_nosql", dbType, StringComparison.OrdinalIgnoreCase))
         {

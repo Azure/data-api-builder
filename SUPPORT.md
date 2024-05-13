@@ -6,7 +6,7 @@ Data API builder is an open-source project with contributions from Microsoft and
 
 ### GitHub Issues
 
-Engineers who contribute to and work on Data API builder periodically monitor and review issues added to [the repository's issues list](https://github.com/Azure/data-api-builder/issues). The period of review is not set, unlike service level agreements (SLA) with Microsoft products, and resolution is not guaranteed. When an issue is raised, a member of the team will respond as soon as possible; please be patient.
+Engineers who contribute to and work on Data API builder periodically monitor and review issues added to [the repository's issues list](https://github.com/Azure/data-api-builder/issues). The period of review is not set by a service level agreement (SLA), and resolution is not guaranteed. When an issue is raised, a member of the team will respond as soon as possible; please be patient.
 
 Repository issues track bugs, questions, and feature requests. Creating issues requires a GitHub account; templates help ensure information is used for investigation. Repository issues may be added to the backlog by engineers and become triaged in our future roadmap.
 

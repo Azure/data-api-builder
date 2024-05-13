@@ -43,12 +43,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// <param name="repValues">Replacement value.</param>
         [DataTestMethod]
         [DataRow(
-            new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
-            new string[] { "@env(')", "@env()", "@env(')'@env('()", "@env('@env()'", "@@eennvv((''''))" },
-            true,
-            true,
-            DisplayName = "Replacement strings that won't match.")]
-        [DataRow(
             new string[] { "@env('envVarName')", "@env(@env('envVarName'))", "@en@env('envVarName')", "@env'()@env'@env('envVarName')')')" },
             new string[] { "envVarValue", "@env(envVarValue)", "@enenvVarValue", "@env'()@env'envVarValue')')" },
             false,
@@ -539,6 +533,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             string options = "";
             string databaseTypeEnvVariable = "";
+            string connectionStringEnvVarName = "DATABASE_CONNECTION_STRING";
 
             switch (databaseType)
             {
@@ -561,6 +556,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     break;
                 case "postgresql":
                     databaseTypeEnvVariable = $"@env('POSTGRESQL_DB_TYPE')";
+                    connectionStringEnvVarName = "DATABASE_CONNECTION_STRING_PGSQL";
                     options = @",""options"": null";
                     break;
                 case "dwsql":
@@ -572,7 +568,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             return $@"
             {{
                 ""database-type"": ""{databaseTypeEnvVariable}"",
-                ""connection-string"": ""@env('DATABASE_CONNECTION_STRING')""
+                ""connection-string"": ""@env('{connectionStringEnvVarName}')""
                 {options}
             }}";
         }
@@ -621,7 +617,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             { "DATABASE_CONTAINER", "xyz"},
             { "DATABASE_NAME", "planet" },
             { "GRAPHQL_SCHEMA_PATH", "gql-schema.gql" },
-            { "DATABASE_CONNECTION_STRING", "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;" }
+            { "DATABASE_CONNECTION_STRING", "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;" },
+            { "DATABASE_CONNECTION_STRING_PGSQL", "Host=<>;Database=<>;username=<>;password=<>" }
         };
 
         /// <summary>

@@ -565,8 +565,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                     break;
             }
 
-            
-
             return $@"
             {{
                 ""database-type"": ""{databaseTypeEnvVariable}"",

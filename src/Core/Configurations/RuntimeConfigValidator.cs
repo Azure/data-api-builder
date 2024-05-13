@@ -190,7 +190,7 @@ public class RuntimeConfigValidator : IConfigValidator
     /// </summary>
     public async Task<JsonSchemaValidationResult> ValidateConfigSchema(RuntimeConfig runtimeConfig, string configFilePath, ILoggerFactory loggerFactory)
     {
-        string jsonData = _fileSystem.File.ReadAllText(configFilePath);
+        string jsonData = runtimeConfig.ToJson();
         ILogger<JsonConfigSchemaValidator> jsonConfigValidatorLogger = loggerFactory.CreateLogger<JsonConfigSchemaValidator>();
         JsonConfigSchemaValidator jsonConfigSchemaValidator = new(jsonConfigValidatorLogger, _fileSystem);
 

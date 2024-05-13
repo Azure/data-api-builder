@@ -72,6 +72,13 @@ namespace Azure.DataApiBuilder.Core.Services
         // of referencing and referenced tables.
         public Dictionary<RelationShipPair, ForeignKeyDefinition>? PairToFkDefinition { get; }
 
+        /// <summary>
+        /// Maps {entityName, relationshipName} to the ForeignKeyDefinition defined for (currently) self-join relationships.
+        /// The ForeignKeyDefinition denotes referencing/referenced fields and whether the referencing/referenced fields
+        /// apply to the target or source entity as defined in the relationship config.
+        /// </summary>
+        public Dictionary<EntityRelationshipKey, ForeignKeyDefinition> RelationshipToFkDefinition { get; set; }
+
         public List<Exception> SqlMetadataExceptions { get; }
 
         Dictionary<string, DatabaseObject> EntityToDatabaseObject { get; set; }
@@ -92,11 +99,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// try to get the exposed name associated
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.
+        /// If an entity name is provided that does not exist
+        /// as metadata in this metadata provider, a KeyNotFoundException
+        /// is thrown.
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>
         /// <param name="backingFieldName">The field used for the lookup in the mapping.</param>
         /// <param name="name">Out parameter in which we will save exposed name.</param>
         /// <returns>True if exists, false otherwise.</returns>
+        /// <throws>KeyNotFoundException if entity name not found.</throws>
         bool TryGetExposedColumnName(string entityName, string backingFieldName, [NotNullWhen(true)] out string? name);
 
         /// <summary>
@@ -104,11 +115,15 @@ namespace Azure.DataApiBuilder.Core.Services
         /// try to get the underlying backing column name associated
         /// with the provided field, if it exists, save in out
         /// parameter, and return true, otherwise return false.
+        /// If an entity name is provided that does not exist
+        /// as metadata in this metadata provider, a KeyNotFoundException
+        /// is thrown.
         /// </summary>
         /// <param name="entityName">The entity whose mapping we lookup.</param>
         /// <param name="field">The field used for the lookup in the mapping.</param>
         /// <param name="name"/>Out parameter in which we will save backing column name.<param>
         /// <returns>True if exists, false otherwise.</returns>
+        /// <throws>KeyNotFoundException if entity name not found.</throws>
         bool TryGetBackingColumn(string entityName, string field, [NotNullWhen(true)] out string? name);
 
         /// <summary>

@@ -2528,6 +2528,57 @@
           }
         }
       }
+    },
+    {
+      dbo_DimAccount: {
+        Source: {
+          Object: dimaccount,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: dbo_DimAccount,
+          Plural: dbo_DimAccounts,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Mappings: {
+          accountkey: AccountKey,
+          parentaccountkey: ParentAccountKey
+        },
+        Relationships: {
+          child_accounts: {
+            Cardinality: Many,
+            TargetEntity: dbo_DimAccount,
+            SourceFields: [
+              accountkey
+            ],
+            TargetFields: [
+              parentaccountkey
+            ]
+          },
+          parent_account: {
+            TargetEntity: dbo_DimAccount,
+            SourceFields: [
+              parentaccountkey
+            ],
+            TargetFields: [
+              accountkey
+            ]
+          }
+        }
+      }
     }
   ]
 }

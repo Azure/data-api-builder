@@ -69,11 +69,11 @@ public static class AppServiceAuthentication
     {
         ClaimsIdentity? identity = null;
 
-        if (context.Request.Headers.TryGetValue(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, out StringValues header))
+        if (context.Request.Headers.TryGetValue(AuthenticationOptions.CLIENT_PRINCIPAL_HEADER, out StringValues headerValues) && headerValues.Count == 1)
         {
             try
             {
-                string encodedPrincipalData = header[0];
+                string encodedPrincipalData = headerValues.ToString();
                 byte[] decodedPrincpalData = Convert.FromBase64String(encodedPrincipalData);
                 string json = Encoding.UTF8.GetString(decodedPrincpalData);
                 AppServiceClientPrincipal? principal = JsonSerializer.Deserialize<AppServiceClientPrincipal>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

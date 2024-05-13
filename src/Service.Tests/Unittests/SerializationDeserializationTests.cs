@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -140,7 +141,7 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// Validates serialization and deserilization of ForeignKeyDefinition object
         /// </summary>
         [TestMethod]
-        public void TestForeginKeyDefinitionSerializationDeserialization()
+        public void TestForeignKeyDefinitionSerializationDeserialization()
         {
             InitializeObjects();
 
@@ -151,14 +152,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 Pair = pair,
                 ReferencedColumns = new List<string> { "Index" },
                 ReferencingColumns = new List<string> { "FirstName" }
-
             };
 
             string serializedForeignKeyDefinition = JsonSerializer.Serialize(foreignKeyDefinition, _options);
             ForeignKeyDefinition deserializedForeignKeyDefinition = JsonSerializer.Deserialize<ForeignKeyDefinition>(serializedForeignKeyDefinition, _options);
 
-            int fields = typeof(ForeignKeyDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 3);
+            List<FieldInfo> fieldMetadata = typeof(ForeignKeyDefinition).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
+            Assert.AreEqual(expected: 7, actual: fieldMetadata.Count);
 
             Assert.IsTrue(foreignKeyDefinition.Equals(deserializedForeignKeyDefinition));
             VerifyRelationShipPair(pair, deserializedForeignKeyDefinition.Pair);
@@ -257,9 +257,13 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
         /// <summary>
         /// Validates serialization and deserilization of Dictionary containing DatabaseTable
-        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict
+        /// this is how we serialize and deserialize metadataprovider.EntityToDatabaseObject dict.
+        /// Temporarily ignore test for .net6 due to npgsql issue.
         /// </summary>
         [TestMethod]
+#if NET6_0
+        [Ignore]
+#endif
         public void TestDictionaryDatabaseObjectSerializationDeserialization()
         {
             InitializeObjects();
@@ -396,11 +400,25 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         {
             _options = new()
             {
+#if NET8_0_OR_GREATER
+                // ObjectConverter behavior different in .NET8 most likely due to
+                // .NET7 breaking change:
+                // - https://learn.microsoft.com/dotnet/core/compatibility/serialization/7.0/polymorphic-serialization#affected-apis
+                // Removing from converter list here does not negatively affect tests
+                // though we are still looking into whether a better solution exists.
+                // Preserving .NET6 behavior requires that Microsoft.Extensions.Configuration.Json dependency
+                // version align to .NET runtime version. eg. dependency version 6.Y.Z for .NET6 and 8.Y.Z for .NET8
+                Converters = {
+                    new DatabaseObjectConverter(),
+                    new TypeConverter()
+                }
+#else
                 Converters = {
                     new DatabaseObjectConverter(),
                     new TypeConverter(),
-                    new ObjectConverter(),
+                    new ObjectConverter()
                 }
+#endif
             };
 
             _columnDefinition = GetColumnDefinition(typeof(string), DbType.String, true, false, false, new string("John"), false);
@@ -547,8 +565,8 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
         private static void VerifyRelationShipPair(RelationShipPair expectedRelationShipPair, RelationShipPair deserializedRelationShipPair)
         {
-            int fields = typeof(RelationShipPair).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Length;
-            Assert.AreEqual(fields, 2);
+            List<FieldInfo> fieldMetadata = typeof(RelationShipPair).GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).ToList();
+            Assert.AreEqual(expected: 3, actual: fieldMetadata.Count, message: $"Unexpected field count for object type {typeof(RelationShipPair)}");
 
             Assert.IsTrue(expectedRelationShipPair.Equals(deserializedRelationShipPair));
 

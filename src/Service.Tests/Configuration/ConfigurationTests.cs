@@ -1271,6 +1271,7 @@ type Moon {
                     configValidatorLogger.Object,
                     isValidateOnly: true);
 
+            configValidator.ValidateRelationshipConfigCorrectness(configProvider.GetConfig());
             await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
             Assert.IsTrue(configValidator.ConfigValidationExceptions.IsNullOrEmpty());
         }
@@ -1337,6 +1338,7 @@ type Moon {
 
             ILoggerFactory mockLoggerFactory = TestHelper.ProvisionLoggerFactory();
 
+            configValidator.ValidateRelationshipConfigCorrectness(configProvider.GetConfig());
             await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
 
             Assert.IsTrue(configValidator.ConfigValidationExceptions.Any());
@@ -1418,6 +1420,7 @@ type Moon {
 
             try
             {
+                configValidator.ValidateRelationshipConfigCorrectness(configProvider.GetConfig());
                 await configValidator.ValidateEntitiesMetadata(configProvider.GetConfig(), mockLoggerFactory);
             }
             catch

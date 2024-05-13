@@ -58,7 +58,7 @@ public class DabCacheService
         string cacheKey = CreateCacheKey(queryMetadata);
         JsonElement? result = await _cache.GetOrSetAsync(
                key: cacheKey,
-               async (FusionCacheFactoryExecutionContext<JsonElement> ctx, CancellationToken ct) =>
+               async (FusionCacheFactoryExecutionContext<JsonElement?> ctx, CancellationToken ct) =>
                {
                    // Need to handle undesirable results like db errors or null.
                    JsonElement? result = await queryExecutor.ExecuteQueryAsync(

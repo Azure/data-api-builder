@@ -9,6 +9,8 @@ using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
+using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders.Generator;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
@@ -53,7 +55,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem, QueryEngineFactory queryEngineFactory = null)
         {
             _fileSystem = fileSystem;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
@@ -64,6 +66,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             if (cosmosDb is null)
             {
+                // Generate the schema from the data
+
+                IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(DatabaseType.CosmosDB_NoSQL);
+
+                queryEngine.ExecuteAsync("select * from c");
+
+                //GraphQLSchemaGenerate.GenerateGraphQLSchema(JArray item, _runtimeConfig.)
+
                 throw new DataApiBuilderException(
                     message: "No CosmosDB configuration provided but CosmosDB is the specified database.",
                     statusCode: System.Net.HttpStatusCode.InternalServerError,
@@ -364,6 +374,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         private string GraphQLSchema()
         {
+            // Cache the schema if it's already been parsed
             if (_cosmosDb.GraphQLSchema is not null)
             {
                 return _cosmosDb.GraphQLSchema;

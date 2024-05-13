@@ -26,6 +26,7 @@ using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
@@ -100,10 +101,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // If authorization fails, an exception will be thrown and request execution halts.
             AuthorizeMutation(context, parameters, entityName, mutationOperation);
 
-            // Multiple create mutation request is validated to ensure that the request is valid semantically.
             string inputArgumentName = IsPointMutation(context) ? MutationBuilder.ITEM_INPUT_ARGUMENT_NAME : MutationBuilder.ARRAY_INPUT_ARGUMENT_NAME;
-            if (parameters.TryGetValue(inputArgumentName, out object? param) && mutationOperation is EntityActionOperation.Create)
+            if (_runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled() &&
+                parameters.TryGetValue(inputArgumentName, out object? param) &&
+                mutationOperation is EntityActionOperation.Create)
             {
+                // Multiple create mutation request is validated to ensure that the request is valid semantically.
                 IInputField schemaForArgument = context.Selection.Field.Arguments[inputArgumentName];
                 MultipleMutationEntityInputValidationContext multipleMutationEntityInputValidationContext = new(
                     entityName: entityName,
@@ -517,7 +520,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                string roleName = GetHttpContext().Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                if (!GetHttpContext().Request.Headers.TryGetValue(AuthorizationResolver.CLIENT_ROLE_HEADER, out StringValues headerValues) && headerValues.Count != 1)
+                {
+                    throw new DataApiBuilderException(
+                            message: $"No role found.",
+                            statusCode: HttpStatusCode.Forbidden,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.AuthorizationCheckFailed);
+                }
+
+                string roleName = headerValues.ToString();
                 bool isReadPermissionConfiguredForRole = _authorizationResolver.AreRoleAndOperationDefinedForEntity(context.EntityName, roleName, EntityActionOperation.Read);
                 bool isDatabasePolicyDefinedForReadAction = false;
                 JsonDocument? selectOperationResponse = null;
@@ -2034,7 +2045,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         {
             string inputArgumentName = MutationBuilder.ITEM_INPUT_ARGUMENT_NAME;
             string clientRole = AuthorizationResolver.GetRoleOfGraphQLRequest(context);
-            if (mutationOperation is EntityActionOperation.Create)
+            if (mutationOperation is EntityActionOperation.Create && _runtimeConfigProvider.GetConfig().IsMultipleCreateOperationEnabled())
             {
                 if (!IsPointMutation(context))
                 {

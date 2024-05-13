@@ -22,6 +22,27 @@ namespace Azure.DataApiBuilder.Core.AuthenticationHelpers.AuthenticationSimulato
 /// </summary>
 public class SimulatorAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+#if NET8_0_OR_GREATER
+    /// <summary>
+    /// Constructor for the SimulatorAuthenticationHandler.
+    /// Note the parameters are required by the base class.
+    /// </summary>
+    /// <param name="runtimeConfigProvider">Runtime configuration provider.</param>
+    /// <param name="options">Simulator authentication options.</param>
+    /// <param name="logger">Logger factory.</param>
+    /// <param name="encoder">URL encoder.</param>
+    /// <param name="clock">System clock.</param>
+    public SimulatorAuthenticationHandler(
+        RuntimeConfigProvider runtimeConfigProvider,
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder)
+        // ISystemClock is obsolete in .NET 8.0 and later
+        // https://learn.microsoft.com/dotnet/core/compatibility/aspnet-core/8.0/isystemclock-obsolete
+        : base(options, logger, encoder)
+    {
+    }
+#else
     /// <summary>
     /// Constructor for the SimulatorAuthenticationHandler.
     /// Note the parameters are required by the base class.
@@ -36,10 +57,10 @@ public class SimulatorAuthenticationHandler : AuthenticationHandler<Authenticati
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        ISystemClock clock
-        ) : base(options, logger, encoder, clock)
+        ISystemClock clock) : base(options, logger, encoder, clock)
     {
     }
+#endif
 
     /// <summary>
     /// Gets any authentication data for a request. When a client role header is present,

@@ -143,8 +143,85 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Based on the relationship metadata involving referenced and
         /// referencing columns of a foreign key, add the join predicates
-        /// to the subquery Query structure created for the given target entity Name
-        /// and related source alias.
+        /// to the subquery QueryStructure created for the given target's entity name
+        /// and related target table source alias (name of table used in subquery).
+        /// There are only a couple of options for the foreign key - we only use the
+        /// valid foreign key definition. It is guaranteed at least one fk definition
+        /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
+        /// </summary>
+        /// <param name="fkLookupKey">{entityName, relationshipName} used to lookup foreign key metadata.</param>
+        /// <param name="targetEntityName">Related(target) entity's name.</param>
+        /// <param name="subqueryTargetTableAlias">The alias assigned for the underlying source of this related entity.</param>
+        /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
+        public void AddJoinPredicatesForRelationship(
+            EntityRelationshipKey fkLookupKey,
+            string targetEntityName,
+            string subqueryTargetTableAlias,
+            BaseSqlQueryStructure subQuery)
+        {
+            if (string.Equals(fkLookupKey.EntityName, targetEntityName))
+            {
+                AddJoinPredicatesForSelfJoinedEntity(
+                    fkLookupKey: fkLookupKey,
+                    subqueryTargetTableAlias: subqueryTargetTableAlias,
+                    subQuery: subQuery);
+            }
+            else
+            {
+                AddJoinPredicatesForRelatedEntity(
+                    targetEntityName: targetEntityName,
+                    relatedSourceAlias: subqueryTargetTableAlias,
+                    subQuery: subQuery);
+            }
+        }
+
+        /// <summary>
+        /// Add query predicates for self-joined entity.
+        /// Example pseudo tsql to illustrate what the predicates enable:
+        /// SELECT [columns] FROM [SqlQueryStructure.SourceAlias] // table0
+        /// JSON_QUERY(...) AS [fkLookupKey.relationshipName] // RelationshipName represents the sub query.
+        /// OUTER APPLY (
+        ///     // The param 'subQuery' captures the contents of this OUTER APPLY
+        ///     SELECT [columns] FROM [functionParams.subqueryTargetTableAlias] // table1
+        ///     WHERE [table0].[fk.SourceColumn] = [table1].[fk.TargetColumn]
+        /// )
+        /// WHERE [table0].[fk.SourceColumn] = [@param value from request]
+        ///
+        /// Process self-joining entity relationship. Excludes support for processing
+        /// self-joining relationships in GraphQL query filters (nested filter entities).
+        /// </summary>
+        /// <param name="fkLookupKey">{entityName, relationshipName} used to lookup foreign key metadata.</param>
+        /// <param name="subqueryTargetTableAlias">The table alias of the target entity/ subject of the sub-query.</param>
+        /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
+        /// <exception cref="DataApiBuilderException">Raised when an entity's relationship config is not found in the
+        /// metadata provider.</exception>
+        private void AddJoinPredicatesForSelfJoinedEntity(
+            EntityRelationshipKey fkLookupKey,
+            string subqueryTargetTableAlias,
+            BaseSqlQueryStructure subQuery)
+        {
+            if (MetadataProvider.RelationshipToFkDefinition.TryGetValue(key: fkLookupKey, out ForeignKeyDefinition? fkDef))
+            {
+                subQuery.Predicates.AddRange(
+                        CreateJoinPredicates(
+                            leftTableAlias: SourceAlias,
+                            leftColumnNames: fkDef.ResolveSourceColumns(),
+                            rightTableAlias: subqueryTargetTableAlias,
+                            rightColumnNames: fkDef.ResolveTargetColumns()));
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Could not find relationship between self-joined entity: {EntityName}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Based on the relationship metadata involving referenced and
+        /// referencing columns of a foreign key, add the join predicates
+        /// to the subquery Query structure created for linking objects.
         /// There are only a couple of options for the foreign key - we only use the
         /// valid foreign key definition. It is guaranteed at least one fk definition
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
@@ -174,8 +251,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     out foreignKeyDefinitions))
             {
                 Dictionary<DatabaseObject, string> associativeTableAndAliases = new();
-                // For One-One and One-Many, not all fk definitions would be valid
-                // but at least 1 will be.
+                // For One-One and One-Many, not all fk definitions are valid
+                // and at least 1 will be.
                 // Identify the side of the relationship first, then check if its valid
                 // by ensuring the referencing and referenced column count > 0
                 // before adding the predicates.

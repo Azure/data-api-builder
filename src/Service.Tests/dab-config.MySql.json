@@ -821,6 +821,32 @@
         }
       }
     },
+    "BookNF": {
+      "source": {
+        "object": "books",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "bookNF",
+          "plural": "booksNF"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    },
     "BookWebsitePlacement": {
       "source": {
         "object": "book_website_placements",
@@ -2263,6 +2289,42 @@
           ]
         }
       ]
+    },
+    "dbo_DimAccount": {
+      "source": "dimaccount",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read",
+            "create",
+            "update",
+            "delete"
+          ]
+        }
+      ],
+      "relationships": {
+        "parent_account": {
+          "cardinality": "one",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "ParentAccountKey"
+          ],
+          "target.fields": [
+            "AccountKey"
+          ]
+        },
+        "child_accounts": {
+          "cardinality": "many",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "AccountKey"
+          ],
+          "target.fields": [
+            "ParentAccountKey"
+          ]
+        }
+      }
     }
   }
 }

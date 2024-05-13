@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Net;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.Tests.SqlTests;
@@ -374,6 +375,23 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
 
         #endregion
 
+        #region Order determination test for relationships having source/target entities backed by same database table
+
+        /// <summary>
+        /// Test to validate that when multiple-create is executed for a relationship for which source and target entities are backed by the
+        /// same database table, we throw an appropriate exception because DAB currently does not support multiple-create for such relationships.
+        /// </summary>
+        [TestMethod]
+        public void TestExceptionForSelfReferencingRelationships()
+        {
+            // Identical source and target entities backed by the same database table 'books'.
+            ValidateExceptionForSelfReferencingRelationship(sourceEntityName: "Book", targetEntityName: "Book");
+
+            // Different source and target entities backed by the same database table 'books'.
+            ValidateExceptionForSelfReferencingRelationship(sourceEntityName: "Book", targetEntityName: "BookNF");
+        }
+        #endregion
+
         #region Helpers
         private static void ValidateReferencingEntityForRelationship(
             string sourceEntityName,
@@ -394,6 +412,35 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
                 targetNodeValue: null,
                 nestingLevel: 1);
             Assert.AreEqual(expectedReferencingEntityName, actualReferencingEntityName);
+        }
+
+        /// <summary>
+        /// Helper method to validate the exception when multiple-create is executed for a self-referencing relationship where source and target
+        /// entities are backed by the same database table.
+        /// </summary>
+        /// <param name="sourceEntityName">Name of the source entity.</param>
+        /// <param name="targetEntityName">NAme of the target entity.</param>
+        private static void ValidateExceptionForSelfReferencingRelationship(
+            string sourceEntityName,
+            string targetEntityName)
+        {
+            // Setup mock IMiddlewareContext.
+            IMiddlewareContext context = SetupMiddlewareContext();
+            DataApiBuilderException ex = Assert.ThrowsException<DataApiBuilderException>(() => MultipleCreateOrderHelper.GetReferencingEntityName(
+                relationshipName: "testRelationship", // Don't need relationship name while testing determination of referencing entity using metadata.
+                context: context,
+                sourceEntityName: sourceEntityName,
+                targetEntityName: targetEntityName,
+                metadataProvider: _sqlMetadataProvider,
+                columnDataInSourceBody: new(),
+                targetNodeValue: null,
+                nestingLevel: 1));
+
+            // Assert that the exception is as expected.
+            Assert.AreEqual(HttpStatusCode.BadRequest, ex.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.NotSupported, ex.SubStatusCode);
+            Assert.AreEqual($"Multiple-create for relationship: testRelationship at level: 1 is not supported because the source entity: {sourceEntityName} and" +
+                $" the target entity: {targetEntityName} are backed by the same database table.", ex.Message);
         }
         #endregion
 

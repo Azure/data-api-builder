@@ -3674,6 +3674,58 @@
           "linking.target.fields": []
         }
       }
+    },
+    "dbo_DimAccount": {
+      "source": {
+        "object": "DimAccount",
+        "type": "table"
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "dbo_DimAccount",
+          "plural": "dbo_DimAccounts"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ],
+      "relationships": {
+        "parent_account": {
+          "cardinality": "one",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "ParentAccountKey"
+          ],
+          "target.fields": [
+            "AccountKey"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        },
+        "child_accounts": {
+          "cardinality": "many",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "AccountKey"
+          ],
+          "target.fields": [
+            "ParentAccountKey"
+          ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
+      }
     }
   }
 }

@@ -58,6 +58,7 @@ DROP TABLE IF EXISTS fte_data;
 DROP TABLE IF EXISTS intern_data;
 DROP TABLE IF EXISTS books_sold;
 DROP TABLE IF EXISTS default_with_function_table;
+DROP TABLE IF EXISTS [DimAccount]
 DROP TABLE IF EXISTS users;
 DROP TABLE IF EXISTS user_profiles;
 DROP SCHEMA IF EXISTS [foo];
@@ -359,6 +360,20 @@ CREATE TABLE default_with_function_table
     default_date_string DATETIME DEFAULT '1999-01-08 10:23:54'
 )
 
+CREATE TABLE [dbo].[DimAccount] (
+    [AccountKey]                    [INT]           IDENTITY(1, 1) NOT NULL,
+    [ParentAccountKey]              [INT]           NULL,
+    CONSTRAINT [PK_DimAccount]
+        PRIMARY KEY CLUSTERED ([AccountKey] ASC)
+);
+
+ALTER TABLE [dbo].[DimAccount] WITH CHECK
+ADD CONSTRAINT [FK_DimAccount_DimAccount]
+    FOREIGN KEY ([ParentAccountKey])
+    REFERENCES [dbo].[DimAccount] ([AccountKey]);
+
+ALTER TABLE [dbo].[DimAccount] CHECK CONSTRAINT [FK_DimAccount_DimAccount];
+
 CREATE TABLE users (
     userid INT PRIMARY KEY IDENTITY,
     username NVARCHAR(50) UNIQUE,
@@ -635,6 +650,14 @@ INSERT INTO books_sold(id, book_name, last_sold_on) values(1, 'Awesome Book', GE
 
 INSERT INTO users (username, email) VALUES ('john_doe', 'john.doe@example.com'), ('jane_smith', 'jane.smith@example.com');
 INSERT INTO user_profiles (username, profilepictureurl, userid) VALUES ('john_doe', 'https://example.com/profiles/john_doe.jpg', 1), ('jane_smith', 'https://example.com/profiles/jane_smith.jpg', 2);
+
+SET IDENTITY_INSERT DimAccount ON
+INSERT INTO DimAccount(AccountKey, ParentAccountKey)
+VALUES (1, null),
+(2, 1),
+(3, 2),
+(4, 2);
+SET IDENTITY_INSERT DimAccount OFF
 
 EXEC('CREATE VIEW books_view_all AS SELECT * FROM dbo.books');
 EXEC('CREATE VIEW books_view_with_mapping AS SELECT * FROM dbo.books');

@@ -94,7 +94,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
             // in an authenticated requests.
             if (isAuthenticatedRequest)
             {
-                clientDefinedRole = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                clientDefinedRole = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
             }
             else
             {

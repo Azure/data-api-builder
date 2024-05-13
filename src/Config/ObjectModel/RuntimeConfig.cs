@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
@@ -135,7 +136,9 @@ public record RuntimeConfig
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
-    private Dictionary<string, string> _entityNameToDataSourceName;
+    private Dictionary<string, string> _entityNameToDataSourceName = new();
+
+    private Dictionary<string, string> _entityPathNameToEntityName = new();
 
     /// <summary>
     /// List of all datasources.
@@ -152,6 +155,16 @@ public record RuntimeConfig
     public IEnumerable<KeyValuePair<string, DataSource>> GetDataSourceNamesToDataSourcesIterator()
     {
         return _dataSourceNameToDataSource.AsEnumerable();
+    }
+
+    public bool TryAddEntityPathNameToEntityName(string entityPathName, string entityName)
+    {
+        return _entityPathNameToEntityName.TryAdd(entityPathName, entityName);
+    }
+
+    public bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
+    {
+        return _entityPathNameToEntityName.TryGetValue(entityPathName, out entityName);
     }
 
     /// <summary>
@@ -196,7 +209,7 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
+                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replaceEnvVar: true))
                 {
                     try
                     {

@@ -4,7 +4,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.IdentityModel.Tokens.Jwt;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using System.Net;
@@ -75,6 +74,12 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
 
                             services.AddSingleton(runtimeConfigProvider);
 
+                            // https://github.com/dotnet/aspnetcore/issues/53332#issuecomment-2091861884
+                            // AddRouting() adds required services that .NET8 does not add by default
+                            // Without this, .NET8 fails to resolve the required services for the middleware
+                            // and tests fail.
+                            services.AddRouting();
+
                             if (useAuthorizationMiddleware)
                             {
                                 services.AddAuthorization();
@@ -135,6 +140,10 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                             services.AddAuthentication(defaultScheme: JwtBearerDefaults.AuthenticationScheme)
                                 .AddJwtBearer(options =>
                                 {
+                                    // .NET8 change that required and is compatible with .NET6.
+                                    // Required so that legacy URL claim types are used.
+                                    // https://github.com/dotnet/aspnetcore/issues/52075#issuecomment-1815584839
+                                    options.MapInboundClaims = false;
                                     options.Audience = AUDIENCE;
                                     options.TokenValidationParameters = new()
                                     {
@@ -165,7 +174,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Authentication.Helpers
                         })
                         .Configure(app =>
                         {
-                            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
                             app.UseAuthentication();
                             app.UseClientRoleHeaderAuthenticationMiddleware();
 

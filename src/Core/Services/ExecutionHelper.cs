@@ -318,9 +318,9 @@ namespace Azure.DataApiBuilder.Service.Services
                 SupportedHotChocolateTypes.SHORT_TYPE => ((IntValueNode)value).ToInt16(),
                 SupportedHotChocolateTypes.INT_TYPE => ((IntValueNode)value).ToInt32(),
                 SupportedHotChocolateTypes.LONG_TYPE => ((IntValueNode)value).ToInt64(),
-                SupportedHotChocolateTypes.SINGLE_TYPE => ((FloatValueNode)value).ToSingle(),
-                SupportedHotChocolateTypes.FLOAT_TYPE => ((FloatValueNode)value).ToDouble(),
-                SupportedHotChocolateTypes.DECIMAL_TYPE => ((FloatValueNode)value).ToDecimal(),
+                SupportedHotChocolateTypes.SINGLE_TYPE => value is IntValueNode intValueNode ? intValueNode.ToSingle() : ((FloatValueNode)value).ToSingle(),
+                SupportedHotChocolateTypes.FLOAT_TYPE => value is IntValueNode intValueNode ? intValueNode.ToDouble() : ((FloatValueNode)value).ToDouble(),
+                SupportedHotChocolateTypes.DECIMAL_TYPE => value is IntValueNode intValueNode ? intValueNode.ToDecimal() : ((FloatValueNode)value).ToDecimal(),
                 SupportedHotChocolateTypes.UUID_TYPE => Guid.TryParse(value.Value!.ToString(), out Guid guidValue) ? guidValue : value.Value,
                 _ => value.Value
             };

@@ -24,7 +24,7 @@ If you find your issue already exists, make relevant comments and add your [reac
 ### Azure services support tickets
 If your solution hosts Data API builder containers using Azure Static Web Apps, Azure Container Apps, Azure Container Instances, Azure Kubernetes Services, or Azure Web Apps for Containers, then the cause of your issue could be that service. If you wish to open a support ticket with that service, do so in your [Azure portal](https://learn.microsoft.com/en-us/azure/azure-portal/supportability/how-to-create-azure-support-request). 
 
-### Azure database support tickets
+### Azure Database support tickets
 
 If your solution uses an Azure database, including Azure SQL, Azure Cosmos DB, Azure Database for PostgreSQL, Azure Database for MySQL, and Azure SQL Data Warehouse, then the cause of your issue could be with that database. If you wish to open a support ticket with that database, do so in your [Azure portal](https://learn.microsoft.com/en-us/azure/azure-portal/supportability/how-to-create-azure-support-request).
 

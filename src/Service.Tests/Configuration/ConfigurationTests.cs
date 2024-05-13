@@ -653,10 +653,63 @@ type Moon {
         }
 
         /// <summary>
+        /// Validates that DAB supplements the PgSQL database connection strings with the property "ApplicationName" and
+        /// 1. Adds the property/value "Application Name=dab_oss_Major.Minor.Patch" when the env var DAB_APP_NAME_ENV is not set.
+        /// 2. Adds the property/value "Application Name=dab_hosted_Major.Minor.Patch" when the env var DAB_APP_NAME_ENV is set to "dab_hosted".
+        /// (DAB_APP_NAME_ENV is set in hosted scenario or when user sets the value.)
+        /// NOTE: "#pragma warning disable format" is used here to avoid removing intentional, readability promoting spacing in DataRow display names.
+        /// </summary>
+        /// <param name="configProvidedConnString">connection string provided in the config.</param>
+        /// <param name="expectedDabModifiedConnString">Updated connection string with Application Name.</param>
+        /// <param name="dabEnvOverride">Whether DAB_APP_NAME_ENV is set in environment. (Always present in hosted scenario or if user supplies value.)</param>
+        [DataTestMethod]
+        [DataRow("Host=foo;Username=testuser;", "Host=foo;Username=testuser;Application Name=", false, DisplayName = "[PGSQL]:DAB adds version 'dab_oss_major_minor_patch' to non-provided connection string property 'ApplicationName']")]
+        [DataRow("Host=foo;Username=testuser;", "Host=foo;Username=testuser;Application Name=", true, DisplayName = "[PGSQL]:DAB adds DAB_APP_NAME_ENV value 'dab_hosted' and version suffix '_major_minor_patch' to non-provided connection string property 'ApplicationName'.]")]
+        [DataRow("Host=foo;Username=testuser;Application Name=UserAppName", "Host=foo;Username=testuser;Application Name=UserAppName,", false, DisplayName = "[PGSQL]:DAB appends version 'dab_oss_major_minor_patch' to user supplied 'Application Name' property.]")]
+        [DataRow("Host=foo;Username=testuser;Application Name=UserAppName", "Host=foo;Username=testuser;Application Name=UserAppName,", true, DisplayName = "[PGSQL]:DAB appends version string 'dab_hosted' and version suffix '_major_minor_patch' to user supplied 'ApplicationName' property.]")]
+        public void PgSqlConnStringSupplementedWithAppNameProperty(
+            string configProvidedConnString,
+            string expectedDabModifiedConnString,
+            bool dabEnvOverride)
+        {
+            // Explicitly set the DAB_APP_NAME_ENV to null to ensure that the DAB_APP_NAME_ENV is not set.
+            if (dabEnvOverride)
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, "dab_hosted");
+            }
+            else
+            {
+                Environment.SetEnvironmentVariable(ProductInfo.DAB_APP_NAME_ENV, null);
+            }
+
+            // Resolve assembly version. Not possible to do in DataRow as DataRows expect compile-time constants.
+            string resolvedAssemblyVersion = ProductInfo.GetDataApiBuilderUserAgent();
+            expectedDabModifiedConnString += resolvedAssemblyVersion;
+
+            RuntimeConfig runtimeConfig = CreateBasicRuntimeConfigWithNoEntity(DatabaseType.PostgreSQL, configProvidedConnString);
+
+            // Act
+            bool configParsed = RuntimeConfigLoader.TryParseConfig(
+                runtimeConfig.ToJson(),
+                out RuntimeConfig updatedRuntimeConfig,
+                replaceEnvVar: true);
+
+            // Assert
+            Assert.AreEqual(
+                expected: true,
+                actual: configParsed,
+                message: "Runtime config unexpectedly failed parsing.");
+            Assert.AreEqual(
+                expected: expectedDabModifiedConnString,
+                actual: updatedRuntimeConfig.DataSource.ConnectionString,
+                message: "DAB did not properly set the 'Application Name' connection string property.");
+        }
+
+        /// <summary>
         /// Validates that DAB doesn't append nor modify
         /// - the 'Application Name' or 'App' properties in MySQL database connection strings.
         /// - the 'Application Name' property in
-        /// PostgreSQL, CosmosDB_PostgreSQl, CosmosDB_NoSQL database connection strings.
+        /// CosmosDB_PostgreSQL, CosmosDB_NoSQL database connection strings.
         /// This test validates that this behavior holds true when the DAB_APP_NAME_ENV environment variable
         /// - is set (dabEnvOverride==true) -> (DAB hosted)
         /// - is not set (dabEnvOverride==false) -> (DAB OSS).
@@ -673,10 +726,6 @@ type Moon {
         [DataRow(DatabaseType.MySQL, "Something;"                                 , "Something;"                                 , true , DisplayName = "[MYSQL|DAB hosted]:No addition of 'Application Name' or 'App' property to connection string.")]
         [DataRow(DatabaseType.MySQL, "Something;Application Name=CustAppName;"    , "Something;Application Name=CustAppName;"    , true , DisplayName = "[MYSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
         [DataRow(DatabaseType.MySQL, "Something1;App=CustAppName;Something2;"     , "Something1;App=CustAppName;Something2;"     , true, DisplayName = "[MySQL|DAB hosted]:No modification of customer overridden 'App' property.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[PGSQL|DAB OSS]:No addition of 'Application Name' property to connection string.]")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[PGSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[PGSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]
-        [DataRow(DatabaseType.PostgreSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", true , DisplayName = "[PGSQL|DAB hosted]:No modification of customer overridden 'Application Name' property.")]
         [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , false, DisplayName = "[COSMOSDB_NOSQL|DAB OSS]:No addition of 'Application Name' property to connection string.")]
         [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;Application Name=CustAppName;", "Something;Application Name=CustAppName;", false, DisplayName = "[COSMOSDB_NOSQL|DAB OSS]:No modification of customer overridden 'Application Name' property.")]
         [DataRow(DatabaseType.CosmosDB_NoSQL, "Something;"                             , "Something;"                             , true , DisplayName = "[COSMOSDB_NOSQL|DAB hosted]:No addition of 'Application Name' property to connection string.")]

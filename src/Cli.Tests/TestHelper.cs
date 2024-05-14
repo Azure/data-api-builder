@@ -160,6 +160,68 @@ namespace Cli.Tests
           ""entities"": {}";
 
         /// <summary>
+        /// Configuration with unresolved environment variable references on
+        /// properties of various data types (string, enum, bool, int).
+        /// </summary>
+        public const string CONFIG_ENV_VARS = @"
+            {
+               ""data-source"": {
+              ""database-type"": ""@env('database-type')"",
+              ""connection-string"": ""@env('connection-string')""
+            },
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": false
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""StaticWebApps""
+                  }
+              }
+          },
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book"",
+                  ""parameters"": {
+                      ""param1"": ""@env('sp_param1_int')"",
+                      ""param2"": ""hello"",
+                      ""param3"": ""@env('sp_param3_bool')""
+                  }
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                    ""methods"": [
+                      ""post""
+                    ]
+                  },
+                  ""graphql"": {
+                    ""operation"": ""mutation""
+                      }
+                    }
+                  }
+          }";
+
+        /// <summary>
         /// A minimal valid config json without any entities. This config string is used in unit tests.
         /// </summary>
         public const string INITIAL_CONFIG = $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{RUNTIME_SECTION}}}";

@@ -259,9 +259,6 @@ namespace Azure.DataApiBuilder.Service.Tests.Unittests
         /// Temporarily ignore test for .net6 due to npgsql issue.
         /// </summary>
         [TestMethod]
-#if NET6_0
-        [Ignore]
-#endif
         public void TestDictionaryDatabaseObjectSerializationDeserialization()
         {
             InitializeObjects();

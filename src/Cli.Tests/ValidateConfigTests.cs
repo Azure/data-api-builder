@@ -160,8 +160,11 @@ public class ValidateConfigTests
 
         // Assert
         string loggerOutput = writer.ToString();
+        Assert.IsFalse(
+            condition: loggerOutput.Contains("Failed to validate config against schema due to"),
+            message: "Unexpected errors encountered when validating config schema in RuntimeConfigValidator::ValidateConfigSchema(...).");
         Assert.IsTrue(
             condition: loggerOutput.Contains("The config satisfies the schema requirements."),
-            message: "Unsuccessful execution of RuntimeConfigValidator::ValidateConfigSchema(...).");
+            message: "RuntimeConfigValidator::ValidateConfigSchema(...) didn't communicate successful config schema validation.");
     }
 }

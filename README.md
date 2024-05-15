@@ -5,7 +5,7 @@
 [![Documentation](https://img.shields.io/badge/docs-website-%23fc0)](https://learn.microsoft.com/azure/data-api-builder/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Latest stable version of Data API builder is **0.11.132** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
+Latest stable version of Data API builder is **1.1.7** [What's new?](https://learn.microsoft.com/azure/data-api-builder/whats-new)
 
 ## Community
 

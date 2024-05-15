@@ -55,7 +55,7 @@ $latestBlock = @'
     "releaseType": "${releaseType}",
     "releaseDate": "${releaseDate}",
     "files": {
-        "linux-x64-net6":{
+        "linux-x64":{
             "url": "$($frameworkPlatformDownloadMetadata["net6.0_linux-x64"])",
             "sha": "$($frameworkPlatformFileHashMetadata["net6.0_linux-x64"])"
         },
@@ -63,7 +63,7 @@ $latestBlock = @'
             "url": "$($frameworkPlatformDownloadMetadata["net8.0_linux-x64"])",
             "sha": "$($frameworkPlatformFileHashMetadata["net8.0_linux-x64"])"
         },
-        "win-x64-net6":{
+        "win-x64":{
             "url": "$($frameworkPlatformDownloadMetadata["net6.0_win-x64"])",
             "sha": "$($frameworkPlatformFileHashMetadata["net6.0_win-x64"])"
         },
@@ -71,7 +71,7 @@ $latestBlock = @'
             "url": "$($frameworkPlatformDownloadMetadata["net8.0_win-x64"])",
             "sha": "$($frameworkPlatformFileHashMetadata["net8.0_win-x64"])"
         },
-        "osx-x64-net6":{
+        "osx-x64":{
             "url": "$($frameworkPlatformDownloadMetadata["net6.0_osx-x64"])",
             "sha": "$($frameworkPlatformFileHashMetadata["net6.0_osx-x64"])"
         },

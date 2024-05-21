@@ -155,7 +155,7 @@ public record PaginationOptions
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }
-        else if(maxResponseSize > Int32.MaxValue)
+        else if (maxResponseSize > Int32.MaxValue)
         {
             throw new DataApiBuilderException(
                 message: "Pagination options invalid.Max response size cannt exceed max int value.",

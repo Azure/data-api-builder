@@ -495,6 +495,11 @@ public record RuntimeConfig
         return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
     }
 
+    public int MaxReponseSize()
+    {
+        return Runtime?.Pagination?.MaxResponseSize ?? PaginationOptions.MAX_RESPONSE_SIZE;
+    }
+
     /// <summary>
     /// Get the pagination limit from the runtime configuration.
     /// </summary>

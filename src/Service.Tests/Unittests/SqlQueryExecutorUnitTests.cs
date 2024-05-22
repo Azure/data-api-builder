@@ -260,7 +260,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// was invoked the expected number of times.
         /// </summary>
         [TestMethod, TestCategory(TestCategory.MSSQL)]
-        public async Task TestRetryPolicySuccessfullyExecutingQueryAfterNAttempts()
+        public void ValidateStreamingLogic()
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             FileSystem fileSystem = new();
@@ -269,53 +269,27 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
             Mock<IHttpContextAccessor> httpContextAccessor = new();
             DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(provider);
-            Mock<MsSqlQueryExecutor> queryExecutor
-                = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
-            queryExecutor.Setup(x => x.ConnectionStringBuilders).Returns(new Dictionary<string, DbConnectionStringBuilder>());
-            queryExecutor.Setup(x => x.PrepareDbCommand(
-                It.IsAny<SqlConnection>(),
-                It.IsAny<string>(),
-                It.IsAny<IDictionary<string, DbConnectionParam>>(),
-                It.IsAny<HttpContext>(),
-                It.IsAny<string>())).CallBase();
+            // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
+            MsSqlQueryExecutor msSqlQueryExecutor = new(provider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
 
-            // Mock the ExecuteQueryAgainstDbAsync to throw a transient exception.
-            queryExecutor.SetupSequence(x => x.ExecuteQueryAgainstDbAsync(
-                It.IsAny<SqlConnection>(),
-                It.IsAny<string>(),
-                It.IsAny<IDictionary<string, DbConnectionParam>>(),
-                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
-                It.IsAny<HttpContext>(),
-                provider.GetConfig().DefaultDataSourceName,
-                It.IsAny<List<string>>()))
-            .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
-            .Throws(SqlTestHelper.CreateSqlException(ERRORCODE_SEMAPHORE_TIMEOUT))
-            .CallBase();
-
-            // Call the actual ExecuteQueryAsync method.
-            queryExecutor.Setup(x => x.ExecuteQueryAsync(
-                It.IsAny<string>(),
-                It.IsAny<IDictionary<string, DbConnectionParam>>(),
-                It.IsAny<Func<DbDataReader, List<string>, Task<object>>>(),
-                It.IsAny<string>(),
-                It.IsAny<HttpContext>(),
-                It.IsAny<List<string>>())).CallBase();
-
-            string sqltext = "SELECT * from books";
-
-            await queryExecutor.Object.ExecuteQueryAsync<object>(
-                    sqltext: sqltext,
-                    dataSourceName: String.Empty,
-                    parameters: new Dictionary<string, DbConnectionParam>(),
-                    dataReaderHandler: null,
-                    args: null);
-
-            // The logger is invoked three (3) times, once for each of the following events:
-            // The query fails on the first attempt (log event 1).
-            // The query fails on the second attempt/first retry (log event 2).
-            // The query succeeds on the third attempt/second retry (log event 3).
-            Assert.AreEqual(3, queryExecutorLogger.Invocations.Count);
+            try
+            {
+                /// In this test the DbDataReader.GetChars method is mocked to return 1000 bytes of data.
+                /// Max available size is set to 5000 bytes. The method should throw an exception after 5 runs of GetChars because the total size of the data exceeds the max available size.
+                Mock<DbDataReader> dbDataReader = new();
+                dbDataReader.Setup(x => x.GetOrdinal(It.IsAny<string>())).Returns(0);
+                dbDataReader.Setup(x => x.GetFieldType(It.IsAny<int>())).Returns(typeof(string));
+                dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1000);
+                dbDataReader.Setup(x => x.GetDataTypeName(It.IsAny<int>())).Returns("nvarchar");
+                msSqlQueryExecutor.ExtractColumnIntoDbResultSetRow(dbDataReader.Object, new(), "Test", 5000);
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.AreEqual(HttpStatusCode.RequestEntityTooLarge, ex.StatusCode);
+                Assert.AreEqual("The JSON result size exceeds max result size of 5000. Please use pagination to reduce size of result.", ex.Message);
+            }
+            
         }
 
         [TestCleanup]

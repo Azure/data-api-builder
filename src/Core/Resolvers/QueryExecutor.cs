@@ -429,7 +429,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 continue;
                             }
 
-                            currentSize = currentSize + ExtractColumnIntoDbResultSetRow(dbDataReader, dbResultSetRow, columnName, (int)(_maxBufferSize - currentSize));
+                            currentSize = currentSize + ExtractColumnIntoDbResultSetRow(dbDataReader, dbResultSetRow, columnName, currentSize);
                         }
                     }
 
@@ -464,7 +464,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 continue;
                             }
 
-                            currentSize = currentSize + ExtractColumnIntoDbResultSetRow(dbDataReader, dbResultSetRow, columnName, (int)(_maxBufferSize - currentSize));
+                            currentSize = currentSize + ExtractColumnIntoDbResultSetRow(dbDataReader, dbResultSetRow, columnName, currentSize);
                         }
                     }
 
@@ -630,7 +630,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// Use the currentSize to keep track of the size of the data extracted and validate against the max buffer size.
         /// </summary>
         /// <returns>Amount of data read. Will throw if ever data read goes past max available size.</returns>
-        public static long ExtractColumnIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, string columnName, int availableSize)
+        public long ExtractColumnIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, string columnName, long offset)
         {
             int colIndex = dbDataReader.GetOrdinal(columnName);
             long dataRead = 0;
@@ -639,18 +639,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // check for large object columns
                 string dataTypeName = dbDataReader.GetDataTypeName(colIndex);
                 Type systemType = TypeHelper.GetSystemTypeFromSqlDbType(dataTypeName);
+                int availableSize = (int)(_maxBufferSize - dataRead - offset);
                 if (systemType == typeof(string))
                 {
-                    char[] buffer = new char[availableSize - dataRead];
+                    char[] buffer = new char[availableSize];
                     StringBuilder stringBuilder = new();
                     // streaming logic for text readers when reading across columns: https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/sqlclient-streaming-support
-                    long charsRead;
+                    long charsRead = 0;
+
+                    // using buffer as null gives the size of the data.
+                    long dataSize = dbDataReader.GetChars(colIndex, charsRead, null, 0, 0);
+                    ValidateSize(availableSize, dataSize);
                     do
                     {
-                        ValidateSize(availableSize, dataRead);
-
                         // read data upto the buffer limit.
-                        charsRead = dbDataReader.GetChars(colIndex, 0, buffer, 0, (int)(availableSize - dataRead));
+                        charsRead = dbDataReader.GetChars(colIndex, charsRead, buffer, 0, (int)(availableSize - dataRead));
                         dataRead = dataRead + charsRead;
 
                         stringBuilder.Append(buffer[0..(int)charsRead]);
@@ -725,12 +728,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         }
 
-        private static void ValidateSize(int maxSize, long currentSize)
+        private void ValidateSize(int availableSize, long currentSize)
         {
-            if (maxSize - currentSize <= 0)
+            if (availableSize - currentSize <= 0)
             {
                 throw new DataApiBuilderException(
-                    message: $"The JSON result size exceeds max result size of {maxSize}. Please use pagination to reduce size of result.",
+                    message: $"The JSON result size exceeds max result size of {_maxBufferSize}. Please use pagination to reduce size of result.",
                     statusCode: HttpStatusCode.RequestEntityTooLarge,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorProcessingData);
             }

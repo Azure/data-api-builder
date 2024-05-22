@@ -49,7 +49,7 @@ public record PaginationOptions
     public int? MaxResponseSize { get; init; } = null;
 
     [JsonConstructor]
-    public PaginationOptions(int? DefaultPageSize = null, int? MaxPageSize = null, int? MaxResponseSizeInput = null)
+    public PaginationOptions(int? DefaultPageSize = null, int? MaxPageSize = null, int? MaxResponseSize = null)
     {
         if (MaxPageSize is not null)
         {
@@ -73,10 +73,10 @@ public record PaginationOptions
             this.DefaultPageSize = (int)DEFAULT_PAGE_SIZE;
         }
 
-        if (MaxResponseSizeInput is not null)
+        if (MaxResponseSize is not null)
         {
-            ValidateMaxResponseSize((int)MaxResponseSizeInput);
-            MaxResponseSize = (int)MaxResponseSizeInput;
+            ValidateMaxResponseSize((int)MaxResponseSize);
+            this.MaxResponseSize = (int)MaxResponseSize;
             UserProvidedMaxResponseSize = true;
         }
         else

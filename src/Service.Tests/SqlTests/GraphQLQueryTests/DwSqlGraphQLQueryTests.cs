@@ -208,6 +208,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Get all instances of a type with nullable datetime fields
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields()
+        {
+            string msSqlQuery = $"SELECT id, title, published_date FROM books ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await TestQueryingTypeWithNullableDateTimeFields(msSqlQuery);
+        }
+
+        /// <summary>
         /// Get all instances of a type with nullable string fields
         /// </summary>
         [TestMethod]

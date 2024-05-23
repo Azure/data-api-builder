@@ -49,7 +49,8 @@ COMMIT;
 CREATE TABLE books(
     id int NOT NULL,
     title varchar(2048) NOT NULL,
-    publisher_id int NOT NULL
+    publisher_id int NOT NULL,
+    published_date datetime NULL
 );
 
 CREATE TABLE book_website_placements(
@@ -330,6 +331,8 @@ VALUES (1, 'Awesome book', 1234),
 (12, 'Time to Eat 2', 1941),
 (13, 'Before Sunrise', 1234),
 (14, 'Before Sunset', 1234);
+
+INSERT INTO books(id, title, publisher_id, published_date) VALUES (15, 'Before Sunset 2', 1234, '2023-08-21 15:11:04');
 
 INSERT INTO book_website_placements(id, book_id, price) VALUES (1, 1, 100), (2, 2, 50), (3, 3, 23), (4, 5, 33);
 

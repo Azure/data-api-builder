@@ -222,7 +222,7 @@ FROM
         [TestMethod]
         public async Task TestQueryingTypeWithNullableDateTimeFields()
         {
-            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT datetime_types FROM types_table ORDER BY id asc LIMIT 100) as table0";
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT datetime_types FROM type_table ORDER BY id asc LIMIT 100) as table0";
             await TestQueryingTypeWithNullableDateTimeFields(postgresQuery);
         }
 

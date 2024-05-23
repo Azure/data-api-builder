@@ -165,8 +165,8 @@ namespace Azure.DataApiBuilder.Service.Services
                     FloatType => fieldValue.GetDouble(), // spec
                     SingleType => fieldValue.GetSingle(),
                     DecimalType => fieldValue.GetDecimal(),
-                    DateTimeType => DateTimeOffset.Parse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
-                    DateType => DateTimeOffset.Parse(fieldValue.GetString()!),
+                    DateTimeType => DateTimeOffset.TryParse(fieldValue.GetString()!, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal, out DateTimeOffset date) ? date : null, // for DW when datetime is null it will be in "" due to stringagg parsing and hence we need to ensure parsing is correct.
+                    DateType => DateTimeOffset.TryParse(fieldValue.GetString()!, out DateTimeOffset date) ? date : null,
                     LocalTimeType => LocalTimePattern.ExtendedIso.Parse(fieldValue.GetString()!).Value,
                     ByteArrayType => fieldValue.GetBytesFromBase64(),
                     BooleanType => fieldValue.GetBoolean(), // spec

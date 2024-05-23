@@ -108,8 +108,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // If the column is not a subquery column and is not a string, cast it to string
                 if (!subQueryColumn && structure.GetColumnSystemType(column.ColumnName) != typeof(string))
                 {
-                    // 121 ensures the time precision is kept:https://learn.microsoft.com/en-us/sql/t-sql/data-types/date-transact-sql?view=fabric&preserve-view=true
-                    col_value = $"CONVERT(NVARCHAR(MAX), [{col_value}], 121)";
+                    col_value = $"CONVERT(NVARCHAR(MAX), [{col_value}])";
 
                     Type col_type = structure.GetColumnSystemType(column.ColumnName);
 

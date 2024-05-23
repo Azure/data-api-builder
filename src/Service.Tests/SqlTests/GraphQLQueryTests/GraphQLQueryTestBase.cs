@@ -991,18 +991,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
-        /// Get all instances of a type with nullable datetime fields
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
         /// </summary>
         [TestMethod]
         public async Task TestQueryingTypeWithNullableDateTimeFields(string dbQuery)
         {
-            string graphQLQueryName = "books";
+            string graphQLQueryName = "supportedTypes";
             string graphQLQuery = @"{
-                books(first: 100) {
+                supportedTypes(first: 100) {
                     items {
-                        id
-                        title
-                        published_date
+                        datetime_types
                     }
                 }
             }";

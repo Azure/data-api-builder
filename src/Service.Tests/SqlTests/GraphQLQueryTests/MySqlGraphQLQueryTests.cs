@@ -294,6 +294,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields()
+        {
+            string mySqlQuery = @"
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('datetime_types', `subq1`.`datetime_types`)), '[]') AS `data`
+                FROM
+                  (SELECT `table0`.`datetime_types` AS `datetime_types`
+                   FROM `type_table` AS `table0`
+                   WHERE 1 = 1
+                   ORDER BY `table0`.`id` asc
+                   LIMIT 100) AS `subq1`";
+
+            await TestQueryingTypeWithNullableDateTimeFields(mySqlQuery);
+        }
+
+        /// <summary>
         /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
         /// book_id and book_title are aliases used for corresponding query fields.
         /// The response for the query will contain the alias instead of raw db column..

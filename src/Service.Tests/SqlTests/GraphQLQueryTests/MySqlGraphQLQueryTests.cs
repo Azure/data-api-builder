@@ -300,7 +300,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         public async Task TestQueryingTypeWithNullableDateTimeFields()
         {
             string mySqlQuery = @"
-                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT(`datetime_types`, `subq1`.`datetime_types`)), '[]') AS `data`
+                SELECT COALESCE(JSON_ARRAYAGG(JSON_OBJECT('datetime_types', `subq1`.`datetime_types`)), '[]') AS `data`
                 FROM
                   (SELECT `table0`.`datetime_types` AS `datetime_types`
                    FROM `type_table` AS `table0`

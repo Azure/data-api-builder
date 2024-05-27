@@ -10,12 +10,12 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
-using Azure.DataApiBuilder.Core.Services.MetadataProviders.Generator;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using Microsoft.OData.Edm;
+using Polly;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
@@ -55,7 +55,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         public List<Exception> SqlMetadataExceptions { get; private set; } = new();
 
-        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem, QueryEngineFactory queryEngineFactory = null)
+        public CosmosSqlMetadataProvider(RuntimeConfigProvider runtimeConfigProvider, IFileSystem fileSystem, IQueryEngineFactory? queryEngineFactory)
         {
             _fileSystem = fileSystem;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
@@ -66,11 +66,19 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             if (cosmosDb is null)
             {
+                if (queryEngineFactory is null)
+                {
+                    throw new DataApiBuilderException(
+                            message: "No CosmosDB Query Engine Initialized.",
+                            statusCode: System.Net.HttpStatusCode.InternalServerError,
+                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfigProvider.GetConfig());
+
                 // Generate the schema from the data
-
                 IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(DatabaseType.CosmosDB_NoSQL);
-
-                queryEngine.ExecuteAsync("select * from c");
+                queryEngine.ExecuteAsync(_runtimeConfig);
 
                 //GraphQLSchemaGenerate.GenerateGraphQLSchema(JArray item, _runtimeConfig.)
 

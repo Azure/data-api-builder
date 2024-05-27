@@ -1,0 +1,8 @@
+type Player @model {
+    id : ID,
+    name : String,
+    played: Int,
+    winPercent: Float,
+    currentStreak: Int,
+    maxStreak: Int
+}

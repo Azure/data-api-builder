@@ -15,6 +15,8 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using HotChocolate.Types.Relay;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
@@ -112,6 +114,52 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             JsonDocument response = executeQueryResult != null ? JsonDocument.Parse(executeQueryResult.ToString()) : null;
 
             return new Tuple<JsonDocument, IMetadata>(response, null);
+        }
+
+        internal async Task<JArray> ExecuteAsync(
+                       RuntimeConfig runtimeConfig,
+                       string dataSourceName)
+        {
+            CosmosClient client = _clientProvider.Clients[dataSourceName];
+
+            string databaseName = runtimeConfig.DataSource.Options["database"].ToString();
+            string containerName = runtimeConfig.DataSource.Options["container"].ToString();
+
+            JObject schemaAnalyzerConfig = new (runtimeConfig.DataSource.Options["schemaAnalyzer"].ToString());
+            schemaAnalyzerConfig.TryGetValue("sampleCount", out JToken sampleCount);
+            int limitValue = sampleCount.ToObject<int>();
+
+            schemaAnalyzerConfig.TryGetValue("query", out JToken queryToken);
+            string queryString = queryToken.ToObject<string>();
+
+            if (string.IsNullOrEmpty(queryString))
+            {
+                queryString = "Select * from c";
+            }
+
+            Container container = client.GetDatabase(databaseName)
+                                        .GetContainer(containerName);
+
+            QueryDefinition querySpec = new($"{queryString} limit {limitValue}");
+
+            JArray jArray = new();
+            // If partition key value or id values are not provided, will execute cross partition query
+            using (FeedIterator<JObject> query = container.GetItemQueryIterator<JObject>(querySpec))
+            {
+                do
+                {
+                    FeedResponse<JObject> page = await query.ReadNextAsync();
+                    IEnumerator<JObject> enumerator = page.GetEnumerator();
+                    while (enumerator.MoveNext())
+                    {
+                        JObject item = enumerator.Current;
+                        jArray.Add(item);
+                    }
+                }
+                while (query.HasMoreResults);
+            }
+
+            return jArray;
         }
 
         /// <summary>

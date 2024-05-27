@@ -46,6 +46,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers.Factories
                 switch (dataSource.DatabaseType)
                 {
                     case DatabaseType.CosmosDB_NoSQL:
+                        queryExecutor = new CosmosQueryExecutor(runtimeConfigProvider, logger, contextAccessor);
                         break;
                     case DatabaseType.MSSQL:
                         queryBuilder = new MsSqlQueryBuilder();

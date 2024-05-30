@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // https://github.com/dotnet/efcore/blob/main/src/EFCore.SqlServer/Storage/Internal/SqlServerTransientExceptionDetector.cs
                 "20", "64", "121", "233", "601", "617", "669", "921", "997", "1203", "1204", "1205", "1221", "1807", "3935", "3960",
                 "3966", "4060", "4221", "8628", "8645", "8651", "9515", "10053", "10054", "10060", "10922", "10928", "10929", "10936",
-                "14355", "17197", "20041", "40197", "40501", "40613", "41301", "41302", "41305", "41325", "41839", "49918", "49919", "49920",
+                "14355", "17197", "20041", "40197", "40501", "40613", "41301", "41302", "41305", "41325", "41839", "42109", "49918", "49919", "49920",
 
                 // Transient error codes compiled from:
                 //  https://learn.microsoft.com/en-us/dotnet/api/microsoft.data.sqlclient.sqlconfigurableretryfactory?view=sqlclient-dotnet-standard-5.0

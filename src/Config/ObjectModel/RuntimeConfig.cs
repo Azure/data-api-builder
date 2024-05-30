@@ -6,6 +6,7 @@ using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Service.Exceptions;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -495,9 +496,11 @@ public record RuntimeConfig
         return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
     }
 
-    public int MaxReponseSize()
+    public int? MaxDbResponseSizeMb()
     {
-        return Runtime?.Pagination?.MaxResponseSize ?? PaginationOptions.MAX_RESPONSE_SIZE;
+        HyphenatedNamingPolicy namingPolicy = new();
+
+        return DataSource.Options?.TryGetValue(namingPolicy.ConvertName(nameof(MsSqlOptions.MaxDbResponseSizeMb)), out object? value) == true ? value as int? : null;
     }
 
     /// <summary>

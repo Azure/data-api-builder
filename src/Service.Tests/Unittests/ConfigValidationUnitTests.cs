@@ -2414,51 +2414,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
-        /// <summary>
-        /// Test to validate the max response size option in the runtime config whose default value is 64Mb.
-        /// Note: Changing the default value of max response size would be a breaking change.
-        /// </summary>
-        /// <param name="exceptionExpected">should there be an exception.</param>
-        /// <param name="maxResponseSize">maxResponse size input</param>
-        /// <param name="expectedExceptionMessage">exception message in case there is exception.</param>
-        /// <param name="expectedMaxResponseSize">expected value in config.</param>
-        [DataTestMethod]
-        [DataRow(false, null, "", (int)PaginationOptions.MAX_RESPONSE_SIZE,
-            DisplayName = "MaxResponseSize should be 64,000,000(64Mb) when no value provided in config.")]
-        [DataRow(false, 10000, "", 10000,
-            DisplayName = "Valid inputs of MaxResponseSize must be accepted and set in the config.")]
-        [DataRow(true, 100, "Pagination options invalid. Max response size argument is lower than the page size of 8KB of a single row.",
-            DisplayName = "When pagination options value is below 8Kb which is size of a row in sql db, we should throw exception.")]
-        public void ValidateMaxResponseSizeInConfig(
-            bool exceptionExpected,
-            int? maxResponseSize,
-            string expectedExceptionMessage,
-            int? expectedMaxResponseSize = null)
-        {
-            try
-            {
-                RuntimeConfig runtimeConfig = new(
-                    Schema: "UnitTestSchema",
-                    DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
-                    Runtime: new(
-                        Rest: new(),
-                        GraphQL: new(),
-                        Host: new(Cors: null, Authentication: null),
-                        Pagination: new PaginationOptions(MaxResponseSizeInput: maxResponseSize)
-                    ),
-                    Entities: new(new Dictionary<string, Entity>()));
-
-                Assert.AreEqual(expectedMaxResponseSize, runtimeConfig.MaxReponseSize());
-            }
-            catch (DataApiBuilderException dabException)
-            {
-                Assert.IsTrue(exceptionExpected);
-                Assert.AreEqual(expectedExceptionMessage, dabException.Message);
-                Assert.AreEqual(expected: HttpStatusCode.ServiceUnavailable, actual: dabException.StatusCode);
-                Assert.AreEqual(expected: DataApiBuilderException.SubStatusCodes.ConfigValidationError, actual: dabException.SubStatusCode);
-            }
-        }
-
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();

@@ -26,11 +26,6 @@ public record PaginationOptions
     public const uint MAX_PAGE_SIZE = 100000;
 
     /// <summary>
-    /// Max response size - 64 MB is the default.
-    /// </summary>
-    public const int MAX_RESPONSE_SIZE = 64000000;
-
-    /// <summary>
     /// The default page size for pagination.
     /// </summary>
     [JsonPropertyName("default-page-size")]
@@ -42,14 +37,8 @@ public record PaginationOptions
     [JsonPropertyName("max-page-size")]
     public int? MaxPageSize { get; init; } = null;
 
-    /// <summary>
-    /// The max response size for a query.
-    /// </summary>
-    [JsonPropertyName("max-response-size")]
-    public int? MaxResponseSize { get; init; } = null;
-
     [JsonConstructor]
-    public PaginationOptions(int? DefaultPageSize = null, int? MaxPageSize = null, int? MaxResponseSize = null)
+    public PaginationOptions(int? DefaultPageSize = null, int? MaxPageSize = null)
     {
         if (MaxPageSize is not null)
         {
@@ -71,17 +60,6 @@ public record PaginationOptions
         else
         {
             this.DefaultPageSize = (int)DEFAULT_PAGE_SIZE;
-        }
-
-        if (MaxResponseSize is not null)
-        {
-            ValidateMaxResponseSize((int)MaxResponseSize);
-            this.MaxResponseSize = (int)MaxResponseSize;
-            UserProvidedMaxResponseSize = true;
-        }
-        else
-        {
-            this.MaxResponseSize = MAX_RESPONSE_SIZE;
         }
 
         if (this.DefaultPageSize > this.MaxPageSize)
@@ -121,44 +99,12 @@ public record PaginationOptions
     [MemberNotNullWhen(true, nameof(MaxPageSize))]
     public bool UserProvidedMaxPageSize { get; init; } = false;
 
-    /// <summary>
-    /// Flag which informs CLI and JSON serializer whether to write max-response-size
-    /// property and value to the runtime config file.
-    /// When user doesn't provide the max-response-size property/value, which signals DAB to use the default,
-    /// the DAB CLI should not write the default value to a serialized config.
-    /// This is because the user's intent is to use DAB's default value which could change
-    /// and DAB CLI writing the property and value would lose the user's intent.
-    /// This is because if the user were to use the CLI created config, a max-response-size
-    /// property/value specified would be interpreted by DAB as "user explicitly max-response-size."
-    /// </summary>
-    [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
-    [MemberNotNullWhen(true, nameof(MaxResponseSize))]
-    public bool UserProvidedMaxResponseSize { get; init; } = false;
-
     private static void ValidatePageSize(int pageSize)
     {
         if (pageSize < -1 || pageSize == 0 || pageSize > Int32.MaxValue)
         {
             throw new DataApiBuilderException(
                 message: "Pagination options invalid. Page size arguments cannot be 0, exceed max int value or be less than -1",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-        }
-    }
-
-    private static void ValidateMaxResponseSize(int maxResponseSize)
-    {
-        if (maxResponseSize < 8000)
-        {
-            throw new DataApiBuilderException(
-                message: "Pagination options invalid. Max response size argument is lower than the page size of 8KB of a single row.",
-                statusCode: HttpStatusCode.ServiceUnavailable,
-                subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-        }
-        else if (maxResponseSize > Int32.MaxValue)
-        {
-            throw new DataApiBuilderException(
-                message: "Pagination options invalid.Max response size cannt exceed max int value.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }

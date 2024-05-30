@@ -40,7 +40,8 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
         if (typeof(TOptionType).IsAssignableFrom(typeof(MsSqlOptions)))
         {
             return (TOptionType)(object)new MsSqlOptions(
-                SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext))));
+                SetSessionContext: ReadBoolOption(namingPolicy.ConvertName(nameof(MsSqlOptions.SetSessionContext))),
+                MaxDbResponseSizeMb: ReadIntegerOption(namingPolicy.ConvertName(nameof(MsSqlOptions.MaxDbResponseSizeMb))));
         }
 
         throw new NotSupportedException($"The type {typeof(TOptionType).FullName} is not a supported strongly typed options object");
@@ -66,6 +67,16 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
         return false;
     }
 
+    private int? ReadIntegerOption(string option)
+    {
+        if (Options is not null && Options.TryGetValue(option, out object? value) && value is int intValue)
+        {
+            return intValue;
+        }
+
+        return null;
+    }
+
     [JsonIgnore]
     public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";
 }
@@ -84,4 +95,4 @@ public record CosmosDbNoSQLDataSourceOptions(string? Database, string? Container
 /// <summary>
 /// Options for MsSql database.
 /// </summary>
-public record MsSqlOptions(bool SetSessionContext = true) : IDataSourceOptions;
+public record MsSqlOptions(bool SetSessionContext = true, int? MaxDbResponseSizeMb = null) : IDataSourceOptions;

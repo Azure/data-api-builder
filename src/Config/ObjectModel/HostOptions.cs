@@ -37,7 +37,7 @@ public record HostOptions
         if (this.MaxResponseSizeMB is not null && (this.MaxResponseSizeMB < 1 || this.MaxResponseSizeMB > MAX_RESPONSE_LENGTH_DAB_ENGINE_MB))
         {
             throw new DataApiBuilderException(
-                message: $"{nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} must be greater than 0 and <= 187 MB.",
+                message: $"{nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} must be greater than 0 and <= {MAX_RESPONSE_LENGTH_DAB_ENGINE_MB} MB.",
                 statusCode: HttpStatusCode.ServiceUnavailable,
                 subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
         }

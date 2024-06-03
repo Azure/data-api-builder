@@ -17,7 +17,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Generator
             Traverse(item, types, parentName: containerName);
 
             // Assemble GraphQL schema
-            StringBuilder schemaBuilder = new ();
+            StringBuilder schemaBuilder = new();
             foreach (KeyValuePair<string, JObject> type in types)
             {
                 if (type.Key == containerName)
@@ -71,7 +71,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Generator
                         JTokenType? firstElementType = property?.Value?.First?.Type;
                         if (firstElementType == JTokenType.Object)
                         {
-                            if(property == null || property.Value == null || property.Value.First == null)
+                            if (property == null || property.Value == null || property.Value.First == null)
                             {
                                 throw new ArgumentNullException("Property value is null");
                             }
@@ -141,7 +141,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders.Generator
             }
 
             char newFirstLetter = char.ToLowerInvariant(s[0]);
-            if(newFirstLetter == s[0])
+            if (newFirstLetter == s[0])
             {
                 return s;
             }

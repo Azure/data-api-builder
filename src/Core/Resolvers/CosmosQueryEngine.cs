@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string databaseName = runtimeConfig.DataSource.Options["database"].ToString();
             string containerName = runtimeConfig.DataSource.Options["container"].ToString();
 
-            JObject schemaAnalyzerConfig = new (runtimeConfig.DataSource.Options["schemaAnalyzer"].ToString());
+            JObject schemaAnalyzerConfig = new(runtimeConfig.DataSource.Options["schemaAnalyzer"].ToString());
             schemaAnalyzerConfig.TryGetValue("sampleCount", out JToken sampleCount);
             int limitValue = sampleCount.ToObject<int>();
 

@@ -373,7 +373,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 return _cosmosDb.GraphQLSchema;
             }
 
-            if(_cosmosDb.Schema is null)
+            if (_cosmosDb.Schema is null)
             {
                 // Query Engine is required run cosmosDb Query, if it is not available then throw exception
                 IQueryEngine? queryEngine = queryEngineFactory?.GetQueryEngine(_databaseType);

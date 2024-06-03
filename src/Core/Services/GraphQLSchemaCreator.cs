@@ -8,7 +8,6 @@ using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Configurations;
-using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -550,7 +549,6 @@ namespace Azure.DataApiBuilder.Core.Services
                 return new DocumentNode(new List<IDefinitionNode>());
             }
 
-            IQueryEngine queryEngine = _queryEngineFactory.GetQueryEngine(DatabaseType.CosmosDB_NoSQL); // Ensure the cosmos query engine is initialized.
             foreach (string dataSourceName in dataSourceNames)
             {
                 ISqlMetadataProvider metadataProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);

@@ -12,6 +12,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
 {
     public static class DeleteMutationBuilder
     {
+        public const string DELETE_MUTATION_PREFIX = "delete";
+
         /// <summary>
         /// Generate the `delete` mutation field for the GraphQL mutations for a given Object Definition
         /// ReturnEntityName can be different from dbEntityName in cases where user wants summary results returned (through the DBOperationResult entity)
@@ -70,7 +72,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string singularName = GetDefinedSingularName(name.Value, configEntity);
             return new(
                 null,
-                new NameNode($"delete{singularName}"),
+                new NameNode($"{DELETE_MUTATION_PREFIX}{singularName}"),
                 new StringValueNode($"Delete a {singularName}"),
                 inputValues,
                 new NamedTypeNode(returnEntityName),

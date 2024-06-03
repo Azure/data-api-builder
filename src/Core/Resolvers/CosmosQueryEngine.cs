@@ -15,8 +15,6 @@ using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
-using HotChocolate.Types.Relay;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Cosmos;
 using Newtonsoft.Json.Linq;
@@ -116,11 +114,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return new Tuple<JsonDocument, IMetadata>(response, null);
         }
 
-        internal async Task<JArray> ExecuteAsync(
-                       RuntimeConfig runtimeConfig,
-                       string dataSourceName)
+        internal async Task<JArray> ExecuteAsync()
         {
-            CosmosClient client = _clientProvider.Clients[dataSourceName];
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
+
+            CosmosClient client = _clientProvider.Clients[""];
 
             string databaseName = runtimeConfig.DataSource.Options["database"].ToString();
             string containerName = runtimeConfig.DataSource.Options["container"].ToString();

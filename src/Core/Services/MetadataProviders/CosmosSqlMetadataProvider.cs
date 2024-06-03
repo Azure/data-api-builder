@@ -10,12 +10,13 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Azure.DataApiBuilder.Core.Resolvers.Factories;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders.Generator;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
 using Microsoft.OData.Edm;
-using Polly;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 {
@@ -62,34 +63,50 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             _databaseType = _runtimeConfig.DataSource.DatabaseType;
 
-            CosmosDbNoSQLDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
+            ParseSchemaGraphQLDocument();
 
+            CosmosDbNoSQLDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
             if (cosmosDb is null)
             {
-                if (queryEngineFactory is null)
-                {
-                    throw new DataApiBuilderException(
-                            message: "No CosmosDB Query Engine Initialized.",
-                            statusCode: System.Net.HttpStatusCode.InternalServerError,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                }
-
-                GraphQLUtils.GetDataSourceNameFromGraphQLContext(context, runtimeConfigProvider.GetConfig());
-
-                // Generate the schema from the data
-                IQueryEngine queryEngine = queryEngineFactory.GetQueryEngine(DatabaseType.CosmosDB_NoSQL);
-                queryEngine.ExecuteAsync(_runtimeConfig);
-
-                //GraphQLSchemaGenerate.GenerateGraphQLSchema(JArray item, _runtimeConfig.)
-
                 throw new DataApiBuilderException(
-                    message: "No CosmosDB configuration provided but CosmosDB is the specified database.",
-                    statusCode: System.Net.HttpStatusCode.InternalServerError,
-                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                                       message: "No CosmosDB configuration provided.",
+                                       statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                       subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+            }
+
+            if (GraphQLSchemaRoot is null)
+            {
+                // Schema file is not provided, generate the schema from the data
+                if (cosmosDb.Schema is null)
+                {
+                    // Query Engine is required run cosmosDb Query, if it is not available then throw exception
+                    IQueryEngine? queryEngine = queryEngineFactory?.GetQueryEngine(_databaseType);
+                    if (queryEngine is null || queryEngine is not CosmosQueryEngine)
+                    {
+                        throw new DataApiBuilderException(
+                                                       message: "No CosmosDB Query Engine Initialized.",
+                                                       statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    // Generate the schema from the data (blocking call)
+                    JArray sampleData = ((CosmosQueryEngine)queryEngine).ExecuteAsync().Result;
+
+                    string? containerName = cosmosDb.Container;
+                    if (string.IsNullOrEmpty(containerName))
+                    {
+                        throw new DataApiBuilderException(
+                                                   message: "No CosmosDB configuration provided but CosmosDB is the specified container.",
+                                                   statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                    }
+
+                    string graphQlSchema = GraphQLSchemaGenerate.GenerateGraphQLSchema(sampleData, containerName);
+                    GraphQLSchemaRoot = Utf8GraphQLParser.Parse(graphQlSchema);
+                }
             }
 
             _cosmosDb = cosmosDb;
-            ParseSchemaGraphQLDocument();
 
             if (GraphQLSchemaRoot is null)
             {

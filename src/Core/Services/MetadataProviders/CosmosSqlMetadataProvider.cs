@@ -63,8 +63,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
             _databaseType = _runtimeConfig.DataSource.DatabaseType;
 
-            ParseSchemaGraphQLDocument();
-
             CosmosDbNoSQLDataSourceOptions? cosmosDb = _runtimeConfig.DataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>();
             if (cosmosDb is null)
             {
@@ -74,39 +72,9 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                                        subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
             }
 
-            if (GraphQLSchemaRoot is null)
-            {
-                // Schema file is not provided, generate the schema from the data
-                if (cosmosDb.Schema is null)
-                {
-                    // Query Engine is required run cosmosDb Query, if it is not available then throw exception
-                    IQueryEngine? queryEngine = queryEngineFactory?.GetQueryEngine(_databaseType);
-                    if (queryEngine is null || queryEngine is not CosmosQueryEngine)
-                    {
-                        throw new DataApiBuilderException(
-                                                       message: "No CosmosDB Query Engine Initialized.",
-                                                       statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                                       subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
-
-                    // Generate the schema from the data (blocking call)
-                    JArray sampleData = ((CosmosQueryEngine)queryEngine).ExecuteAsync().Result;
-
-                    string? containerName = cosmosDb.Container;
-                    if (string.IsNullOrEmpty(containerName))
-                    {
-                        throw new DataApiBuilderException(
-                                                   message: "No CosmosDB configuration provided but CosmosDB is the specified container.",
-                                                   statusCode: System.Net.HttpStatusCode.InternalServerError,
-                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                    }
-
-                    string graphQlSchema = GraphQLSchemaGenerate.GenerateGraphQLSchema(sampleData, containerName);
-                    GraphQLSchemaRoot = Utf8GraphQLParser.Parse(graphQlSchema);
-                }
-            }
-
             _cosmosDb = cosmosDb;
+
+            ParseSchemaGraphQLDocument(queryEngineFactory);
 
             if (GraphQLSchemaRoot is null)
             {
@@ -397,7 +365,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             return Task.CompletedTask;
         }
 
-        private string GraphQLSchema()
+        private string GraphQLSchema(IQueryEngineFactory? queryEngineFactory)
         {
             // Cache the schema if it's already been parsed
             if (_cosmosDb.GraphQLSchema is not null)
@@ -405,12 +373,39 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 return _cosmosDb.GraphQLSchema;
             }
 
+            if(_cosmosDb.Schema is null)
+            {
+                // Query Engine is required run cosmosDb Query, if it is not available then throw exception
+                IQueryEngine? queryEngine = queryEngineFactory?.GetQueryEngine(_databaseType);
+                if (queryEngine is null || queryEngine is not CosmosQueryEngine)
+                {
+                    throw new DataApiBuilderException(
+                                                   message: "No CosmosDB Query Engine Initialized.",
+                                                   statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                                   subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                // Generate the schema from the data (blocking call)
+                JArray sampleData = ((CosmosQueryEngine)queryEngine).ExecuteAsync().Result;
+
+                string? containerName = _cosmosDb.Container;
+                if (string.IsNullOrEmpty(containerName))
+                {
+                    throw new DataApiBuilderException(
+                                               message: "No CosmosDB configuration provided but CosmosDB is the specified container.",
+                                               statusCode: System.Net.HttpStatusCode.InternalServerError,
+                                               subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
+                }
+
+                return GraphQLSchemaGenerate.GenerateGraphQLSchema(sampleData, containerName);
+            }
+
             return _fileSystem.File.ReadAllText(_cosmosDb.Schema!);
         }
 
-        public void ParseSchemaGraphQLDocument()
+        public void ParseSchemaGraphQLDocument(IQueryEngineFactory? queryEngineFactory)
         {
-            string graphqlSchema = GraphQLSchema();
+            string graphqlSchema = GraphQLSchema(queryEngineFactory);
 
             if (string.IsNullOrEmpty(graphqlSchema))
             {

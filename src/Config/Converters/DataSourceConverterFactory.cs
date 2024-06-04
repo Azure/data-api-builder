@@ -102,7 +102,7 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                         {
                                             optionsSubpropertyValue = null;
                                         }
-                                        else  if (reader.TokenType is JsonTokenType.StartObject)
+                                        else if (reader.TokenType is JsonTokenType.StartObject)
                                         {
                                             Dictionary<string, object?> schemaAnalyzerDict = new();
 

@@ -380,13 +380,13 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             {
                 int sampleCount = DEFAULT_SAMPLE_COUNT;
                 string query = DEFAULT_QUERY;
-                if(_cosmosDb.SchemaAnalyzer is not null)
+                if (_cosmosDb.SchemaAnalyzer is not null)
                 {
-                    sampleCount = _cosmosDb.SchemaAnalyzer.SampleCount?? DEFAULT_SAMPLE_COUNT;
+                    sampleCount = _cosmosDb.SchemaAnalyzer.SampleCount ?? DEFAULT_SAMPLE_COUNT;
                     query = _cosmosDb.SchemaAnalyzer.Query ?? DEFAULT_QUERY;
                 }
 
-                if(string.IsNullOrEmpty(_cosmosDb.Database) || string.IsNullOrEmpty(_cosmosDb.Container))
+                if (string.IsNullOrEmpty(_cosmosDb.Database) || string.IsNullOrEmpty(_cosmosDb.Container))
                 {
                     throw new DataApiBuilderException(
                                  message: "No CosmosDB configuration provided.",
@@ -409,7 +409,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
         internal static async Task<JArray> ExecuteAsync(string connectionString, string databaseName, string containerName, int sampleCount, string queryString)
         {
-            CosmosClient client = new (connectionString);
+            CosmosClient client = new(connectionString);
 
             Container container = client.GetDatabase(databaseName)
                                         .GetContainer(containerName);
@@ -440,7 +440,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                             jArray.Add(item);
                         }
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
                         throw new DataApiBuilderException(
                                     message: $"Error while fetching data from cosmos Db to generate schema : {ex}",

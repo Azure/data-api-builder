@@ -2436,7 +2436,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ValidateMaxResponseSizeInConfig(
             int? providedMaxResponseSizeMB,
             int? expectedMaxResponseSizeMB,
-            bool exceptionExpected,
+            bool isExceptionExpected,
             string expectedExceptionMessage)
         {
             try
@@ -2454,7 +2454,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             catch (DataApiBuilderException ex)
             {
-                Assert.IsTrue(exceptionExpected);
+                Assert.IsTrue(isExceptionExpected);
                 Assert.AreEqual(expectedExceptionMessage, ex.Message);
             }
         }

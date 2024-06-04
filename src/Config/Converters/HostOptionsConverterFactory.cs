@@ -35,9 +35,9 @@ internal class HostOptionsConvertorFactory : JsonConverterFactory
         public override HostOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             // Remove the converter so we don't recurse.
-            JsonSerializerOptions innerOptions = new(options);
-            innerOptions.Converters.Remove(innerOptions.Converters.First(c => c is HostOptionsConvertorFactory));
-            return JsonSerializer.Deserialize<HostOptions>(ref reader, options);
+            JsonSerializerOptions jsonSerializerOptions = new(options);
+            jsonSerializerOptions.Converters.Remove(jsonSerializerOptions.Converters.First(c => c is HostOptionsConvertorFactory));
+            return JsonSerializer.Deserialize<HostOptions>(ref reader, jsonSerializerOptions);
         }
 
         /// <summary>

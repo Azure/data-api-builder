@@ -500,6 +500,12 @@ public record RuntimeConfig
         return Runtime?.Host?.MaxResponseSizeMB;
     }
 
+    public bool MaxResponseSizeLogicEnabled()
+    {
+        // If the user has provided a max response size, we should use new logic to enforce it.
+        return Runtime?.Host?.UserProvidedMaxResponseSizeMB ?? false;
+    }
+
     /// <summary>
     /// Get the pagination limit from the runtime configuration.
     /// </summary>

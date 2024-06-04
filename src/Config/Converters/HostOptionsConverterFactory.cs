@@ -8,7 +8,7 @@ using Azure.DataApiBuilder.Config.ObjectModel;
 namespace Azure.DataApiBuilder.Config.Converters;
 
 /// <summary>
-/// Defines how DAB reads and writes an entity's cache options (JSON).
+/// Defines how DAB reads and writes host options.
 /// </summary>
 internal class HostOptionsConvertorFactory : JsonConverterFactory
 {
@@ -29,8 +29,9 @@ internal class HostOptionsConvertorFactory : JsonConverterFactory
         /// <summary>
         /// Defines how DAB reads host options and defines which values are
         /// used to instantiate HostOptions.
+        /// Uses default deserialize.
         /// </summary>
-        /// <exception cref="JsonException">Thrown when improperly formatted cache options are provided.</exception>
+        /// <exception cref="JsonException">Thrown when improperly formatted host options are provided.</exception>
         public override HostOptions? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             return JsonSerializer.Deserialize<HostOptions>(ref reader, options);

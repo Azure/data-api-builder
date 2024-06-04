@@ -3061,7 +3061,7 @@ type Moon {
             RuntimeConfigProvider provider = new(loader);
 
             DataApiBuilderException exception =
-                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem, null));
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
             Assert.AreEqual("Circular reference detected in the provided GraphQL schema for entity 'Character'.", exception.Message);
             Assert.AreEqual(HttpStatusCode.InternalServerError, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);

@@ -50,7 +50,6 @@ internal class DataSourceConverterFactory : JsonConverterFactory
             DataSource dataSource = new(DatabaseType.MSSQL, string.Empty, null);
             if (reader.TokenType is JsonTokenType.StartObject)
             {
-
                 while (reader.Read() && reader.TokenType is not JsonTokenType.EndObject)
                 {
                     if (reader.TokenType is JsonTokenType.PropertyName)
@@ -102,6 +101,33 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                         else if (reader.TokenType is JsonTokenType.Null)
                                         {
                                             optionsSubpropertyValue = null;
+                                        }
+                                        else  if (reader.TokenType is JsonTokenType.StartObject)
+                                        {
+                                            Dictionary<string, object?> schemaAnalyzerDict = new();
+
+                                            while (reader.Read() && reader.TokenType is not JsonTokenType.EndObject)
+                                            {
+                                                if (reader.TokenType is JsonTokenType.PropertyName)
+                                                {
+                                                    string subPropertyName = reader.GetString() ?? string.Empty;
+                                                    switch (subPropertyName)
+                                                    {
+                                                        case "sampleCount":
+                                                            int sampleCount = JsonSerializer.Deserialize<int>(ref reader, options);
+                                                            schemaAnalyzerDict.Add(subPropertyName, sampleCount);
+                                                            break;
+                                                        case "query":
+                                                            string? queryString = JsonSerializer.Deserialize<string>(ref reader, options);
+                                                            schemaAnalyzerDict.Add(subPropertyName, queryString);
+                                                            break;
+                                                        default:
+                                                            throw new JsonException($"Unexpected property {propertyName} while deserializing Schema Analyzer.");
+                                                    }
+                                                }
+                                            }
+
+                                            optionsSubpropertyValue = schemaAnalyzerDict;
                                         }
                                         else
                                         {

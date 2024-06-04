@@ -22,15 +22,14 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
             IAbstractQueryManagerFactory queryManagerFactory,
             ILogger<ISqlMetadataProvider> logger,
             IFileSystem fileSystem,
-            bool isValidateOnly = false,
-            IQueryEngineFactory? queryEngineFactory = null)
+            bool isValidateOnly = false)
         {
             _metadataProviders = new Dictionary<string, ISqlMetadataProvider>();
             foreach ((string dataSourceName, DataSource dataSource) in runtimeConfigProvider.GetConfig().GetDataSourceNamesToDataSourcesIterator())
             {
                 ISqlMetadataProvider metadataProvider = dataSource.DatabaseType switch
                 {
-                    DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(runtimeConfigProvider, fileSystem, queryEngineFactory),
+                    DatabaseType.CosmosDB_NoSQL => new CosmosSqlMetadataProvider(runtimeConfigProvider, fileSystem),
                     DatabaseType.MSSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly),
                     DatabaseType.DWSQL => new MsSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly),
                     DatabaseType.PostgreSQL => new PostgreSqlMetadataProvider(runtimeConfigProvider, queryManagerFactory, logger, dataSourceName, isValidateOnly),

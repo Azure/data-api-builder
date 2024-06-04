@@ -119,7 +119,7 @@ type PlanetAgain @model {
 
     private HttpClient _client;
     internal WebApplicationFactory<Startup> _application;
-    internal string _containerName = Guid.NewGuid().ToString();
+    internal string _containerName = "planet";
 
     [TestInitialize]
     public void Init()
@@ -158,7 +158,7 @@ type PlanetAgain @model {
         FileSystemRuntimeConfigLoader loader = new(fileSystem);
         RuntimeConfigProvider provider = new(loader);
 
-        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem, null);
+        ISqlMetadataProvider cosmosSqlMetadataProvider = new CosmosSqlMetadataProvider(provider, fileSystem);
         Mock<IMetadataProviderFactory> metadataProviderFactory = new();
         metadataProviderFactory.Setup(x => x.GetMetadataProvider(It.IsAny<string>())).Returns(cosmosSqlMetadataProvider);
 

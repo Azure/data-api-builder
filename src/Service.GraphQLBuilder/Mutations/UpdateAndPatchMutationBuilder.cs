@@ -14,6 +14,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
     public static class UpdateAndPatchMutationBuilder
     {
         public const string INPUT_ARGUMENT_NAME = "item";
+        public const string UPDATE_MUTATION_PREFIX = "update";
 
         /// <summary>
         /// This method is used to determine if a field is allowed to be sent from the client in a Update/Patch mutation (eg, id field is not settable during update).
@@ -211,7 +212,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder.Mutations
             string returnEntityName,
             IEnumerable<string>? rolesAllowedForMutation = null,
             EntityActionOperation operation = EntityActionOperation.Update,
-            string operationNamePrefix = "update")
+            string operationNamePrefix = UPDATE_MUTATION_PREFIX)
         {
             InputObjectTypeDefinitionNode input = GenerateUpdateInputType(
                 inputs,

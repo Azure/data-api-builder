@@ -64,12 +64,13 @@ public record HostOptions
     /// <summary>
     /// Flag which informs CLI and JSON serializer whether to write MaxResponseSizeMB.
     /// property and value to the runtime config file.
-    /// When user doesn't provide the MaxResponseSizeMB property/value, which signals DAB to use the default,
-    /// the DAB CLI should not write the default value to a serialized config.
+    /// When user doesn't provide the MaxResponseSizeMB property/value or provides a null value, which signals DAB to use the default,
+    /// the DAB CLI will not write the default value to a serialized config.
     /// This is because the user's intent is to use DAB's default value which could change
     /// and DAB CLI writing the property and value would lose the user's intent.
     /// This is because if the user were to use the CLI created config, MaxResponseSizeMB
-    /// property/value specified would be interpreted by DAB as "user explicitly set MaxResponseSizeMB."
+    /// property/value specified would be interpreted by DAB as "user explicitly set MaxResponseSizeMB.
+    /// UserProvidedMaxResponseSizeMB is true only when a user provides a non-null value
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
     [MemberNotNullWhen(true, nameof(MaxResponseSizeMB))]

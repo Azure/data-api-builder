@@ -496,11 +496,15 @@ public record RuntimeConfig
         return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
     }
 
-    public int? MaxDbResponseSizeMb()
+    public int? MaxResponseSizeMB()
     {
-        HyphenatedNamingPolicy namingPolicy = new();
+        return Runtime?.Host?.MaxResponseSizeMB;
+    }
 
-        return DataSource.Options?.TryGetValue(namingPolicy.ConvertName(nameof(MsSqlOptions.MaxDbResponseSizeMb)), out object? value) == true ? value as int? : null;
+    public bool MaxResponseSizeLogicEnabled()
+    {
+        // If the user has provided a max response size, we should use new logic to enforce it.
+        return Runtime?.Host?.UserProvidedMaxResponseSizeMB ?? false;
     }
 
     /// <summary>

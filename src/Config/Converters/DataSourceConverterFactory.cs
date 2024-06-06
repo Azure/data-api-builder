@@ -103,14 +103,6 @@ internal class DataSourceConverterFactory : JsonConverterFactory
                                         {
                                             optionsSubpropertyValue = null;
                                         }
-                                        else if (reader.TokenType is JsonTokenType.Number)
-                                        {
-                                            optionsSubpropertyValue = reader.GetInt32();
-                                            if (optionsSubpropertyValue is not null && (int)optionsSubpropertyValue < 1)
-                                            {
-                                                throw new ArgumentOutOfRangeException(nameof(MsSqlOptions.MaxDbResponseSizeMb), "MaxDbResponseSizeMB invalid. Max db response size argument cannot be less than 1MB");
-                                            }
-                                        }
                                         else
                                         {
                                             throw new JsonException($"Unexpected value for options {optionsSubproperty} while deserializing DataSource options.");

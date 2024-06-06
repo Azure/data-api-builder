@@ -38,6 +38,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private int? _maxDbResponseSizeMB;
         private long? _maxDbResponseSizeBytes;
+        private bool _maxResponseSizeLogicEnabled;
 
         /// <summary>
         /// Dictionary that stores dataSourceName to its corresponding connection string builder.
@@ -54,7 +55,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
-            _maxDbResponseSizeMB = configProvider.GetConfig().MaxDbResponseSizeMb();
+            _maxDbResponseSizeMB = configProvider.GetConfig().MaxResponseSizeMB();
+            _maxResponseSizeLogicEnabled = configProvider.GetConfig().MaxResponseSizeLogicEnabled();
             // long value is larger than max int value * 1024 * 1024
             _maxDbResponseSizeBytes = _maxDbResponseSizeMB * 1024 * 1024;
 
@@ -686,7 +688,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // 2. https://stackoverflow.com/questions/54973536/for-json-path-results-in-ssms-truncated-to-2033-characters/54973676
             // 3. https://docs.microsoft.com/en-us/sql/relational-databases/json/use-for-json-output-in-sql-server-and-in-client-apps-sql-server?view=sql-server-2017#use-for-json-output-in-a-c-client-app
 
-            if (_maxDbResponseSizeMB == null)
+            if (_maxResponseSizeLogicEnabled)
             {
                 while (await ReadAsync(dbDataReader))
                 {

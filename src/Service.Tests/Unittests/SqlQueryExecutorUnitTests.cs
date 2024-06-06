@@ -331,17 +331,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             FileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            Dictionary<string, object> msSqlOptions = new()
-            {
-                { "max-db-response-size-mb", 5 }
-            };
             RuntimeConfig runtimeConfig = new(
                 Schema: "UnitTestSchema",
-                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: msSqlOptions),
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
                 Runtime: new(
                         Rest: new(),
                         GraphQL: new(),
-                        Host: new(Cors: null, Authentication: null)
+                        Host: new(Cors: null, Authentication: null, MaxResponseSizeMB: 5)
                     ),
                 Entities: new(new Dictionary<string, Entity>()));
 
@@ -362,7 +358,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Mock<DbDataReader> dbDataReader = new();
                 dbDataReader.Setup(d => d.HasRows).Returns(true);
                 dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
-                int availableSize = (int)runtimeConfig.MaxDbResponseSizeMb() * 1024 * 1024;
+                int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 for (int i = 0; i < readDataLoops; i++)
                 {
                     availableSize -= msSqlQueryExecutor.StreamData(dbDataReader.Object, availableSize, new());

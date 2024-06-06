@@ -36,8 +36,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private RetryPolicy _retryPolicy;
 
-        private int? _maxDbResponseSizeMB;
-        private long? _maxDbResponseSizeBytes;
+        private int? _maxResponseSizeMB;
+        private long? _maxResponseSizeBytes;
         private bool _maxResponseSizeLogicEnabled;
 
         /// <summary>
@@ -55,10 +55,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
-            _maxDbResponseSizeMB = configProvider.GetConfig().MaxResponseSizeMB();
+            _maxResponseSizeMB = configProvider.GetConfig().MaxResponseSizeMB();
             _maxResponseSizeLogicEnabled = configProvider.GetConfig().MaxResponseSizeLogicEnabled();
-            // long value is larger than max int value * 1024 * 1024
-            _maxDbResponseSizeBytes = _maxDbResponseSizeMB * 1024 * 1024;
+            _maxResponseSizeBytes = _maxResponseSizeMB ?? _maxResponseSizeMB * 1024 * 1024;
 
             _retryPolicyAsync = Policy
                 .Handle<DbException>(DbExceptionParser.IsTransientException)
@@ -670,9 +669,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         /// <summary>
         /// This function reads the data from the DbDataReader and returns the JSON string.
-        /// 1. MaxDbResponse is used like a feature flag.
-        /// 2. If MaxDbResponse is not specified by the customer, getString is used and entire data is read into memory. No protections
-        /// 3. If MaxDbResponse is specified by the customer, getChars is used. GetChars tries to read the data in chunks and if the data is more than the specified limit, it throws an exception.
+        /// 1. MaxResponseSizeLogicEnabled is used like a feature flag.
+        /// 2. If MaxResponseSize is not specified by the customer or is null, getString is used and entire data is read into memory.
+        /// 3. If MaxResponseSize is specified by the customer, getChars is used. GetChars tries to read the data in chunks and if the data is more than the specified limit, it throws an exception.
         /// </summary>
         /// <param name="dbDataReader"></param>
         /// <returns></returns>
@@ -698,7 +697,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else
             {
                 // max buffer size will always be smaller than the 
-                long availableSize = (long)_maxDbResponseSizeBytes!;
+                long availableSize = (long)_maxResponseSizeBytes!;
                 while (await ReadAsync(dbDataReader))
                 {
                     availableSize -= StreamData(dbDataReader, (int)availableSize, jsonString);
@@ -713,7 +712,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (availableSize - sizeToBeRead < 0)
             {
                 throw new DataApiBuilderException(
-                    message: $"The JSON result size exceeds max result size of {_maxDbResponseSizeMB}MB. Please use pagination to reduce size of result.",
+                    message: $"The JSON result size exceeds max result size of {_maxResponseSizeMB}MB. Please use pagination to reduce size of result.",
                     statusCode: HttpStatusCode.RequestEntityTooLarge,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorProcessingData);
             }

@@ -57,7 +57,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             HttpContextAccessor = httpContextAccessor;
             _maxResponseSizeMB = configProvider.GetConfig().MaxResponseSizeMB();
             _maxResponseSizeLogicEnabled = configProvider.GetConfig().MaxResponseSizeLogicEnabled();
-            _maxResponseSizeBytes = _maxResponseSizeMB ?? _maxResponseSizeMB * 1024 * 1024;
+            _maxResponseSizeBytes = _maxResponseSizeMB * 1024 * 1024;
 
             _retryPolicyAsync = Policy
                 .Handle<DbException>(DbExceptionParser.IsTransientException)
@@ -689,7 +689,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // 2. https://stackoverflow.com/questions/54973536/for-json-path-results-in-ssms-truncated-to-2033-characters/54973676
             // 3. https://docs.microsoft.com/en-us/sql/relational-databases/json/use-for-json-output-in-sql-server-and-in-client-apps-sql-server?view=sql-server-2017#use-for-json-output-in-a-c-client-app
 
-            if (_maxResponseSizeLogicEnabled)
+            if (!_maxResponseSizeLogicEnabled)
             {
                 while (await ReadAsync(dbDataReader))
                 {

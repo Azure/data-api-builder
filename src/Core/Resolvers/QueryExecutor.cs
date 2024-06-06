@@ -250,7 +250,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             try
             {
-                using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess);
+                using DbDataReader dbDataReader = _maxResponseSizeLogicEnabled ?
+                    await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return await dataReaderHandler(dbDataReader, args);
@@ -326,7 +327,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             try
             {
-                using DbDataReader dbDataReader = cmd.ExecuteReader(CommandBehavior.SequentialAccess);
+                using DbDataReader dbDataReader = _maxResponseSizeLogicEnabled ?
+                    cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return dataReaderHandler(dbDataReader, args);

@@ -991,6 +991,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields(string dbQuery)
+        {
+            string graphQLQueryName = "supportedTypes";
+            string graphQLQuery = @"{
+                supportedTypes(first: 100) {
+                    items {
+                        datetime_types
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
         /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
         /// book_id and book_title are aliases used for corresponding query fields.
         /// The response for the query will contain the alias instead of raw db column.

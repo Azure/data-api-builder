@@ -88,5 +88,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         {
             Assert.Inconclusive("Test skipped for PostgreSql.");
         }
+
+        public override Task InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

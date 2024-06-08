@@ -22,6 +22,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await InitializeTestFixture();
         }
 
+        public override Task InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
+        {
+            throw new System.NotImplementedException();
+        }
+
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)
         {
             return MakeQueryOnTypeTable(queryFields, filterValue: id.ToString(), filterField: "id");

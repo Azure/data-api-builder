@@ -168,7 +168,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "supportedTypes";
             string gqlQuery = @"{
-                supportedTypes(first: 100 orderBy: { " + field + ": ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
+                supportedTypes(first: 100 orderBy: { typeid: ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
                     items {
                         typeid, " + field + @"
                     }
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 filterValue: sqlValue,
                 filterOperator: queryOperator,
                 filterField: field,
-                orderBy: field,
+                orderBy: "typeid",
                 limit: "100");
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
@@ -223,7 +223,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             DisplayName = "datetime type filter and orderby test with neq operator and specific value '1999-01-08 10:23:54'.")]
         [DataRow(DATETIMEOFFSET_TYPE, "neq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=",
             DisplayName = "datetimeoffset type filter and orderby test with neq operator")]
-        [DataRow(DATETIMEOFFSET_TYPE, "lt", "'9999-12-31 23:59:59.9999999'", "\"9999-12-31 23:59:59.9999999\"", "<",
+        [DataRow(DATETIMEOFFSET_TYPE, "lt", "'9999-12-31 23:59:59.9999999'", "\"9999-12-31 23:59:59.9999999Z\"", "<",
             DisplayName = "datetimeoffset type filter and orderby test with lt operator and max value for datetimeoffset.")]
         [DataRow(DATETIMEOFFSET_TYPE, "eq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=",
             DisplayName = "datetimeoffset type filter and orderby test with eq operator")]
@@ -436,8 +436,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
-        [DataRow(LOCALTIME_TYPE, "\"23:59:59.9999999\"")]
-        [DataRow(LOCALTIME_TYPE, "null")]
+        [DataRow(TIME_TYPE, "23:59:59")]
+        [DataRow(TIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         [DataRow(UUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
         public async Task InsertIntoTypeColumnWithArgument(string type, object value)
@@ -843,12 +843,12 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static string TypeNameToGraphQLType(string typeName)
         {
-            if (typeName is DATETIMEOFFSET_TYPE)
+            return typeName switch
             {
-                return DATETIME_TYPE;
-            }
-
-            return typeName;
+                DATETIMEOFFSET_TYPE => DATETIME_TYPE,
+                TIME_TYPE => LOCALTIME_TYPE,
+                _ => typeName
+            };
         }
 
         protected abstract string MakeQueryOnTypeTable(

@@ -436,8 +436,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
-        [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
-        [DataRow(TIME_TYPE, "null")]
+        [DataRow(LOCALTIME_TYPE, "\"23:59:59.9999999\"")]
+        [DataRow(LOCALTIME_TYPE, "null")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         [DataRow(UUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
         public async Task InsertIntoTypeColumnWithArgument(string type, object value)

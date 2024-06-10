@@ -36,9 +36,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private RetryPolicy _retryPolicy;
 
-        private int? _maxResponseSizeMB;
-        private long? _maxResponseSizeBytes;
-        private bool _maxResponseSizeLogicEnabled;
+        private int _maxResponseSizeMB;
+        private long _maxResponseSizeBytes;
 
         /// <summary>
         /// Dictionary that stores dataSourceName to its corresponding connection string builder.
@@ -56,7 +55,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
             _maxResponseSizeMB = configProvider.GetConfig().MaxResponseSizeMB();
-            _maxResponseSizeLogicEnabled = configProvider.GetConfig().MaxResponseSizeLogicEnabled();
             _maxResponseSizeBytes = _maxResponseSizeMB * 1024 * 1024;
 
             _retryPolicyAsync = Policy
@@ -250,7 +248,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             try
             {
-                using DbDataReader dbDataReader = _maxResponseSizeLogicEnabled ?
+                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
                     await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
@@ -327,7 +325,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             try
             {
-                using DbDataReader dbDataReader = _maxResponseSizeLogicEnabled ?
+                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
                     cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
@@ -650,34 +648,33 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="dbDataReader">DbDataReader.</param>
         /// <param name="availableSize">Available buffer.</param>
-        /// <param name="jsonString">jsonString to read into.</param>
+        /// <param name="resultJsonString">jsonString to read into.</param>
         /// <returns>size of data read in bytes.</returns>
-        public int StreamData(DbDataReader dbDataReader, int availableSize, StringBuilder jsonString)
+        internal int StreamData(DbDataReader dbDataReader, long availableSize, StringBuilder resultJsonString)
         {
-            int fieldSize = (int)dbDataReader.GetChars(0, 0, null, 0, 0);
+            long resultFieldSize = dbDataReader.GetChars(0, 0, null, 0, 0);
 
             // if the size of the field is less than available size, then we can read the entire field.
             // else we throw exception.
-            ValidateSize(availableSize, fieldSize);
+            ValidateSize(availableSize, resultFieldSize);
 
-            char[] buffer = new char[fieldSize];
+            char[] buffer = new char[resultFieldSize];
 
             // read entire field into buffer and reduce available size.
-            dbDataReader.GetChars(0, 0, buffer, 0, fieldSize);
+            dbDataReader.GetChars(0, 0, buffer, 0, buffer.Length);
 
-            jsonString.Append(buffer[0..(int)(fieldSize)]);
-            return fieldSize;
+            resultJsonString.Append(buffer);
+            return buffer.Length;
         }
 
         /// <summary>
         /// This function reads the data from the DbDataReader and returns the JSON string.
         /// 1. MaxResponseSizeLogicEnabled is used like a feature flag.
-        /// 2. If MaxResponseSize is not specified by the customer or is null, getString is used and entire data is read into memory.
-        /// 3. If MaxResponseSize is specified by the customer, getChars is used. GetChars tries to read the data in chunks and if the data is more than the specified limit, it throws an exception.
+        /// 2. If MaxResponseSize is not specified by the customer or is null,
+        /// getString is used and entire data is read into memory.
+        /// 3. If MaxResponseSize is specified by the customer, getChars is used.
+        /// GetChars tries to read the data in chunks and if the data is more than the specified limit, it throws an exception.
         /// </summary>
-        /// <param name="dbDataReader"></param>
-        /// <returns></returns>
-        /// <exception cref="DataApiBuilderException"></exception>
         private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)
         {
             StringBuilder jsonString = new();
@@ -689,7 +686,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // 2. https://stackoverflow.com/questions/54973536/for-json-path-results-in-ssms-truncated-to-2033-characters/54973676
             // 3. https://docs.microsoft.com/en-us/sql/relational-databases/json/use-for-json-output-in-sql-server-and-in-client-apps-sql-server?view=sql-server-2017#use-for-json-output-in-a-c-client-app
 
-            if (!_maxResponseSizeLogicEnabled)
+            if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
             {
                 while (await ReadAsync(dbDataReader))
                 {
@@ -698,20 +695,25 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                // max buffer size will always be smaller than the 
-                long availableSize = (long)_maxResponseSizeBytes!;
+                long availableSize = _maxResponseSizeBytes;
                 while (await ReadAsync(dbDataReader))
                 {
-                    availableSize -= StreamData(dbDataReader, (int)availableSize, jsonString);
+                    availableSize -= StreamData(dbDataReader, availableSize, jsonString);
                 }
             }
 
             return jsonString.ToString();
         }
 
-        private void ValidateSize(long availableSize, long sizeToBeRead)
+        /// <summary>
+        /// This function validates the size of data being read is within the available size limit.
+        /// </summary>
+        /// <param name="availableSizeBytes">available size in bytes.</param>
+        /// <param name="sizeToBeReadBytes">amount of data trying to be read in bytes</param>
+        /// <exception cref="DataApiBuilderException">exception if size to be read is greater than data to be read.</exception>
+        private void ValidateSize(long availableSizeBytes, long sizeToBeReadBytes)
         {
-            if (availableSize - sizeToBeRead < 0)
+            if (sizeToBeReadBytes > availableSizeBytes)
             {
                 throw new DataApiBuilderException(
                     message: $"The JSON result size exceeds max result size of {_maxResponseSizeMB}MB. Please use pagination to reduce size of result.",

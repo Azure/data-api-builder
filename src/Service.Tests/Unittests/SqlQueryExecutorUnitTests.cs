@@ -319,14 +319,20 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         }
 
         /// <summary>
-        /// Validates that a query successfully executes within two retries by checking that the SqlQueryExecutor logger
-        /// was invoked the expected number of times.
+        /// Validates streaming logic for QueryExecutor
+        /// In this test the DbDataReader.GetChars method is mocked to return 1024*1024 bytes (1MB) of data.
+        /// Max available size is set to 5 MB.
+        /// Based on number of loops, the data read will be 1MB * readDataLoops.Exception should be thrown in test cases where we go above 5MB.
+        /// This will be in cases where readDataLoops > 5.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
-        [DataRow(false, 4, DisplayName = "Data should be successfully read when amount of data being read is less than max-db-response-size-mb")]
-        [DataRow(false, 5, DisplayName = "Data should be successfully read when amount of data being read is less than max-db-response-size-mb")]
-        [DataRow(true, 6, DisplayName = "Exception should be thrown when amount of data read is more than max-db-response-size-mb")]
-        public void ValidateStreamingLogicAsync(bool exceptionExpected, int readDataLoops)
+        [DataRow(4, false,
+            DisplayName = "Max available size is set to 5MB.Reading 1MB of data over 4 loops should succeed as amount of data being read is less than max-db-response-size-mb")]
+        [DataRow(5, false,
+            DisplayName = "Max available size is set to 5MB.Reading 1MB of data over 5 loops should succeed as amount of data being read is equal to max-db-response-size-mb")]
+        [DataRow(6, true,
+            DisplayName = "Max available size is set to 5MB.Reading 1MB of data over 6 loops should fail as amount of data being read exceeds max-db-response-size-mb")]
+        public void ValidateStreamingLogicAsync(int readDataLoops, bool exceptionExpected)
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             FileSystem fileSystem = new();
@@ -352,16 +358,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                /// In this test the DbDataReader.GetChars method is mocked to return 1024*1024 bytes (1MB) of data.
-                /// Max available size is set to 5 MB.
-                /// Based on number of loops, the data read will be 1MB * readDataLoops.Exception should be thrown in test cases where we go above 5MB.
                 Mock<DbDataReader> dbDataReader = new();
                 dbDataReader.Setup(d => d.HasRows).Returns(true);
                 dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
                 int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 for (int i = 0; i < readDataLoops; i++)
                 {
-                    availableSize -= msSqlQueryExecutor.StreamData(dbDataReader.Object, availableSize, new());
+                    availableSize -= msSqlQueryExecutor.StreamData(dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new());
                 }
 
             }

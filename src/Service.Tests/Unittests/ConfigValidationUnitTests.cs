@@ -2414,6 +2414,51 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
         }
 
+        /// <summary>
+        /// Test to validate the max response size option in the runtime config.
+        /// Note:Changing the default values of max response size would be a breaking change.
+        /// </summary>
+        /// <param name="exceptionExpected">should there be an exception.</param>
+        /// <param name="maxDbResponseSizeMB">maxResponse size input</param>
+        /// <param name="expectedExceptionMessage">expected exception message in case there is exception.</param>
+        /// <param name="expectedMaxResponseSize">expected value in config.</param>
+        [DataTestMethod]
+        [DataRow(null, 158, false, "",
+            DisplayName = $"{nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} should be 158MB when no value provided in config.")]
+        [DataRow(64, 64, false, "",
+            DisplayName = $"Valid positive input of {nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)}  > 0 and <= 158MB must be accepted and set in the config.")]
+        [DataRow(-1, 158, false, "",
+            DisplayName = $"-1 user input for {nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} should result in a value of 158MB which is the max value supported by dab engine")]
+        [DataRow(0, null, true, $"{nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} cannot be 0, exceed 158MB or be less than -1",
+            DisplayName = $"Input of 0 for {nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} must throw exception.")]
+        [DataRow(159, null, true, $"{nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} cannot be 0, exceed 158MB or be less than -1",
+            DisplayName = $"Inputs of {nameof(RuntimeConfig.Runtime.Host.MaxResponseSizeMB)} greater than 158MB must throw exception.")]
+        public void ValidateMaxResponseSizeInConfig(
+            int? providedMaxResponseSizeMB,
+            int? expectedMaxResponseSizeMB,
+            bool isExceptionExpected,
+            string expectedExceptionMessage)
+        {
+            try
+            {
+                RuntimeConfig runtimeConfig = new(
+                    Schema: "UnitTestSchema",
+                    DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                    Runtime: new(
+                        Rest: new(),
+                        GraphQL: new(),
+                        Host: new(Cors: null, Authentication: null, MaxResponseSizeMB: providedMaxResponseSizeMB)
+                    ),
+                    Entities: new(new Dictionary<string, Entity>()));
+                Assert.AreEqual(expectedMaxResponseSizeMB, runtimeConfig.MaxResponseSizeMB());
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.IsTrue(isExceptionExpected);
+                Assert.AreEqual(expectedExceptionMessage, ex.Message);
+            }
+        }
+
         private static RuntimeConfigValidator InitializeRuntimeConfigValidator()
         {
             MockFileSystem fileSystem = new();

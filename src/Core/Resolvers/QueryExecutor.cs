@@ -668,7 +668,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <summary>
-        /// This function reads the data from the DbDataReader and returns the JSON string.
+        /// This function reads the data from the DbDataReader and returns a JSON string.
         /// 1. MaxResponseSizeLogicEnabled is used like a feature flag.
         /// 2. If MaxResponseSize is not specified by the customer or is null,
         /// getString is used and entire data is read into memory.

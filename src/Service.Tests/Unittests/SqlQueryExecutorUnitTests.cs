@@ -366,7 +366,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     availableSize -= msSqlQueryExecutor.StreamData(dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new());
                 }
-
             }
             catch (DataApiBuilderException ex)
             {
@@ -374,7 +373,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(HttpStatusCode.RequestEntityTooLarge, ex.StatusCode);
                 Assert.AreEqual("The JSON result size exceeds max result size of 5MB. Please use pagination to reduce size of result.", ex.Message);
             }
-
         }
 
         [TestCleanup]

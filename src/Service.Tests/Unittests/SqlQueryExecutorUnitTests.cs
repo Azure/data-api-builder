@@ -354,7 +354,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 /// In this test the DbDataReader.GetChars method is mocked to return 1024*1024 bytes (1MB) of data.
                 /// Max available size is set to 5 MB.
-                /// Based on number of loops, the data read will be 1MB * readDataLoops.Exception should be thrown in test cases where we go above 5MB.
+                /// Based on number of loops, the data read will be 1MB * readDataLoops. Exception should be thrown in test cases where we go above 5MB.
                 Mock<DbDataReader> dbDataReader = new();
                 dbDataReader.Setup(d => d.HasRows).Returns(true);
                 dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
@@ -363,7 +363,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     availableSize -= msSqlQueryExecutor.StreamData(dbDataReader.Object, availableSize, new());
                 }
-
             }
             catch (DataApiBuilderException ex)
             {
@@ -371,7 +370,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 Assert.AreEqual(HttpStatusCode.RequestEntityTooLarge, ex.StatusCode);
                 Assert.AreEqual("The JSON result size exceeds max result size of 5MB. Please use pagination to reduce size of result.", ex.Message);
             }
-
         }
 
         [TestCleanup]

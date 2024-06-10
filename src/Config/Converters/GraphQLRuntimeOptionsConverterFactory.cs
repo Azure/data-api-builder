@@ -132,7 +132,7 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             }
                             else
                             {
-                                throw new JsonException($"Unexpected type of value entered for depth-limit: {reader.TokenType}");
+                                throw new JsonException($"Unsupported value entered for depth-limit: {reader.TokenType}");
                             }
 
                             break;

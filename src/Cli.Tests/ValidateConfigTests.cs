@@ -118,18 +118,18 @@ public class ValidateConfigTests
     /// This Test is used to verify that the validate command is able to catch invalid values for the depth-limit property.
     /// </summary>
     [DataTestMethod]
-    [DataRow("null", true, false, DisplayName = "Invalid Value: 'null'")]
-    [DataRow("20", true, true, DisplayName = "Valid Value: 20")]
-    [DataRow(-1, false, false, DisplayName = "Invalid Value: -1")]
-    [DataRow(0, false, false, DisplayName = "Invalid Value: 0")]
-    [DataRow(-2, false, false, DisplayName = "Invalid Value: -2")]
-    [DataRow(2147483648, false, false, DisplayName = "Invalid Value: 2147483648")]
-    [DataRow("seven", true, false, DisplayName = "Invalid Value: 'seven'")]
-    public void TestValidateConfigFailsWithInvalidGraphQLDepthLimit(object? depthLimit, bool isStringValue, bool isSuccessExpected)
+    [DataRow("null", true, DisplayName = "Invalid Value: 'null'. Only integer values are allowed.")]
+    [DataRow("20", true, DisplayName = "Invalid Value: '20'. Integer value provided as string are not allowed.")]
+    [DataRow(0, false, DisplayName = "Invalid Value: 0. Only values between 1 and 2147483647 are allowed along with -1.")]
+    [DataRow(-2, false, DisplayName = "Invalid Value: -2. Negative values are not allowed except -1.")]
+    [DataRow(2147483648, false, DisplayName = "Invalid Value: 2147483648. Only values between 1 and 2147483647 are allowed along with -1.")]
+    [DataRow("seven", true, DisplayName = "Invalid Value: 'seven'. Only integer values are allowed.")]
+    public void TestValidateConfigFailsWithInvalidGraphQLDepthLimit(object? depthLimit, bool isStringValue)
     {
         string depthLimitSection = isStringValue ? $@",""depth-limit"": ""{depthLimit}""" : $@",""depth-limit"": {depthLimit}";
 
         string jsonData = TestHelper.GenerateConfigWithGivenDepthLimit(depthLimitSection);
+
         // create an empty config file
         ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, jsonData);
 

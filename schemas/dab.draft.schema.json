@@ -178,7 +178,7 @@
             },
             "depth-limit": {
               "type": "integer",
-              "description": "Limit the depth of the query",
+              "description": "Maximum allowed depth of a GraphQL query.",
               "default": null
             },
             "multiple-mutations": {

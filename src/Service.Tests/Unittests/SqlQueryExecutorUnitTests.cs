@@ -327,11 +327,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow(4, false,
-            DisplayName = "Max available size is set to 5MB.Reading 1MB of data over 4 loops should succeed as amount of data being read is less than max-db-response-size-mb")]
+            DisplayName = "Max available size is set to 5MB.4 data read loop iterations * 1MB -> should successfully read 4MB because max-db-response-size-mb is 4MB")]
         [DataRow(5, false,
-            DisplayName = "Max available size is set to 5MB.Reading 1MB of data over 5 loops should succeed as amount of data being read is equal to max-db-response-size-mb")]
+            DisplayName = "Max available size is set to 5MB.5 data read loop iterations * 1MB -> should successfully read 5MB because max-db-response-size-mb is 5MB")]
         [DataRow(6, true,
-            DisplayName = "Max available size is set to 5MB.Reading 1MB of data over 6 loops should fail as amount of data being read exceeds max-db-response-size-mb")]
+            DisplayName = "Max available size is set to 5MB.6 data read loop iterations * 1MB -> Fails to read 6MB because max-db-response-size-mb is 5MB")]
         public void ValidateStreamingLogicAsync(int readDataLoops, bool exceptionExpected)
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);

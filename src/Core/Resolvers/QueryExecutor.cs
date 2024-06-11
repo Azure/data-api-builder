@@ -652,7 +652,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <returns>size of data read in bytes.</returns>
         internal int StreamData(DbDataReader dbDataReader, long availableSize, StringBuilder resultJsonString)
         {
-            long resultFieldSize = dbDataReader.GetChars(ordinal:0, dataOffset:0, buffer:null, bufferOffset:0, length:0);
+            long resultFieldSize = dbDataReader.GetChars(ordinal: 0, dataOffset: 0, buffer: null, bufferOffset: 0, length: 0);
 
             // if the size of the field is less than available size, then we can read the entire field.
             // else we throw exception.
@@ -661,7 +661,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             char[] buffer = new char[resultFieldSize];
 
             // read entire field into buffer and reduce available size.
-            dbDataReader.GetChars(ordinal:0, dataOffset:0, buffer:buffer, bufferOffset:0, length:buffer.Length);
+            dbDataReader.GetChars(ordinal: 0, dataOffset: 0, buffer: buffer, bufferOffset: 0, length: buffer.Length);
 
             resultJsonString.Append(buffer);
             return buffer.Length;

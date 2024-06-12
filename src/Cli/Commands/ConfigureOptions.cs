@@ -26,7 +26,7 @@ namespace Cli.Commands
             DepthLimit = depthLimit;
         }
 
-        [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: [0,2147483647] inclusive. Default is infinity. Use 0 to remove limit.")]
+        [Option("runtime.graphql.depth-limit", Required = false, HelpText = "Max allowed depth of the nested query. Allowed values: (0,2147483647] inclusive. Default is infinity. Use -1 to remove limit.")]
         public int? DepthLimit { get; }
 
         public int Handler(ILogger logger, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)

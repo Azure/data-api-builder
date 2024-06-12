@@ -76,7 +76,7 @@ namespace Cli.Tests
             // Assert: Validate the Depth Limit is added
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
-            Assert.IsNotNull(config.Runtime!.GraphQL!.DepthLimit);
+            Assert.IsNotNull(config.Runtime?.GraphQL?.DepthLimit);
             Assert.AreEqual(maxDepthLimit, config!.Runtime!.GraphQL!.DepthLimit);
         }
 

@@ -495,9 +495,9 @@ public record RuntimeConfig
         return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
     }
 
-    public int? MaxResponseSizeMB()
+    public int MaxResponseSizeMB()
     {
-        return Runtime?.Host?.MaxResponseSizeMB;
+        return Runtime?.Host?.MaxResponseSizeMB ?? HostOptions.MAX_RESPONSE_LENGTH_DAB_ENGINE_MB;
     }
 
     public bool MaxResponseSizeLogicEnabled()

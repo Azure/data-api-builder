@@ -18,12 +18,12 @@ public record HostOptions
     /// .net6: https://github.com/dotnet/runtime/blob/v8.0.0/src/libraries/System.Text.Json/src/System/Text/Json/Writer/JsonWriterHelper.cs#75
     /// ref: Json constant: https://github.com/dotnet/runtime/blob/main/src/libraries/System.Text.Json/src/System/Text/Json/JsonConstants.cs#L80
     /// </summary>
-    private const int MAX_RESPONSE_LENGTH_DAB_ENGINE_MB = 158;
+    public const int MAX_RESPONSE_LENGTH_DAB_ENGINE_MB = 158;
 
     /// <summary>
     /// Dab engine default response length. As of now this is same as max response length.
     /// </summary>
-    private const int DEFAULT_RESPONSE_LENGTH_DAB_ENGINE_MB = 158;
+    public const int DEFAULT_RESPONSE_LENGTH_DAB_ENGINE_MB = 158;
 
     [JsonPropertyName("cors")]
     public CorsOptions? Cors { get; init; }

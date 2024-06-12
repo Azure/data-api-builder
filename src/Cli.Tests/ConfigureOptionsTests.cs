@@ -4,7 +4,7 @@
 namespace Cli.Tests
 {
     /// <summary>
-    /// Validates that `dab configure [options]` configure settings with the user-provided options.
+    /// Validates that `dab configure [options]` configures settings with the user-provided options.
     /// </summary>
     [TestClass]
     public class ConfigureOptionsTests : VerifyBase

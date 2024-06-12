@@ -99,7 +99,7 @@ namespace Cli.Tests
             {
                 Runtime = config.Runtime! with
                 {
-                    GraphQL = config.Runtime!.GraphQL! with
+                    GraphQL = config.Runtime.GraphQL! with
                     {
                         DepthLimit = currentDepthLimit
                     }
@@ -119,7 +119,7 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
 
-            Assert.AreEqual(newDepthLimit, config.Runtime!.GraphQL!.DepthLimit);
+            Assert.AreEqual(newDepthLimit, config.Runtime?.GraphQL?.DepthLimit);
         }
     }
 }

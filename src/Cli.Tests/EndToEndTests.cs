@@ -301,11 +301,11 @@ public class EndToEndTests
     /// Valid values are [1, INT32.MAX_VALUE], and -1 to remove depth limit.
     /// </summary>
     [DataTestMethod]
-    [DataRow("8", true, DisplayName = "Succesful update with a valid value for depth limit")]
+    [DataRow("8", true, DisplayName = "Successful update with a valid value for depth limit")]
     [DataRow("0", false, DisplayName = "Failure as depth limit cannot be set to 0.")]
-    [DataRow("-1", true, DisplayName = "Succesful update to to remove depth limit using -1.")]
+    [DataRow("-1", true, DisplayName = "Successful update to to remove depth limit using -1.")]
     [DataRow("-15", false, DisplayName = "Failure as negative value other than -1 is invalid")]
-    [DataRow("2147483647", true, DisplayName = "Succesful update setting value to INT32_MAX")]
+    [DataRow("2147483647", true, DisplayName = "Successful update setting value to INT32_MAX")]
     [DataRow("2147483648", false, DisplayName = "Failure when using depth value greater than INT32_MAX")]
     [DataRow("seven", false, DisplayName = "Failure when using string value for depth limit")]
     public void TestUpdateDepthLimitInGraphQLRuntimeSettings(string depthLimit, bool isSuccess)

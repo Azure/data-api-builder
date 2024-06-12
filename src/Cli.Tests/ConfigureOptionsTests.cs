@@ -76,16 +76,18 @@ namespace Cli.Tests
             // Assert: Validate the Depth Limit is added
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
             Assert.IsTrue(RuntimeConfigLoader.TryParseConfig(updatedConfig, out config));
-            Assert.IsNotNull(config.Runtime!.GraphQL!.DepthLimit);
-            Assert.AreEqual(maxDepthLimit, config!.Runtime!.GraphQL!.DepthLimit);
+            Assert.IsNotNull(config.Runtime?.GraphQL?.DepthLimit);
+            Assert.AreEqual(maxDepthLimit, config.Runtime.GraphQL.DepthLimit);
         }
 
         /// <summary>
         /// Test to update the current depth limit for GraphQL and removal the depth limit using -1.
+        /// When runtime.graphql.depth-limit has an initial value of 8.
+        /// validates that "dab configure --runtime.graphql.depth-limit {value}" sets the expected depth limit.
         /// </summary>
         [DataTestMethod]
         [DataRow(20, DisplayName = "Update current depth limit for GraphQL.")]
-        [DataRow(-1, DisplayName = "Remove depth limit from GraphQL.")]
+        [DataRow(-1, DisplayName = "Remove depth limit from GraphQL by setting depth limit to -1.")]
         public void TestUpdateDepthLimitForGraphQL(int? newDepthLimit)
         {
             int currentDepthLimit = 8;
@@ -105,12 +107,12 @@ namespace Cli.Tests
             };
 
             _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(config.ToJson()));
-
-            // Act: Update Depth Limit
             ConfigureOptions options = new(
                 depthLimit: newDepthLimit,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
+
+            // Act: Update Depth Limit
             Assert.IsTrue(TryConfigureSettings(options, _runtimeConfigLoader!, _fileSystem!));
 
             // Assert: Validate the Depth Limit is updated

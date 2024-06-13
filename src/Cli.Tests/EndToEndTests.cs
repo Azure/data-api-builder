@@ -297,6 +297,36 @@ public class EndToEndTests
     }
 
     /// <summary>
+    /// This test checks behavior of executing `dab configure --runtime.graphql.depth-limit {value}`.
+    /// Valid values are [1, INT32.MAX_VALUE], and -1 to remove depth limit.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("8", true, DisplayName = "Successful update with a valid value for depth limit")]
+    [DataRow("0", false, DisplayName = "Failure as depth limit cannot be set to 0.")]
+    [DataRow("-1", true, DisplayName = "Successful update to to remove depth limit using -1.")]
+    [DataRow("-15", false, DisplayName = "Failure as negative value other than -1 is invalid")]
+    [DataRow("2147483647", true, DisplayName = "Successful update setting value to INT32_MAX")]
+    [DataRow("2147483648", false, DisplayName = "Failure when using depth value greater than INT32_MAX")]
+    [DataRow("seven", false, DisplayName = "Failure when using string value for depth limit")]
+    public void TestUpdateDepthLimitInGraphQLRuntimeSettings(string depthLimit, bool isSuccess)
+    {
+        // Initialize the config file.
+        string[] initArgs = { "init", "-c", TEST_RUNTIME_CONFIG_FILE, "--host-mode", "development", "--database-type",
+            "mssql", "--connection-string", TEST_ENV_CONN_STRING };
+        Program.Execute(initArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        Assert.IsTrue(_runtimeConfigLoader!.TryLoadConfig(TEST_RUNTIME_CONFIG_FILE, out RuntimeConfig? runtimeConfig));
+        Assert.IsNotNull(runtimeConfig);
+
+        // Act: Update the depth limit in the config file.
+        string[] runtimeArgs = { "configure", "-c", TEST_RUNTIME_CONFIG_FILE, "--runtime.graphql.depth-limit", depthLimit };
+        int isError = Program.Execute(runtimeArgs, _cliLogger!, _fileSystem!, _runtimeConfigLoader!);
+
+        // Assert: Check if the depth limit was updated successfully.
+        Assert.AreEqual(isSuccess, isError == 0);
+    }
+
+    /// <summary>
     /// Test to verify authentication options with init command containing
     /// neither EasyAuth or Simulator as Authentication provider.
     /// It checks correct generation of config with provider, audience and issuer.

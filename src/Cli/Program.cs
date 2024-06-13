@@ -58,7 +58,7 @@ namespace Cli
             });
 
             // Parsing user arguments and executing required methods.
-            int result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions>(args)
+            int result = parser.ParseArguments<InitOptions, AddOptions, UpdateOptions, StartOptions, ValidateOptions, ExportOptions, AddTelemetryOptions, ConfigureOptions>(args)
                 .MapResult(
                     (InitOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (AddOptions options) => options.Handler(cliLogger, loader, fileSystem),
@@ -66,6 +66,7 @@ namespace Cli
                     (StartOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (ValidateOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (AddTelemetryOptions options) => options.Handler(cliLogger, loader, fileSystem),
+                    (ConfigureOptions options) => options.Handler(cliLogger, loader, fileSystem),
                     (ExportOptions options) => Exporter.Export(options, cliLogger, loader, fileSystem),
                     errors => DabCliParserErrorHandler.ProcessErrorsAndReturnExitCode(errors));
 

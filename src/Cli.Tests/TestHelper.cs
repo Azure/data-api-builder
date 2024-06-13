@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.IdentityModel.Tokens;
+
 namespace Cli.Tests
 {
     public static class TestHelper
@@ -12,6 +14,8 @@ namespace Cli.Tests
         public const string TEST_ENV_CONN_STRING = "@env('connection-string')";
 
         public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
+
+        public const string SAMPLE_TEST_PGSQL_CONN_STRING = "Host=<>;Database=<>;username=<>;password=<>";
 
         // test schema for cosmosDB
         public const string TEST_SCHEMA_FILE = "test-schema.gql";
@@ -109,7 +113,8 @@ namespace Cli.Tests
           ""runtime"": {
               ""rest"": {
                   ""path"": ""/api"",
-                  ""enabled"": true
+                  ""enabled"": true,
+                  ""request-body-strict"": true
               },
               ""graphql"": {
                   ""path"": ""/graphql"",
@@ -156,6 +161,68 @@ namespace Cli.Tests
               }
           },
           ""entities"": {}";
+
+        /// <summary>
+        /// Configuration with unresolved environment variable references on
+        /// properties of various data types (string, enum, bool, int).
+        /// </summary>
+        public const string CONFIG_ENV_VARS = @"
+            {
+               ""data-source"": {
+              ""database-type"": ""@env('database-type')"",
+              ""connection-string"": ""@env('connection-string')""
+            },
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": false
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""StaticWebApps""
+                  }
+              }
+          },
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book"",
+                  ""parameters"": {
+                      ""param1"": ""@env('sp_param1_int')"",
+                      ""param2"": ""hello"",
+                      ""param3"": ""@env('sp_param3_bool')""
+                  }
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                    ""methods"": [
+                      ""post""
+                    ]
+                  },
+                  ""graphql"": {
+                    ""operation"": ""mutation""
+                      }
+                    }
+                  }
+          }";
 
         /// <summary>
         /// A minimal valid config json without any entities. This config string is used in unit tests.
@@ -1162,6 +1229,43 @@ namespace Cli.Tests
   }
 }
 ";
+        /// <summary>
+        /// Generates the config json string with the given depth limit in the form of json string.
+        /// example: { ""depth-limit"": 10 }
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateConfigWithGivenDepthLimit(string? depthLimitJson = null)
+        {
+            string depthLimitSection = depthLimitJson.IsNullOrEmpty() ? string.Empty : ("," + depthLimitJson);
+
+            string runtimeSection = $@"
+            ""runtime"": {{
+                ""rest"": {{
+                    ""path"": ""/api"",
+                    ""enabled"": true,
+                    ""request-body-strict"": true
+                }},
+                ""graphql"": {{
+                    ""path"": ""/graphql"",
+                    ""enabled"": true,
+                    ""allow-introspection"": true
+                    {depthLimitSection}
+                }},
+                ""host"": {{
+                    ""mode"": ""development"",
+                    ""cors"": {{
+                        ""origins"": [],
+                        ""allow-credentials"": false
+                    }},
+                    ""authentication"": {{
+                        ""provider"": ""StaticWebApps""
+                    }}
+                }}
+            }},
+            ""entities"": {{}}";
+
+            return $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{runtimeSection}}}";
+        }
 
         /// <summary>
         /// Creates basic initialization options for MS SQL config.

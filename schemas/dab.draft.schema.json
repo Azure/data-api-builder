@@ -176,6 +176,11 @@
               "type": "boolean",
               "description": "Allow enabling/disabling GraphQL requests for all entities."
             },
+            "depth-limit": {
+              "type": "integer",
+              "description": "Maximum allowed depth of a GraphQL query.",
+              "default": null
+            },
             "multiple-mutations": {
               "type": "object",
               "description": "Configuration properties for multiple mutation operations",

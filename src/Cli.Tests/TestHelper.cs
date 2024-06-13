@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.IdentityModel.Tokens;
+
 namespace Cli.Tests
 {
     public static class TestHelper
@@ -1234,7 +1236,7 @@ namespace Cli.Tests
         /// <returns></returns>
         public static string GenerateConfigWithGivenDepthLimit(string? depthLimitJson = null)
         {
-            string depthLimitSection = depthLimitJson != null ? depthLimitJson : string.Empty;
+            string depthLimitSection = depthLimitJson.IsNullOrEmpty() ? string.Empty : ("," + depthLimitJson);
 
             string runtimeSection = $@"
             ""runtime"": {{

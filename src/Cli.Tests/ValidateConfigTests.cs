@@ -119,7 +119,6 @@ public class ValidateConfigTests
     /// </summary>
     [DataTestMethod]
     [DataRow("null", true, DisplayName = "Invalid Value: 'null'. Only integer values are allowed.")]
-    [DataRow(null, false, DisplayName = "Invalid Value: null. Only integer values are allowed.")]
     [DataRow("20", true, DisplayName = "Invalid Value: '20'. Integer values provided as strings are not allowed.")]
     [DataRow(0, false, DisplayName = "Invalid Value: 0. Only values between 1 and 2147483647 are allowed along with -1.")]
     [DataRow(-2, false, DisplayName = "Invalid Value: -2. Negative values are not allowed except -1.")]
@@ -127,11 +126,7 @@ public class ValidateConfigTests
     [DataRow("seven", true, DisplayName = "Invalid Value: 'seven'. Only integer values are allowed.")]
     public void TestValidateConfigFailsWithInvalidGraphQLDepthLimit(object? depthLimit, bool isStringValue)
     {
-        string depthLimitSection = isStringValue ? $@",""depth-limit"": ""{depthLimit}""" : $@",""depth-limit"": {depthLimit}";
-        if (depthLimit is null && !isStringValue)
-        {
-            depthLimitSection = $@",""depth-limit"": null";
-        }
+        string depthLimitSection = isStringValue ? $@"""depth-limit"": ""{depthLimit}""" : $@"""depth-limit"": {depthLimit}";
 
         string jsonData = TestHelper.GenerateConfigWithGivenDepthLimit(depthLimitSection);
 

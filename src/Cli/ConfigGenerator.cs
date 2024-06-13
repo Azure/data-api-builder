@@ -539,6 +539,7 @@ namespace Cli
         /// Attempts to update the depth limit in the GraphQL runtime settings based on the provided value.
         /// Validates that any user-provided depth limit is an integer within the valid range of [1 to Int32.MaxValue] or -1.
         /// A depth limit of -1 is considered a special case that disables the GraphQL depth limit.
+        /// [NOTE:] This method expects the provided depth limit to be not null.
         /// </summary>
         /// <param name="options">Options including the new depth limit.</param>
         /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
@@ -565,7 +566,7 @@ namespace Cli
             // Try to update the depth limit in the runtime configuration
             try
             {
-                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime! with { GraphQL = runtimeConfig.Runtime.GraphQL! with { DepthLimit = newDepthLimit } } };
+                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime! with { GraphQL = runtimeConfig.Runtime.GraphQL! with { DepthLimit = newDepthLimit, UserProvidedDepthLimit = true } } };
             }
             catch (Exception e)
             {

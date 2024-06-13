@@ -27,18 +27,37 @@ namespace Cli.Tests
         }
 
         /// <summary>
-        /// Validates that `dab configure` is a no-op because the user provided no options to update
-        /// the config file. The config file must not change.
+        /// Validates that if depth-limit is not provided in `dab configure` options, then The config file must not change.
+        /// Example: if depth-limit is not provided in the config, it should not be added.
+        /// if { "depth-limit" : null } is provided in the config, it should not be removed.
+        /// Also, if { "depth-limit" : -1 } is provided in the config, it should not be removed.
         /// </summary>
-        [TestMethod]
-        public void TestNoUpdateRuntimeSettings()
+        [DataTestMethod]
+        [DataRow(null, false, DisplayName = "Config: 'depth-limit' property not defined, should not be added.")]
+        [DataRow(null, true, DisplayName = "Config: 'depth-limit' is null. It should not be removed.")]
+        [DataRow(-1, true, DisplayName = "Config: 'depth-limit' is -1, should remain as is without change.")]
+        public void TestNoUpdateOnGraphQLDepthLimitInRuntimeSettings(object? depthLimit, bool isDepthLimitProvidedInConfig)
         {
+            string depthLimitSection = "";
+            if (isDepthLimitProvidedInConfig)
+            {
+                if (depthLimit == null)
+                {
+                    depthLimitSection = $@"""depth-limit"": null";
+                }
+                else
+                {
+                    depthLimitSection = $@"""depth-limit"": {depthLimit}";
+                }
+            }
+
+            string initialConfig = TestHelper.GenerateConfigWithGivenDepthLimit(depthLimitSection);
+
             // Arrange
-            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, new MockFileData(INITIAL_CONFIG));
+            _fileSystem!.AddFile(TEST_RUNTIME_CONFIG_FILE, initialConfig);
 
             // Act: Run Configure with no options
             ConfigureOptions options = new(
-                depthLimit: null,
                 config: TEST_RUNTIME_CONFIG_FILE
             );
 
@@ -48,7 +67,17 @@ namespace Cli.Tests
             string updatedConfig = _fileSystem!.File.ReadAllText(TEST_RUNTIME_CONFIG_FILE);
 
             // Assert that INITIAL_CONFIG is same as the updated config
-            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(INITIAL_CONFIG), JObject.Parse(updatedConfig)));
+            if (isDepthLimitProvidedInConfig)
+            {
+                Assert.IsTrue(updatedConfig.Contains(depthLimitSection));
+            }
+            else
+            {
+                Assert.IsTrue(!updatedConfig.Contains("depth-limit"));
+            }
+
+            // Assert that INITIAL_CONFIG is same as the updated config
+            Assert.IsTrue(JToken.DeepEquals(JObject.Parse(initialConfig), JObject.Parse(updatedConfig)));
         }
 
         /// <summary>

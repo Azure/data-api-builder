@@ -126,9 +126,13 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             break;
 
                         case "depth-limit":
-                            if (reader.TokenType is JsonTokenType.Number)
+                            if (reader.TokenType is JsonTokenType.Null)
                             {
-                                graphQLRuntimeOptions = graphQLRuntimeOptions with { DepthLimit = reader.GetInt32() };
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { DepthLimit = null, UserProvidedDepthLimit = true };
+                            }
+                            else if (reader.TokenType is JsonTokenType.Number)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { DepthLimit = reader.GetInt32(), UserProvidedDepthLimit = true };
                             }
                             else
                             {
@@ -155,9 +159,16 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteString("path", value.Path);
             writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
 
-            if (value.DepthLimit is not null)
+            if (value.UserProvidedDepthLimit)
             {
-                writer.WriteNumber("depth-limit", value.DepthLimit.Value);
+                if (value.DepthLimit is null)
+                {
+                    writer.WriteNull("depth-limit");
+                }
+                else
+                {
+                    writer.WriteNumber("depth-limit", value.DepthLimit.Value);
+                }
             }
 
             if (value.MultipleMutationOptions is not null)

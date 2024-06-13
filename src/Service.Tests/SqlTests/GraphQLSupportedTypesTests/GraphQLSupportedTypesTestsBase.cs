@@ -139,7 +139,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
         [DataRow(SINGLE_TYPE, "gte", "-9.2", "-9.2", ">=")]
         [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
-        [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
+        [DataRow(SINGLE_TYPE, "lte", "real '.33'", "0.33", "<=")]
         [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
         [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
         [DataRow(FLOAT_TYPE, "gt", "-9.2", "-9.2", ">")]
@@ -180,7 +180,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 filterValue: sqlValue,
                 filterOperator: queryOperator,
                 filterField: field,
-                orderBy: "typeid",
+                orderBy: "id",
                 limit: "100");
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
@@ -279,31 +279,63 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
+        /// (MSSQL Test, which supports time type with 7 decimal precision)
         /// Validates that LocalTime values with X precision are handled correctly: precision of 7 decimal places used with eq (=) will 
         /// not return result with only 3 decimal places i.e. 10:23:54.999 != 10:23:54.9999999
-        /// In the Database only one row exist with value 23:59:59.9999999
+        /// In the Database only one row exists with value 23:59:59.9999999
         /// </summary>
         [DataTestMethod]
-        [DataRow("\"23:59:59.9999999\"", 1, DisplayName = "TimeType Precision Check with 7 decimal places")]
-        [DataRow("\"23:59:59.999\"", 0, DisplayName = "TimeType Precision Check with 3 decimal places")]
-        public async Task TestTimeTypePrecisionCheck(string gqlValue, int count)
+        [DataRow("23:59:59.9999999", DisplayName = "TimeType Precision Check with 7 decimal places")]
+        [DataRow("23:59:59.999", DisplayName = "TimeType Precision Check with 3 decimal places")]
+        public async Task TestTimeTypePrecisionCheck(string gqlInput)
         {
+            // Arrange
             if (!IsSupportedType(TIME_TYPE))
             {
                 Assert.Inconclusive("Type not supported");
             }
 
+            string graphQLMutationName = "createSupportedType";
+            string gqlMutation = "mutation{ createSupportedType (item: { time_types: \"" + gqlInput + "\"}){ typeid, time_types } }";
+            JsonElement testScopedInsertedRecord = await ExecuteGraphQLRequestAsync(gqlMutation, graphQLMutationName, isAuthenticated: true);
+
+            if (!testScopedInsertedRecord.TryGetProperty("typeid", out JsonElement typeid))
+            {
+                Assert.Fail(message: "Failed to insert test record.");
+            }
+
+            int insertedRecordId = typeid.GetInt32();
+
             string graphQLQueryName = "supportedTypes";
+            string idFilter = @"typeid: { eq: " + typeid.GetInt32() + " }";
             string gqlQuery = @"{
-                supportedTypes(first: 100 orderBy: { " + "time_types" + ": ASC } filter: { " + "time_types" + ": {" + "eq" + ": " + gqlValue + @"} }) {
+                supportedTypes(
+                orderBy: { " + "time_types" + @": ASC }
+                filter: { " + "time_types" + ": {" + "eq" + ": \"" + gqlInput + "\"}," + idFilter + @"}) {
                     items {
                         typeid, " + "time_types" + @"
                     }
                 }
             }";
 
+            // Act - Execute query with filter on time_types, expect to get back time_types with 7 decimal places.
             JsonElement gqlResponse = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            Assert.AreEqual(count, gqlResponse.GetProperty("items").GetArrayLength());
+
+            // Assert
+            // Validate that the filter returned a result.
+            bool receivedResultWithFilter = gqlResponse.TryGetProperty("items", out JsonElement items) && items.GetArrayLength() > 0;
+            Assert.AreEqual(expected: true, actual: receivedResultWithFilter, message: "Unexpected results and result count.");
+
+            // Validate that the filter returned the value inserted during setup.
+            JsonElement firstItem = items[0];
+            JsonElement typeId = firstItem.GetProperty("typeid");
+            int actualTypeIdInResponse = typeId.GetInt32();
+            Assert.AreEqual(expected: insertedRecordId, actual: actualTypeIdInResponse, message: "typeid mismatch, filter didn't work");
+
+            // Validate that the filter returned the value with expected time_types precision.
+            JsonElement timeValue = firstItem.GetProperty("time_types");
+            string actualTimeValue = timeValue.GetString();
+            Assert.AreEqual(expected: gqlInput, actual: actualTimeValue, message: "returned time value unexpected.");
         }
 
         /// <summary>

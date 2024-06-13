@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
 
 namespace Azure.DataApiBuilder.Config.ObjectModel;
@@ -20,5 +21,6 @@ public record GraphQLRuntimeOptions(bool Enabled = true,
     /// the DAB CLI should not write the default value to a serialized config.
     /// </summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.Always)]
+    [MemberNotNullWhen(true, nameof(DepthLimit))]
     public bool UserProvidedDepthLimit { get; init; } = false;
 }

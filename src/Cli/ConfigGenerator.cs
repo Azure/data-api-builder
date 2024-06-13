@@ -511,6 +511,73 @@ namespace Cli
         }
 
         /// <summary>
+        /// Tries to update the runtime settings based on the provided runtime options.
+        /// </summary>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        public static bool TryConfigureSettings(ConfigureOptions options, FileSystemRuntimeConfigLoader loader, IFileSystem fileSystem)
+        {
+            if (!TryGetConfigFileBasedOnCliPrecedence(loader, options.Config, out string runtimeConfigFile))
+            {
+                return false;
+            }
+
+            if (!loader.TryLoadConfig(runtimeConfigFile, out RuntimeConfig? runtimeConfig))
+            {
+                _logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                return false;
+            }
+
+            if (options.DepthLimit is not null && !TryUpdateDepthLimit(options, ref runtimeConfig))
+            {
+                return false;
+            }
+
+            return WriteRuntimeConfigToFile(runtimeConfigFile, runtimeConfig, fileSystem);
+        }
+
+        /// <summary>
+        /// Attempts to update the depth limit in the GraphQL runtime settings based on the provided value.
+        /// Validates that any user-provided depth limit is an integer within the valid range of [1 to Int32.MaxValue] or -1.
+        /// A depth limit of -1 is considered a special case that disables the GraphQL depth limit.
+        /// [NOTE:] This method expects the provided depth limit to be not null.
+        /// </summary>
+        /// <param name="options">Options including the new depth limit.</param>
+        /// <param name="runtimeConfig">Current config, updated if method succeeds.</param>
+        /// <returns>True if the update was successful, false otherwise.</returns>
+        private static bool TryUpdateDepthLimit(
+            ConfigureOptions options,
+            [NotNullWhen(true)] ref RuntimeConfig runtimeConfig)
+        {
+            // check if depth limit is within the valid range of 1 to Int32.MaxValue
+            int? newDepthLimit = options.DepthLimit;
+            if (newDepthLimit < 1)
+            {
+                if (newDepthLimit == -1)
+                {
+                    _logger.LogWarning("Depth limit set to -1 removes the GraphQL query depth limit.");
+                }
+                else
+                {
+                    _logger.LogError("Invalid depth limit. Specify a depth limit > 0 or remove the existing depth limit by specifying -1.");
+                    return false;
+                }
+            }
+
+            // Try to update the depth limit in the runtime configuration
+            try
+            {
+                runtimeConfig = runtimeConfig with { Runtime = runtimeConfig.Runtime! with { GraphQL = runtimeConfig.Runtime.GraphQL! with { DepthLimit = newDepthLimit, UserProvidedDepthLimit = true } } };
+            }
+            catch (Exception e)
+            {
+                _logger.LogError("Failed to update the depth limit: {e}", e);
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Parse permission string to create PermissionSetting array.
         /// </summary>
         /// <param name="permissions">Permission input string as IEnumerable.</param>

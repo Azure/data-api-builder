@@ -59,6 +59,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<HostOptions>(options => options.MaxResponseSizeMB);
         // Ignore UserProvidedMaxResponseSizeMB as that's not serialized in our config file.
         VerifierSettings.IgnoreMember<HostOptions>(options => options.UserProvidedMaxResponseSizeMB);
+        // Ignore UserProvidedDepthLimit as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.UserProvidedDepthLimit);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

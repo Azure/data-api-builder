@@ -115,6 +115,37 @@ public class ValidateConfigTests
     }
 
     /// <summary>
+    /// This Test is used to verify that the validate command is able to catch invalid values for the depth-limit property.
+    /// </summary>
+    [DataTestMethod]
+    [DataRow("null", true, DisplayName = "Invalid Value: 'null'. Only integer values are allowed.")]
+    [DataRow("20", true, DisplayName = "Invalid Value: '20'. Integer values provided as strings are not allowed.")]
+    [DataRow(0, false, DisplayName = "Invalid Value: 0. Only values between 1 and 2147483647 are allowed along with -1.")]
+    [DataRow(-2, false, DisplayName = "Invalid Value: -2. Negative values are not allowed except -1.")]
+    [DataRow(2147483648, false, DisplayName = "Invalid Value: 2147483648. Only values between 1 and 2147483647 are allowed along with -1.")]
+    [DataRow("seven", true, DisplayName = "Invalid Value: 'seven'. Only integer values are allowed.")]
+    public void TestValidateConfigFailsWithInvalidGraphQLDepthLimit(object? depthLimit, bool isStringValue)
+    {
+        string depthLimitSection = isStringValue ? $@"""depth-limit"": ""{depthLimit}""" : $@"""depth-limit"": {depthLimit}";
+
+        string jsonData = TestHelper.GenerateConfigWithGivenDepthLimit(depthLimitSection);
+
+        // create an empty config file
+        ((MockFileSystem)_fileSystem!).AddFile(TEST_RUNTIME_CONFIG_FILE, jsonData);
+
+        ValidateOptions validateOptions = new(TEST_RUNTIME_CONFIG_FILE);
+
+        try
+        {
+            Assert.IsFalse(ConfigGenerator.IsConfigValid(validateOptions, _runtimeConfigLoader!, _fileSystem!));
+        }
+        catch (Exception ex)
+        {
+            Assert.Fail($"Unexpected Exception thrown: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// This method implicitly validates that RuntimeConfigValidator::ValidateConfigSchema(...) successfully
     /// executes against a config file referencing environment variables.
     /// [CLI] ConfigGenerator::IsConfigValid(...)

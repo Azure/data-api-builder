@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.IdentityModel.Tokens;
+
 namespace Cli.Tests
 {
     public static class TestHelper
@@ -111,7 +113,8 @@ namespace Cli.Tests
           ""runtime"": {
               ""rest"": {
                   ""path"": ""/api"",
-                  ""enabled"": true
+                  ""enabled"": true,
+                  ""request-body-strict"": true
               },
               ""graphql"": {
                   ""path"": ""/graphql"",
@@ -1226,6 +1229,43 @@ namespace Cli.Tests
   }
 }
 ";
+        /// <summary>
+        /// Generates the config json string with the given depth limit in the form of json string.
+        /// example: { ""depth-limit"": 10 }
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateConfigWithGivenDepthLimit(string? depthLimitJson = null)
+        {
+            string depthLimitSection = depthLimitJson.IsNullOrEmpty() ? string.Empty : ("," + depthLimitJson);
+
+            string runtimeSection = $@"
+            ""runtime"": {{
+                ""rest"": {{
+                    ""path"": ""/api"",
+                    ""enabled"": true,
+                    ""request-body-strict"": true
+                }},
+                ""graphql"": {{
+                    ""path"": ""/graphql"",
+                    ""enabled"": true,
+                    ""allow-introspection"": true
+                    {depthLimitSection}
+                }},
+                ""host"": {{
+                    ""mode"": ""development"",
+                    ""cors"": {{
+                        ""origins"": [],
+                        ""allow-credentials"": false
+                    }},
+                    ""authentication"": {{
+                        ""provider"": ""StaticWebApps""
+                    }}
+                }}
+            }},
+            ""entities"": {{}}";
+
+            return $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{runtimeSection}}}";
+        }
 
         /// <summary>
         /// Creates basic initialization options for MS SQL config.

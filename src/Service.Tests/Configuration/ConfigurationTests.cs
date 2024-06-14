@@ -3712,6 +3712,82 @@ type Moon {
         }
 
         /// <summary>
+        /// Tests the enforcement of depth limit restrictions on GraphQL queries and mutations in non-hosted mode.
+        /// Verifies that requests exceeding the specified depth limit result in a BadRequest, 
+        /// while requests within the limit succeed with the expected status code.
+        /// Also verifies that the error message contains the current and allowed max depth limit value.
+        /// </summary>
+        /// <param name="depthLimit">The maximum allowed depth for GraphQL queries and mutations.</param>
+        /// <param name="isMutationOperation">Indicates whether the operation is a mutation (true) or a query (false).</param>
+        /// <param name="expectedStatusCodeForGraphQL">The expected HTTP status code for the operation.</param>
+        [DataTestMethod]
+        [DataRow(1, false, HttpStatusCode.BadRequest, DisplayName = "Failed Query execution when max depth limit is set to 1")]
+        [DataRow(2, false, HttpStatusCode.OK, DisplayName = "Query execution succesful when max depth limit is set to 2")]
+        [DataRow(1, true, HttpStatusCode.BadRequest, DisplayName = "Failed Mutation execution when max depth limit is set to 1")]
+        [DataRow(2, true, HttpStatusCode.OK, DisplayName = "Mutation execution succesful when max depth limit is set to 2")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestDepthLimitRestictionOnGrahQLInNonHostedMode(
+            int depthLimit,
+            bool isMutationOperation,
+            HttpStatusCode expectedStatusCodeForGraphQL)
+        {
+            // Arrange
+            GraphQLRuntimeOptions graphqlOptions = new(DepthLimit: depthLimit);
+            graphqlOptions = graphqlOptions with { UserProvidedDepthLimit = true };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            // Act
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query;
+                if (isMutationOperation)
+                {
+                    // requested mutation operation has depth of 2
+                    query = GetSimpleGraphQLCreateMutation();
+                }
+                else
+                {
+                    // requested query operation has depth of 2
+                    query = GetSimpleReadGraphQLQuery();
+                }
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+
+                // Assert
+                Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                if (expectedStatusCodeForGraphQL == HttpStatusCode.OK)
+                {
+                    Assert.IsFalse(body.Contains("errors"));
+                }
+                else
+                {
+                    Assert.IsTrue(body.Contains("errors"));
+                    Assert.IsTrue(body.Contains($"The GraphQL document has an execution depth of 2 which exceeds the max allowed execution depth of {depthLimit}."));
+                }
+            }
+        }
+
+        /// <summary>
         /// Helper function to write custom configuration file. with minimal REST/GraphQL global settings
         /// using the supplied entities.
         /// </summary>
@@ -4248,6 +4324,27 @@ type Moon {
             }
 
             return false;
+        }
+
+        private static string GetSimpleReadGraphQLQuery()
+        {
+            return @"{
+                    book_by_pk(id: 1) {
+                       id,
+                       title,
+                       publisher_id
+                    }
+                }";
+        }
+
+        private static string GetSimpleGraphQLCreateMutation()
+        {
+            return @"mutation createbook{
+                        createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {
+                            title
+                            publisher_id
+                        }
+                    }";
         }
     }
 }

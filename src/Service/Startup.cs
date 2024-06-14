@@ -240,9 +240,10 @@ namespace Azure.DataApiBuilder.Service
             // This rule is only added if a positive depth limit is specified, ensuring that the server
             // enforces a limit on the depth of incoming GraphQL queries/mutation to prevent extremly deep queries
             // that could potentially lead to performance issues.
+            // Additionally, the skipIntrospectionFields parameter is set to true to prevent the depth limit rule for introspection queries.
             if (depthLimit.HasValue && depthLimit.Value > 0)
             {
-                server = server.AddMaxExecutionDepthRule(depthLimit.Value);
+                server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: depthLimit.Value, skipIntrospectionFields: true);
             }
 
             server.AddErrorFilter(error =>

@@ -3788,6 +3788,54 @@ type Moon {
         }
 
         /// <summary>
+        /// This Test verfyies that depth-limit specified for graphQL do not affect the introspection queries.
+        /// In this test, we have specified the depth limit as 2 and we are sending introspection query with depth 6.
+        /// The expected result is that the query should be successful and should not return any errors.
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task TestGraphQLIntrospectionQueriesAreNotImpactedByDepthLimit()
+        {
+            // Arrange
+            GraphQLRuntimeOptions graphqlOptions = new(DepthLimit: 2);
+            graphqlOptions = graphqlOptions with { UserProvidedDepthLimit = true };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            // Act
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // nested depth:6
+                string query = GetSimpleGraphQLIntrospectionQuery();
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+
+                // Assert
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                Assert.IsFalse(body.Contains("errors"));
+            }
+        }
+
+        /// <summary>
         /// Helper function to write custom configuration file. with minimal REST/GraphQL global settings
         /// using the supplied entities.
         /// </summary>
@@ -4345,6 +4393,28 @@ type Moon {
                             publisher_id
                         }
                     }";
+        }
+
+        private static string GetSimpleGraphQLIntrospectionQuery()
+        {
+            return @"{
+                __schema {
+                    types {
+                    name
+                    fields {
+                        name
+                        type {
+                            name
+                            kind
+                                ofType {
+                                    name
+                                    kind
+                                }
+                            }
+                        }
+                    }
+                }
+            }";
         }
     }
 }

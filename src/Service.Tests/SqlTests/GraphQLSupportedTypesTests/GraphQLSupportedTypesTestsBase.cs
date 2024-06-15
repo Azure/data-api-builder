@@ -224,7 +224,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(DATETIMEOFFSET_TYPE, "neq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=",
             DisplayName = "datetimeoffset type filter and orderby test with neq operator")]
         [DataRow(DATETIMEOFFSET_TYPE, "lt", "'9999-12-31 23:59:59.9999999'", "\"9999-12-31 23:59:59.9999999Z\"", "<",
-            DisplayName = "datetimeoffset type filter and orderby test with lt operator and max value for datetimeoffset.")]
+            DisplayName = "datetimeoffset type filter and orderby test with lt operator and max value (with UTC offset specified) for datetimeoffset.")]
         [DataRow(DATETIMEOFFSET_TYPE, "eq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=",
             DisplayName = "datetimeoffset type filter and orderby test with eq operator")]
         [DataRow(DATE_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", "=",
@@ -253,7 +253,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             DisplayName = "datetime2 type filter and orderby test with neq operator")]
         public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
-            // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.0000000'
+            // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.499999'
+            // https://dev.mysql.com/doc/refman/8.4/en/datetime.html
             if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "'9999-12-31 23:59:59.9999999'")
             {
                 sqlValue = "'9999-12-31 23:59:59.0000000'";
@@ -554,8 +555,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
-
-            //await ResetDbStateAsync();
         }
 
         [DataTestMethod]
@@ -596,8 +595,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
-
-            //await ResetDbStateAsync();
         }
 
         #endregion

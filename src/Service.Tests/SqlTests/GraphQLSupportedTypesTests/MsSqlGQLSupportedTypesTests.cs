@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using static Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes.SupportedHotChocolateTypes;
 
 namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 {
@@ -22,9 +23,29 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await InitializeTestFixture();
         }
 
-        public override Task InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
+        /// <summary>
+        /// MSSQL Single Type Tests.
+        /// </summary>
+        /// <param name="type">GraphQL Type</param>
+        /// <param name="filterOperator">Comparison operator: gt, lt, gte, lte, etc.</param>
+        /// <param name="sqlValue">Value to be set in "expected value" sql query.</param>
+        /// <param name="gqlValue">GraphQL input value supplied.</param>
+        /// <param name="queryOperator">Query operator for "expected value" sql query.</param>
+        [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
+        [DataRow(SINGLE_TYPE, "gte", "-9.'", "-9.2", ">=")]
+        [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
+        [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
+        [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
+        [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
+        [DataTestMethod]
+        public async Task MSSQL_real_graphql_single_filter_expectedValues(
+            string type,
+            string filterOperator,
+            string sqlValue,
+            string gqlValue,
+            string queryOperator)
         {
-            throw new System.NotImplementedException();
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)

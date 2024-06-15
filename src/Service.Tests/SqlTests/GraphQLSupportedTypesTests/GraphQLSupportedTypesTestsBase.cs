@@ -136,12 +136,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(LONG_TYPE, "eq", "-1", "-1", "=")]
         [DataRow(STRING_TYPE, "neq", "'foo'", "\"foo\"", "!=")]
         [DataRow(STRING_TYPE, "eq", "'lksa;jdflasdf;alsdflksdfkldj'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=")]
-        [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
-        [DataRow(SINGLE_TYPE, "gte", "-9.2", "-9.2", ">=")]
-        [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
-        [DataRow(SINGLE_TYPE, "lte", "real '.33'", "0.33", "<=")]
-        [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
-        [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
         [DataRow(FLOAT_TYPE, "gt", "-9.2", "-9.2", ">")]
         [DataRow(FLOAT_TYPE, "gte", "-9.2", "-9.2", ">=")]
         [DataRow(FLOAT_TYPE, "lt", ".33", "0.33", "<")]
@@ -422,8 +416,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             PerformTestEqualsForExtendedTypes(type, expectedResult, actual.ToString());
         }
-
-        public abstract Task InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult);
 
         /// <summary>
         /// Test case for invalid time, such as negative values or hours>24 or minutes/seconds>60.

@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow("9999-12-31", "9999-12-31T00:00:00.000Z", DisplayName = "Max date for datetime column stored with zeroed out time.")]
         [DataRow("1000-01-01", "1000-01-01T00:00:00.000Z", DisplayName = "Min date for datetime column stored with zeroed out time.")]
         [DataTestMethod]
-        public override async Task InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
+        public async Task InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
         {
             // Arrange
             const string DATETIME_FIELD = "datetime_types";
@@ -87,7 +87,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             Assert.AreEqual(
                 expected: expectedResult,
                 actual: actual.GetProperty(DATETIME_FIELD).GetString(),
-                message: "get back towork jr");
+                message: "Unexpected datetime value.");
         }
 
         /// <summary>
@@ -105,9 +105,33 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         public async Task InsertMutationInput_DateTimeTypes_TimeOnly_ValidRange_ReturnsExpectedValues(string dateTimeGraphQLInput, string expectedResult)
         {
             // Arrange
-            //expectedResult = DateTime.Parse(dateTimeGraphQLInput).ToString("yyyy-MM-ddT") + expectedResult;
             expectedResult = DateTime.UtcNow.ToString("yyyy-MM-ddT") + expectedResult;
             await InsertMutationInput_DateTimeTypes_ValidRange_ReturnsExpectedValues(dateTimeGraphQLInput, expectedResult);
+        }
+
+        /// <summary>
+        /// MySql Single Type Tests.
+        /// </summary>
+        /// <param name="type">GraphQL Type</param>
+        /// <param name="filterOperator">Comparison operator: gt, lt, gte, lte, etc.</param>
+        /// <param name="sqlValue">Value to be set in "expected value" sql query.</param>
+        /// <param name="gqlValue">GraphQL input value supplied.</param>
+        /// <param name="queryOperator">Query operator for "expected value" sql query.</param>
+        [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
+        [DataRow(SINGLE_TYPE, "gte", "-9.'", "-9.2", ">=")]
+        [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
+        [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
+        [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
+        [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
+        [DataTestMethod]
+        public async Task MySql_real_graphql_single_filter_expectedValues(
+            string type,
+            string filterOperator,
+            string sqlValue,
+            string gqlValue,
+            string queryOperator)
+        {
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)

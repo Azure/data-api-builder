@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <param name="gqlValue">GraphQL input value supplied.</param>
         /// <param name="queryOperator">Query operator for "expected value" sql query.</param>
         [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
-        [DataRow(SINGLE_TYPE, "gte", "-9.'", "-9.2", ">=")]
+        [DataRow(SINGLE_TYPE, "gte", "-9.2", "-9.2", ">=")]
         [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
         [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
         [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]

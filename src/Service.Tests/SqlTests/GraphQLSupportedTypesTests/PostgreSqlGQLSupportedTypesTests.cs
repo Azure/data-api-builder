@@ -40,10 +40,10 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
         [DataTestMethod]
         public async Task PG_real_graphql_single_filter_expectedValues(
-            string type, 
-            string filterOperator, 
+            string type,
+            string filterOperator,
             string sqlValue,
-            string gqlValue, 
+            string gqlValue,
             string queryOperator)
         {
             await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);

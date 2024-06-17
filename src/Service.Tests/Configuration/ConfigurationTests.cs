@@ -1300,6 +1300,58 @@ type Moon {
         }
 
         /// <summary>
+        /// Test to verify that provided value of depth-limit in the config file should be greater than 0.
+        /// -1 and null are special values to disable depth limit.
+        /// This test validates that depth-limit outside the valid range should fail validation.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(-1, DisplayName = "[PASS]: Valid Value: -1 to disable depth limit")]
+        [DataRow(0, DisplayName = "[FAIL]: Invalid Value: 0 for depth-limit.")]
+        [DataRow(2, DisplayName = "[PASS]: Valid Value: 2 for depth-limit.")]
+        [DataRow(null, DisplayName = "[PASS]: Valid Value: null for depth-limit.")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestValidateConfigForDifferentDepthLimit(int? depthLimit)
+        {
+            // Fetch the MS_SQL integration test config file.
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            FileSystemRuntimeConfigLoader testConfigPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfig configuration = TestHelper.GetRuntimeConfigProvider(testConfigPath).GetConfig();
+            configuration = configuration with
+            {
+                Runtime = configuration.Runtime with
+                {
+                    GraphQL = configuration.Runtime.GraphQL with { DepthLimit = depthLimit, UserProvidedDepthLimit = true }
+                }
+            };
+            const string CUSTOM_CONFIG = "custom-config.json";
+
+            MockFileSystem fileSystem = new();
+
+            // write it to the custom-config file and add it to the filesystem.
+            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(configuration.ToJson()));
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator =
+                new(
+                    configProvider,
+                    fileSystem,
+                    configValidatorLogger.Object,
+                    true);
+
+            if (depthLimit is not null && depthLimit <= 0 && depthLimit != -1)
+            {
+                Assert.IsFalse(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+            }
+            else
+            {
+                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
+            }
+        }
+
+        /// <summary>
         /// This test method checks a valid config's entities against
         /// the database and ensures they are valid.
         /// </summary>
@@ -3818,6 +3870,58 @@ type Moon {
             {
                 // nested depth:6
                 string query = GetSimpleGraphQLIntrospectionQuery();
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+
+                // Assert
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                Assert.IsFalse(body.Contains("errors"));
+            }
+        }
+
+        /// <summary>
+        /// Tests the behavior of GraphQL queries in non-hosted mode when the depth limit is explicitly set to -1 or null.
+        /// Setting the depth limit to -1 or null is intended to disable the depth limit check, allowing queries of any depth.
+        /// This test verifies that queries are processed successfully without any errors under these configurations.
+        /// </summary>
+        /// <param name="depthLimit"> </param>
+        [DataTestMethod]
+        [DataRow(-1, DisplayName = "Setting -1 for depth-limit will disable the depth limit")]
+        [DataRow(null, DisplayName = "Setting null for depth-limit will disable the depth limit")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestNoDepthLimitOnGrahQLInNonHostedMode(
+            int? depthLimit)
+        {
+            // Arrange
+            GraphQLRuntimeOptions graphqlOptions = new(DepthLimit: depthLimit);
+            graphqlOptions = graphqlOptions with { UserProvidedDepthLimit = true };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            // Act
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // requested query operation has depth of 2
+                string query = GetSimpleReadGraphQLQuery();
 
                 object payload = new { query };
 

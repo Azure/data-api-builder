@@ -426,7 +426,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         foreach (DataRow schemaRow in schemaTable.Rows)
                         {
                             string columnName = (string)schemaRow["ColumnName"];
-                            int columnSize = (int)schemaRow["ColumnSize"];
 
                             if (args is not null && !args.Contains(columnName))
                             {
@@ -442,8 +441,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 }
                                 else
                                 {
+                                    int columnSize = (int)schemaRow["ColumnSize"];
+                                    string dataTypeName = (string)schemaRow["DataType"];
                                     availableBytes -= StreamDataIntoDbResultSetRow(
-                                        dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, availableBytes);
+                                        dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, dataTypeName, availableBytes);
                                 }
 
                             }
@@ -495,8 +496,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     int columnSize = (int)schemaRow["ColumnSize"];
+                                    string dataType = (string)schemaRow["DataType"];
                                     availableBytes -= StreamDataIntoDbResultSetRow(
-                                        dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, availableBytes);
+                                        dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, dataType, availableBytes);
                                 }
                             }
                             else
@@ -721,10 +723,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="columnName">columnName to read</param>
         /// <param name="ordinal">ordinal of column.</param>
 
-        internal int StreamDataIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, string columnName, int columnSize, int ordinal, long availableBytes)
+        internal int StreamDataIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, string columnName, int columnSize, int ordinal, string dataTypeName, long availableBytes)
         {
-            // check for large object columns
-            string dataTypeName = dbDataReader.GetDataTypeName(ordinal);
             Type systemType = TypeHelper.GetSystemTypeFromSqlDbType(dataTypeName);
             int dataRead;
 

@@ -379,10 +379,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Validates streaming logic for QueryExecutor
-        /// In this test the DbDataReader.GetChars method is mocked to return 1024*1024 bytes (1MB) of data.
-        /// Max available size is set to 5 MB.
-        /// Based on number of loops, the data read will be 1MB * readDataLoops.Exception should be thrown in test cases where we go above 5MB.
-        /// This will be in cases where readDataLoops > 5.
+        /// In this test the streaming logic for stored procedure's is tested.
+        /// The test tries to validate the streaming across different column types (Byte, string, int etc)
+        /// Max available size is set to 4 MB, getChars and getBytes are moqed to return 1MB per read.
+        /// Exception should be thrown in test cases where we go above 4MB.
         /// </summary>
         [DataTestMethod, TestCategory(TestCategory.MSSQL)]
         [DataRow(4, false,
@@ -392,8 +392,10 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ValidateStreamingLogicForStoredProcedures(int readDataLoops, bool exceptionExpected)
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
-            string[] columnNames = new string[] { "StringColumn1", "StringColumn2", "ByteColumn", "ByteColumn2", "IntColumn" };
-            int[] columnSize = new int[] { 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 4 };
+            string[] columnNames = { "StringColumn1", "StringColumn2", "ByteColumn", "ByteColumn2", "IntColumn" };
+            string[] columnTypes = { "varchar", "nvarchar", "image", "binary", "int" };
+            int[] columnSize = { 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 4 };
+
             FileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfig runtimeConfig = new(
@@ -422,18 +424,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 dbDataReader.Setup(d => d.HasRows).Returns(true);
                 dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
                 dbDataReader.Setup(x => x.GetBytes(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
-                dbDataReader.Setup(x => x.GetDataTypeName(0)).Returns("varchar");
-                dbDataReader.Setup(x => x.GetDataTypeName(1)).Returns("nvarchar");
-                dbDataReader.Setup(x => x.GetDataTypeName(2)).Returns("binary");
-                dbDataReader.Setup(x => x.GetDataTypeName(3)).Returns("binary");
-                dbDataReader.Setup(x => x.GetDataTypeName(4)).Returns("int");
 
                 int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 DbResultSetRow dbResultSetRow = new();
                 for (int i = 0; i < readDataLoops; i++)
                 {
                     availableSize -= msSqlQueryExecutor.StreamDataIntoDbResultSetRow(
-                        dbDataReader: dbDataReader.Object, dbResultSetRow: dbResultSetRow, columnName: columnNames[i], columnSize: columnSize[i], ordinal: i, availableBytes: availableSize);
+                        dbDataReader.Object, dbResultSetRow, columnName: columnNames[i],
+                        columnSize: columnSize[i], ordinal: i, dataTypeName: columnTypes[i], availableBytes: availableSize);
                     Assert.IsTrue(dbResultSetRow.Columns.ContainsKey(columnNames[i]));
                 }
             }

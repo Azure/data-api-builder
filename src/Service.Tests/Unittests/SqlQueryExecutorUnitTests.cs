@@ -423,7 +423,11 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 dbDataReader.Setup(d => d.HasRows).Returns(true);
                 dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
                 dbDataReader.Setup(x => x.GetBytes(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
-
+                dbDataReader.Setup(x => x.GetFieldType(0)).Returns(typeof(string));
+                dbDataReader.Setup(x => x.GetFieldType(1)).Returns(typeof(string));
+                dbDataReader.Setup(x => x.GetFieldType(2)).Returns(typeof(byte[]));
+                dbDataReader.Setup(x => x.GetFieldType(3)).Returns(typeof(byte[]));
+                dbDataReader.Setup(x => x.GetFieldType(4)).Returns(typeof(int));
                 int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 DbResultSetRow dbResultSetRow = new();
                 for (int i = 0; i < readDataLoops; i++)

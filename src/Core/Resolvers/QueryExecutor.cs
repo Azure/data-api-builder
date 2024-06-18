@@ -434,7 +434,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                if (ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
+                                if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
                                 {
                                     dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
                                 }
@@ -487,7 +487,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                if (ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
+                                if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
                                 {
                                     dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
                                 }

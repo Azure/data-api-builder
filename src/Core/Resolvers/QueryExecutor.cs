@@ -691,7 +691,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dbDataReader">DbDataReader.</param>
         /// <param name="availableSize">Available buffer.</param>
         /// <param name="ordinal"> ordinal of column being read</param>
-        /// <param name="resultBytes">jsonString to read into.</param>
+        /// <param name="resultBytes">bytes array to read result into.</param>
         /// <returns>size of data read in bytes.</returns>
         internal int StreamByteData(DbDataReader dbDataReader, long availableSize, int ordinal, out byte[]? resultBytes)
         {
@@ -703,12 +703,20 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             resultBytes = new byte[resultFieldSize];
 
-            // read entire field into buffer and reduce available size.
             dbDataReader.GetBytes(ordinal: 0, dataOffset: 0, buffer: resultBytes, bufferOffset: 0, length: resultBytes.Length);
 
             return resultBytes.Length;
         }
 
+        /// <summary>
+        /// Streams a column into the dbResultSetRow
+        /// </summary>
+        /// <param name="dbDataReader">DbDataReader</param>
+        /// <param name="dbResultSetRow">Result set row to read into</param>
+        /// <param name="availableBytes">Available bytes to read.</param>
+        /// <param name="columnName">columnName to read</param>
+        /// <param name="ordinal">ordinal of column.</param>
+        /// <returns>bytes of data read.</returns>
         internal int StreamDataIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, long availableBytes, string columnName, int ordinal)
         {
             // check for large object columns

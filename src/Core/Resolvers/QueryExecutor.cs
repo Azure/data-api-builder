@@ -438,7 +438,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             {
                                 if (ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
                                 {
-                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[colIndex]);
+                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
                                 }
                                 else
                                 {

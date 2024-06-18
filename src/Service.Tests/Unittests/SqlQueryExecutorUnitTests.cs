@@ -393,6 +393,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             string[] columnNames = new string[] { "StringColumn1", "StringColumn2", "ByteColumn", "ByteColumn2", "IntColumn" };
+            int[] columnSize = new int[] { 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 4 };
             FileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
             RuntimeConfig runtimeConfig = new(
@@ -421,17 +422,18 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 dbDataReader.Setup(d => d.HasRows).Returns(true);
                 dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
                 dbDataReader.Setup(x => x.GetBytes(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
-                dbDataReader.Setup(x => x.GetDataTypeName(0)).Returns("varchar(50)");
-                dbDataReader.Setup(x => x.GetDataTypeName(1)).Returns("nvarchar(50)");
-                dbDataReader.Setup(x => x.GetDataTypeName(2)).Returns("binary(50)");
-                dbDataReader.Setup(x => x.GetDataTypeName(3)).Returns("binary(50)");
-                dbDataReader.Setup(x => x.GetDataTypeName(4)).Returns("Int");
+                dbDataReader.Setup(x => x.GetDataTypeName(0)).Returns("varchar");
+                dbDataReader.Setup(x => x.GetDataTypeName(1)).Returns("nvarchar");
+                dbDataReader.Setup(x => x.GetDataTypeName(2)).Returns("binary");
+                dbDataReader.Setup(x => x.GetDataTypeName(3)).Returns("binary");
+                dbDataReader.Setup(x => x.GetDataTypeName(4)).Returns("int");
+
                 int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 DbResultSetRow dbResultSetRow = new();
                 for (int i = 0; i < readDataLoops; i++)
                 {
                     availableSize -= msSqlQueryExecutor.StreamDataIntoDbResultSetRow(
-                        dbDataReader: dbDataReader.Object, dbResultSetRow: dbResultSetRow, availableBytes: availableSize, columnName: columnNames[i], ordinal: i);
+                        dbDataReader: dbDataReader.Object, dbResultSetRow: dbResultSetRow, columnName: columnNames[i], columnSize: columnSize[i], ordinal: i, availableBytes: availableSize);
                     Assert.IsTrue(dbResultSetRow.Columns.ContainsKey(columnNames[i]));
                 }
             }

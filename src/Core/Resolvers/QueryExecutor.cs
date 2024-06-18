@@ -4,7 +4,6 @@
 using System.Data;
 using System.Data.Common;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -427,6 +426,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         foreach (DataRow schemaRow in schemaTable.Rows)
                         {
                             string columnName = (string)schemaRow["ColumnName"];
+                            int columnSize = (int)schemaRow["ColumnSize"];
 
                             if (args is not null && !args.Contains(columnName))
                             {
@@ -443,7 +443,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     availableBytes -= StreamDataIntoDbResultSetRow(
-                                        dbDataReader, dbResultSetRow, availableBytes, columnName, ordinal: colIndex);
+                                        dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, availableBytes);
                                 }
 
                             }
@@ -494,8 +494,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 }
                                 else
                                 {
+                                    int columnSize = (int)schemaRow["ColumnSize"];
                                     availableBytes -= StreamDataIntoDbResultSetRow(
-                                        dbDataReader, dbResultSetRow, availableBytes, columnName, ordinal: colIndex);
+                                        dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, availableBytes);
                                 }
                             }
                             else
@@ -719,15 +720,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="availableBytes">Available bytes to read.</param>
         /// <param name="columnName">columnName to read</param>
         /// <param name="ordinal">ordinal of column.</param>
-        /// <returns>bytes of data read.</returns>
-        internal int StreamDataIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, long availableBytes, string columnName, int ordinal)
+
+        internal int StreamDataIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, string columnName, int columnSize, int ordinal, long availableBytes)
         {
             // check for large object columns
             string dataTypeName = dbDataReader.GetDataTypeName(ordinal);
             Type systemType = TypeHelper.GetSystemTypeFromSqlDbType(dataTypeName);
             int dataRead;
 
-            if (systemType == typeof(string) || systemType == typeof(DateTime))
+            if (systemType == typeof(string))
             {
                 StringBuilder jsonString = new();
                 dataRead = StreamData(
@@ -744,9 +745,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else
             {
-                dataRead = Marshal.SizeOf(systemType);
+                dataRead = columnSize;
                 ValidateSize(availableBytes, dataRead);
-
                 dbResultSetRow.Columns.Add(columnName, dbDataReader[ordinal]);
             }
 

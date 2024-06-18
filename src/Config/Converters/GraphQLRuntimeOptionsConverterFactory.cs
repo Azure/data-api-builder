@@ -132,7 +132,16 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             }
                             else if (reader.TokenType is JsonTokenType.Number)
                             {
-                                int depthLimit = reader.GetInt32();
+                                int depthLimit;
+                                try
+                                {
+                                    depthLimit = reader.GetInt32();
+                                }
+                                catch (JsonException)
+                                {
+                                    throw new JsonException($"The 'depth-limit' value must be an integer within the valid range of 1 to Int32.Max or -1.");
+                                }
+
                                 if (depthLimit < -1 || depthLimit == 0)
                                 {
                                     throw new JsonException($"Invalid depth-limit: {depthLimit}. Specify a depth limit > 0 or remove the existing depth limit by specifying -1.");

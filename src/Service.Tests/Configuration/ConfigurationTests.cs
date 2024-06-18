@@ -1302,18 +1302,23 @@ type Moon {
         /// <summary>
         /// Test to verify that provided value of depth-limit in the config file should be greater than 0.
         /// -1 and null are special values to disable depth limit.
-        /// This test validates that depth-limit outside the valid range should fail validation.
+        /// This test validates that depth-limit outside the valid range should fail validation
+        /// during `dab validate` and `dab start`.
         /// </summary>
         [DataTestMethod]
-        [DataRow(-1, DisplayName = "[PASS]: Valid Value: -1 to disable depth limit")]
-        [DataRow(0, DisplayName = "[FAIL]: Invalid Value: 0 for depth-limit.")]
-        [DataRow(2, DisplayName = "[PASS]: Valid Value: 2 for depth-limit.")]
-        [DataRow(null, DisplayName = "[PASS]: Valid Value: null for depth-limit.")]
+        [DataRow(-1, true, DisplayName = "[PASS]: Valid Value: -1 to disable depth limit")]
+        [DataRow(0, false, DisplayName = "[FAIL]: Invalid Value: 0 for depth-limit.")]
+        [DataRow(-2, false, DisplayName = "[FAIL]: Invalid Value: -2 for depth-limit.")]
+        [DataRow(2, true, DisplayName = "[PASS]: Valid Value: 2 for depth-limit.")]
+        [DataRow(2147483647, true, DisplayName = "[PASS]: Valid Value: Using Int32.MaxValue(2147483647) for depth-limit.")]
+        [DataRow(null, true, DisplayName = "[PASS]: Valid Value: null for depth-limit.")]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task TestValidateConfigForDifferentDepthLimit(int? depthLimit)
+        public async Task TestValidateConfigForDifferentDepthLimit(int? depthLimit, bool isValidInput)
         {
+            //Arrange
             // Fetch the MS_SQL integration test config file.
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            const string CUSTOM_CONFIG = "custom-config.json";
             FileSystemRuntimeConfigLoader testConfigPath = TestHelper.GetRuntimeConfigLoader();
             RuntimeConfig configuration = TestHelper.GetRuntimeConfigProvider(testConfigPath).GetConfig();
             configuration = configuration with
@@ -1323,11 +1328,10 @@ type Moon {
                     GraphQL = configuration.Runtime.GraphQL with { DepthLimit = depthLimit, UserProvidedDepthLimit = true }
                 }
             };
-            const string CUSTOM_CONFIG = "custom-config.json";
 
             MockFileSystem fileSystem = new();
 
-            // write it to the custom-config file and add it to the filesystem.
+            // write the content of configuration to the custom-config file and add it to the filesystem.
             fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(configuration.ToJson()));
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
             configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
@@ -1341,14 +1345,11 @@ type Moon {
                     configValidatorLogger.Object,
                     true);
 
-            if (depthLimit is not null && depthLimit <= 0 && depthLimit != -1)
-            {
-                Assert.IsFalse(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
-            }
-            else
-            {
-                Assert.IsTrue(await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory()));
-            }
+            // Act
+            bool isSuccess = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
+
+            // Assert
+            Assert.AreEqual(isValidInput, isSuccess);
         }
 
         /// <summary>
@@ -3774,11 +3775,11 @@ type Moon {
         /// <param name="expectedStatusCodeForGraphQL">The expected HTTP status code for the operation.</param>
         [DataTestMethod]
         [DataRow(1, false, HttpStatusCode.BadRequest, DisplayName = "Failed Query execution when max depth limit is set to 1")]
-        [DataRow(2, false, HttpStatusCode.OK, DisplayName = "Query execution succesful when max depth limit is set to 2")]
+        [DataRow(2, false, HttpStatusCode.OK, DisplayName = "Query execution successful when max depth limit is set to 2")]
         [DataRow(1, true, HttpStatusCode.BadRequest, DisplayName = "Failed Mutation execution when max depth limit is set to 1")]
-        [DataRow(2, true, HttpStatusCode.OK, DisplayName = "Mutation execution succesful when max depth limit is set to 2")]
+        [DataRow(2, true, HttpStatusCode.OK, DisplayName = "Mutation execution successful when max depth limit is set to 2")]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task TestDepthLimitRestictionOnGrahQLInNonHostedMode(
+        public async Task TestDepthLimitRestrictionOnGraphQLInNonHostedMode(
             int depthLimit,
             bool isMutationOperation,
             HttpStatusCode expectedStatusCodeForGraphQL)
@@ -3799,7 +3800,6 @@ type Moon {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            // Act
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
@@ -3807,12 +3807,23 @@ type Moon {
                 if (isMutationOperation)
                 {
                     // requested mutation operation has depth of 2
-                    query = GetSimpleGraphQLCreateMutation();
+                    query = @"mutation createbook{
+                                createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {      // depth: 1
+                                    title                                                           // depth: 2
+                                    publisher_id
+                                }
+                            }";
                 }
                 else
                 {
                     // requested query operation has depth of 2
-                    query = GetSimpleReadGraphQLQuery();
+                    query = @"{
+                                book_by_pk(id: 1) {     // depth: 1
+                                    id,                 // depth: 2
+                                    title,
+                                    publisher_id
+                                }
+                            }";
                 }
 
                 object payload = new { query };
@@ -3822,12 +3833,13 @@ type Moon {
                     Content = JsonContent.Create(payload)
                 };
 
+                // Act
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
 
                 // Assert
                 Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
-                if (expectedStatusCodeForGraphQL == HttpStatusCode.OK)
+                if (graphQLResponse.StatusCode == HttpStatusCode.OK)
                 {
                     Assert.IsFalse(body.Contains("errors"));
                 }
@@ -3869,7 +3881,24 @@ type Moon {
             using (HttpClient client = server.CreateClient())
             {
                 // nested depth:6
-                string query = GetSimpleGraphQLIntrospectionQuery();
+                string query = @"{
+                                    __schema {                  // depth: 1
+                                        types {                 // depth: 2
+                                        name
+                                        fields {
+                                            name                // depth: 3
+                                            type {
+                                                name            // depth: 4
+                                                kind
+                                                    ofType {    // depth: 5
+                                                        name    // depth: 6
+                                                        kind
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }";
 
                 object payload = new { query };
 
@@ -3921,7 +3950,13 @@ type Moon {
             using (HttpClient client = server.CreateClient())
             {
                 // requested query operation has depth of 2
-                string query = GetSimpleReadGraphQLQuery();
+                string query = @"{
+                                    book_by_pk(id: 1) {         // depth: 1
+                                        id,                 // depth: 2
+                                        title,
+                                        publisher_id
+                                    }
+                                }";
 
                 object payload = new { query };
 
@@ -4476,49 +4511,6 @@ type Moon {
             }
 
             return false;
-        }
-
-        private static string GetSimpleReadGraphQLQuery()
-        {
-            return @"{
-                    book_by_pk(id: 1) {
-                       id,
-                       title,
-                       publisher_id
-                    }
-                }";
-        }
-
-        private static string GetSimpleGraphQLCreateMutation()
-        {
-            return @"mutation createbook{
-                        createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {
-                            title
-                            publisher_id
-                        }
-                    }";
-        }
-
-        private static string GetSimpleGraphQLIntrospectionQuery()
-        {
-            return @"{
-                __schema {
-                    types {
-                    name
-                    fields {
-                        name
-                        type {
-                            name
-                            kind
-                                ofType {
-                                    name
-                                    kind
-                                }
-                            }
-                        }
-                    }
-                }
-            }";
         }
     }
 }

@@ -679,7 +679,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             char[] buffer = new char[resultFieldSize];
 
             // read entire field into buffer and reduce available size.
-            dbDataReader.GetChars(ordinal: 0, dataOffset: 0, buffer: buffer, bufferOffset: 0, length: buffer.Length);
+            dbDataReader.GetChars(ordinal: ordinal, dataOffset: 0, buffer: buffer, bufferOffset: 0, length: buffer.Length);
 
             resultJsonString.Append(buffer);
             return buffer.Length;

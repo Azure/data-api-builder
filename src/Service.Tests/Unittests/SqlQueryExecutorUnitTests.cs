@@ -439,7 +439,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 Assert.IsTrue(exceptionExpected);
                 Assert.AreEqual(HttpStatusCode.RequestEntityTooLarge, ex.StatusCode);
-                Assert.AreEqual("The JSON result size exceeds max result size of 5MB. Please use pagination to reduce size of result.", ex.Message);
+                Assert.AreEqual("The JSON result size exceeds max result size of 4MB. Please use pagination to reduce size of result.", ex.Message);
             }
         }
 

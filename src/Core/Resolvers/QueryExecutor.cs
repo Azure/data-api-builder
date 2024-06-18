@@ -443,7 +443,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     availableBytes -= StreamDataIntoDbResultSetRow(
-                                        dbDataReader, dbResultSetRow, availableBytes, columnName, ordinal:colIndex);
+                                        dbDataReader, dbResultSetRow, availableBytes, columnName, ordinal: colIndex);
                                 }
 
                             }
@@ -495,7 +495,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     availableBytes -= StreamDataIntoDbResultSetRow(
-                                        dbDataReader, dbResultSetRow, availableBytes, columnName, ordinal:colIndex);
+                                        dbDataReader, dbResultSetRow, availableBytes, columnName, ordinal: colIndex);
                                 }
                             }
                             else
@@ -706,7 +706,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             resultBytes = new byte[resultFieldSize];
 
-            dbDataReader.GetBytes(ordinal: 0, dataOffset: 0, buffer: resultBytes, bufferOffset: 0, length: resultBytes.Length);
+            dbDataReader.GetBytes(ordinal: ordinal, dataOffset: 0, buffer: resultBytes, bufferOffset: 0, length: resultBytes.Length);
 
             return resultBytes.Length;
         }
@@ -738,7 +738,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             else if (systemType == typeof(byte[]) || systemType == typeof(byte))
             {
                 dataRead = StreamByteData(
-                    dbDataReader:dbDataReader, availableSize:availableBytes, ordinal: ordinal, out byte[]? result);
+                    dbDataReader: dbDataReader, availableSize: availableBytes, ordinal: ordinal, out byte[]? result);
 
                 dbResultSetRow.Columns.Add(columnName, result);
             }
@@ -785,7 +785,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 while (await ReadAsync(dbDataReader))
                 {
                     availableSize -= StreamData(
-                        dbDataReader:dbDataReader, availableSize:availableSize, resultJsonString: jsonString, ordinal:0);
+                        dbDataReader: dbDataReader, availableSize: availableSize, resultJsonString: jsonString, ordinal: 0);
                 }
             }
 

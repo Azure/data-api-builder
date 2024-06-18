@@ -365,7 +365,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 for (int i = 0; i < readDataLoops; i++)
                 {
                     availableSize -= msSqlQueryExecutor.StreamData(
-                        dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new(), ordinal:0);
+                        dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new(), ordinal: 0);
                 }
 
             }

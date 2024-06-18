@@ -393,7 +393,6 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
             string[] columnNames = { "StringColumn1", "StringColumn2", "ByteColumn", "ByteColumn2", "IntColumn" };
-            string[] columnTypes = { "varchar", "nvarchar", "image", "binary", "int" };
             int[] columnSize = { 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 4 };
 
             FileSystem fileSystem = new();
@@ -431,7 +430,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 {
                     availableSize -= msSqlQueryExecutor.StreamDataIntoDbResultSetRow(
                         dbDataReader.Object, dbResultSetRow, columnName: columnNames[i],
-                        columnSize: columnSize[i], ordinal: i, dataTypeName: columnTypes[i], availableBytes: availableSize);
+                        columnSize: columnSize[i], ordinal: i, availableBytes: availableSize);
                     Assert.IsTrue(dbResultSetRow.Columns.ContainsKey(columnNames[i]));
                 }
             }

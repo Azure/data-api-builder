@@ -358,13 +358,80 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
+                // Test for general queries and mutations
                 Mock<DbDataReader> dbDataReader = new();
                 dbDataReader.Setup(d => d.HasRows).Returns(true);
                 dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
                 int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 for (int i = 0; i < readDataLoops; i++)
                 {
-                    availableSize -= msSqlQueryExecutor.StreamData(dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new());
+                    availableSize -= msSqlQueryExecutor.StreamData(dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new(), 0);
+                }
+
+            }
+            catch (DataApiBuilderException ex)
+            {
+                Assert.IsTrue(exceptionExpected);
+                Assert.AreEqual(HttpStatusCode.RequestEntityTooLarge, ex.StatusCode);
+                Assert.AreEqual("The JSON result size exceeds max result size of 5MB. Please use pagination to reduce size of result.", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Validates streaming logic for QueryExecutor
+        /// In this test the DbDataReader.GetChars method is mocked to return 1024*1024 bytes (1MB) of data.
+        /// Max available size is set to 5 MB.
+        /// Based on number of loops, the data read will be 1MB * readDataLoops.Exception should be thrown in test cases where we go above 5MB.
+        /// This will be in cases where readDataLoops > 5.
+        /// </summary>
+        [DataTestMethod, TestCategory(TestCategory.MSSQL)]
+        [DataRow(4, false,
+            DisplayName = "Max available size is set to 4MB.4 data read loop iterations, 4 columns of size 1MB -> should successfully read because max-db-response-size-mb is 4MB")]
+        [DataRow(5, true,
+            DisplayName = "Max available size is set to 4MB.5 data read loop iterations, 4 columns of size 1MB and one int read of 4 bytes -> Fails to read because max-db-response-size-mb is 4MB")]
+        public void ValidateStreamingLogicForStoredProcedures(int readDataLoops, bool exceptionExpected)
+        {
+            TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
+            string[] columnNames = new string[] { "StringColumn1", "StringColumn2", "ByteColumn", "ByteColumn2", "IntColumn" };
+            FileSystem fileSystem = new();
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfig runtimeConfig = new(
+                Schema: "UnitTestSchema",
+                DataSource: new DataSource(DatabaseType: DatabaseType.MSSQL, "", Options: null),
+                Runtime: new(
+                        Rest: new(),
+                        GraphQL: new(),
+                        Host: new(Cors: null, Authentication: null, MaxResponseSizeMB: 4)
+                    ),
+                Entities: new(new Dictionary<string, Entity>()));
+
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+
+            Mock<ILogger<QueryExecutor<SqlConnection>>> queryExecutorLogger = new();
+            Mock<IHttpContextAccessor> httpContextAccessor = new();
+            DbExceptionParser dbExceptionParser = new MsSqlDbExceptionParser(runtimeConfigProvider);
+
+            // Instantiate the MsSqlQueryExecutor and Setup parameters for the query
+            MsSqlQueryExecutor msSqlQueryExecutor = new(runtimeConfigProvider, dbExceptionParser, queryExecutorLogger.Object, httpContextAccessor.Object);
+
+            try
+            {
+                // Test for general queries and mutations
+                Mock<DbDataReader> dbDataReader = new();
+                dbDataReader.Setup(d => d.HasRows).Returns(true);
+                dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
+                dbDataReader.Setup(x => x.GetBytes(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<byte[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
+                dbDataReader.Setup(x => x.GetDataTypeName(0)).Returns("varchar(50)");
+                dbDataReader.Setup(x => x.GetDataTypeName(1)).Returns("nvarchar(50)");
+                dbDataReader.Setup(x => x.GetDataTypeName(2)).Returns("binary(50)");
+                dbDataReader.Setup(x => x.GetDataTypeName(3)).Returns("binary(50)");
+                dbDataReader.Setup(x => x.GetDataTypeName(4)).Returns("Int");
+                int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
+                DbResultSetRow dbResultSetRow = new();
+                for (int i = 0; i < readDataLoops; i++)
+                {
+                    availableSize -= msSqlQueryExecutor.StreamDataIntoDbResultSetRow(dbDataReader: dbDataReader.Object, dbResultSetRow: dbResultSetRow, availableBytes: availableSize, columnName: columnNames[i], i);
+                    Assert.IsTrue(dbResultSetRow.Columns.ContainsKey(columnNames[i]));
                 }
             }
             catch (DataApiBuilderException ex)

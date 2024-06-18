@@ -4,11 +4,13 @@
 using System.Data;
 using System.Data.Common;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -412,7 +414,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ExtractResultSetFromDbDataReaderAsync(DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet = new(resultProperties: GetResultPropertiesAsync(dbDataReader).Result ?? new());
-
+            long availableBytes = _maxResponseSizeBytes;
             while (await ReadAsync(dbDataReader))
             {
                 if (dbDataReader.HasRows)
@@ -434,7 +436,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+                                if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
+                                {
+                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[colIndex]);
+                                }
+                                else
+                                {
+                                    availableBytes -= StreamDataIntoDbResultSetRow(dbDataReader, dbResultSetRow, availableBytes, columnName, colIndex);
+                                }
+
                             }
                             else
                             {
@@ -455,7 +465,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader) ?? new());
-
+            long availableBytes = _maxResponseSizeBytes;
             while (Read(dbDataReader))
             {
                 if (dbDataReader.HasRows)
@@ -477,7 +487,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+                                if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
+                                {
+                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[colIndex]);
+                                }
+                                else
+                                {
+                                    availableBytes -= StreamDataIntoDbResultSetRow(dbDataReader, dbResultSetRow, availableBytes, columnName, colIndex);
+                                }
                             }
                             else
                             {
@@ -649,10 +666,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="dbDataReader">DbDataReader.</param>
         /// <param name="availableSize">Available buffer.</param>
         /// <param name="resultJsonString">jsonString to read into.</param>
+        /// <param name="ordinal">Ordinal of column being read.</param>
         /// <returns>size of data read in bytes.</returns>
-        internal int StreamData(DbDataReader dbDataReader, long availableSize, StringBuilder resultJsonString)
+        internal int StreamData(DbDataReader dbDataReader, long availableSize, StringBuilder resultJsonString, int ordinal)
         {
-            long resultFieldSize = dbDataReader.GetChars(ordinal: 0, dataOffset: 0, buffer: null, bufferOffset: 0, length: 0);
+            long resultFieldSize = dbDataReader.GetChars(ordinal: ordinal, dataOffset: 0, buffer: null, bufferOffset: 0, length: 0);
 
             // if the size of the field is less than available size, then we can read the entire field.
             // else we throw exception.
@@ -665,6 +683,61 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             resultJsonString.Append(buffer);
             return buffer.Length;
+        }
+
+        /// <summary>
+        /// Reads data into byteObject.
+        /// </summary>
+        /// <param name="dbDataReader">DbDataReader.</param>
+        /// <param name="availableSize">Available buffer.</param>
+        /// <param name="ordinal"> ordinal of column being read</param>
+        /// <param name="resultBytes">jsonString to read into.</param>
+        /// <returns>size of data read in bytes.</returns>
+        internal int StreamByteData(DbDataReader dbDataReader, long availableSize, int ordinal, out byte[]? resultBytes)
+        {
+            long resultFieldSize = dbDataReader.GetBytes(ordinal: ordinal, dataOffset: 0, buffer: null, bufferOffset: 0, length: 0);
+
+            // if the size of the field is less than available size, then we can read the entire field.
+            // else we throw exception.
+            ValidateSize(availableSize, resultFieldSize);
+
+            resultBytes = new byte[resultFieldSize];
+
+            // read entire field into buffer and reduce available size.
+            dbDataReader.GetBytes(ordinal: 0, dataOffset: 0, buffer: resultBytes, bufferOffset: 0, length: resultBytes.Length);
+
+            return resultBytes.Length;
+        }
+
+        internal int StreamDataIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, long availableBytes, string columnName, int ordinal)
+        {
+            // check for large object columns
+            string dataTypeName = dbDataReader.GetDataTypeName(ordinal);
+            Type systemType = TypeHelper.GetSystemTypeFromSqlDbType(dataTypeName);
+            int dataRead;
+
+            if (systemType == typeof(string))
+            {
+                StringBuilder jsonString = new();
+                dataRead = StreamData(dbDataReader, availableBytes, jsonString, ordinal);
+
+                dbResultSetRow.Columns.Add(columnName, jsonString.ToString());
+            }
+            else if (systemType == typeof(byte[]) || systemType == typeof(byte))
+            {
+                dataRead = StreamByteData(dbDataReader, availableBytes, ordinal, out byte[]? result);
+
+                dbResultSetRow.Columns.Add(columnName, result);
+            }
+            else
+            {
+                dataRead = Marshal.SizeOf(systemType);
+                ValidateSize(availableBytes, dataRead);
+
+                dbResultSetRow.Columns.Add(columnName, dbDataReader[ordinal]);
+            }
+
+            return dataRead;
         }
 
         /// <summary>
@@ -698,7 +771,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 long availableSize = _maxResponseSizeBytes;
                 while (await ReadAsync(dbDataReader))
                 {
-                    availableSize -= StreamData(dbDataReader, availableSize, jsonString);
+                    availableSize -= StreamData(dbDataReader, availableSize, jsonString, 0);
                 }
             }
 

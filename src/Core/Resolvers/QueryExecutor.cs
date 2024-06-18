@@ -735,7 +735,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 dbResultSetRow.Columns.Add(columnName, jsonString.ToString());
             }
-            else if (systemType == typeof(byte[]) || systemType == typeof(byte))
+            else if (systemType == typeof(byte[]))
             {
                 dataRead = StreamByteData(
                     dbDataReader: dbDataReader, availableSize: availableBytes, ordinal: ordinal, out byte[]? result);

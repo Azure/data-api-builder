@@ -442,7 +442,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     int columnSize = (int)schemaRow["ColumnSize"];
-                                    string dataTypeName = (string)schemaRow["DataType"];
+                                    string dataTypeName = (string)schemaRow["DataTypeName"];
                                     availableBytes -= StreamDataIntoDbResultSetRow(
                                         dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, dataTypeName, availableBytes);
                                 }
@@ -496,7 +496,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                 else
                                 {
                                     int columnSize = (int)schemaRow["ColumnSize"];
-                                    string dataType = (string)schemaRow["DataType"];
+                                    string dataType = (string)schemaRow["DataTypeName"];
                                     availableBytes -= StreamDataIntoDbResultSetRow(
                                         dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, dataType, availableBytes);
                                 }

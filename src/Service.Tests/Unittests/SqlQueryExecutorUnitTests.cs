@@ -358,14 +358,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
             try
             {
-                // Test for general queries and mutations
                 Mock<DbDataReader> dbDataReader = new();
                 dbDataReader.Setup(d => d.HasRows).Returns(true);
                 dbDataReader.Setup(x => x.GetChars(It.IsAny<int>(), It.IsAny<long>(), It.IsAny<char[]>(), It.IsAny<int>(), It.IsAny<int>())).Returns(1024 * 1024);
                 int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 for (int i = 0; i < readDataLoops; i++)
                 {
-                    availableSize -= msSqlQueryExecutor.StreamData(dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new(), 0);
+                    availableSize -= msSqlQueryExecutor.StreamData(
+                        dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new(), ordinal:0);
                 }
 
             }
@@ -430,7 +430,8 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 DbResultSetRow dbResultSetRow = new();
                 for (int i = 0; i < readDataLoops; i++)
                 {
-                    availableSize -= msSqlQueryExecutor.StreamDataIntoDbResultSetRow(dbDataReader: dbDataReader.Object, dbResultSetRow: dbResultSetRow, availableBytes: availableSize, columnName: columnNames[i], i);
+                    availableSize -= msSqlQueryExecutor.StreamDataIntoDbResultSetRow(
+                        dbDataReader: dbDataReader.Object, dbResultSetRow: dbResultSetRow, availableBytes: availableSize, columnName: columnNames[i], ordinal: i);
                     Assert.IsTrue(dbResultSetRow.Columns.ContainsKey(columnNames[i]));
                 }
             }

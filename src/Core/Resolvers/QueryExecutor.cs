@@ -727,7 +727,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Type systemType = TypeHelper.GetSystemTypeFromSqlDbType(dataTypeName);
             int dataRead;
 
-            if (systemType == typeof(string))
+            if (systemType == typeof(string) || systemType == typeof(DateTime))
             {
                 StringBuilder jsonString = new();
                 dataRead = StreamData(

@@ -490,7 +490,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             {
                                 if (ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
                                 {
-                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[colIndex]);
+                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
                                 }
                                 else
                                 {
@@ -747,7 +747,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 dataRead = columnSize;
                 ValidateSize(availableBytes, dataRead);
-                dbResultSetRow.Columns.Add(columnName, dbDataReader[ordinal]);
+                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
             }
 
             return dataRead;

@@ -364,7 +364,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 for (int i = 0; i < readDataLoops; i++)
                 {
-                    availableSize -= msSqlQueryExecutor.StreamData(
+                    availableSize -= msSqlQueryExecutor.StreamCharData(
                         dbDataReader: dbDataReader.Object, availableSize: availableSize, resultJsonString: new(), ordinal: 0);
                 }
 
@@ -392,8 +392,9 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         public void ValidateStreamingLogicForStoredProcedures(int readDataLoops, bool exceptionExpected)
         {
             TestHelper.SetupDatabaseEnvironment(TestCategory.MSSQL);
-            string[] columnNames = { "StringColumn1", "StringColumn2", "ByteColumn", "ByteColumn2", "IntColumn" };
-            int[] columnSize = { 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 4 };
+            string[] columnNames = { "NVarcharStringColumn1", "VarCharStringColumn2", "ImageByteColumn", "ImageByteColumn2", "IntColumn" };
+            // 1MB -> 1024*1024 bytes, an int is 4 bytes
+            int[] columnSizeBytes = { 1024 * 1024, 1024 * 1024, 1024 * 1024, 1024 * 1024, 4 };
 
             FileSystem fileSystem = new();
             FileSystemRuntimeConfigLoader loader = new(fileSystem);
@@ -428,14 +429,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 dbDataReader.Setup(x => x.GetFieldType(2)).Returns(typeof(byte[]));
                 dbDataReader.Setup(x => x.GetFieldType(3)).Returns(typeof(byte[]));
                 dbDataReader.Setup(x => x.GetFieldType(4)).Returns(typeof(int));
-                int availableSize = (int)runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
+                int availableSizeBytes = runtimeConfig.MaxResponseSizeMB() * 1024 * 1024;
                 DbResultSetRow dbResultSetRow = new();
                 for (int i = 0; i < readDataLoops; i++)
                 {
-                    availableSize -= msSqlQueryExecutor.StreamDataIntoDbResultSetRow(
+                    availableSizeBytes -= msSqlQueryExecutor.StreamDataIntoDbResultSetRow(
                         dbDataReader.Object, dbResultSetRow, columnName: columnNames[i],
-                        columnSize: columnSize[i], ordinal: i, availableBytes: availableSize);
-                    Assert.IsTrue(dbResultSetRow.Columns.ContainsKey(columnNames[i]));
+                        columnSize: columnSizeBytes[i], ordinal: i, availableBytes: availableSizeBytes);
+                    Assert.IsTrue(dbResultSetRow.Columns.ContainsKey(columnNames[i]), $"Column {columnNames[i]} should be successfully read and added to DbResultRow while streaming.");
                 }
             }
             catch (DataApiBuilderException ex)

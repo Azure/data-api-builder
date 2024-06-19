@@ -670,7 +670,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="resultJsonString">jsonString to read into.</param>
         /// <param name="ordinal">Ordinal of column being read.</param>
         /// <returns>size of data read in bytes.</returns>
-        internal int StreamData(DbDataReader dbDataReader, long availableSize, StringBuilder resultJsonString, int ordinal)
+        internal int StreamCharData(DbDataReader dbDataReader, long availableSize, StringBuilder resultJsonString, int ordinal)
         {
             long resultFieldSize = dbDataReader.GetChars(ordinal: ordinal, dataOffset: 0, buffer: null, bufferOffset: 0, length: 0);
 
@@ -719,7 +719,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="availableBytes">Available bytes to read.</param>
         /// <param name="columnName">columnName to read</param>
         /// <param name="ordinal">ordinal of column.</param>
-
+        /// <returns>size of data read in bytes</returns>
         internal int StreamDataIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, string columnName, int columnSize, int ordinal, long availableBytes)
         {
             Type systemType = dbDataReader.GetFieldType(ordinal);
@@ -728,7 +728,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             if (systemType == typeof(string))
             {
                 StringBuilder jsonString = new();
-                dataRead = StreamData(
+                dataRead = StreamCharData(
                     dbDataReader: dbDataReader, availableSize: availableBytes, resultJsonString: jsonString, ordinal: ordinal);
 
                 dbResultSetRow.Columns.Add(columnName, jsonString.ToString());
@@ -781,7 +781,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 long availableSize = _maxResponseSizeBytes;
                 while (await ReadAsync(dbDataReader))
                 {
-                    availableSize -= StreamData(
+                    // We only have a single column and hence when streaming data, we pass in 0 as the ordinal.
+                    availableSize -= StreamCharData(
                         dbDataReader: dbDataReader, availableSize: availableSize, resultJsonString: jsonString, ordinal: 0);
                 }
             }

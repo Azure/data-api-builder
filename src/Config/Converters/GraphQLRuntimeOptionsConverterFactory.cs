@@ -137,9 +137,9 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                                 {
                                     depthLimit = reader.GetInt32();
                                 }
-                                catch (JsonException)
+                                catch (FormatException e)
                                 {
-                                    throw new JsonException($"The 'depth-limit' value must be an integer within the valid range of 1 to Int32.Max or -1.");
+                                    throw new JsonException($"Failed to parse the depth-limit value: {e.Message}");
                                 }
 
                                 if (depthLimit < -1 || depthLimit == 0)

@@ -1301,7 +1301,8 @@ type Moon {
 
         /// <summary>
         /// Test to verify that provided value of depth-limit in the config file should be greater than 0.
-        /// -1 and null are special values to disable depth limit.
+        /// -1 and null are special values.
+        /// -1 can be set to remove the depth limit, while `null` is the default value which means no depth limit check.
         /// This test validates that depth-limit outside the valid range should fail validation
         /// during `dab validate` and `dab start`.
         /// </summary>
@@ -1311,7 +1312,7 @@ type Moon {
         [DataRow(-2, false, DisplayName = "[FAIL]: Invalid Value: -2 for depth-limit.")]
         [DataRow(2, true, DisplayName = "[PASS]: Valid Value: 2 for depth-limit.")]
         [DataRow(2147483647, true, DisplayName = "[PASS]: Valid Value: Using Int32.MaxValue(2147483647) for depth-limit.")]
-        [DataRow(null, true, DisplayName = "[PASS]: Valid Value: null for depth-limit.")]
+        [DataRow(null, true, DisplayName = "[PASS]: Default Value: null for depth-limit.")]
         [TestCategory(TestCategory.MSSQL)]
         public async Task TestValidateConfigForDifferentDepthLimit(int? depthLimit, bool isValidInput)
         {
@@ -3769,6 +3770,21 @@ type Moon {
         /// Verifies that requests exceeding the specified depth limit result in a BadRequest, 
         /// while requests within the limit succeed with the expected status code.
         /// Also verifies that the error message contains the current and allowed max depth limit value.
+        /// Example:
+        /// Query:
+        /// query book_by_pk{
+        ///     book_by_pk(id: 1) {         // depth: 1
+        ///         id,                     // depth: 2
+        ///         title,                  // depth: 2
+        ///         publisher_id            // depth: 2
+        ///     }
+        /// }
+        /// Mutation:
+        /// mutation createbook {
+        ///    createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {         // depth: 1
+        ///       title,                                                              // depth: 2
+        ///       publisher_id                                                        // depth: 2
+        ///   }
         /// </summary>
         /// <param name="depthLimit">The maximum allowed depth for GraphQL queries and mutations.</param>
         /// <param name="isMutationOperation">Indicates whether the operation is a mutation (true) or a query (false).</param>
@@ -3808,8 +3824,8 @@ type Moon {
                 {
                     // requested mutation operation has depth of 2
                     query = @"mutation createbook{
-                                createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {      // depth: 1
-                                    title                                                           // depth: 2
+                                createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {
+                                    title
                                     publisher_id
                                 }
                             }";
@@ -3817,9 +3833,9 @@ type Moon {
                 else
                 {
                     // requested query operation has depth of 2
-                    query = @"{
-                                book_by_pk(id: 1) {     // depth: 1
-                                    id,                 // depth: 2
+                    query = @"query book_by_pk{
+                                book_by_pk(id: 1) {
+                                    id,
                                     title,
                                     publisher_id
                                 }
@@ -3839,22 +3855,44 @@ type Moon {
                 // Assert
                 Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
+                JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
                 if (graphQLResponse.StatusCode == HttpStatusCode.OK)
                 {
-                    Assert.IsFalse(body.Contains("errors"));
+                    Assert.IsFalse(body.Contains("errors"), "The response should not contain any errors.");
+                    Assert.IsNotNull(responseJson.GetProperty("data"), "The response should contain data.");
+
                 }
                 else
                 {
-                    Assert.IsTrue(body.Contains("errors"));
-                    Assert.IsTrue(body.Contains($"The GraphQL document has an execution depth of 2 which exceeds the max allowed execution depth of {depthLimit}."));
+                    Assert.IsNotNull(responseJson.GetProperty("errors"), "The response should contain errors.");
+                    string errorMessage = responseJson.GetProperty("errors").EnumerateArray().FirstOrDefault().GetProperty("message").GetString();
+                    string expectedErrorMessage = $"The GraphQL document has an execution depth of 2 which exceeds the max allowed execution depth of {depthLimit}.";
+                    Assert.AreEqual(expectedErrorMessage, errorMessage, "The error message should contain the current and allowed max depth limit value.");
                 }
             }
         }
 
         /// <summary>
-        /// This Test verfyies that depth-limit specified for graphQL do not affect the introspection queries.
+        /// This test verifies that the depth-limit specified for GraphQL does not affect introspection queries.
         /// In this test, we have specified the depth limit as 2 and we are sending introspection query with depth 6.
         /// The expected result is that the query should be successful and should not return any errors.
+        /// Example:
+        /// {
+        ///    __schema {               // depth: 1
+        ///       types {               // depth: 2
+        ///         name                // depth: 3
+        ///         fields {            // depth: 3
+        ///           name              // depth: 4
+        ///           type {            // depth: 4
+        ///            name             // depth: 5
+        ///            kind             // depth: 5
+        ///            ofType {         // depth: 5
+        ///              name           // depth: 6
+        ///              kind           // depth: 6
+        ///             }
+        ///         }
+        ///     }
+        /// }
         /// </summary>
         [TestCategory(TestCategory.MSSQL)]
         [TestMethod]
@@ -3876,22 +3914,21 @@ type Moon {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            // Act
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
                 // nested depth:6
                 string query = @"{
-                                    __schema {                  // depth: 1
-                                        types {                 // depth: 2
+                                    __schema {
+                                        types {
                                         name
                                         fields {
-                                            name                // depth: 3
+                                            name
                                             type {
-                                                name            // depth: 4
+                                                name
                                                 kind
-                                                    ofType {    // depth: 5
-                                                        name    // depth: 6
+                                                    ofType {
+                                                        name
                                                         kind
                                                     }
                                                 }
@@ -3907,27 +3944,43 @@ type Moon {
                     Content = JsonContent.Create(payload)
                 };
 
+                // Act
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
 
                 // Assert
                 Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
-                Assert.IsFalse(body.Contains("errors"));
+                Assert.IsFalse(body.Contains("errors"), "The response should not contain any errors.");
+
+                JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
+                Assert.IsNotNull(responseJson, "The response should be a valid JSON.");
+                responseJson.GetProperty("data").GetProperty("__schema").GetProperty("types");
+
+                JsonElement schema = responseJson.GetProperty("data").GetProperty("__schema");
+                Assert.IsNotNull(schema, "The response should contain schema information.");
             }
         }
 
         /// <summary>
         /// Tests the behavior of GraphQL queries in non-hosted mode when the depth limit is explicitly set to -1 or null.
-        /// Setting the depth limit to -1 or null is intended to disable the depth limit check, allowing queries of any depth.
+        /// Setting the depth limit to -1 is intended to disable the depth limit check, allowing queries of any depth.
+        /// Using null as default value of dab which also disables the depth limit check.
         /// This test verifies that queries are processed successfully without any errors under these configurations.
+        /// Example Query:
+        /// {
+        ///     book_by_pk(id: 1) {         // depth: 1
+        ///         id,                     // depth: 2
+        ///         title,                  // depth: 2
+        ///         publisher_id            // depth: 2
+        ///     }
+        /// }
         /// </summary>
         /// <param name="depthLimit"> </param>
         [DataTestMethod]
         [DataRow(-1, DisplayName = "Setting -1 for depth-limit will disable the depth limit")]
-        [DataRow(null, DisplayName = "Setting null for depth-limit will disable the depth limit")]
+        [DataRow(null, DisplayName = "Using default value: null for depth-limit which also disables the depth limit check")]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task TestNoDepthLimitOnGrahQLInNonHostedMode(
-            int? depthLimit)
+        public async Task TestNoDepthLimitOnGrahQLInNonHostedMode(int? depthLimit)
         {
             // Arrange
             GraphQLRuntimeOptions graphqlOptions = new(DepthLimit: depthLimit);
@@ -3945,14 +3998,13 @@ type Moon {
                 $"--ConfigFileName={CUSTOM_CONFIG}"
             };
 
-            // Act
             using (TestServer server = new(Program.CreateWebHostBuilder(args)))
             using (HttpClient client = server.CreateClient())
             {
                 // requested query operation has depth of 2
                 string query = @"{
-                                    book_by_pk(id: 1) {         // depth: 1
-                                        id,                 // depth: 2
+                                    book_by_pk(id: 1) {
+                                        id,
                                         title,
                                         publisher_id
                                     }
@@ -3965,12 +4017,17 @@ type Moon {
                     Content = JsonContent.Create(payload)
                 };
 
+                // Act
                 HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
 
                 // Assert
                 Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
-                Assert.IsFalse(body.Contains("errors"));
+                Assert.IsFalse(body.Contains("errors"), "The response should not contain any errors.");
+
+                JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
+                Assert.IsNotNull(responseJson.GetProperty("data"), "The response should contain data.");
+                Assert.IsNotNull(responseJson.GetProperty("data").GetProperty("book_by_pk"), "The response should contain book_by_pk data.");
             }
         }
 

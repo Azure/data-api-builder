@@ -190,15 +190,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
-            int? depthLimit = null;
-            if (runtimeConfig is not null
-                && runtimeConfig.Runtime!.GraphQL!.DepthLimit is not null
-                && runtimeConfig.Runtime!.GraphQL!.DepthLimit > 0)
-            {
-                depthLimit = runtimeConfig.Runtime!.GraphQL!.DepthLimit;
-            }
-
-            AddGraphQLService(services, depthLimit);
+            AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
             services.AddFusionCache()
                 .WithOptions(options =>
                 {
@@ -222,7 +214,7 @@ namespace Azure.DataApiBuilder.Service
         /// when determining whether to allow introspection requests to proceed.
         /// </summary>
         /// <param name="services">Service Collection</param>
-        private void AddGraphQLService(IServiceCollection services, int? depthLimit = null)
+        private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
             IRequestExecutorBuilder server = services.AddGraphQLServer()
                 .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
@@ -241,9 +233,9 @@ namespace Azure.DataApiBuilder.Service
             // enforces a limit on the depth of incoming GraphQL queries/mutation to prevent extremely deep queries
             // that could potentially lead to performance issues.
             // Additionally, the skipIntrospectionFields parameter is set to true to skip depth limit enforcement on introspection queries.
-            if (depthLimit.HasValue && depthLimit.Value > 0)
+            if (graphQLRuntimeOptions is not null && graphQLRuntimeOptions.DepthLimit.HasValue && graphQLRuntimeOptions.DepthLimit.Value > 0)
             {
-                server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: depthLimit.Value, skipIntrospectionFields: true);
+                server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
             }
 
             server.AddErrorFilter(error =>

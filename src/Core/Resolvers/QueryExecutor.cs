@@ -444,7 +444,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                                     availableBytes -= StreamDataIntoDbResultSetRow(
                                         dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, availableBytes);
                                 }
-
                             }
                             else
                             {

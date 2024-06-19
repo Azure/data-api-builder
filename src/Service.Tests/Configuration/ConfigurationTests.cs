@@ -3070,7 +3070,7 @@ type Moon {
         [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
         public void ValidateGraphQLSchemaEntityPresentInConfig()
         {
-                string GRAPHQL_SCHEMA = @"
+            string GRAPHQL_SCHEMA = @"
 type Character {
     id : ID,
     name : String
@@ -3090,7 +3090,7 @@ type Planet @model(name:""Planet"") {
             }
 
             Dictionary<string, Entity> entities = new(baseConfig.Entities);
-            entities.Remove("Character");   
+            entities.Remove("Character");
             RuntimeConfig runtimeConfig = new(Schema: baseConfig.Schema,
                                              DataSource: baseConfig.DataSource,
                                              Runtime: baseConfig.Runtime,

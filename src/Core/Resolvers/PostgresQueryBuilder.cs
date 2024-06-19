@@ -101,7 +101,59 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         public string Build(SqlExecuteStructure structure)
         {
-            throw new NotImplementedException();
+            return $"SELECT * FROM {QuoteIdentifier(structure.DatabaseObject.SchemaName)}.{QuoteIdentifier(structure.DatabaseObject.Name)}({BuildProcedureParameterList(structure.ProcedureParameters)})";
+        }
+        private string BuildProcedureParameterList(Dictionary<string, object> parameters)
+        {
+            if (parameters == null || parameters.Count == 0)
+            {
+                return "";
+            }
+
+            List<string> parameterList = new();
+            foreach (KeyValuePair<string, object> param in parameters)
+            {
+                parameterList.Add($"{QuoteIdentifier(param.Key)} := {FormatParameterValue(param.Value)}");
+            }
+
+            return string.Join(", ", parameterList);
+        }
+
+#pragma warning disable CA1822 // Mark members as static
+        private string? FormatParameterValue(object value)
+#pragma warning restore CA1822 // Mark members as static
+        {
+            if (value == null)
+            {
+                return "NULL";
+            }
+
+            if (value is string || value is char)
+            {
+                if (value == null)
+                {
+                    value = string.Empty;
+                }
+                // Handle string values, escaping single quotes
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+                return $"{value.ToString().Replace("'", "''")}";
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
+            }
+
+            if (value is bool)
+            {
+                // Handle boolean values
+                return (bool)value ? "TRUE" : "FALSE";
+            }
+
+            if (value is DateTime)
+            {
+                // Handle DateTime values
+                return $"'{((DateTime)value).ToString("yyyy-MM-dd HH:mm:ss")}'";
+            }
+
+            // Handle numeric and other types
+            return value == null ? string.Empty : value.ToString();
         }
 
         public string Build(SqlUpsertQueryStructure structure)
@@ -218,12 +270,35 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             return string.Join(", ", builtColumns);
         }
-
-        /// <inheritdoc/>
-        public string BuildStoredProcedureResultDetailsQuery(string databaseObjectName)
+        public string BuildStoredProcedureResultDetailsQuery(string procedureName)
         {
-            throw new NotImplementedException();
+            // This query retrieves the details of the result set for a given stored procedure
+            
+    string query = $@"
+    SELECT
+        p.parameter_name AS name,
+        p.data_type AS system_type_name,
+        CASE
+            WHEN p.parameter_mode = 'IN' THEN FALSE
+            ELSE TRUE
+        END AS is_nullable
+    FROM
+        information_schema.parameters p
+    JOIN
+        information_schema.routines r
+        ON p.specific_name = r.specific_name
+    WHERE
+        r.routine_schema = 'public'
+        and p.parameter_mode = 'OUT'
+        AND r.routine_name = '{procedureName}'
+    ORDER BY
+        p.ordinal_position";
+
+
+
+            return query;
         }
+
 
         /// <inheritdoc/>
         public string BuildQueryToGetReadOnlyColumns(string schemaParamName, string tableParamName)

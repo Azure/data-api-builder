@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// <summary>
         /// MySql Single Type Tests.
         /// </summary>
-        /// <param name="type">GraphQL Type</param>
+        /// <param name="graphqlDataType">GraphQL Data Type</param>
         /// <param name="filterOperator">Comparison operator: gt, lt, gte, lte, etc.</param>
         /// <param name="sqlValue">Value to be set in "expected value" sql query.</param>
         /// <param name="gqlValue">GraphQL input value supplied.</param>
@@ -125,13 +125,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
         [DataTestMethod]
         public async Task MySql_real_graphql_single_filter_expectedValues(
-            string type,
+            string graphqlDataType,
             string filterOperator,
             string sqlValue,
             string gqlValue,
             string queryOperator)
         {
-            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+            await QueryTypeColumnFilterAndOrderBy(graphqlDataType, filterOperator, sqlValue, gqlValue, queryOperator);
         }
 
         protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)

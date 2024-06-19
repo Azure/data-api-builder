@@ -379,7 +379,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
 
         /// <summary>
         /// Validates streaming logic for QueryExecutor
-        /// In this test the streaming logic for stored procedure's is tested.
+        /// In this test the streaming logic for stored procedures is tested.
         /// The test tries to validate the streaming across different column types (Byte, string, int etc)
         /// Max available size is set to 4 MB, getChars and getBytes are moqed to return 1MB per read.
         /// Exception should be thrown in test cases where we go above 4MB.

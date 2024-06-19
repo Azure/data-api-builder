@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
@@ -222,6 +223,16 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 }
 
                 string entityType = field.Type.NamedType().Name.Value;
+
+                // If the entity is not present in the runtime config, throw an exception as we are expecting all the entities to be present in the runtime config.
+                if (!_runtimeConfig.Entities.ContainsKey(entityType))
+                {
+                    throw new DataApiBuilderException(
+                        message: $"The entity '{entityType}' was not found in the runtime config.",
+                        statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
+                        subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
+                }
+
                 // If the entity is already visited, then it is a circular reference
                 if (!trackerForFields.Add(entityType))
                 {
@@ -241,11 +252,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 }
 
                 EntityDbPolicyCosmosModel currentEntity = new(
-                            Path: currentPath,
-                            EntityName: entityType,
-                            ColumnName: field.Name.Value,
-                            Alias: alias);
+                                Path: currentPath,
+                                EntityName: entityType,
+                                ColumnName: field.Name.Value,
+                                Alias: alias);
 
+                // If entity is defined in the runtime config, only then generate Join for this entity
                 if (EntityWithJoins.ContainsKey(entityType))
                 {
                     EntityWithJoins[entityType].Add(currentEntity);
@@ -255,7 +267,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                     EntityWithJoins.Add(
                         entityType,
                         new List<EntityDbPolicyCosmosModel>() {
-                            currentEntity
+                        currentEntity
                         });
                 }
 

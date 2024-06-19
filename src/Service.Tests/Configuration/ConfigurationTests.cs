@@ -3067,6 +3067,51 @@ type Moon {
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, exception.SubStatusCode);
         }
 
+        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
+        public void ValidateGraphQLSchemaEntityPresentInConfig()
+        {
+                string GRAPHQL_SCHEMA = @"
+type Character {
+    id : ID,
+    name : String
+}
+
+type Planet @model(name:""Planet"") {
+    id : ID!,
+    name : String,
+    characters : [Character]
+}";
+            // Read the base config from the file system
+            TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
+            FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+            if (!baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig))
+            {
+                throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
+            }
+
+            Dictionary<string, Entity> entities = new(baseConfig.Entities);
+            entities.Remove("Character");   
+            RuntimeConfig runtimeConfig = new(Schema: baseConfig.Schema,
+                                             DataSource: baseConfig.DataSource,
+                                             Runtime: baseConfig.Runtime,
+                                             Entities: new(entities));
+
+            // Setup a mock file system, and use that one with the loader/provider for the config
+            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
+            {
+                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
+                { DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()) }
+            });
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+
+            DataApiBuilderException exception =
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+            Assert.AreEqual("The entity 'Character' was not found in the runtime config.", exception.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
+        }
+
         /// <summary>
         /// When you query, DAB loads schema and check for defined entities in the config file which get load during DAB initialization, and
         /// it fails during this check if entity is not defined in the config file. In this test case, we are testing the error message is appropriate.

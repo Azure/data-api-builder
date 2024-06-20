@@ -32,6 +32,8 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
 
         public const string PK_QUERY_SUFFIX = "_by_pk";
 
+        public const string EXECUTE_SP_PREFIX = "execute";
+
         /// <summary>
         /// Enforces the GraphQL naming restrictions on <paramref name="name"/>.
         /// Completely removes invalid characters from the input parameter: name.
@@ -200,7 +202,7 @@ namespace Azure.DataApiBuilder.Service.GraphQLBuilder
         /// <returns>Name to be used for the stored procedure GraphQL field.</returns>
         public static string GenerateStoredProcedureGraphQLFieldName(string entityName, Entity entity)
         {
-            string preformattedField = $"execute{GetDefinedSingularName(entityName, entity)}";
+            string preformattedField = $"{EXECUTE_SP_PREFIX}{GetDefinedSingularName(entityName, entity)}";
             return FormatNameForField(preformattedField);
         }
 

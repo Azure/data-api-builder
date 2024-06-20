@@ -13,6 +13,7 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
+using HotChocolate.Types;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
@@ -224,7 +225,7 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
                 string entityType = field.Type.NamedType().Name.Value;
 
                 // If the entity is not present in the runtime config, throw an exception as we are expecting all the entities to be present in the runtime config.
-                if (!_runtimeConfig.Entities.ContainsKey(entityType))
+                if (!_runtimeConfig.Entities.ContainsKey(GraphQLNaming.ObjectTypeToEntityName(schemaDocument[entityType])))
                 {
                     throw new DataApiBuilderException(
                         message: $"The entity '{entityType}' was not found in the runtime config.",

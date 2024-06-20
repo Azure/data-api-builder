@@ -33,7 +33,7 @@
     }
   },
   "entities": {
-    "PlanetAlias": {
+    "Planet": {
       "source": {
         "object": "graphqldb.planet"
       },

@@ -3080,12 +3080,6 @@ type Moon {
 type Character {
     id : ID,
     name : String,
-    star: Star
-}
-
-type Star  @model(name:""StarAlias""){
-    id : ID,
-    name : String
 }
 
 type Planet @model(name:""Planet"") {

@@ -163,15 +163,6 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                     AssertIfEntityIsAvailableInConfig(modelName);
 
-                    // If the entity is not present in the runtime config, throw an exception as we are expecting all the entities to be present in the runtime config.
-                    if (!_runtimeConfig.Entities.ContainsKey(modelName))
-                    {
-                        throw new DataApiBuilderException(
-                            message: $"The entity '{modelName}' was not found in the runtime config.",
-                            statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
-                            subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
-                    }
-
                     if (EntityWithJoins.TryGetValue(modelName, out List<EntityDbPolicyCosmosModel>? entityWithJoins))
                     {
                         entityWithJoins.Add(new(Path: CosmosQueryStructure.COSMOSDB_CONTAINER_DEFAULT_ALIAS, EntityName: modelName));

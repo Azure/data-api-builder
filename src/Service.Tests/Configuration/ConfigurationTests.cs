@@ -431,7 +431,7 @@ type Character {
     moons: [Moon],
 }
 
-type Planet @model(name:""Planet"") {
+type Planet @model(name:""PlanetAlias"") {
     id : ID!,
     name : String,
     character: Character
@@ -452,7 +452,7 @@ type Character {
     moons: Moon,
 }
 
-type Planet @model(name:""Planet"") {
+type Planet @model(name:""PlanetAlias"") {
     id : ID!,
     name : String,
     character: Character

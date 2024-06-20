@@ -1841,7 +1841,7 @@ namespace Azure.DataApiBuilder.Core.Services
             foreach (DbResultSetRow readOnlyFieldRowWithProperties in readOnlyFieldRowsWithProperties.Rows)
             {
                 Dictionary<string, object?> readOnlyFieldInfo = readOnlyFieldRowWithProperties.Columns;
-                string fieldName = (string)readOnlyFieldInfo["column_name"]!;
+                string fieldName = (string)readOnlyFieldInfo["COLUMN_NAME"]!;
                 readOnlyFields.Add(fieldName);
             }
 

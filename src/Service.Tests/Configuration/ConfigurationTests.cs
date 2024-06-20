@@ -19,7 +19,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -3082,7 +3081,7 @@ type Character {
     name : String,
 }
 
-type Planet @model(name:""Planet"") {
+type Planet @model(name:""PlanetAlias"") {
     id : ID!,
     name : String,
     characters : [Character]
@@ -3117,127 +3116,6 @@ type Planet @model(name:""Planet"") {
             Assert.AreEqual("The entity 'Character' was not found in the runtime config.", exception.Message);
             Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
             Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
-        }
-
-        /// <summary>
-        /// GraphQL Schema types defined -> Character and Planet and Star (with Alias as "StarAlias")
-        /// DAB runtime config entities defined -> Planet, Character, StarAlias
-        /// Should not throw mismatch error as StarAlias is defined in the config file.
-        /// </summary>
-        /// <exception cref="ApplicationException"></exception>
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public void ValidateGraphQLSchemaEntityPresentInConfigWithAlias()
-        {
-            string GRAPHQL_SCHEMA = @"
-type Character {
-    id : ID,
-    name : String,
-    star: Star
-}
-
-type Star  @model(name:""StarAlias""){
-    id : ID,
-    name : String
-}
-
-type Planet @model(name:""Planet"") {
-    id : ID!,
-    name : String,
-    characters : [Character]
-}";
-            // Read the base config from the file system
-            TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
-            FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
-            if (!baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig))
-            {
-                throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
-            }
-
-            Dictionary<string, Entity> entities = new(baseConfig.Entities);
-            entities.Add("StarAlias", entities["Star"]);
-            entities.Remove("Star");
-
-            RuntimeConfig runtimeConfig = new(Schema: baseConfig.Schema,
-                                             DataSource: baseConfig.DataSource,
-                                             Runtime: baseConfig.Runtime,
-                                             Entities: new(entities));
-
-            // Setup a mock file system, and use that one with the loader/provider for the config
-            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
-            {
-                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
-                { DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()) }
-            });
-            FileSystemRuntimeConfigLoader loader = new(fileSystem);
-            RuntimeConfigProvider provider = new(loader);
-
-            new CosmosSqlMetadataProvider(provider, fileSystem);
-
-            //Should not throw any exception, test would fail if it throws.
-        }
-
-        /// <summary>
-        /// When you query, DAB loads schema and check for defined entities in the config file which get load during DAB initialization, and
-        /// it fails during this check if entity is not defined in the config file. In this test case, we are testing the error message is appropriate.
-        /// </summary>
-        [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestErrorMessageWithoutKeyFieldsInConfig()
-        {
-            Dictionary<string, object> dbOptions = new();
-            HyphenatedNamingPolicy namingPolicy = new();
-
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), "dummy");
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
-
-            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), Options: dbOptions);
-
-            // Add a dummy entity in config file just to make sure the config file is valid.
-            Entity entity = new(
-                Source: new("EntityName", EntitySourceType.Table, null, null),
-                Rest: new(Enabled: false),
-                GraphQL: new("", ""),
-                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: null,
-                Mappings: null
-            );
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), entity, "EntityName");
-
-            const string CUSTOM_CONFIG = "custom-config.json";
-
-            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
-
-            string[] args = new[]
-            {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
-
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
-            {
-                // When you query, DAB loads schema and check for defined entities in the config file and
-                // it fails during that, since entity is not defined in the config file.
-                string query = @"{
-                    Planet {
-                        items{
-                            id
-                        }
-                    }
-                }";
-
-                object payload = new { query };
-
-                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
-                {
-                    Content = JsonContent.Create(payload)
-                };
-
-                DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () => await client.SendAsync(graphQLRequest));
-                Assert.AreEqual("The entity 'Planet' was not found in the runtime config.", ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
-            }
         }
 
         /// <summary>

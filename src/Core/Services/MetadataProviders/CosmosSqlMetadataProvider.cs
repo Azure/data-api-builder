@@ -223,11 +223,12 @@ namespace Azure.DataApiBuilder.Core.Services.MetadataProviders
 
                 string entityType = field.Type.NamedType().Name.Value;
 
+                string entityOrAliasName = GraphQLNaming.ObjectTypeToEntityName(schemaDocument[entityType]);
                 // If the entity is not present in the runtime config, throw an exception as we are expecting all the entities to be present in the runtime config.
-                if (!_runtimeConfig.Entities.ContainsKey(GraphQLNaming.ObjectTypeToEntityName(schemaDocument[entityType])))
+                if (!_runtimeConfig.Entities.ContainsKey(entityOrAliasName))
                 {
                     throw new DataApiBuilderException(
-                        message: $"The entity '{entityType}' was not found in the runtime config.",
+                        message: $"The entity '{entityOrAliasName}' was not found in the runtime config.",
                         statusCode: System.Net.HttpStatusCode.ServiceUnavailable,
                         subStatusCode: DataApiBuilderException.SubStatusCodes.ConfigValidationError);
                 }

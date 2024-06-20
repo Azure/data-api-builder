@@ -13,7 +13,6 @@ using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Directives;
 using HotChocolate.Language;
-using HotChocolate.Types;
 using Microsoft.OData.Edm;
 
 namespace Azure.DataApiBuilder.Core.Services.MetadataProviders

@@ -3858,14 +3858,15 @@ type Moon {
                 JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
                 if (graphQLResponse.StatusCode == HttpStatusCode.OK)
                 {
-                    Assert.IsFalse(body.Contains("errors"), "The response should not contain any errors.");
-                    Assert.IsNotNull(responseJson.GetProperty("data"), "The response should contain data.");
-
+                    Assert.IsTrue(responseJson.TryGetProperty("data", out JsonElement data), "The response should contain data.");
+                    Assert.IsFalse(data.TryGetProperty("errors", out _), "The response should not contain any errors.");
                 }
                 else
                 {
-                    Assert.IsNotNull(responseJson.GetProperty("errors"), "The response should contain errors.");
-                    string errorMessage = responseJson.GetProperty("errors").EnumerateArray().FirstOrDefault().GetProperty("message").GetString();
+                    Assert.IsTrue(responseJson.TryGetProperty("errors", out JsonElement data), "The response should contain errors.");
+                    Assert.IsTrue(data.EnumerateArray().Any(), "The response should contain at least one error.");
+                    Assert.IsTrue(data.EnumerateArray().FirstOrDefault().TryGetProperty("message", out JsonElement message), "The error should contain a message."));
+                    string errorMessage = message.GetString();
                     string expectedErrorMessage = $"The GraphQL document has an execution depth of 2 which exceeds the max allowed execution depth of {depthLimit}.";
                     Assert.AreEqual(expectedErrorMessage, errorMessage, "The error message should contain the current and allowed max depth limit value.");
                 }
@@ -3950,13 +3951,12 @@ type Moon {
                 // Assert
                 Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
-                Assert.IsFalse(body.Contains("errors"), "The response should not contain any errors.");
 
                 JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
                 Assert.IsNotNull(responseJson, "The response should be a valid JSON.");
-                responseJson.GetProperty("data").GetProperty("__schema").GetProperty("types");
-
-                JsonElement schema = responseJson.GetProperty("data").GetProperty("__schema");
+                Assert.IsTrue(responseJson.TryGetProperty("data", out JsonElement data), "The response should contain data.");
+                Assert.IsFalse(data.TryGetProperty("errors", out _), "The response should not contain any errors.");
+                Assert.IsTrue(responseJson.GetProperty("data").TryGetProperty("__schema", out JsonElement schema));
                 Assert.IsNotNull(schema, "The response should contain schema information.");
             }
         }
@@ -4023,11 +4023,12 @@ type Moon {
                 // Assert
                 Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
                 string body = await graphQLResponse.Content.ReadAsStringAsync();
-                Assert.IsFalse(body.Contains("errors"), "The response should not contain any errors.");
 
                 JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
-                Assert.IsNotNull(responseJson.GetProperty("data"), "The response should contain data.");
-                Assert.IsNotNull(responseJson.GetProperty("data").GetProperty("book_by_pk"), "The response should contain book_by_pk data.");
+                Assert.IsNotNull(responseJson, "The response should be a valid JSON.");
+                Assert.IsTrue(responseJson.TryGetProperty("data", out JsonElement data), "The response should contain data.");
+                Assert.IsFalse(data.TryGetProperty("errors", out _), "The response should not contain any errors.");
+                Assert.IsTrue(data.TryGetProperty("book_by_pk", out _), "The response data should contain book_by_pk data.");
             }
         }
 

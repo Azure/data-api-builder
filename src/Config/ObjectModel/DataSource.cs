@@ -33,7 +33,11 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
                 Container: ReadStringOption(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container))),
                 Schema: ReadStringOption(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema))),
                 // The "raw" schema will be provided via the controller to setup config, rather than parsed from the JSON file.
-                GraphQLSchema: ReadStringOption(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema))))
+                GraphQLSchema: ReadStringOption(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.GraphQLSchema))),
+                SchemaAnalyzer: new CosmosDbSchemaAnalyzerOptions(
+                    SampleCount: ReadIntegerOption(namingPolicy.ConvertName(nameof(CosmosDbSchemaAnalyzerOptions.SampleCount))),
+                    Query: ReadStringOption(namingPolicy.ConvertName(nameof(CosmosDbSchemaAnalyzerOptions.Query))))
+                )
                 : default;
         }
 
@@ -66,6 +70,16 @@ public record DataSource(DatabaseType DatabaseType, string ConnectionString, Dic
         return false;
     }
 
+    private int? ReadIntegerOption(string option)
+    {
+        if (Options is not null && Options.TryGetValue(option, out object? value) && value is int intValue)
+        {
+            return intValue;
+        }
+
+        return null;
+    }
+
     [JsonIgnore]
     public string DatabaseTypeNotSupportedMessage => $"The provided database-type value: {DatabaseType} is currently not supported. Please check the configuration file.";
 }
@@ -79,7 +93,14 @@ public interface IDataSourceOptions { }
 /// <param name="Container">Name of the default CosmosDB container.</param>
 /// <param name="Schema">Path to the GraphQL schema file.</param>
 /// <param name="GraphQLSchema">Raw contents of the GraphQL schema.</param>
-public record CosmosDbNoSQLDataSourceOptions(string? Database, string? Container, string? Schema, string? GraphQLSchema) : IDataSourceOptions;
+public record CosmosDbNoSQLDataSourceOptions(string? Database, string? Container, string? Schema, string? GraphQLSchema, CosmosDbSchemaAnalyzerOptions? SchemaAnalyzer) : IDataSourceOptions;
+
+/// <summary>
+/// The CosmosDB NoSQL SchemaAnalyzer options.
+/// </summary>
+/// <param name="SampleCount">Name of the default CosmosDB database.</param>
+/// <param name="Query">Name of the default CosmosDB container.</param>
+public record CosmosDbSchemaAnalyzerOptions(int? SampleCount, string? Query) : IDataSourceOptions;
 
 /// <summary>
 /// Options for MsSql database.

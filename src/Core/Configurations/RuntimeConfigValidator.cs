@@ -117,7 +117,6 @@ public class RuntimeConfigValidator : IConfigValidator
             }
         }
 
-        ValidateDatabaseType(runtimeConfig, fileSystem, logger);
     }
 
     /// <summary>
@@ -330,6 +329,7 @@ public class RuntimeConfigValidator : IConfigValidator
             logger: loggerFactory.CreateLogger<ISqlMetadataProvider>(),
             fileSystem: _fileSystem,
             isValidateOnly: _isValidateOnly);
+
         await metadataProviderFactory.InitializeAsync();
 
         ConfigValidationExceptions.AddRange(metadataProviderFactory.GetAllMetadataExceptions());
@@ -349,56 +349,6 @@ public class RuntimeConfigValidator : IConfigValidator
         foreach (Exception exception in ConfigValidationExceptions)
         {
             _logger.LogError(exception.Message);
-        }
-    }
-
-    /// <summary>
-    /// Throws exception if database type is incorrectly configured
-    /// in the config.
-    /// </summary>
-    public void ValidateDatabaseType(
-        RuntimeConfig runtimeConfig,
-        IFileSystem fileSystem,
-        ILogger logger)
-    {
-        // Schema file should be present in the directory if not specified in the config
-        // when using CosmosDB_NoSQL database.
-        foreach (DataSource dataSource in runtimeConfig.ListAllDataSources())
-        {
-            if (dataSource.DatabaseType is DatabaseType.CosmosDB_NoSQL)
-            {
-                try
-                {
-                    CosmosDbNoSQLDataSourceOptions? cosmosDbNoSql =
-                        dataSource.GetTypedOptions<CosmosDbNoSQLDataSourceOptions>() ??
-                        throw new DataApiBuilderException(
-                            "CosmosDB_NoSql is specified but no CosmosDB_NoSql configuration information has been provided.",
-                            HttpStatusCode.ServiceUnavailable,
-                            DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-
-                    // The schema is provided through GraphQLSchema and not the Schema file when the configuration
-                    // is received after startup.
-                    if (string.IsNullOrEmpty(cosmosDbNoSql.GraphQLSchema))
-                    {
-                        if (string.IsNullOrEmpty(cosmosDbNoSql.Schema))
-                        {
-                            throw new DataApiBuilderException(
-                                "No GraphQL schema file has been provided for CosmosDB_NoSql. Ensure you provide a GraphQL schema containing the GraphQL object types to expose.",
-                                HttpStatusCode.ServiceUnavailable,
-                                DataApiBuilderException.SubStatusCodes.ErrorInInitialization);
-                        }
-
-                        if (!fileSystem.File.Exists(cosmosDbNoSql.Schema))
-                        {
-                            throw new FileNotFoundException($"The GraphQL schema file at '{cosmosDbNoSql.Schema}' could not be found. Ensure that it is a path relative to the runtime.");
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    HandleOrRecordException(e);
-                }
-            }
         }
     }
 

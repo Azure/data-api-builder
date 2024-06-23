@@ -3852,7 +3852,7 @@ type Planet @model(name:""PlanetAlias"") {
                 {
                     Assert.IsTrue(responseJson.TryGetProperty("errors", out JsonElement data), "The response should contain errors.");
                     Assert.IsTrue(data.EnumerateArray().Any(), "The response should contain at least one error.");
-                    Assert.IsTrue(data.EnumerateArray().FirstOrDefault().TryGetProperty("message", out JsonElement message), "The error should contain a message."));
+                    Assert.IsTrue(data.EnumerateArray().FirstOrDefault().TryGetProperty("message", out JsonElement message), "The error should contain a message.");
                     string errorMessage = message.GetString();
                     string expectedErrorMessage = $"The GraphQL document has an execution depth of 2 which exceeds the max allowed execution depth of {depthLimit}.";
                     Assert.AreEqual(expectedErrorMessage, errorMessage, "The error message should contain the current and allowed max depth limit value.");

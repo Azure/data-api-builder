@@ -36,6 +36,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         private RetryPolicy _retryPolicy;
 
+        private int _maxResponseSizeMB;
+        private long _maxResponseSizeBytes;
+
         /// <summary>
         /// Dictionary that stores dataSourceName to its corresponding connection string builder.
         /// </summary>
@@ -51,6 +54,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ConnectionStringBuilders = new Dictionary<string, DbConnectionStringBuilder>();
             ConfigProvider = configProvider;
             HttpContextAccessor = httpContextAccessor;
+            _maxResponseSizeMB = configProvider.GetConfig().MaxResponseSizeMB();
+            _maxResponseSizeBytes = _maxResponseSizeMB * 1024 * 1024;
+
             _retryPolicyAsync = Policy
                 .Handle<DbException>(DbExceptionParser.IsTransientException)
                 .WaitAndRetryAsync(
@@ -242,7 +248,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             try
             {
-                using DbDataReader dbDataReader = await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
+                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
+                    await cmd.ExecuteReaderAsync(CommandBehavior.SequentialAccess) : await cmd.ExecuteReaderAsync(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return await dataReaderHandler(dbDataReader, args);
@@ -318,7 +325,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             try
             {
-                using DbDataReader dbDataReader = cmd.ExecuteReader(CommandBehavior.CloseConnection);
+                using DbDataReader dbDataReader = ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled() ?
+                    cmd.ExecuteReader(CommandBehavior.SequentialAccess) : cmd.ExecuteReader(CommandBehavior.CloseConnection);
                 if (dataReaderHandler is not null && dbDataReader is not null)
                 {
                     return dataReaderHandler(dbDataReader, args);
@@ -399,13 +407,12 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 throw DbExceptionParser.Parse(e);
             }
         }
-
         /// <inheritdoc />
         public async Task<DbResultSet>
             ExtractResultSetFromDbDataReaderAsync(DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet = new(resultProperties: GetResultPropertiesAsync(dbDataReader).Result ?? new());
-
+            long availableBytes = _maxResponseSizeBytes;
             while (await ReadAsync(dbDataReader))
             {
                 if (dbDataReader.HasRows)
@@ -427,7 +434,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+                                if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
+                                {
+                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+                                }
+                                else
+                                {
+                                    int columnSize = (int)schemaRow["ColumnSize"];
+                                    availableBytes -= StreamDataIntoDbResultSetRow(
+                                        dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, availableBytes);
+                                }
                             }
                             else
                             {
@@ -448,7 +464,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             ExtractResultSetFromDbDataReader(DbDataReader dbDataReader, List<string>? args = null)
         {
             DbResultSet dbResultSet = new(resultProperties: GetResultProperties(dbDataReader) ?? new());
-
+            long availableBytes = _maxResponseSizeBytes;
             while (Read(dbDataReader))
             {
                 if (dbDataReader.HasRows)
@@ -470,7 +486,16 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             int colIndex = dbDataReader.GetOrdinal(columnName);
                             if (!dbDataReader.IsDBNull(colIndex))
                             {
-                                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+                                if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
+                                {
+                                    dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+                                }
+                                else
+                                {
+                                    int columnSize = (int)schemaRow["ColumnSize"];
+                                    availableBytes -= StreamDataIntoDbResultSetRow(
+                                        dbDataReader, dbResultSetRow, columnName, columnSize, ordinal: colIndex, availableBytes);
+                                }
                             }
                             else
                             {
@@ -636,6 +661,102 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             return resultProperties;
         }
 
+        /// <summary>
+        /// Reads data into jsonString.
+        /// </summary>
+        /// <param name="dbDataReader">DbDataReader.</param>
+        /// <param name="availableSize">Available buffer.</param>
+        /// <param name="resultJsonString">jsonString to read into.</param>
+        /// <param name="ordinal">Ordinal of column being read.</param>
+        /// <returns>size of data read in bytes.</returns>
+        internal int StreamCharData(DbDataReader dbDataReader, long availableSize, StringBuilder resultJsonString, int ordinal)
+        {
+            long resultFieldSize = dbDataReader.GetChars(ordinal: ordinal, dataOffset: 0, buffer: null, bufferOffset: 0, length: 0);
+
+            // if the size of the field is less than available size, then we can read the entire field.
+            // else we throw exception.
+            ValidateSize(availableSize, resultFieldSize);
+
+            char[] buffer = new char[resultFieldSize];
+
+            // read entire field into buffer and reduce available size.
+            dbDataReader.GetChars(ordinal: ordinal, dataOffset: 0, buffer: buffer, bufferOffset: 0, length: buffer.Length);
+
+            resultJsonString.Append(buffer);
+            return buffer.Length;
+        }
+
+        /// <summary>
+        /// Reads data into byteObject.
+        /// </summary>
+        /// <param name="dbDataReader">DbDataReader.</param>
+        /// <param name="availableSize">Available buffer.</param>
+        /// <param name="ordinal"> ordinal of column being read</param>
+        /// <param name="resultBytes">bytes array to read result into.</param>
+        /// <returns>size of data read in bytes.</returns>
+        internal int StreamByteData(DbDataReader dbDataReader, long availableSize, int ordinal, out byte[]? resultBytes)
+        {
+            long resultFieldSize = dbDataReader.GetBytes(
+                ordinal: ordinal, dataOffset: 0, buffer: null, bufferOffset: 0, length: 0);
+
+            // if the size of the field is less than available size, then we can read the entire field.
+            // else we throw exception.
+            ValidateSize(availableSize, resultFieldSize);
+
+            resultBytes = new byte[resultFieldSize];
+
+            dbDataReader.GetBytes(ordinal: ordinal, dataOffset: 0, buffer: resultBytes, bufferOffset: 0, length: resultBytes.Length);
+
+            return resultBytes.Length;
+        }
+
+        /// <summary>
+        /// Streams a column into the dbResultSetRow
+        /// </summary>
+        /// <param name="dbDataReader">DbDataReader</param>
+        /// <param name="dbResultSetRow">Result set row to read into</param>
+        /// <param name="availableBytes">Available bytes to read.</param>
+        /// <param name="columnName">columnName to read</param>
+        /// <param name="ordinal">ordinal of column.</param>
+        /// <returns>size of data read in bytes</returns>
+        internal int StreamDataIntoDbResultSetRow(DbDataReader dbDataReader, DbResultSetRow dbResultSetRow, string columnName, int columnSize, int ordinal, long availableBytes)
+        {
+            Type systemType = dbDataReader.GetFieldType(ordinal);
+            int dataRead;
+
+            if (systemType == typeof(string))
+            {
+                StringBuilder jsonString = new();
+                dataRead = StreamCharData(
+                    dbDataReader: dbDataReader, availableSize: availableBytes, resultJsonString: jsonString, ordinal: ordinal);
+
+                dbResultSetRow.Columns.Add(columnName, jsonString.ToString());
+            }
+            else if (systemType == typeof(byte[]))
+            {
+                dataRead = StreamByteData(
+                    dbDataReader: dbDataReader, availableSize: availableBytes, ordinal: ordinal, out byte[]? result);
+
+                dbResultSetRow.Columns.Add(columnName, result);
+            }
+            else
+            {
+                dataRead = columnSize;
+                ValidateSize(availableBytes, dataRead);
+                dbResultSetRow.Columns.Add(columnName, dbDataReader[columnName]);
+            }
+
+            return dataRead;
+        }
+
+        /// <summary>
+        /// This function reads the data from the DbDataReader and returns a JSON string.
+        /// 1. MaxResponseSizeLogicEnabled is used like a feature flag.
+        /// 2. If MaxResponseSize is not specified by the customer or is null,
+        /// getString is used and entire data is read into memory.
+        /// 3. If MaxResponseSize is specified by the customer, getChars is used.
+        /// GetChars tries to read the data in chunks and if the data is more than the specified limit, it throws an exception.
+        /// </summary>
         private async Task<string> GetJsonStringFromDbReader(DbDataReader dbDataReader)
         {
             StringBuilder jsonString = new();
@@ -646,12 +767,43 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // 1. https://docs.microsoft.com/en-us/sql/relational-databases/json/format-query-results-as-json-with-for-json-sql-server?view=sql-server-2017#output-of-the-for-json-clause
             // 2. https://stackoverflow.com/questions/54973536/for-json-path-results-in-ssms-truncated-to-2033-characters/54973676
             // 3. https://docs.microsoft.com/en-us/sql/relational-databases/json/use-for-json-output-in-sql-server-and-in-client-apps-sql-server?view=sql-server-2017#use-for-json-output-in-a-c-client-app
-            while (await ReadAsync(dbDataReader))
+
+            if (!ConfigProvider.GetConfig().MaxResponseSizeLogicEnabled())
             {
-                jsonString.Append(dbDataReader.GetString(0));
+                while (await ReadAsync(dbDataReader))
+                {
+                    jsonString.Append(dbDataReader.GetString(0));
+                }
+            }
+            else
+            {
+                long availableSize = _maxResponseSizeBytes;
+                while (await ReadAsync(dbDataReader))
+                {
+                    // We only have a single column and hence when streaming data, we pass in 0 as the ordinal.
+                    availableSize -= StreamCharData(
+                        dbDataReader: dbDataReader, availableSize: availableSize, resultJsonString: jsonString, ordinal: 0);
+                }
             }
 
             return jsonString.ToString();
+        }
+
+        /// <summary>
+        /// This function validates the size of data being read is within the available size limit.
+        /// </summary>
+        /// <param name="availableSizeBytes">available size in bytes.</param>
+        /// <param name="sizeToBeReadBytes">amount of data trying to be read in bytes</param>
+        /// <exception cref="DataApiBuilderException">exception if size to be read is greater than data to be read.</exception>
+        private void ValidateSize(long availableSizeBytes, long sizeToBeReadBytes)
+        {
+            if (sizeToBeReadBytes > availableSizeBytes)
+            {
+                throw new DataApiBuilderException(
+                    message: $"The JSON result size exceeds max result size of {_maxResponseSizeMB}MB. Please use pagination to reduce size of result.",
+                    statusCode: HttpStatusCode.RequestEntityTooLarge,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorProcessingData);
+            }
         }
     }
 }

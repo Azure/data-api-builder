@@ -125,6 +125,22 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             graphQLRuntimeOptions = graphQLRuntimeOptions with { MultipleMutationOptions = multipleMutationOptionsConverter.Read(ref reader, typeToConvert, options) };
                             break;
 
+                        case "depth-limit":
+                            if (reader.TokenType is JsonTokenType.Null)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { DepthLimit = null, UserProvidedDepthLimit = true };
+                            }
+                            else if (reader.TokenType is JsonTokenType.Number)
+                            {
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { DepthLimit = reader.GetInt32(), UserProvidedDepthLimit = true };
+                            }
+                            else
+                            {
+                                throw new JsonException($"Unsupported value entered for depth-limit: {reader.TokenType}");
+                            }
+
+                            break;
+
                         default:
                             throw new JsonException($"Unexpected property {propertyName}");
                     }
@@ -142,6 +158,18 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
             writer.WriteBoolean("enabled", value.Enabled);
             writer.WriteString("path", value.Path);
             writer.WriteBoolean("allow-introspection", value.AllowIntrospection);
+
+            if (value.UserProvidedDepthLimit)
+            {
+                if (value.DepthLimit is null)
+                {
+                    writer.WriteNull("depth-limit");
+                }
+                else
+                {
+                    writer.WriteNumber("depth-limit", value.DepthLimit.Value);
+                }
+            }
 
             if (value.MultipleMutationOptions is not null)
             {

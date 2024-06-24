@@ -24,11 +24,6 @@
     <PackageReference Include="HotChocolate.Types.NodaTime" />
     <PackageReference Include="Humanizer" />
     <PackageReference Include="Newtonsoft.Json" />
-    <PackageReference Include="StyleCop.Analyzers">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
 
 </Project>

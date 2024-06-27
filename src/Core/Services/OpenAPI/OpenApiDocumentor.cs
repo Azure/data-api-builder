@@ -937,6 +937,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 Schema = new()
                 {
+                    Type = SCHEMA_OBJECT_TYPE,
                     Properties = responseBodyProperties
                 }
             };

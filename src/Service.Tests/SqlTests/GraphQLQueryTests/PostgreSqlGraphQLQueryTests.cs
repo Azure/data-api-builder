@@ -217,6 +217,16 @@ FROM
         }
 
         /// <summary>
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields()
+        {
+            string postgresQuery = $"SELECT json_agg(to_jsonb(table0)) FROM (SELECT datetime_types FROM type_table ORDER BY id asc LIMIT 100) as table0";
+            await TestQueryingTypeWithNullableDateTimeFields(postgresQuery);
+        }
+
+        /// <summary>
         /// Test to check graphQL support for aliases(arbitrarily set by user while making request).
         /// book_id and book_title are aliases used for corresponding query fields.
         /// The response for the query will contain the alias instead of raw db field.

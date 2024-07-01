@@ -1299,24 +1299,44 @@ type Moon {
         }
 
         /// <summary>
-        /// Test to verify that provided value of depth-limit in the config file should be greater than 0.
-        /// -1 and null are special values.
-        /// -1 can be set to remove the depth limit, while `null` is the default value which means no depth limit check.
-        /// This test validates that depth-limit outside the valid range should fail validation
-        /// during `dab validate` and `dab start`.
+        /// Test to verify that provided invalid value of depth-limit in the config file should
+        /// result in validation failure during `dab validate` and `dab start`.
         /// </summary>
         [DataTestMethod]
-        [DataRow(-1, true, DisplayName = "[PASS]: Valid Value: -1 to disable depth limit")]
-        [DataRow(0, false, DisplayName = "[FAIL]: Invalid Value: 0 for depth-limit.")]
-        [DataRow(-2, false, DisplayName = "[FAIL]: Invalid Value: -2 for depth-limit.")]
-        [DataRow(2, true, DisplayName = "[PASS]: Valid Value: 2 for depth-limit.")]
-        [DataRow(2147483647, true, DisplayName = "[PASS]: Valid Value: Using Int32.MaxValue(2147483647) for depth-limit.")]
-        [DataRow(null, true, DisplayName = "[PASS]: Default Value: null for depth-limit.")]
+        [DataRow(0, DisplayName = "[FAIL]: Invalid Value: 0 for depth-limit.")]
+        [DataRow(-2, DisplayName = "[FAIL]: Invalid Value: -2 for depth-limit.")]
         [TestCategory(TestCategory.MSSQL)]
-        public async Task TestValidateConfigForDifferentDepthLimit(int? depthLimit, bool isValidInput)
+        public async Task TestValidateConfigForInvalidDepthLimit(int? depthLimit)
         {
-            //Arrange
-            // Fetch the MS_SQL integration test config file.
+            await ValidateConfigWithDepthLimit(depthLimit, expectedSuccess: false);
+        }
+
+        /// <summary>
+        /// Test to verify that provided valid value of depth-limit in the config file should not
+        /// result in any validation failure during `dab validate` and `dab start`.
+        /// -1 and null are special values.
+        /// -1 can be set to remove the depth limit, while `null` is the default value which means no depth limit check.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(-1, DisplayName = "[PASS]: Valid Value: -1 to disable depth limit")]
+        [DataRow(2, DisplayName = "[PASS]: Valid Value: 2 for depth-limit.")]
+        [DataRow(2147483647, DisplayName = "[PASS]: Valid Value: Using Int32.MaxValue(2147483647) for depth-limit.")]
+        [DataRow(null, DisplayName = "[PASS]: Default Value: null for depth-limit.")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestValidateConfigForValidDepthLimit(int? depthLimit)
+        {
+            await ValidateConfigWithDepthLimit(depthLimit, expectedSuccess: true);
+        }
+
+        /// <summary>
+        /// This method validates that depth-limit outside the valid range should fail validation
+        /// during `dab validate` and `dab start`.     
+        /// </summary>
+        /// <param name="depthLimit"></param>
+        /// <param name="expectedSuccess"></param>
+        private static async Task ValidateConfigWithDepthLimit(int? depthLimit, bool expectedSuccess)
+        {
+            // Arrange: Common setup logic
             TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
             const string CUSTOM_CONFIG = "custom-config.json";
             FileSystemRuntimeConfigLoader testConfigPath = TestHelper.GetRuntimeConfigLoader();
@@ -1330,26 +1350,19 @@ type Moon {
             };
 
             MockFileSystem fileSystem = new();
-
-            // write the content of configuration to the custom-config file and add it to the filesystem.
             fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(configuration.ToJson()));
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
             configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
             RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
 
             Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
-            RuntimeConfigValidator configValidator =
-                new(
-                    configProvider,
-                    fileSystem,
-                    configValidatorLogger.Object,
-                    true);
+            RuntimeConfigValidator configValidator = new(configProvider, fileSystem, configValidatorLogger.Object, true);
 
             // Act
             bool isSuccess = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
 
-            // Assert
-            Assert.AreEqual(isValidInput, isSuccess);
+            // Assert based on expected success
+            Assert.AreEqual(expectedSuccess, isSuccess);
         }
 
         /// <summary>
@@ -3774,17 +3787,17 @@ type Planet @model(name:""PlanetAlias"") {
         ///   }
         /// </summary>
         /// <param name="depthLimit">The maximum allowed depth for GraphQL queries and mutations.</param>
-        /// <param name="isMutationOperation">Indicates whether the operation is a mutation (true) or a query (false).</param>
+        /// <param name="operationType">Indicates whether the operation is a mutation or a query.</param>
         /// <param name="expectedStatusCodeForGraphQL">The expected HTTP status code for the operation.</param>
         [DataTestMethod]
-        [DataRow(1, false, HttpStatusCode.BadRequest, DisplayName = "Failed Query execution when max depth limit is set to 1")]
-        [DataRow(2, false, HttpStatusCode.OK, DisplayName = "Query execution successful when max depth limit is set to 2")]
-        [DataRow(1, true, HttpStatusCode.BadRequest, DisplayName = "Failed Mutation execution when max depth limit is set to 1")]
-        [DataRow(2, true, HttpStatusCode.OK, DisplayName = "Mutation execution successful when max depth limit is set to 2")]
+        [DataRow(1, GraphQLOperation.Query, HttpStatusCode.BadRequest, DisplayName = "Failed Query execution when max depth limit is set to 1")]
+        [DataRow(2, GraphQLOperation.Query, HttpStatusCode.OK, DisplayName = "Query execution successful when max depth limit is set to 2")]
+        [DataRow(1, GraphQLOperation.Mutation, HttpStatusCode.BadRequest, DisplayName = "Failed Mutation execution when max depth limit is set to 1")]
+        [DataRow(2, GraphQLOperation.Mutation, HttpStatusCode.OK, DisplayName = "Mutation execution successful when max depth limit is set to 2")]
         [TestCategory(TestCategory.MSSQL)]
         public async Task TestDepthLimitRestrictionOnGraphQLInNonHostedMode(
             int depthLimit,
-            bool isMutationOperation,
+            GraphQLOperation operationType,
             HttpStatusCode expectedStatusCodeForGraphQL)
         {
             // Arrange
@@ -3807,7 +3820,7 @@ type Planet @model(name:""PlanetAlias"") {
             using (HttpClient client = server.CreateClient())
             {
                 string query;
-                if (isMutationOperation)
+                if (operationType is GraphQLOperation.Mutation)
                 {
                     // requested mutation operation has depth of 2
                     query = @"mutation createbook{

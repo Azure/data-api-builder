@@ -25,6 +25,7 @@ using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
 using Azure.DataApiBuilder.Service.HealthCheck;
 using HotChocolate.AspNetCore;
+using HotChocolate.Execution.Configuration;
 using HotChocolate.Types;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
@@ -189,7 +190,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
-            AddGraphQLService(services);
+            AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
             services.AddFusionCache()
                 .WithOptions(options =>
                 {
@@ -213,50 +214,61 @@ namespace Azure.DataApiBuilder.Service
         /// when determining whether to allow introspection requests to proceed.
         /// </summary>
         /// <param name="services">Service Collection</param>
-        private void AddGraphQLService(IServiceCollection services)
+        private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
-            services.AddGraphQLServer()
-                    .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
-                    .ConfigureSchema((serviceProvider, schemaBuilder) =>
-                    {
-                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
-                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
-                    })
-                    .AddHttpRequestInterceptor<IntrospectionInterceptor>()
-                    .AddAuthorization()
-                    .AllowIntrospection(false)
-                    .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
-                    .AddErrorFilter(error =>
-                    {
-                        if (error.Exception is not null)
-                        {
-                            _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
-                            return error.WithMessage(error.Exception.Message);
-                        }
+            IRequestExecutorBuilder server = services.AddGraphQLServer()
+                .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
+                .ConfigureSchema((serviceProvider, schemaBuilder) =>
+                {
+                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
+                    graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                })
+                .AddHttpRequestInterceptor<IntrospectionInterceptor>()
+                .AddAuthorization()
+                .AllowIntrospection(false)
+                .AddAuthorizationHandler<GraphQLAuthorizationHandler>();
 
-                        if (error.Code is not null)
-                        {
-                            _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
-                            return error.WithMessage(error.Message);
-                        }
+            // Conditionally adds a maximum depth rule to the GraphQL queries/mutation selection set.
+            // This rule is only added if a positive depth limit is specified, ensuring that the server
+            // enforces a limit on the depth of incoming GraphQL queries/mutation to prevent extremely deep queries
+            // that could potentially lead to performance issues.
+            // Additionally, the skipIntrospectionFields parameter is set to true to skip depth limit enforcement on introspection queries.
+            if (graphQLRuntimeOptions is not null && graphQLRuntimeOptions.DepthLimit.HasValue && graphQLRuntimeOptions.DepthLimit.Value > 0)
+            {
+                server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
+            }
 
-                        return error;
-                    })
-                    .AddErrorFilter(error =>
+            server.AddErrorFilter(error =>
+                {
+                    if (error.Exception is not null)
                     {
-                        if (error.Exception is DataApiBuilderException thrownException)
-                        {
-                            return error.RemoveException()
-                                    .RemoveLocations()
-                                    .RemovePath()
-                                    .WithMessage(thrownException.Message)
-                                    .WithCode($"{thrownException.SubStatusCode}");
-                        }
+                        _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
+                        return error.WithMessage(error.Exception.Message);
+                    }
 
-                        return error;
-                    })
-                    .UseRequest<BuildRequestStateMiddleware>()
-                    .UseDefaultPipeline();
+                    if (error.Code is not null)
+                    {
+                        _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
+                        return error.WithMessage(error.Message);
+                    }
+
+                    return error;
+                })
+                .AddErrorFilter(error =>
+                {
+                    if (error.Exception is DataApiBuilderException thrownException)
+                    {
+                        return error.RemoveException()
+                                .RemoveLocations()
+                                .RemovePath()
+                                .WithMessage(thrownException.Message)
+                                .WithCode($"{thrownException.SubStatusCode}");
+                    }
+
+                    return error;
+                })
+                .UseRequest<BuildRequestStateMiddleware>()
+                .UseDefaultPipeline();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

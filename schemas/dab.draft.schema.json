@@ -177,7 +177,7 @@
               "description": "Allow enabling/disabling GraphQL requests for all entities."
             },
             "depth-limit": {
-              "type": "integer",
+              "type": [ "integer", "null" ],
               "description": "Maximum allowed depth of a GraphQL query.",
               "default": null
             },

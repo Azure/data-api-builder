@@ -48,11 +48,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
                 // These errors mainly occur when the SQL Server client can't connect to the server.
                 // This may happen when the client cannot resolve the name of the server or the name of the server is incorrect.
-                "53", "11001",
-
-                // Transient error codes compiled from:
-                // https://docs.microsoft.com/en-us/sql/relational-databases/errors-events/database-engine-events-and-errors?view=sql-server-ver16
-                "18456"
+                "53", "11001"
             });
 
             ConflictExceptionCodes.UnionWith(new List<string>

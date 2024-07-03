@@ -132,7 +132,22 @@ internal class GraphQLRuntimeOptionsConverterFactory : JsonConverterFactory
                             }
                             else if (reader.TokenType is JsonTokenType.Number)
                             {
-                                graphQLRuntimeOptions = graphQLRuntimeOptions with { DepthLimit = reader.GetInt32(), UserProvidedDepthLimit = true };
+                                int depthLimit;
+                                try
+                                {
+                                    depthLimit = reader.GetInt32();
+                                }
+                                catch (FormatException)
+                                {
+                                    throw new JsonException($"The JSON token value is of the incorrect numeric format.");
+                                }
+
+                                if (depthLimit < -1 || depthLimit == 0)
+                                {
+                                    throw new JsonException($"Invalid depth-limit: {depthLimit}. Specify a depth limit > 0 or remove the existing depth limit by specifying -1.");
+                                }
+
+                                graphQLRuntimeOptions = graphQLRuntimeOptions with { DepthLimit = depthLimit, UserProvidedDepthLimit = true };
                             }
                             else
                             {

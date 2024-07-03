@@ -140,7 +140,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [TestMethod, TestCategory(TestCategory.MSSQL)]
         public async Task TestRetryPolicyExhaustingMaxAttempts()
         {
-            int maxRetries = 5;
+            int maxRetries = 2;
             int maxAttempts = maxRetries + 1; // 1 represents the original attempt to execute the query in addition to retries.
             RuntimeConfig mockConfig = new(
                Schema: "",

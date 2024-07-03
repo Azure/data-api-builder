@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
         // The maximum number of attempts that can be made to execute the query successfully in addition to the first attempt.
         // So to say in case of transient exceptions, the query will be executed (_maxRetryCount + 1) times at max.
-        private static int _maxRetryCount = 5;
+        private static int _maxRetryCount = 2;
 
         private AsyncRetryPolicy _retryPolicyAsync;
 

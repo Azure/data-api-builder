@@ -24,7 +24,7 @@ public class DabField
     /// Creates a new DabField instance with both alias and backing column name.
     /// </summary>
     /// <param name="alias">Mapped (aliased) column name defined in DAB runtime config.</param>
-    /// <param name="backingColumnName"Database column name.></param>
+    /// <param name="backingColumnName">Database column name.</param>
     public DabField(string alias, string backingColumnName)
     {
         Alias = alias;

@@ -251,7 +251,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             // https://dev.mysql.com/doc/refman/8.4/en/datetime.html
             if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "'9999-12-31 23:59:59.9999999'")
             {
-                sqlValue = "'9999-12-31 23:59:59.0000000'";
+                sqlValue = "'9999-12-31 23:59:59.499999";
                 gqlValue = "\"9999-12-31 23:59:59.0000000\"";
             }
 

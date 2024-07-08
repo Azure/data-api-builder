@@ -10,9 +10,9 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     {
         private int _numberOfRecords;
 
-        public TopNSampler(int numberOfRecords)
+        public TopNSampler(int? numberOfRecords)
         {
-            this._numberOfRecords = numberOfRecords;
+            this._numberOfRecords = numberOfRecords ?? 10;
         }
 
         public async Task<JArray> GetSampleAsync(Container container)

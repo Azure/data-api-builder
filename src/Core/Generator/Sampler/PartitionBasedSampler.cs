@@ -8,11 +8,11 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     internal class PartitionBasedSampler : ISchemaGeneratorSampler
     {
-        private string _partitionKeyPath;
+        private string? _partitionKeyPath;
         private int _numberOfRecordsPerPartition;
         private int _maxDaysPerPartition;
 
-        public PartitionBasedSampler(string partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition)
+        public PartitionBasedSampler(string? partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition)
         {
             this._partitionKeyPath = partitionKeyPath;
             this._numberOfRecordsPerPartition = numberOfRecordsPerPartition ?? 5;
@@ -23,9 +23,18 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         {
             JArray dataArray = new ();
 
-            // Get container properties
-            ContainerProperties containerProperties = await container.ReadContainerAsync();
-            var partitionKeyPaths = containerProperties.PartitionKeyPath.Split('/').Where(p => !string.IsNullOrEmpty(p)).ToList();
+            List<string> partitionKeyPaths = new();
+
+            if (_partitionKeyPath is null)
+            {
+                // Get container properties
+                ContainerProperties containerProperties = await container.ReadContainerAsync();
+                partitionKeyPaths = containerProperties.PartitionKeyPath.Split('/').Where(p => !string.IsNullOrEmpty(p)).ToList();
+            }
+            else
+            {
+                partitionKeyPaths.Add(_partitionKeyPath);
+            }
 
             // Build the query to get unique partition key values
             string selectClause = string.Join(", ", partitionKeyPaths.Select(path => $"c.{path}"));

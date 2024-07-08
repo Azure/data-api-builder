@@ -8,15 +8,15 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     internal class TimeBasedSampler : ISchemaGeneratorSampler
     {
-        private int _groupSize;
+        private int _groupCount;
         private int _numberOfRecordsPerGroup;
-        private int _maxDaysPerPartition;
+        private int _maxDaysPerGroup;
 
-        public TimeBasedSampler(int groupSize, int numberOfRecordsPerGroup, int maxDaysPerPartition)
+        public TimeBasedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDaysPerGroup)
         {
-            this._groupSize = groupSize;
-            this._numberOfRecordsPerGroup = numberOfRecordsPerGroup;
-            this._maxDaysPerPartition = maxDaysPerPartition;
+            this._groupCount = groupCount ?? 10;
+            this._numberOfRecordsPerGroup = numberOfRecordsPerGroup ?? 5;
+            this._maxDaysPerGroup = maxDaysPerGroup ?? 10;
         }
 
         public async Task<JArray> GetSampleAsync(Container container)
@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 (int minTimestamp, int maxTimestamp) = await GetHighestAndLowestTimestampsAsync(container);
 
                 // Divide the range into subranges and get data
-                return await GetDataFromSubranges(container, minTimestamp, maxTimestamp, _groupSize, _numberOfRecordsPerGroup);
+                return await GetDataFromSubranges(container, minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);
             }
             catch (CosmosException ex)
             {

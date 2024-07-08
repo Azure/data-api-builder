@@ -67,8 +67,26 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             var result = await partitionBasedSampler.GetSampleAsync(_containerWithNamePk);
 
             Assert.AreEqual(expectedResultCount, result.Count);
+        }
 
-            Console.WriteLine(result);
+        [TestMethod(displayName: "TimeBasedSampler Scenarios")]
+        [DataRow(1, 1, 1, 1, DisplayName = "TimeBasedSampler: Get 1 record if it is allowed to fetch 1 item in a group.")]
+        [DataRow(2, 1, 1, 2, DisplayName = "TimeBasedSampler: Get 2 record if it is allowed to fetch 2 items in a group.")]
+        [DataRow(null, 1, 1, 10, DisplayName = "TimeBasedSampler: Get 10 records if 1 item is allowed to fetch from each group and group information is not passed")]
+        [DataRow(null, null, null, 50, DisplayName = "TimeBasedSampler: Calculate number of item according to the default value")]
+        public async Task TestTimeBasedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDaysPerGroup, int expectedResultCount)
+        {
+            CreateItems(DATABASE_NAME, CONTAINER_NAME_NAME_PK, 200, "/name");
+
+            // Arrange
+            ISchemaGeneratorSampler partitionBasedSampler
+                = new TimeBasedSampler(groupCount: groupCount,
+                        numberOfRecordsPerGroup: numberOfRecordsPerGroup,
+                        maxDaysPerGroup: maxDaysPerGroup);
+            // Act
+            var result = await partitionBasedSampler.GetSampleAsync(_containerWithNamePk);
+
+            Assert.AreEqual(expectedResultCount, result.Count);
         }
 
         /// <summary>

@@ -30,7 +30,6 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             // Build the query to get unique partition key values
             string selectClause = string.Join(", ", partitionKeyPaths.Select(path => $"c.{path}"));
             string query = $"SELECT DISTINCT {selectClause} FROM c";
-            Console.WriteLine(query);
             QueryDefinition queryDefinition = new(query);
             FeedIterator<dynamic> queryResultSetIterator = container.GetItemQueryIterator<dynamic>(queryDefinition);
 
@@ -63,12 +62,8 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
                 string latestItemsQuery = $"SELECT * FROM c WHERE {filterCondition} {timestampThresholdCondition} ORDER BY c._ts DESC {limitCondition}";
 
-                Console.WriteLine(latestItemsQuery);
-
                 QueryDefinition latestItemsQueryDefinition = new (latestItemsQuery);
                 FeedIterator<dynamic> latestItemsIterator = container.GetItemQueryIterator<dynamic>(latestItemsQueryDefinition);
-
-                Console.WriteLine($"{_numberOfRecordsPerPartition} items for last {_maxDaysPerPartition} days for partition {partitionKey}:");
 
                 while (latestItemsIterator.HasMoreResults)
                 {

@@ -9,13 +9,11 @@ namespace Azure.DataApiBuilder.Core.Generator
 {
     internal class GraphQlSchemaGenerator
     {
-        public static async Task GenerateSchema(ISchemaGeneratorSampler sampler, Container container)
+        public static async Task<string> GenerateSchema(ISchemaGeneratorSampler sampler, Container container)
         {
             JArray dataArray = await sampler.GetSampleAsync(container);
 
-            string schema = SchemaGenerator.Run(dataArray);
-
-            Console.WriteLine(schema);
+            return SchemaGenerator.Run(dataArray);
         }
     }
 }

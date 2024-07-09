@@ -26,7 +26,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
         /// <summary>
         /// Postgres Single Type Test.
-        /// Postgres requires conversion of 0.33 to 'real' type otherwise precision is lost.
+        /// Postgres requires conversion of a float value, ex: 0.33 to 'real' type otherwise precision is lost.
         /// </summary>
         /// <param name="type">GraphQL Type</param>
         /// <param name="filterOperator">Comparison operator: gt, lt, gte, lte, etc.</param>

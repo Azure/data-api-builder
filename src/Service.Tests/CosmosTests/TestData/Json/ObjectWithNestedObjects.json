@@ -1,0 +1,35 @@
+{
+  "user": {
+    "id": 1,
+    "username": "johndoe",
+    "profile": {
+      "firstName": "John",
+      "lastName": "Doe",
+      "dob": "1990-01-01"
+    }
+  },
+  "settings": {
+    "notifications": true,
+    "theme": "dark",
+    "languages": [ "en", "es", "fr" ]
+  },
+  "posts": [
+    {
+      "id": 101,
+      "title": "Hello World",
+      "content": "This is my first post!",
+      "comments": [
+        {
+          "user": "janedoe",
+          "message": "Welcome to the blog!"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "title": "Another Post",
+      "content": "This is another post.",
+      "comments": []
+    }
+  ]
+}

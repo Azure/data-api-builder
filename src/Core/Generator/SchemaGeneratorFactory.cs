@@ -18,7 +18,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 _ => throw new ArgumentException($"Invalid sampling mode: {mode}")
             };
 
-            return await GraphQlSchemaGenerator.GenerateSchema(schemaGeneratorSampler, container);
+            return await GraphQLSchemaGenerator.Generate(schemaGeneratorSampler, container);
         }
     }
 }

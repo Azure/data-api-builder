@@ -7,13 +7,15 @@ using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
-    internal class GraphQlSchemaGenerator
+    internal class GraphQLSchemaGenerator
     {
-        public static async Task<string> GenerateSchema(ISchemaGeneratorSampler sampler, Container container)
+        public static async Task<string> Generate(ISchemaGeneratorSampler sampler, Container container)
         {
+            // Get Sample Data
             JArray dataArray = await sampler.GetSampleAsync(container);
 
-            return SchemaGenerator.Run(dataArray);
+            // Generate GQL Schema
+            return SchemaGenerator.Run(dataArray, container.Id);
         }
     }
 }

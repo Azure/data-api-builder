@@ -1,0 +1,5 @@
+type Containername @model {
+  name: String
+  age: Int
+  emails: [String]
+}

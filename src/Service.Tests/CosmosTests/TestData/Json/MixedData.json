@@ -1,0 +1,18 @@
+{
+  "id": 12345,
+  "name": "Widget",
+  "price": 19.99,
+  "inStock": true,
+  "tags": [ "gadget", "tool", "home" ],
+  "dimensions": {
+    "length": 10.5,
+    "width": 7.25,
+    "height": 3.0
+  },
+  "manufacturedDate": "2021-08-15T08:00:00Z",
+  "relatedProducts": [
+    23456,
+    34567,
+    45678
+  ]
+}

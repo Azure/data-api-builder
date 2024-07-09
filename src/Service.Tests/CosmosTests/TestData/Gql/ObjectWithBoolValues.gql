@@ -1,0 +1,5 @@
+type Containername @model {
+  isActive: Boolean
+  isVerified: Boolean
+  name: String
+}

@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Core.Generator.Sampler;
 using Azure.DataApiBuilder.Core.Resolvers;

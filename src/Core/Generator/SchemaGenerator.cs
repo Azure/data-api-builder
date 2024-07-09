@@ -1,154 +1,193 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using Newtonsoft.Json.Linq;
+using System.Globalization;
 using System.Text;
-using System.Text.RegularExpressions;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
     internal class SchemaGenerator
     {
-        public static string Run(JArray jsonArray)
+        private Dictionary<string, string> _gqlTypes = new ();
+        private HashSet<string> _processedTypes = new ();
+
+        public static string Run(JArray jsonArray, string containerName)
         {
-            return GenerateGraphQLSchema(item: jsonArray,
-                containerName: "Planet");
+            if (jsonArray == null || jsonArray.Count == 0)
+            {
+                throw new InvalidOperationException("JArray must contain at least one JSON object.");
+            }
+
+            return new SchemaGenerator().ConvertJsonToGQLSchema(jsonArray: jsonArray,
+                containerName: containerName);
         }
 
-        static string GenerateGraphQLSchema(JToken item, string containerName)
+        private string ConvertJsonToGQLSchema(JArray jsonArray, string containerName)
         {
-            var types = new Dictionary<string, JObject>();
-            if (item.Type == JTokenType.Array)
-            {
-                int i = 0;
-                do
-                {
-                    JToken? element = item[i];
-                    if (element is null)
-                    {
-                        break;
-                    }
-                    // Traverse the JSON object to generate types
-                    Traverse(element, types, parentName: containerName);
-                    i++;
-                } while (i < item.Count());
+            var gqlFields = new Dictionary<string, string>();
 
-            }
-            else if (item.Type == JTokenType.Object)
+            foreach (var token in jsonArray)
             {
-                // Traverse the JSON object to generate types
-                Traverse(item, types, parentName: containerName);
-            }
-
-            // Assemble GraphQL schema
-            var schemaBuilder = new StringBuilder();
-            foreach (var type in types)
-            {
-                if (type.Key == containerName)
+                if (token is JObject jsonObject)
                 {
-                    schemaBuilder.AppendLine($"type @model {type.Key} {{");
+                    MergeJsonObject(jsonObject, gqlFields, ToPascalCase(containerName));
                 }
                 else
                 {
-                    schemaBuilder.AppendLine($"type {type.Key} {{");
+                    throw new InvalidOperationException("JArray must contain JSON objects only.");
                 }
-
-                foreach (var property in type.Value.Properties())
-                {
-                    schemaBuilder.AppendLine($"    {property.Name}: {property.Value}");
-                }
-
-                schemaBuilder.AppendLine("}");
             }
 
-            return schemaBuilder.ToString();
-        }
+            GenerateSchema(gqlFields, ToPascalCase(containerName), true);
 
-        static void Traverse(JToken token, Dictionary<string, JObject> types, string parentName)
-        {
-            parentName = ToUpperFirstLetter(parentName/*.ToCamelCase()*/);
-
-            if (token.Type == JTokenType.Object)
+            var sb = new StringBuilder();
+            foreach (var gqlType in _gqlTypes)
             {
-                var obj = (JObject)token;
-                if (!types.ContainsKey(parentName))
-                {
-                    types[parentName] = new JObject();
-                }
+                sb.AppendLine(gqlType.Value);
+                sb.AppendLine();
+            }
 
-                foreach (var property in obj.Properties())
-                {
-                    if (property == null || property.Value == null)
-                    {
-                        continue;
-                    }
+            return sb.ToString().Trim();
+        }
 
-                    string fieldType = GetGraphQLType(property.Value);
-                    types[parentName][property.Name] = fieldType;
-
-                    if (property.Value.Type == JTokenType.Object)
-                    {
-                        Traverse(property.Value, types, property.Name);
-                    }
-                    else if (property.Value.First != null && property.Value.Type == JTokenType.Array && property.Value.HasValues)
-                    {
-                        var firstElementType = property.Value.First.Type;
-                        if (firstElementType == JTokenType.Object)
-                        {
-                            Traverse(property.Value.First, types, property.Name);
-                        }
-                        else if (firstElementType == JTokenType.Array)
-                        {
-                            throw new NotSupportedException("Nested arrays are not supported in GraphQL schema generation.");
-                        }
-                    }
-                }
+        private void MergeJsonObject(JObject jsonObject, Dictionary<string, string> gqlFields, string parentType)
+        {
+            foreach (var property in jsonObject.Properties())
+            {
+                var gqlField = ProcessJsonToken(property.Value, property.Name, parentType);
+                gqlFields[property.Name] = gqlField;
             }
         }
 
-        static string GetGraphQLType(JToken token)
+        private string ProcessJsonToken(JToken token, string fieldName, string parentType)
         {
-            string key = token.Path.Split('.').Last();
+            if (fieldName == "id")
+            {
+                return $"{fieldName}: ID";
+            }
+               
             switch (token.Type)
             {
-                case JTokenType.String:
-                    if (key == "id")
-                    {
-                        return "ID";
-                    }
-                    return "String";
-                case JTokenType.Integer:
-                    return "Int";
-                case JTokenType.Float:
-                    return "Float";
-                case JTokenType.Boolean:
-                    return "Boolean";
-                case JTokenType.Null:
-                    return "String"; // Treat null as string for simplicity
                 case JTokenType.Object:
-                    return ToUpperFirstLetter(Regex.Replace(key, @"\[\d+\]$", "")/*.ToCamelCase()*/); // Extract object name from path
+                    var objectTypeName = ToPascalCase(fieldName);
+                    if (!_processedTypes.Contains(objectTypeName))
+                    {
+                        _processedTypes.Add(objectTypeName);
+                        var objectFields = new Dictionary<string, string>();
+                        MergeJsonObject((JObject)token, objectFields, objectTypeName);
+                        GenerateSchema(objectFields, objectTypeName);
+                    }
+                    return $"{fieldName}: {objectTypeName}";
+
                 case JTokenType.Array:
-                    var arrayType = GetGraphQLType(((JArray)token).First());
-                    var sanitizedValue = arrayType.EndsWith("s") ? arrayType.Remove(arrayType.Length - 1) : arrayType;
-                    return $"[{sanitizedValue}]";
+                    return ProcessJsonArray((JArray)token, fieldName, parentType);
+
+                case JTokenType.String:
+                    return $"{fieldName}: String";
+
+                case JTokenType.Integer:
+                    return $"{fieldName}: Int";
+
+                case JTokenType.Float:
+                    return $"{fieldName}: Float";
+
+                case JTokenType.Boolean:
+                    return $"{fieldName}: Boolean";
+
+                case JTokenType.Date:
+                    // Example: Representing date as ISO 8601 string
+                    return $"{fieldName}: String";
+
+                case JTokenType.Null:
+                    return $"{fieldName}: String"; // Could be any type, using String as default
+
                 default:
-                    return "String"; // Default to string
+                    throw new InvalidOperationException($"Unsupported JTokenType: {token.Type}");
             }
         }
 
-        static string ToUpperFirstLetter(string source)
+        private string ProcessJsonArray(JArray jsonArray, string fieldName, string parentType)
         {
-            if (string.IsNullOrEmpty(source))
+            if (jsonArray.Count == 0)
             {
-                return string.Empty;
+                return $"{fieldName}: [String]"; // Default to array of Strings if empty
             }
-            // convert to char array of the string
-            char[] letters = source.ToCharArray();
-            // upper case the first char
-            letters[0] = char.ToUpper(letters[0]);
-            // return the array made of the new char array
-            return new string(letters);
+
+            var itemType = DetermineArrayItemType(jsonArray, fieldName, parentType);
+            return $"{fieldName}: [{itemType}]";
         }
+
+        private string DetermineArrayItemType(JArray jsonArray, string fieldName, string parentType)
+        {
+            var firstElement = jsonArray[0];
+
+            switch (firstElement.Type)
+            {
+                case JTokenType.Object:
+                    var objectTypeName = ToPascalCase(fieldName);
+                    if (!_processedTypes.Contains(objectTypeName))
+                    {
+                        _processedTypes.Add(objectTypeName);
+                        var objectFields = new Dictionary<string, string>();
+                        MergeJsonObject((JObject)firstElement, objectFields, objectTypeName);
+                        GenerateSchema(objectFields, objectTypeName);
+                    }
+                    return objectTypeName;
+
+                case JTokenType.Array:
+                    return $"[{DetermineArrayItemType((JArray)firstElement, fieldName, parentType)}]";
+
+                case JTokenType.String:
+                    return "String";
+
+                case JTokenType.Integer:
+                    return "Int";
+
+                case JTokenType.Float:
+                    return "Float";
+
+                case JTokenType.Boolean:
+                    return "Boolean";
+
+                case JTokenType.Date:
+                    // Example: Representing date as ISO 8601 string
+                    return "String";
+
+                case JTokenType.Null:
+                    return "String"; // Default to String if null
+
+                default:
+                    throw new InvalidOperationException($"Unsupported JTokenType: {firstElement.Type}");
+            }
+        }
+
+        private void GenerateSchema(Dictionary<string, string> gqlFields, string typeName, bool isRoot = false)
+        {
+            var sb = new StringBuilder();
+            if (isRoot)
+            {
+                sb.AppendLine($"type {typeName} @model {{"); // Add @model annotation
+            }
+            else
+            {
+                sb.AppendLine($"type {typeName} {{"); // Add @model annotation
+            }
+           
+            foreach (var field in gqlFields.Values)
+            {
+                sb.AppendLine($"  {field}");
+            }
+            sb.AppendLine("}");
+
+            _gqlTypes[typeName] = sb.ToString();
+        }
+
+        private static string ToPascalCase(string str)
+        {
+            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str).Replace("_", string.Empty).Replace("-", string.Empty);
+        }
+
 
     }
 }

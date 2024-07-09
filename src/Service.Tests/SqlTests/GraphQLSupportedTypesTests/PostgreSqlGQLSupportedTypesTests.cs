@@ -36,9 +36,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(SINGLE_TYPE, "gt", "real '-9.3'", "-9.3", ">")]
         [DataRow(SINGLE_TYPE, "gte", "real '-9.2'", "-9.2", ">=")]
         [DataRow(SINGLE_TYPE, "lt", "real '.33'", "0.33", "<")]
-        [DataRow(SINGLE_TYPE, "lte", "'.33'", "0.33", "<=")]
-        [DataRow(SINGLE_TYPE, "neq", "'9.2'", "9.2", "!=")]
-        [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
+        [DataRow(SINGLE_TYPE, "lte", "real '.33'", "0.33", "<=")]
+        [DataRow(SINGLE_TYPE, "neq", "real '9.2'", "9.2", "!=")]
+        [DataRow(SINGLE_TYPE, "eq", "real '0.33'", "0.33", "=")]
         [DataTestMethod]
         public async Task PG_real_graphql_single_filter_expectedValues(
             string type,

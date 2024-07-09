@@ -595,7 +595,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Utility function to do special comparisons for some of the extended types
         /// if json compare doesn't suffice
         /// </summary>
-        public static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
+        protected static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
         {
             switch (type)
             {

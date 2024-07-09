@@ -439,7 +439,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Double" => double.Parse(param),
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
-                "DateTime" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal).DateTime,
+                // When GraphQL input specifies a TZ offset "12-31-2024T12:00:00+03:00"
+                // and DAB has resolved the ColumnDefinition.SystemType to DateTime,
+                // DAB converts the input to UTC because:
+                // - DAB assumes that values without timezone offset are UTC.
+                // - DAB shouldn't store values in the backend database which the user did not intend
+                //   - e.g. Storing this value for the original example would be incorrect: "12-31-2024T12:00:00"
+                //   - The correct value to store would be "12-31-2024T09:00:00" (UTC)
+                "DateTime" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal).UtcDateTime,
                 "DateTimeOffset" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 "Date" => DateOnly.Parse(param),
                 "Guid" => Guid.Parse(param),

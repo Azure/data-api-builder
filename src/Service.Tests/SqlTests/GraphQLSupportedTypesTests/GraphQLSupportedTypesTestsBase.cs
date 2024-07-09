@@ -97,9 +97,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "supportedType_by_pk";
-            string gqlQuery = "{ supportedType_by_pk(typeid: " + id + ") { " + field + " } }";
+            string gqlQuery = "{ supportedType_by_pk(typeid: " + id + ") { typeid, " + field + " } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id);
+            string dbQuery = MakeQueryOnTypeTable(
+                queryFields: new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) },
+                id: id);
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -134,12 +136,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(LONG_TYPE, "eq", "-1", "-1", "=")]
         [DataRow(STRING_TYPE, "neq", "'foo'", "\"foo\"", "!=")]
         [DataRow(STRING_TYPE, "eq", "'lksa;jdflasdf;alsdflksdfkldj'", "\"lksa;jdflasdf;alsdflksdfkldj\"", "=")]
-        [DataRow(SINGLE_TYPE, "gt", "-9.3", "-9.3", ">")]
-        [DataRow(SINGLE_TYPE, "gte", "-9.2", "-9.2", ">=")]
-        [DataRow(SINGLE_TYPE, "lt", ".33", "0.33", "<")]
-        [DataRow(SINGLE_TYPE, "lte", ".33", "0.33", "<=")]
-        [DataRow(SINGLE_TYPE, "neq", "9.2", "9.2", "!=")]
-        [DataRow(SINGLE_TYPE, "eq", "'0.33'", "0.33", "=")]
         [DataRow(FLOAT_TYPE, "gt", "-9.2", "-9.2", ">")]
         [DataRow(FLOAT_TYPE, "gte", "-9.2", "-9.2", ">=")]
         [DataRow(FLOAT_TYPE, "lt", ".33", "0.33", "<")]
@@ -166,14 +162,20 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "supportedTypes";
             string gqlQuery = @"{
-                supportedTypes(first: 100 orderBy: { " + field + ": ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
+                supportedTypes(first: 100 orderBy: { typeid: ASC } filter: { " + field + ": {" + filterOperator + ": " + gqlValue + @"} }) {
                     items {
-                        " + field + @"
+                        typeid, " + field + @"
                     }
                 }
             }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, filterValue: sqlValue, filterOperator: queryOperator, filterField: field, orderBy: field, limit: "100");
+            string dbQuery = MakeQueryOnTypeTable(
+                queryFields: new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) },
+                filterValue: sqlValue,
+                filterOperator: queryOperator,
+                filterField: field,
+                orderBy: "id",
+                limit: "100");
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
             string expected = await GetDatabaseResultAsync(dbQuery);
@@ -215,8 +217,8 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             DisplayName = "datetime type filter and orderby test with neq operator and specific value '1999-01-08 10:23:54'.")]
         [DataRow(DATETIMEOFFSET_TYPE, "neq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "!=",
             DisplayName = "datetimeoffset type filter and orderby test with neq operator")]
-        [DataRow(DATETIMEOFFSET_TYPE, "lt", "'9999-12-31 23:59:59.9999999'", "\"9999-12-31 23:59:59.9999999\"", "<",
-            DisplayName = "datetimeoffset type filter and orderby test with lt operator and max value for datetimeoffset.")]
+        [DataRow(DATETIMEOFFSET_TYPE, "lt", "'9999-12-31 23:59:59.9999999'", "\"9999-12-31 23:59:59.9999999Z\"", "<",
+            DisplayName = "datetimeoffset type filter and orderby test with lt operator and max value (with UTC offset specified) for datetimeoffset.")]
         [DataRow(DATETIMEOFFSET_TYPE, "eq", "'1999-01-08 10:23:54.9999999-14:00'", "\"1999-01-08 10:23:54.9999999-14:00\"", "=",
             DisplayName = "datetimeoffset type filter and orderby test with eq operator")]
         [DataRow(DATE_TYPE, "eq", "'1999-01-08'", "\"1999-01-08\"", "=",
@@ -245,10 +247,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             DisplayName = "datetime2 type filter and orderby test with neq operator")]
         public async Task QueryTypeColumnFilterAndOrderByDateTime(string type, string filterOperator, string sqlValue, string gqlValue, string queryOperator)
         {
-            // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.0000000'
+            // In MySQL, the DATETIME data type supports a range from '1000-01-01 00:00:00.0000000' to '9999-12-31 23:59:59.499999'
+            // https://dev.mysql.com/doc/refman/8.4/en/datetime.html
             if (DatabaseEngine is TestCategory.MYSQL && sqlValue is "'9999-12-31 23:59:59.9999999'")
             {
-                sqlValue = "'9999-12-31 23:59:59.0000000'";
+                sqlValue = "'9999-12-31 23:59:59.499999";
                 gqlValue = "\"9999-12-31 23:59:59.0000000\"";
             }
 
@@ -271,36 +274,68 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         }
 
         /// <summary>
+        /// (MSSQL Test, which supports time type with 7 decimal precision)
         /// Validates that LocalTime values with X precision are handled correctly: precision of 7 decimal places used with eq (=) will 
         /// not return result with only 3 decimal places i.e. 10:23:54.999 != 10:23:54.9999999
-        /// In the Database only one row exist with value 23:59:59.9999999
+        /// In the Database only one row exists with value 23:59:59.9999999
         /// </summary>
         [DataTestMethod]
-        [DataRow("\"23:59:59.9999999\"", 1, DisplayName = "TimeType Precision Check with 7 decimal places")]
-        [DataRow("\"23:59:59.999\"", 0, DisplayName = "TimeType Precision Check with 3 decimal places")]
-        public async Task TestTimeTypePrecisionCheck(string gqlValue, int count)
+        [DataRow("23:59:59.9999999", DisplayName = "TimeType Precision Check with 7 decimal places")]
+        [DataRow("23:59:59.999", DisplayName = "TimeType Precision Check with 3 decimal places")]
+        public async Task TestTimeTypePrecisionCheck(string gqlInput)
         {
+            // Arrange
             if (!IsSupportedType(TIME_TYPE))
             {
                 Assert.Inconclusive("Type not supported");
             }
 
+            string graphQLMutationName = "createSupportedType";
+            string gqlMutation = "mutation{ createSupportedType (item: { time_types: \"" + gqlInput + "\"}){ typeid, time_types } }";
+            JsonElement testScopedInsertedRecord = await ExecuteGraphQLRequestAsync(gqlMutation, graphQLMutationName, isAuthenticated: true);
+
+            if (!testScopedInsertedRecord.TryGetProperty("typeid", out JsonElement typeid))
+            {
+                Assert.Fail(message: "Failed to insert test record.");
+            }
+
+            int insertedRecordId = typeid.GetInt32();
+
             string graphQLQueryName = "supportedTypes";
+            string idFilter = @"typeid: { eq: " + typeid.GetInt32() + " }";
             string gqlQuery = @"{
-                supportedTypes(first: 100 orderBy: { " + "time_types" + ": ASC } filter: { " + "time_types" + ": {" + "eq" + ": " + gqlValue + @"} }) {
+                supportedTypes(
+                orderBy: { " + "time_types" + @": ASC }
+                filter: { " + "time_types" + ": {" + "eq" + ": \"" + gqlInput + "\"}," + idFilter + @"}) {
                     items {
-                        " + "time_types" + @"
+                        typeid, " + "time_types" + @"
                     }
                 }
             }";
 
+            // Act - Execute query with filter on time_types, expect to get back time_types with 7 decimal places.
             JsonElement gqlResponse = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: false);
-            Assert.AreEqual(count, gqlResponse.GetProperty("items").GetArrayLength());
+
+            // Assert
+            // Validate that the filter returned a result.
+            bool receivedResultWithFilter = gqlResponse.TryGetProperty("items", out JsonElement items) && items.GetArrayLength() > 0;
+            Assert.AreEqual(expected: true, actual: receivedResultWithFilter, message: "Unexpected results and result count.");
+
+            // Validate that the filter returned the value inserted during setup.
+            JsonElement firstItem = items[0];
+            JsonElement typeId = firstItem.GetProperty("typeid");
+            int actualTypeIdInResponse = typeId.GetInt32();
+            Assert.AreEqual(expected: insertedRecordId, actual: actualTypeIdInResponse, message: "typeid mismatch, filter didn't work");
+
+            // Validate that the filter returned the value with expected time_types precision.
+            JsonElement timeValue = firstItem.GetProperty("time_types");
+            string actualTimeValue = timeValue.GetString();
+            Assert.AreEqual(expected: gqlInput, actual: actualTimeValue, message: "returned time value unexpected.");
         }
 
         /// <summary>
-        /// The method constructs a GraphQL query to insert the value into the database table
-        /// and then executes the query and compares the expected result with the actual result to verify if different types are supported.
+        /// This test executes a GraphQL insert mutation for each data row's {value} of GraphQL data type {type}
+        /// to validate that the DAB engine supports inserting different types into the database.
         /// </summary>
         [DataTestMethod]
         [DataRow(BYTE_TYPE, "255")]
@@ -314,7 +349,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(INT_TYPE, "0")]
         [DataRow(INT_TYPE, "-9999")]
         [DataRow(INT_TYPE, "null")]
-        [DataRow(UUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
+        [DataRow(UUID_TYPE, "\"3a1483a5-9ac2-4998-bcf3-78a28078c6ac\"")]
         [DataRow(UUID_TYPE, "null")]
         [DataRow(LONG_TYPE, "0")]
         [DataRow(LONG_TYPE, "9000000000000000000")]
@@ -345,9 +380,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(TIME_TYPE, "\"23:59\"")]
         [DataRow(TIME_TYPE, "null")]
         [DataRow(DATETIME_TYPE, "\"1753-01-01 00:00:00.000\"")]
-        [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.997\"")]
-        [DataRow(DATETIME_TYPE, "\"9999-12-31T23:59:59.997\"")]
-        [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.997Z\"")]
+        [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.499\"")]
+        [DataRow(DATETIME_TYPE, "\"9999-12-31T23:59:59.499\"")]
+        [DataRow(DATETIME_TYPE, "\"9999-12-31 23:59:59.499Z\"")]
         [DataRow(DATETIME_TYPE, "null")]
         [DataRow(SMALLDATETIME_TYPE, "\"1900-01-01\"")]
         [DataRow(SMALLDATETIME_TYPE, "\"2079-06-06\"")]
@@ -369,17 +404,17 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             }
 
             string field = $"{type.ToLowerInvariant()}_types";
-            string graphQLQueryName = "createSupportedType";
-            string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ " + field + " } }";
+            string graphQLMutationName = "createSupportedType";
+            string gqlMutation = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ typeid, " + field + " } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlMutation, graphQLMutationName, isAuthenticated: true);
+            Assert.IsTrue(
+                condition: actual.GetProperty("typeid").TryGetInt32(out int insertedRecordId),
+                message: "Error: GraphQL mutation result indicates issue during record creation.");
+            string expectedResultDbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, id: insertedRecordId);
+            string expectedResult = await GetDatabaseResultAsync(expectedResultDbQuery);
 
-            JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
-            string expected = await GetDatabaseResultAsync(dbQuery);
-
-            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
-
-            await ResetDbStateAsync();
+            PerformTestEqualsForExtendedTypes(type, expectedResult, actual.ToString());
         }
 
         /// <summary>
@@ -401,7 +436,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "createSupportedType";
-            string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ " + field + " } }";
+            string gqlQuery = "mutation{ createSupportedType (item: {" + field + ": " + value + " }){ typeid, " + field + " } }";
 
             JsonElement response = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string responseMessage = Regex.Unescape(JsonSerializer.Serialize(response));
@@ -426,8 +461,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         [DataRow(BOOLEAN_TYPE, true)]
         [DataRow(DATETIMEOFFSET_TYPE, "1999-01-08 10:23:54+8:00")]
         [DataRow(DATETIME_TYPE, "1999-01-08 10:23:54")]
-        [DataRow(TIME_TYPE, "\"23:59:59.9999999\"")]
-        [DataRow(TIME_TYPE, "null")]
+        [DataRow(TIME_TYPE, "23:59:59")]
         [DataRow(BYTEARRAY_TYPE, "V2hhdGNodSBkb2luZyBkZWNvZGluZyBvdXIgdGVzdCBiYXNlNjQgc3RyaW5ncz8=")]
         [DataRow(UUID_TYPE, "3a1483a5-9ac2-4998-bcf3-78a28078c6ac")]
         public async Task InsertIntoTypeColumnWithArgument(string type, object value)
@@ -439,16 +473,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "createSupportedType";
-            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ createSupportedType (item: {" + field + ": $param }){ " + field + " } }";
-
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 5001);
+            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ createSupportedType (item: {" + field + ": $param }){ typeid, " + field + " } }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true, new() { { "param", value } });
-            string expected = await GetDatabaseResultAsync(dbQuery);
+            Assert.IsTrue(
+                condition: actual.GetProperty("typeid").TryGetInt32(out int insertedRecordId),
+                message: "Error: GraphQL mutation result indicates issue during record creation.");
+            string expectedResultDbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, id: insertedRecordId);
+            string expectedResult = await GetDatabaseResultAsync(expectedResultDbQuery);
 
-            PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
-
-            await ResetDbStateAsync();
+            PerformTestEqualsForExtendedTypes(type, expectedResult, actual.ToString());
         }
 
         [DataTestMethod]
@@ -505,16 +539,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
-            string gqlQuery = "mutation{ updateSupportedType (typeid: 1, item: {" + field + ": " + value + " }){ " + field + " } }";
+            string gqlQuery = "mutation{ updateSupportedType (typeid: 1, item: {" + field + ": " + value + " }){ typeid " + field + " } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
+            string dbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, id: 1);
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
-
-            await ResetDbStateAsync();
         }
 
         [DataTestMethod]
@@ -547,16 +579,14 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
 
             string field = $"{type.ToLowerInvariant()}_types";
             string graphQLQueryName = "updateSupportedType";
-            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ updateSupportedType (typeid: 1, item: {" + field + ": $param }){ " + field + " } }";
+            string gqlQuery = "mutation($param: " + TypeNameToGraphQLType(type) + "){ updateSupportedType (typeid: 1, item: {" + field + ": $param }){ typeid, " + field + " } }";
 
-            string dbQuery = MakeQueryOnTypeTable(new List<string> { field }, id: 1);
+            string dbQuery = MakeQueryOnTypeTable(new List<DabField> { new(alias: "typeid", backingColumnName: "id"), new(backingColumnName: field) }, id: 1);
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(gqlQuery, graphQLQueryName, isAuthenticated: true, new() { { "param", value } });
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             PerformTestEqualsForExtendedTypes(type, expected, actual.ToString());
-
-            await ResetDbStateAsync();
         }
 
         #endregion
@@ -565,7 +595,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// Utility function to do special comparisons for some of the extended types
         /// if json compare doesn't suffice
         /// </summary>
-        private static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
+        protected static void PerformTestEqualsForExtendedTypes(string type, string expected, string actual)
         {
             switch (type)
             {
@@ -833,23 +863,24 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
         /// </summary>
         private static string TypeNameToGraphQLType(string typeName)
         {
-            if (typeName is DATETIMEOFFSET_TYPE)
+            return typeName switch
             {
-                return DATETIME_TYPE;
-            }
-
-            return typeName;
+                DATETIMEOFFSET_TYPE => DATETIME_TYPE,
+                TIME_TYPE => LOCALTIME_TYPE,
+                _ => typeName
+            };
         }
 
         protected abstract string MakeQueryOnTypeTable(
-            List<string> queriedColumns,
+            List<DabField> queryFields,
             string filterValue = "1",
             string filterOperator = "=",
             string filterField = "1",
             string orderBy = "id",
             string limit = "1");
 
-        protected abstract string MakeQueryOnTypeTable(List<string> columnsToQuery, int id);
+        protected abstract string MakeQueryOnTypeTable(List<DabField> queryFields, int id);
+
         protected virtual bool IsSupportedType(string type)
         {
             return true;

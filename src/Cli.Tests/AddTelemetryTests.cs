@@ -154,7 +154,7 @@ namespace Cli.Tests
         private const string TELEMETRY_SECTION_WITH_APP_INSIGHTS = @"
             ""telemetry"": {
                 ""application-insights"": {
-                    ""enabled"": true,
+                    ""enabled"": false,
                     ""connection-string"": ""InstrumentationKey=00000000-0000-0000-0000-000000000000""
                 }
             }";

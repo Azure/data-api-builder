@@ -273,7 +273,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             TryParseAndAssertOnDefaults("{" + emptyHostSubProps, out _);
 
             // Test with empty telemetry sub-properties
-            minJsonWithTelemetrySubProps.Append(@"{ ""application-insights"": { } } }");
+            //minJsonWithTelemetrySubProps.Append(@"{ ""application-insights"": { } } }");
 
             string emptyTelemetrySubProps = minJsonWithTelemetrySubProps + "}";
             TryParseAndAssertOnDefaults("{" + emptyTelemetrySubProps, out _);

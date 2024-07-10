@@ -293,7 +293,7 @@
                 "enabled": {
                   "type": "boolean",
                   "description": "Allow enabling/disabling Application Insights telemetry.",
-                  "default": true
+                  "default": false
                 }
               },
               "required": [

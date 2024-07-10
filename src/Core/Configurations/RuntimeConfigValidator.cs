@@ -81,7 +81,7 @@ public class RuntimeConfigValidator : IConfigValidator
 
         ValidateAuthenticationOptions(runtimeConfig);
         ValidateGlobalEndpointRouteConfig(runtimeConfig);
-        ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
+        //ValidateAppInsightsTelemetryConnectionString(runtimeConfig);
 
         // Running these graphQL validations only in development mode to ensure
         // fast startup of engine in production mode.

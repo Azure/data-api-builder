@@ -3,6 +3,6 @@ type Emptyobject {
 
 
 type Containername @model {
-  emptyObject: Emptyobject
-  emptyArray: [String]
+  emptyObject : Emptyobject
+  emptyArray : emptyArray: [String]
 }

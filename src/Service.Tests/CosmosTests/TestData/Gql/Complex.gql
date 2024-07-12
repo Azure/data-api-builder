@@ -1,28 +1,28 @@
 type Coordinates {
-  latitude: Float
-  longitude: Float
+  latitude : Float
+  longitude : Float
 }
 
 
 type Address {
-  street: String
-  city: String
-  state: String
-  zip: String
-  coordinates: Coordinates
+  street : String
+  city : String
+  state : String
+  zip : String
+  coordinates : Coordinates
 }
 
 
 type Phonenumbers {
-  type: String
-  number: String
+  type : String
+  number : String
 }
 
 
 type Containername @model {
-  name: String
-  age: Int
-  address: Address
-  emails: [String]
-  phoneNumbers: [Phonenumbers]
+  name : String
+  age : Int
+  address : Address
+  emails : [String]
+  phoneNumbers : [Phonenumbers]
 }

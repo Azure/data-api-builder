@@ -1,102 +1,97 @@
 type Person {
-  firstName: String
-  lastName: String
-  zipCode: Int
+  firstName : String
+  lastName : String
+  zipCode : Int
 }
 
 
 type Anotherpojo {
-  anotherProp: String
-  anotherIntProp: Int
-  person: Person
+  anotherProp : String
+  anotherIntProp : Int
+  person : Person
 }
 
 
 type Star {
-  name: String
+  name : String
 }
 
 
 type Character {
-  id: ID
-  name: String
-  type: String
-  homePlanet: Int
-  primaryFunction: String
-  star: Star
+  id : ID
+  name : String
+  type : String
+  homePlanet : Int
+  primaryFunction : String
+  star : Star
 }
 
 
 type Tag {
-  id: ID
-  name: String
+  id : ID
+  name : String
 }
 
 
 type Stars {
-  id: ID
-  name: String
-  tag: Tag
+  id : ID
+  name : String
+  tag : Tag
 }
 
 
 type Suns {
-  id: ID
-  name: String
+  id : ID
+  name : String
 }
 
 
 type Moreattributes {
-  id: ID
-  name: String
+  id : ID
+  name : String
 }
 
 
 type Moonadditionalattributes {
-  id: ID
-  name: String
-  moreAttributes: [Moreattributes]
+  id : ID
+  name : String
+  moreAttributes : [Moreattributes]
 }
 
 
 type Moons {
-  id: ID
-  name: String
-  details: String
-  moonAdditionalAttributes: [Moonadditionalattributes]
+  id : ID
+  name : String
+  details : String
+  moonAdditionalAttributes : [Moonadditionalattributes]
 }
 
 
 type Earth {
-  id: ID
-  name: String
-  type: String
+  id : ID
+  name : String
+  type : String
 }
 
 
 type Additionalattributes {
-  id: ID
-  name: String
+  id : ID
+  name : String
 }
 
 
 type Containername @model {
-  id: ID
-  name: String
-  dimension: String
-  age: Int
-  myBooleanProp: Boolean
-  anotherPojo: Anotherpojo
-  character: Character
-  stars: [Stars]
-  suns: [Suns]
-  moons: [Moons]
-  earth: Earth
-  additionalAttributes: [Additionalattributes]
-  tags: [String]
-  _rid: String
-  _self: String
-  _etag: String
-  _attachments: String
-  _ts: Int
+  id : ID
+  name : String
+  dimension : String
+  age : Int
+  myBooleanProp : Boolean
+  anotherPojo : Anotherpojo
+  character : Character
+  stars : [Stars]
+  suns : [Suns]
+  moons : [Moons]
+  earth : Earth
+  additionalAttributes : [Additionalattributes]
+  tags : [String]
 }

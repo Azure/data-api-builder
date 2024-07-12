@@ -1,5 +1,5 @@
 type Containername @model {
-  name: String
-  age: Int
-  email: String
+  name : String
+  age : Int
+  email : String
 }

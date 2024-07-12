@@ -10,6 +10,11 @@
 
   <ItemGroup>
     <None Remove="CosmosTests\TestData\Json\EmulatorData.json" />
+    <None Remove="CosmosTests\TestData\Json\MultiItems\1.json" />
+    <None Remove="CosmosTests\TestData\Json\MultiItems\2.json" />
+    <None Remove="CosmosTests\TestData\Json\MultiItems\3.json" />
+    <None Remove="CosmosTests\TestData\Json\MultiItems\4.json" />
+    <None Remove="CosmosTests\TestData\Json\MultiItems\5.json" />
     <None Remove="dab-config.CosmosDb_NoSql.json" />
     <None Remove="dab-config.json" />
     <None Remove="dab-config.MsSql.json" />

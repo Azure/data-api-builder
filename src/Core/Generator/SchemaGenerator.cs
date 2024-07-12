@@ -1,37 +1,58 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Globalization;
 using System.Text;
+using Azure.DataApiBuilder.Core.Extensions;
 using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
+    /// <summary>
+    /// This Class takes a JArray of JSON objects and generates a GraphQL schema.
+    /// </summary>
     internal class SchemaGenerator
     {
+        // Cosmos DB reserved properties, these properties will be ignored in the schema generation as they are not user-defined properties.
+        private readonly List<string> _cosmosDbReservedProperties = new() { "_ts", "_etag", "_rid", "_self", "_attachments" };
+
         private Dictionary<string, string> _gqlTypes = new ();
         private HashSet<string> _processedTypes = new ();
 
+        /// <summary>
+        /// Processes a JArray of JSON objects and generates a GraphQL schema.
+        /// </summary>
+        /// <param name="jsonArray">Sampled JSON Data</param>
+        /// <param name="containerName">Cosmos DB Container Name</param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException">If JsonArray or Container Name is Empty or null</exception>
         public static string Run(JArray jsonArray, string containerName)
         {
-            if (jsonArray == null || jsonArray.Count == 0)
+            // Validating if passed inputs are not null or empty
+            if (jsonArray == null || jsonArray.Count == 0 || string.IsNullOrEmpty(containerName))
             {
                 throw new InvalidOperationException("JArray must contain at least one JSON object.");
             }
 
-            return new SchemaGenerator().ConvertJsonToGQLSchema(jsonArray: jsonArray,
-                containerName: containerName);
+            return new SchemaGenerator().ConvertJsonToGQLSchema(jsonArray, containerName);
         }
 
+        /// <summary>
+        /// This method converts a JArray of JSON objects to a GraphQL schema.
+        /// </summary>
+        /// <param name="jsonArray"></param>
+        /// <param name="containerName"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException">If JArray doesn't contains JObject</exception>
         private string ConvertJsonToGQLSchema(JArray jsonArray, string containerName)
         {
-            var gqlFields = new Dictionary<string, string>();
+            Dictionary<string, string> gqlFields = new ();
 
-            foreach (var token in jsonArray)
+            foreach (JToken token in jsonArray)
             {
                 if (token is JObject jsonObject)
                 {
-                    MergeJsonObject(jsonObject, gqlFields, ToPascalCase(containerName));
+                    Console.WriteLine($"-----------------------------");
+                    TraverseJsonObject(jsonObject, gqlFields, containerName.ToPascalCase());
                 }
                 else
                 {
@@ -39,10 +60,10 @@ namespace Azure.DataApiBuilder.Core.Generator
                 }
             }
 
-            GenerateSchema(gqlFields, ToPascalCase(containerName), true);
+            GenerateSchema(gqlFields, containerName.ToPascalCase(), true);
 
-            var sb = new StringBuilder();
-            foreach (var gqlType in _gqlTypes)
+            StringBuilder sb = new ();
+            foreach (KeyValuePair<string, string> gqlType in _gqlTypes)
             {
                 sb.AppendLine(gqlType.Value);
                 sb.AppendLine();
@@ -51,143 +72,131 @@ namespace Azure.DataApiBuilder.Core.Generator
             return sb.ToString().Trim();
         }
 
-        private void MergeJsonObject(JObject jsonObject, Dictionary<string, string> gqlFields, string parentType)
+        /// <summary>
+        /// This function takes the JSON Object and Traverse through it to collect all the GQL Entities which corresponding schema
+        /// </summary>
+        /// <param name="jsonObject"></param>
+        /// <param name="gqlFields"></param>
+        /// <param name="parentType"></param>
+        private void TraverseJsonObject(JObject jsonObject, Dictionary<string, string> gqlFields, string parentType)
         {
-            foreach (var property in jsonObject.Properties())
+            Console.WriteLine($"Parent Type: {parentType}");
+            foreach (JProperty property in jsonObject.Properties())
             {
-                var gqlField = ProcessJsonToken(property.Value, property.Name, parentType);
-                gqlFields[property.Name] = gqlField;
+                Console.WriteLine($"Property Name: {property.Name} Value: {property.Value}");
+                // Skipping if the property is reserved Cosmos DB property
+                if (_cosmosDbReservedProperties.Contains(property.Name))
+                {
+                    continue;
+                }
+
+                gqlFields[property.Name] = $"{property.Name}: {ProcessJsonToken(property.Value, property.Name, parentType, false)}";
             }
         }
 
-        private string ProcessJsonToken(JToken token, string fieldName, string parentType)
+        /// <summary>
+        /// Traverse through the JSON Token and generate the GQL Field, it runs the same logic recursively also, for nested objects.
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="fieldName"></param>
+        /// <param name="parentType"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        private string ProcessJsonToken(JToken token, string fieldName, string parentType, bool isArray)
         {
+            string gqlFieldType;
+            // If field name is "id" then it will be represented as ID in GQL
             if (fieldName == "id")
             {
-                return $"{fieldName}: ID";
-            }
-               
-            switch (token.Type)
-            {
-                case JTokenType.Object:
-                    var objectTypeName = ToPascalCase(fieldName);
-                    if (!_processedTypes.Contains(objectTypeName))
-                    {
-                        _processedTypes.Add(objectTypeName);
-                        var objectFields = new Dictionary<string, string>();
-                        MergeJsonObject((JObject)token, objectFields, objectTypeName);
-                        GenerateSchema(objectFields, objectTypeName);
-                    }
-                    return $"{fieldName}: {objectTypeName}";
-
-                case JTokenType.Array:
-                    return ProcessJsonArray((JArray)token, fieldName, parentType);
-
-                case JTokenType.String:
-                    return $"{fieldName}: String";
-
-                case JTokenType.Integer:
-                    return $"{fieldName}: Int";
-
-                case JTokenType.Float:
-                    return $"{fieldName}: Float";
-
-                case JTokenType.Boolean:
-                    return $"{fieldName}: Boolean";
-
-                case JTokenType.Date:
-                    // Example: Representing date as ISO 8601 string
-                    return $"{fieldName}: String";
-
-                case JTokenType.Null:
-                    return $"{fieldName}: String"; // Could be any type, using String as default
-
-                default:
-                    throw new InvalidOperationException($"Unsupported JTokenType: {token.Type}");
-            }
-        }
-
-        private string ProcessJsonArray(JArray jsonArray, string fieldName, string parentType)
-        {
-            if (jsonArray.Count == 0)
-            {
-                return $"{fieldName}: [String]"; // Default to array of Strings if empty
-            }
-
-            var itemType = DetermineArrayItemType(jsonArray, fieldName, parentType);
-            return $"{fieldName}: [{itemType}]";
-        }
-
-        private string DetermineArrayItemType(JArray jsonArray, string fieldName, string parentType)
-        {
-            var firstElement = jsonArray[0];
-
-            switch (firstElement.Type)
-            {
-                case JTokenType.Object:
-                    var objectTypeName = ToPascalCase(fieldName);
-                    if (!_processedTypes.Contains(objectTypeName))
-                    {
-                        _processedTypes.Add(objectTypeName);
-                        var objectFields = new Dictionary<string, string>();
-                        MergeJsonObject((JObject)firstElement, objectFields, objectTypeName);
-                        GenerateSchema(objectFields, objectTypeName);
-                    }
-                    return objectTypeName;
-
-                case JTokenType.Array:
-                    return $"[{DetermineArrayItemType((JArray)firstElement, fieldName, parentType)}]";
-
-                case JTokenType.String:
-                    return "String";
-
-                case JTokenType.Integer:
-                    return "Int";
-
-                case JTokenType.Float:
-                    return "Float";
-
-                case JTokenType.Boolean:
-                    return "Boolean";
-
-                case JTokenType.Date:
-                    // Example: Representing date as ISO 8601 string
-                    return "String";
-
-                case JTokenType.Null:
-                    return "String"; // Default to String if null
-
-                default:
-                    throw new InvalidOperationException($"Unsupported JTokenType: {firstElement.Type}");
-            }
-        }
-
-        private void GenerateSchema(Dictionary<string, string> gqlFields, string typeName, bool isRoot = false)
-        {
-            var sb = new StringBuilder();
-            if (isRoot)
-            {
-                sb.AppendLine($"type {typeName} @model {{"); // Add @model annotation
+                gqlFieldType = "ID";
             }
             else
             {
-                sb.AppendLine($"type {typeName} {{"); // Add @model annotation
+                // Rest of the fields will be processed based on their type
+                switch (token.Type)
+                {
+                    case JTokenType.Object:
+                        string objectTypeName = fieldName.ToPascalCase();
+                        if (!_processedTypes.Contains(objectTypeName))
+                        {
+                            _processedTypes.Add(objectTypeName);
+
+                            Dictionary<string, string> objectFields = new();
+                            TraverseJsonObject((JObject)token, objectFields, objectTypeName);
+
+                            GenerateSchema(objectFields, objectTypeName);
+                        }
+
+                        gqlFieldType = objectTypeName;
+                        break;
+
+                    case JTokenType.Array:
+                        gqlFieldType = ProcessJsonArray((JArray)token, fieldName, parentType);
+                        break;
+
+                    case JTokenType.Integer:
+                        gqlFieldType = "Int";
+                        break;
+
+                    case JTokenType.Float:
+                        gqlFieldType = "Float";
+                        break;
+
+                    case JTokenType.Boolean:
+                        gqlFieldType = "Boolean";
+                        break;
+
+                    case JTokenType.Date or JTokenType.Null or JTokenType.String:
+                        // Example: Representing date as ISO 8601 string
+                        gqlFieldType = "String";
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unsupported JTokenType: {token.Type}");
+                }
+
             }
-           
-            foreach (var field in gqlFields.Values)
+
+            if (isArray)
+            {
+                return $"[{gqlFieldType}]";
+            }
+
+            return gqlFieldType;
+        }
+
+        /// <summary>
+        /// Process first element of the JSON Array and generate the GQL Field, if array is empty consider it array of string
+        /// </summary>
+        /// <param name="jsonArray"></param>
+        /// <param name="fieldName"></param>
+        /// <param name="parentType"></param>
+        /// <returns></returns>
+        private string ProcessJsonArray(JArray jsonArray, string fieldName, string parentType)
+        {
+            // Take first element out of the array, Assuming array contains similar objects and process it
+            return ProcessJsonToken(jsonArray[0], fieldName, parentType, true);
+        }
+
+        /// <summary>
+        /// Converted collected GQL field information to the GQL Schema
+        /// </summary>
+        /// <param name="gqlFields"></param>
+        /// <param name="typeName"></param>
+        /// <param name="isRoot"></param>
+        private void GenerateSchema(Dictionary<string, string> gqlFields, string typeName, bool isRoot = false)
+        {
+            StringBuilder sb = new ();
+            sb.AppendLine($"type {typeName} {(isRoot ? "@model " : "")}{{");
+
+            foreach (string field in gqlFields.Values)
             {
                 sb.AppendLine($"  {field}");
             }
+
             sb.AppendLine("}");
 
             _gqlTypes[typeName] = sb.ToString();
         }
-
-        private static string ToPascalCase(string str)
-        {
-            return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str).Replace("_", string.Empty).Replace("-", string.Empty);
-        }
-
-
     }
 }

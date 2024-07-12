@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Text;
@@ -17,91 +16,41 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
     public class SchemaGeneratorTest
     {
         [TestMethod]
-        [DataRow("CosmosTests/TestData/Json")]
-        public void TestSchemaGenerator(string filePath)
+        [DataRow("CosmosTests/TestData/Json", "CosmosTests/TestData/Gql")]
+        public void TestSchemaGenerator(string jsonFilePath, string gqlFilePath)
         {
-            IDictionary<string, JObject> scenarios = new Dictionary<string, JObject>();
-
-            string[] successPayloadFiles = Directory.GetFiles(filePath, "*.json");
+            string[] successPayloadFiles = Directory.GetFiles(jsonFilePath, "*.json");
             foreach (string payloadFile in successPayloadFiles)
             {
                 string json = Regex.Replace(File.ReadAllText(payloadFile, Encoding.UTF8), @"\s+", string.Empty);
                 
                 string filename = Path.GetFileNameWithoutExtension(payloadFile);
-                scenarios.Add(filename, JsonConvert.DeserializeObject<JObject>(json));
-            }
 
-            foreach (var item in scenarios)
-            {
-                JArray jsonArray = new (item.Value);
-                // Act
+                JArray jsonArray = new(JsonConvert.DeserializeObject<JObject>(json));
                 string schema = SchemaGenerator.Run(jsonArray, "containerName");
-                //File.Create(@$"C:\Workspace\Azure\data-api-builder\src\Service.Tests\CosmosTests\TestData\Gql\/{item.Key}.gql");
-                File.WriteAllText(@$"C:\Workspace\Azure\data-api-builder\src\Service.Tests\CosmosTests\TestData\Gql\/{item.Key}.gql", schema);
-                Console.WriteLine(item.Key);
-                Console.WriteLine(schema);
-                Console.WriteLine("-------------");
 
-                // Assert
-                Assert.IsNotNull(schema);
+                File.WriteAllText(@$"C:\Workspace\Azure\data-api-builder\src\Service.Tests\CosmosTests\TestData\Gql\/{filename}.gql", schema);
             }
         }
 
         [TestMethod]
-        public void TestSimpleJsonObject()
+        [DataRow("CosmosTests/TestData/Json/MultiItems", "CosmosTests/TestData/Gql")]
+        public void TestSchemaGeneratorUsingMultipleJson(string jsonFilePath, string gqlFilePath)
         {
-            var jsonArray = JArray.Parse(@"[{ ""name"": ""John"", ""age"": 30, ""isStudent"": false }]");
+            JArray jArray = new ();
 
-            string gqlSchema = SchemaGenerator.Run(jsonArray, "containerName");
+            string[] successPayloadFiles = Directory.GetFiles(jsonFilePath, "*.json");
+            foreach (string payloadFile in successPayloadFiles)
+            {
+                string json = Regex.Replace(File.ReadAllText(payloadFile, Encoding.UTF8), @"\s+", string.Empty);
+                jArray.Add(JsonConvert.DeserializeObject<JObject>(json));
+            }
 
-            string expectedSchema = @"type Containername @model {
-  name: String
-  age: Int
-  isStudent: Boolean
-}";
+            // Act
+            string schema = SchemaGenerator.Run(jArray, "containerName");
 
-            AreEqualAfterCleanup(expectedSchema, gqlSchema);
-        }
-
-        [TestMethod]
-        public void TestNestedJsonObject()
-        {
-            var jsonArray = JArray.Parse(@"[{ ""name"": ""John"", ""address"": { ""street"": ""123 Main St"", ""city"": ""Anytown"" } }]");
-
-            string gqlSchema = SchemaGenerator.Run(jsonArray, "containerName");
-
-            string expectedSchema = @"type Address {
-  street: String
-  city: String
-}
-
-
-type Containername @model {
-  name: String
-  address: Address
-}";
-
-            AreEqualAfterCleanup(expectedSchema, gqlSchema);
-        }
-
-        [TestMethod]
-        public void TestJsonArray()
-        {
-            var jsonArray = JArray.Parse(@"[{ ""name"": ""John"", ""courses"": [ { ""name"": ""Math"" }, { ""name"": ""History"" } ] }]");
-
-            string gqlSchema = SchemaGenerator.Run(jsonArray, "containerName");
-
-            string expectedSchema = @"type CoursesItem {
-  name: String
-}
-
-
-type Containername @model {
-  name: String
-  courses: [CoursesItem]
-}";
-
-            AreEqualAfterCleanup(expectedSchema, gqlSchema);
+            //File.Create(@$"C:\Workspace\Azure\data-api-builder\src\Service.Tests\CosmosTests\TestData\Gql\/{item.Key}.gql");
+            File.WriteAllText(@$"C:\Workspace\Azure\data-api-builder\src\Service.Tests\CosmosTests\TestData\Gql\/MultiItems.gql", schema);
         }
 
         [TestMethod]

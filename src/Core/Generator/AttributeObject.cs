@@ -5,12 +5,13 @@ namespace Azure.DataApiBuilder.Core.Generator
 {
     internal class AttributeObject
     {
-        public AttributeObject(string name, string type, string parent, bool isArray, object? value = null)
+        public AttributeObject(string name, string type, string parent, bool isArray, object? value = null, int arrayLength = 0)
         {
             this.Name = name;
             this.Type = type;
             this.Parent = parent;
             this.IsArray = isArray;
+            this.ParentArrayLength = arrayLength;
 
             if (value is not null)
             {
@@ -26,19 +27,21 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         public bool IsArray { get; set; }
 
-        public bool IsModel { get; set; }  
+        public int ParentArrayLength { get; set; }
 
         public List<object> Values { get; set; } = new();
 
         public override string? ToString()
         {
-            return $"{Name} : {Type} : {Parent} : {IsArray}";
+            return $"{Name} : {Type} : {Parent} : {IsArray} : {ParentArrayLength}";
         }
 
         public string? GetString(int totalCount)
         {
             string t = Type;
-            if (totalCount > 1 && Values.Count < totalCount)
+            if (totalCount > 1 &&
+                (Values.Count < totalCount ||
+                    Values.Count < ParentArrayLength))
             {
                 t = $"{Type}!";
             }

@@ -122,10 +122,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     Predicates.Add(CreatePredicateForParam(new KeyValuePair<string, object?>(pkBackingColumn, param.Value)));
                 }
                 else // Unpack the input argument type as columns to update
-                if (param.Key == UpdateMutationBuilder.INPUT_ARGUMENT_NAME)
+                if (param.Key == UpdateAndPatchMutationBuilder.INPUT_ARGUMENT_NAME)
                 {
                     IDictionary<string, object?> updateFields =
-                        GQLMutArgumentToDictParams(context, UpdateMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams);
+                        GQLMutArgumentToDictParams(context, UpdateAndPatchMutationBuilder.INPUT_ARGUMENT_NAME, mutationParams);
 
                     foreach (KeyValuePair<string, object?> field in updateFields)
                     {
@@ -159,7 +159,13 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Predicate predicate;
             // since we have already validated param we know backing column exists
             MetadataProvider.TryGetBackingColumn(EntityName, param.Key, out string? backingColumn);
-            if (param.Value is null && !sourceDefinition.Columns[backingColumn!].IsNullable)
+            if (backingColumn is null)
+            {
+                // If param.Key was not present in the ExposedToBackingColumnMap then provided param.Key is already the backing column
+                backingColumn = param.Key;
+            }
+
+            if (param.Value is null && !sourceDefinition.Columns[backingColumn].IsNullable)
             {
                 throw new DataApiBuilderException(
                     message: $"Cannot set argument {param.Key} to null.",
@@ -170,7 +176,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 predicate = new(
                     new PredicateOperand(
-                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn!)),
+                        new Column(tableSchema: DatabaseObject.SchemaName, tableName: DatabaseObject.Name, backingColumn)),
                     PredicateOperation.Equal,
                     new PredicateOperand($"{MakeDbConnectionParam(null, backingColumn)}")
                 );

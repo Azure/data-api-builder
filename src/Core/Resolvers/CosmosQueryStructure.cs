@@ -4,20 +4,31 @@
 using System.Diagnostics.CodeAnalysis;
 using Azure.DataApiBuilder.Auth;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.GraphQLTypes;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
+using Microsoft.AspNetCore.Http;
 
 namespace Azure.DataApiBuilder.Core.Resolvers
 {
     public class CosmosQueryStructure : BaseQueryStructure
     {
         private readonly IMiddlewareContext _context;
-        private readonly string _containerAlias = "c";
+
+        /// <summary>
+        /// For any CosmosDB Query, the default alias for the container is 'c'
+        /// </summary>
+        public const string COSMOSDB_CONTAINER_DEFAULT_ALIAS = "c";
+
+        private readonly string _containerAlias = COSMOSDB_CONTAINER_DEFAULT_ALIAS;
+        public IncrementingInteger TableCounter { get; internal set; } = new();
 
         public override string SourceAlias { get => base.SourceAlias; set => base.SourceAlias = value; }
 
@@ -26,32 +37,32 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string Container { get; internal set; }
         public string Database { get; internal set; }
         public string? Continuation { get; internal set; }
-        public int? MaxItemCount { get; internal set; }
+        public uint? MaxItemCount { get; internal set; }
         public string? PartitionKeyValue { get; internal set; }
         public List<OrderByColumn> OrderByColumns { get; internal set; }
-        // Order of the join matters
-        public Stack<CosmosJoinStructure>? Joins { get; internal set; }
 
-        /// <summary>
-        /// A simple class that is used to hold the information about joins that
-        /// are part of a Cosmos query.
-        /// <summary>
-        /// <param name="DbObject">The name of the database object containing table metadata like joined tables.</param>
-        /// <param name="TableAlias">The alias of the table that is joined with.</param>
-        public record CosmosJoinStructure(DatabaseObject DbObject, string TableAlias);
+        public RuntimeConfigProvider RuntimeConfigProvider { get; internal set; }
+
+        public string GetTableAlias()
+        {
+            return $"table{TableCounter.Next()}";
+        }
 
         public CosmosQueryStructure(
             IMiddlewareContext context,
             IDictionary<string, object?> parameters,
+            RuntimeConfigProvider provider,
             ISqlMetadataProvider metadataProvider,
             IAuthorizationResolver authorizationResolver,
             GQLFilterParser gQLFilterParser,
-            IncrementingInteger? counter = null)
-            : base(metadataProvider, authorizationResolver, gQLFilterParser, entityName: string.Empty, counter: counter)
+            IncrementingInteger? counter = null,
+            List<Predicate>? predicates = null)
+            : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates: predicates, entityName: string.Empty, counter: counter)
         {
             _context = context;
             SourceAlias = _containerAlias;
             DatabaseObject.Name = _containerAlias;
+            RuntimeConfigProvider = provider;
             Init(parameters);
         }
 
@@ -110,7 +121,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             IsPaginated = QueryBuilder.IsPaginationType(underlyingType);
             OrderByColumns = new();
-
             if (IsPaginated)
             {
                 FieldNode? fieldNode = ExtractItemsQueryField(selection.SyntaxNode);
@@ -138,12 +148,31 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 Container = MetadataProvider.GetDatabaseObjectName(entityName);
             }
 
+            HttpContext httpContext = GraphQLFilterParser.GetHttpContextFromMiddlewareContext(_context);
+            if (httpContext is not null)
+            {
+                AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
+                    EntityActionOperation.Read,
+                    this,
+                    httpContext,
+                    AuthorizationResolver,
+                    (CosmosSqlMetadataProvider)MetadataProvider);
+            }
+
+            RuntimeConfigProvider.TryGetConfig(out RuntimeConfig? runtimeConfig);
             // first and after will not be part of query parameters. They will be going into headers instead.
             // TODO: Revisit 'first' while adding support for TOP queries
             if (queryParams.ContainsKey(QueryBuilder.PAGE_START_ARGUMENT_NAME))
             {
-                MaxItemCount = (int?)queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                object? firstArgument = queryParams[QueryBuilder.PAGE_START_ARGUMENT_NAME];
+                MaxItemCount = runtimeConfig?.GetPaginationLimit((int?)firstArgument);
+
                 queryParams.Remove(QueryBuilder.PAGE_START_ARGUMENT_NAME);
+            }
+            else
+            {
+                // set max item count to default value.
+                MaxItemCount = runtimeConfig?.DefaultPageSize();
             }
 
             if (queryParams.ContainsKey(QueryBuilder.PAGINATION_TOKEN_ARGUMENT_NAME))

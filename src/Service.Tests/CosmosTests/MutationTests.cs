@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public void TestFixtureSetup()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             CreateItems(DATABASE_NAME, _containerName, 10);
@@ -261,27 +261,26 @@ mutation {{
         [TestMethod]
         [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed fields.")]
         [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no create/read operation restrictions.")]
-        [DataRow("only-create-role", "The mutation operation createEarth was successful " +
+        [DataRow("only-create-role", "The mutation operation createPlanetAgain was successful " +
             "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "Successful create operation but AuthZ failure for read when role has ONLY create permission and NO read permission.")]
         [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for create mutation because of reference to excluded/disallowed field using wildcard.")]
         [DataRow("only-update-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when create permission is NOT there.")]
         public async Task CreateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
         {
-            // Run mutation Add Earth;
+            // Run mutation Add AuthTestModel;
             string id = Guid.NewGuid().ToString();
             const string name = "test_name";
             string mutation = $@"
 mutation {{
-    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanetAgain (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
-            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
-            JsonElement response = await ExecuteGraphQLRequestAsync("createEarth", mutation, variables: new(), authToken: authtoken, clientRoleHeader: roleName);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            JsonElement response = await ExecuteGraphQLRequestAsync("createPlanetAgain", mutation, variables: new(), authToken: authToken, clientRoleHeader: roleName);
 
             // Validate the result contains the GraphQL authorization error code.
-            Console.WriteLine(response.ToString());
             if (string.IsNullOrEmpty(expectedErrorMessage))
             {
                 Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -301,8 +300,8 @@ mutation {{
         [TestMethod]
         [DataRow("field-mutation-with-read-permission", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for update mutation because of reference to excluded/disallowed fields.")]
         [DataRow("authenticated", NO_ERROR_MESSAGE, DisplayName = "AuthZ success when role has no update/read operation restrictions.")]
-        [DataRow("only-update-role", "The mutation operation updateEarth was successful " +
-            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure  but sucessful operation where role has ONLY update permission and NO read permission.")]
+        [DataRow("only-update-role", "The mutation operation updatePlanetAgain was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure but successful operation where role has ONLY update permission and NO read permission.")]
         [DataRow("wildcard-exclude-fields-role", DataApiBuilderException.GRAPHQL_MUTATION_FIELD_AUTHZ_FAILURE, DisplayName = "AuthZ failure for update mutation because of reference to excluded/disallowed field using wildcard.")]
         [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when update permission is NOT there.")]
         public async Task UpdateItemWithAuthPermissions(string roleName, string expectedErrorMessage)
@@ -312,13 +311,13 @@ mutation {{
             const string name = "test_name";
             string createMutation = $@"
 mutation {{
-    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanetAgain (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
 
-            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createEarth", createMutation,
+            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createPlanetAgain", createMutation,
                 variables: new(),
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
                 clientRoleHeader: AuthorizationType.Authenticated.ToString());
@@ -326,10 +325,10 @@ mutation {{
             // Making sure item is created successfully
             Assert.AreEqual(id, createResponse.GetProperty("id").GetString());
 
-            // Run mutation Update Earth;
+            // Run mutation Update AuthTestModel;
             string mutation = @"
-mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
-    updateEarth (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdatePlanetAgainInput!) {
+    updatePlanetAgain (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
         id
         name
      }
@@ -340,15 +339,14 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
                 name = "new_name"
             };
 
-            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "updateEarth",
+                queryName: "updatePlanetAgain",
                 query: mutation,
                 variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } },
-                authToken: authtoken,
+                authToken: authToken,
                 clientRoleHeader: roleName);
 
-            Console.WriteLine(response.ToString());
             if (string.IsNullOrEmpty(expectedErrorMessage))
             {
                 Assert.AreEqual(id, response.GetProperty("id").GetString());
@@ -368,8 +366,8 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
         [TestMethod]
         [DataRow("field-mutation-with-read-permission", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response for delete mutation because of reference to excluded/disallowed fields.")]
         [DataRow("authenticated", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response when role has no delete operation restrictions.")]
-        [DataRow("only-delete-role", "The mutation operation deleteEarth was successful " +
-            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure but sucessful operation where role has ONLY delete permission and NO read permission.")]
+        [DataRow("only-delete-role", "The mutation operation deletePlanetAgain was successful " +
+            "but the current user is unauthorized to view the response due to lack of read permissions", DisplayName = "AuthZ failure but successful operation where role has ONLY delete permission and NO read permission.")]
         [DataRow("wildcard-exclude-fields-role", MutationTests.NO_ERROR_MESSAGE, DisplayName = "AuthZ success and blank response for delete mutation because of reference to excluded/disallowed fields using wildcard")]
         [DataRow("only-create-role", MutationTests.USER_NOT_AUTHORIZED, DisplayName = "AuthZ failure when delete permission is NOT there.")]
         public async Task DeleteItemWithAuthPermissions(string roleName, string expectedErrorMessage)
@@ -379,13 +377,13 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: UpdateEarthInput!) {
             const string name = "test_name";
             string createMutation = $@"
 mutation {{
-    createEarth (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+    createPlanetAgain (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
         id
         name
     }}
 }}";
 
-            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createEarth", createMutation,
+            JsonElement createResponse = await ExecuteGraphQLRequestAsync("createPlanetAgain", createMutation,
                 variables: new(),
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString()),
                 clientRoleHeader: AuthorizationType.Authenticated.ToString());
@@ -393,23 +391,21 @@ mutation {{
             // Making sure item is created successfully
             Assert.AreEqual(id, createResponse.GetProperty("id").GetString());
 
-            // Run mutation Update Earth;
+            // Run mutation Update AuthTestModel;
             string mutation = @"
 mutation ($id: ID!, $partitionKeyValue: String!) {
-    deleteEarth (id: $id, _partitionKeyValue: $partitionKeyValue) {
+    deletePlanetAgain (id: $id, _partitionKeyValue: $partitionKeyValue) {
         id
         name
      }
 }";
-            string authtoken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "deleteEarth",
+                queryName: "deletePlanetAgain",
                 query: mutation,
                 variables: new() { { "id", id }, { "partitionKeyValue", id } },
-                authToken: authtoken,
+                authToken: authToken,
                 clientRoleHeader: roleName);
-
-            Console.WriteLine(response.ToString());
 
             if (string.IsNullOrEmpty(expectedErrorMessage))
             {
@@ -733,6 +729,351 @@ type Planet @model(name:""Planet"") {
             }
         }
 
+        [TestMethod]
+        public async Task CanPatchItemWithoutVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            const string name = "test_name";
+            string mutation = $@"
+mutation {{
+    createPlanet (item: {{ id: ""{id}"", name: ""{name}"" }}) {{
+        id
+        name
+    }}
+}}";
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", mutation, variables: new());
+            // Executing path with updating "existing" field and "adding" a new field
+            const string newName = "new_name";
+            mutation = $@"
+mutation {{
+    patchPlanet (id: ""{id}"", _partitionKeyValue: ""{id}"", item: {{name: ""{newName}"", stars: [{{ id: ""{id}"" }}] }}) {{
+        id
+        name
+        stars
+        {{
+            id
+        }}
+    }}
+}}";
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new());
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreEqual(id, response.GetProperty("stars")[0].GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task CanPatchItemWithVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name"
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            // Executing path with updating "existing" field and "adding" a new field
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
+    patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+        stars
+        {
+            id
+        }
+     }
+}";
+            var update = new
+            {
+                name = "new_name",
+                stars = new[] { new { id = "TestStar" } }
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreEqual("TestStar", response.GetProperty("stars")[0].GetProperty("id").GetString());
+        }
+
+        [TestMethod]
+        public async Task CanPatchNestedItemWithVariables()
+        {
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name",
+                character = new
+                {
+                    id = "characterId",
+                    name = "characterName",
+                    homePlanet = 1,
+                    star = new
+                    {
+                        id = "starId",
+                        name = "starName",
+                        tag = new
+                        {
+                            id = "tagId",
+                            name = "tagName"
+                        }
+                    }
+                }
+            };
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } });
+
+            // Executing path with updating "existing" field and "adding" a new field
+            const string newName = "new_name";
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
+    patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+        character
+        {
+            id
+            name
+            type
+            homePlanet
+            star
+            {
+                id
+                name
+                tag
+                {
+                    id
+                    name
+                }
+            }
+        }
+        stars
+        {
+            id
+        }
+     }
+}";
+            var update = new
+            {
+                name = "new_name",
+                character = new
+                {
+                    id = "characterId",
+                    name = "characterName",
+                    type = "characterType",
+                    homePlanet = 2,
+                    star = new
+                    {
+                        id = "starId",
+                        name = "starName1",
+                        tag = new
+                        {
+                            id = "tagId",
+                            name = "tagName"
+                        }
+                    }
+                },
+                stars = new[] { new { id = "TestStar" } }
+            };
+
+            JsonElement response = await ExecuteGraphQLRequestAsync("patchPlanet", mutation, variables: new() { { "id", id }, { "partitionKeyValue", id }, { "item", update } });
+            // Validate results
+            Assert.AreEqual(id, response.GetProperty("id").GetString());
+            Assert.AreEqual(newName, response.GetProperty("name").GetString());
+            Assert.AreEqual("characterType", response.GetProperty("character").GetProperty("type").GetString());
+            Assert.AreEqual("characterName", response.GetProperty("character").GetProperty("name").GetString());
+            Assert.AreEqual(2, response.GetProperty("character").GetProperty("homePlanet").GetInt32());
+            Assert.AreEqual("starName1", response.GetProperty("character").GetProperty("star").GetProperty("name").GetString());
+            Assert.AreEqual("TestStar", response.GetProperty("stars")[0].GetProperty("id").GetString());
+        }
+
+        /// <summary>
+        ///  Patch Operation has limitation of executing/patching only 10 attributes at a time, internally which is 10 patch operation.
+        ///  In DAB, we are supporting multiple patch operations in a single patch operation by executing them in a Transactional Batch.
+        /// </summary>
+        [TestMethod]
+        public async Task CanPatchMoreThan10AttributesInAnItemWithVariables()
+        {
+            string roleName = "anonymous";
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: roleName);
+
+            // Run mutation Add planet;
+            string id = Guid.NewGuid().ToString();
+            var input = new
+            {
+                id,
+                name = "test_name",
+                character = new
+                {
+                    id = "characterId",
+                    name = "characterName",
+                    type = "characterType",
+                    homePlanet = 1,
+                    star = new
+                    {
+                        id = "starId",
+                        name = "starName",
+                        tag = new
+                        {
+                            id = "tagId",
+                            name = "tagName"
+                        }
+                    }
+                },
+                age = 10,
+                dimension = "my dimension",
+                tags = new[] { "tag1", "tag2", "tag3" },
+                stars = new[]
+                {
+                    new { id = "TestStar1" },
+                    new { id = "TestStar2" },
+                },
+                moons = new[]
+                {
+                    new {
+                        id = "TestMoon1",
+                        moonAdditionalAttributes = new[]
+                        {
+                            new { id = "moonAdditionalAttributes1" },
+                            new { id = "moonAdditionalAttributes2" }
+                        }
+                    },
+                    new { id = "TestMoon2",
+                        moonAdditionalAttributes = new[]
+                        {
+                            new { id = "moonAdditionalAttributes3" },
+                            new { id = "moonAdditionalAttributes4" }
+                        } }
+                },
+                suns = new[]
+                {
+                    new { id = "TestSun1" },
+                    new { id = "TestSun2" },
+                }
+            };
+
+            _ = await ExecuteGraphQLRequestAsync("createPlanet", _createPlanetMutation, new() { { "item", input } },
+                authToken: authToken,
+                clientRoleHeader: roleName);
+
+            string mutation = @"
+mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
+    patchPlanet (id: $id, _partitionKeyValue: $partitionKeyValue, item: $item) {
+        id
+        name
+        age
+        dimension
+        character
+        {
+            id
+            name
+            type
+            homePlanet
+            star
+            {
+                id
+                name
+                tag
+                {
+                    id
+                    name
+                }
+            }
+        }
+        tags
+        stars
+        {
+            id
+        }
+        moons
+        {
+            id
+            moonAdditionalAttributes
+            {
+                id
+            }
+        }
+        suns
+        {
+            id
+        }
+    }
+}";
+            var update = new
+            {
+                name = "test_name", // Patch1
+                character = new
+                {
+                    id = "characterId1", // Patch2
+                    name = "characterName1", // Patch3
+                    type = "characterType1", // Patch4
+                    homePlanet = 11, // Patch5
+                    star = new
+                    {
+                        id = "starId1", // Patch6
+                        name = "starName1", // Patch7
+                        tag = new
+                        {
+                            id = "tagId1", // Patch8
+                            name = "tagName1" // Patch9
+                        }
+                    }
+                },
+                tags = new[] { "tag4", "tag5", "tag6" }, // Patch10
+                stars = new[] // Patch11
+                {
+                    new { id = "TestStar3" },
+                    new { id = "TestStar4" },
+                },
+                moons = new[] // Patch12
+                {
+                    new {
+                        id = "TestMoon11",
+                        moonAdditionalAttributes = new[]
+                        {
+                            new { id = "moonAdditionalAttributes11" },
+                            new { id = "moonAdditionalAttributes21" }
+                        }
+                    },
+                    new { id = "TestMoon21",
+                        moonAdditionalAttributes = new[]
+                        {
+                            new { id = "moonAdditionalAttributes31" },
+                            new { id = "moonAdditionalAttributes41" }
+                        } }
+                }
+            };
+
+            JsonElement patchResponse = await ExecuteGraphQLRequestAsync(
+                "patchPlanet",
+                mutation,
+                variables: new()
+                {
+                    { "id", id },
+                    { "partitionKeyValue", id },
+                    { "item", update }
+                },
+                authToken: authToken,
+                clientRoleHeader: roleName);
+
+            // This information should be same as original input
+            Assert.AreEqual(patchResponse.GetProperty("id").GetString(), input.id);
+            Assert.AreEqual(patchResponse.GetProperty("age").GetInt32(), input.age);
+            Assert.AreEqual(patchResponse.GetProperty("dimension").GetString(), input.dimension);
+            // Asserting updated information
+            Assert.AreEqual(patchResponse.GetProperty("name").GetString(), update.name);
+            Assert.AreEqual(patchResponse.GetProperty("character").ToString(), JsonSerializer.Serialize(update.character));
+            Assert.AreEqual(patchResponse.GetProperty("tags").ToString(), JsonSerializer.Serialize(update.tags));
+            Assert.AreEqual(patchResponse.GetProperty("stars").ToString(), JsonSerializer.Serialize(update.stars));
+            Assert.AreEqual(patchResponse.GetProperty("moons").ToString(), JsonSerializer.Serialize(update.moons));
+        }
+
         /// <summary>
         /// Runs once after all tests in this class are executed
         /// </summary>
@@ -740,7 +1081,7 @@ type Planet @model(name:""Planet"") {
         public void TestFixtureTearDown()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }

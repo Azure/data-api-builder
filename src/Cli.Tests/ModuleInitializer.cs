@@ -31,6 +31,8 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeOptions>(options => options.IsCachingEnabled);
         // Ignore the entity IsCachingEnabled as that's unimportant from a test standpoint.
         VerifierSettings.IgnoreMember<Entity>(entity => entity.IsCachingEnabled);
+        // Ignore the entity IsLinkingEntity as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<Entity>(entity => entity.IsLinkingEntity);
         // Ignore the UserProvidedTtlOptions. They aren't serialized to our config file, enforced by EntityCacheOptionsConverter.
         VerifierSettings.IgnoreMember<EntityCacheOptions>(cacheOptions => cacheOptions.UserProvidedTtlOptions);
         // Ignore the IsRequestBodyStrict as that's unimportant from a test standpoint.
@@ -51,6 +53,14 @@ static class ModuleInitializer
         VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.Schema);
         // Ignore the message as that's not serialized in our config file anyway.
         VerifierSettings.IgnoreMember<DataSource>(dataSource => dataSource.DatabaseTypeNotSupportedMessage);
+        // Ignore DefaultDataSourceName as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<RuntimeConfig>(config => config.DefaultDataSourceName);
+        // Ignore MaxResponseSizeMB as as that's unimportant from a test standpoint.
+        VerifierSettings.IgnoreMember<HostOptions>(options => options.MaxResponseSizeMB);
+        // Ignore UserProvidedMaxResponseSizeMB as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<HostOptions>(options => options.UserProvidedMaxResponseSizeMB);
+        // Ignore UserProvidedDepthLimit as that's not serialized in our config file.
+        VerifierSettings.IgnoreMember<GraphQLRuntimeOptions>(options => options.UserProvidedDepthLimit);
         // Customise the path where we store snapshots, so they are easier to locate in a PR review.
         VerifyBase.DerivePathInfo(
             (sourceFile, projectDirectory, type, method) => new(

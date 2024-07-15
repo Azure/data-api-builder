@@ -576,6 +576,32 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Test One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// <summary>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship(string dbQuery)
+        {
+            string graphQLQueryName = "shrubs";
+            string graphQLQuery = @"query {
+                shrubs {
+                  items {
+                    fancyName
+                    fungus {
+                      habitat
+                  }
+                }
+              }
+            }";
+
+            JsonElement actual = await base.ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
         /// This deeply nests a many-to-one/one-to-many join multiple times to
         /// show that it still results in a valid query.
         /// </summary>
@@ -959,6 +985,27 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
             }";
 
             JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: false);
+            string expected = await GetDatabaseResultAsync(dbQuery);
+
+            SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
+        }
+
+        /// <summary>
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields(string dbQuery)
+        {
+            string graphQLQueryName = "supportedTypes";
+            string graphQLQuery = @"{
+                supportedTypes(first: 100) {
+                    items {
+                        datetime_types
+                    }
+                }
+            }";
+
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
             string expected = await GetDatabaseResultAsync(dbQuery);
 
             SqlTestHelper.PerformTestEqualJsonStrings(expected, actual.GetProperty("items").ToString());
@@ -1564,16 +1611,134 @@ query {
             Assert.AreEqual(1, response.GetProperty("items").EnumerateArray().First().GetProperty("id").GetInt32());
         }
 
+        /// <summary>
+        /// Validates that DAB evaluates the self-joining relationship "child_accounts" for the entity dbo_DimAccounts.
+        /// The database schema defines a foreign key relationship between the dbo_DimAccount table and itself:
+        /// Referencing field: ParentAccountKey | Referenced field: AccountKey
+        /// The field child_accounts represents the one-to-many relationship entry:
+        /// - source entity: dbo_DimAccount | source.fields: AccountKey
+        /// - target entity: dbo_DimAccount | target.fields: ParentAccountKey
+        /// In plain language: one (parent) account whose referenced field AccountKey maps
+        /// to many child records' referencing field ParentAccountKey.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryById_SelfReferencingRelationship_ReturnsExpectedChildren()
+        {
+            string query = @"
+            query queryAccountAndParent{
+                dbo_DimAccount_by_pk(AccountKey: 2) {
+                    AccountKey
+                    ParentAccountKey
+                    child_accounts {
+                        items {
+                            AccountKey
+                        }
+                    }   
+                }
+            }";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "dbo_DimAccount_by_pk", false);
+
+            // Expected Response
+            /* 
+             * {
+  "data": {
+    "dbo_DimAccount_by_pk": {
+      "AccountKey": 2,
+      "ParentAccountKey": 1,
+      "child_accounts": {
+        "items": [
+          {
+            "AccountKey": 3
+          },
+          {
+            "AccountKey": 4
+          }
+        ]
+      }
+    }
+  }
+}
+             */
+
+            Assert.AreEqual(expected: 2, actual: response.GetProperty("AccountKey").GetInt32());
+            Assert.AreEqual(expected: 1, actual: response.GetProperty("ParentAccountKey").GetInt32());
+            Assert.AreEqual(expected: 2, actual: response.GetProperty("child_accounts").GetProperty("items").GetArrayLength());
+            List<JsonElement> childAccounts = response.GetProperty("child_accounts").GetProperty("items").EnumerateArray().ToList();
+            Assert.IsTrue(childAccounts[0].GetProperty("AccountKey").GetInt32() == 3);
+            Assert.IsTrue(childAccounts[1].GetProperty("AccountKey").GetInt32() == 4);
+        }
+
+        /// <summary>
+        /// Validates that DAB evaluates the self-joining relationship "parent_account" for the entity dbo_DimAccounts.
+        /// The database schema defines a foreign key relationship between the dbo_DimAccount table and itself:
+        /// Referencing field: ParentAccountKey | Referenced field: AccountKey
+        /// The field parent_account represents the many-to-one relationship entry:
+        /// - source entity: dbo_DimAccount | source.fields: ParentAccountKey
+        /// - target entity: dbo_DimAccount | target.fields: AccountKey
+        /// In plain language: many (child) accounts whose records' referencing field ParentAccountKey map
+        /// to a single parent record's referenced field AccountKey.
+        /// </summary>
+        [TestMethod]
+        public async Task QueryMany_SelfReferencingRelationship()
+        {
+            string query = @"
+            query queryAccountAndParent{
+                dbo_DimAccounts(first: 1, filter: {ParentAccountKey: { isNull: false}}, orderBy: { AccountKey: ASC}) {
+                    items {
+                        AccountKey
+                        ParentAccountKey
+                        parent_account {
+                            AccountKey
+                        }
+                    }
+                }
+            }";
+
+            JsonElement response = await ExecuteGraphQLRequestAsync(query, "dbo_DimAccounts", false);
+
+            /* Expected Response
+{
+  "data": {
+    "dbo_DimAccounts": {
+      "items": [
+        {
+          "AccountKey": 2,
+          "ParentAccountKey": 1,
+          "parent_account": {
+            "AccountKey": 1
+          }
+        }
+      ]
+    }
+  }
+}
+             */
+            Assert.AreEqual(expected: 1, actual: response.GetProperty("items").GetArrayLength());
+            List<JsonElement> results = response.GetProperty("items").EnumerateArray().ToList();
+            Assert.AreEqual(expected: 1, actual: results.Count, message: "More results than expected");
+            JsonElement account = results[0];
+            Assert.AreEqual(expected: 2, actual: account.GetProperty("AccountKey").GetInt32());
+            // help write an assert that checks the parent_account field
+            int expectedParentAccountKey = account.GetProperty("ParentAccountKey").GetInt32();
+            int relationshipResolvedAccountKey = account.GetProperty("parent_account").GetProperty("AccountKey").GetInt32();
+            Assert.AreEqual(expected: expectedParentAccountKey, actual: relationshipResolvedAccountKey);
+        }
+
         #endregion
 
         #region Negative Tests
 
+        /// <summary>
+        /// This test checks the failure on providing invalid first parameter in graphQL Query.
+        /// We only allow -1 or positive integers for first parameter.-1 means max page size.
+        /// </summary>
         [TestMethod]
         public virtual async Task TestInvalidFirstParamQuery()
         {
             string graphQLQueryName = "books";
             string graphQLQuery = @"{
-                books(first: -1) {
+                books(first: -2) {
                     items {
                         id
                         title

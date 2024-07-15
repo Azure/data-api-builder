@@ -11,6 +11,7 @@ using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
@@ -42,12 +43,6 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         public string? FilterPredicates { get; set; }
 
         /// <summary>
-        /// DbPolicyPredicates is a string that represents the filter portion of our query
-        /// in the WHERE Clause added by virtue of the database policy.
-        /// </summary>
-        public Dictionary<EntityActionOperation, string?> DbPolicyPredicatesForOperations { get; set; } = new();
-
-        /// <summary>
         /// Collection of all the fields referenced in the database policy for create action.
         /// The fields referenced in the database policy should be a subset of the fields that are being inserted via the insert statement,
         /// as then only we would be able to make them a part of our SELECT FROM clause from the temporary table.
@@ -63,7 +58,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string entityName = "",
             IncrementingInteger? counter = null,
             HttpContext? httpContext = null,
-            EntityActionOperation operationType = EntityActionOperation.None
+            EntityActionOperation operationType = EntityActionOperation.None,
+            bool isLinkingEntity = false
             )
             : base(metadataProvider, authorizationResolver, gQLFilterParser, predicates, entityName, counter)
         {
@@ -72,7 +68,11 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // For GraphQL read operation, we are deliberately not passing httpContext to this point
             // and hence it will take its default value i.e. null here.
             // For GraphQL read operation, the database policy predicates are added later in the Sql{*}QueryStructure classes.
-            if (httpContext is not null)
+            // Linking entities are not configured by the users through the config file.
+            // DAB interprets the database metadata for linking tables and creates an Entity objects for them.
+            // This is done because linking entity field information are needed for successfully
+            // generating the schema when multiple create feature is enabled.
+            if (httpContext is not null && !isLinkingEntity)
             {
                 AuthorizationPolicyHelpers.ProcessAuthorizationPolicies(
                 operationType,
@@ -123,6 +123,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Get column type from table underlying the query structure
         /// </summary>
+        /// <param name="columnName">backing column name</param>
         public Type GetColumnSystemType(string columnName)
         {
             if (GetUnderlyingSourceDefinition().Columns.TryGetValue(columnName, out ColumnDefinition? column))
@@ -142,8 +143,85 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <summary>
         /// Based on the relationship metadata involving referenced and
         /// referencing columns of a foreign key, add the join predicates
-        /// to the subquery Query structure created for the given target entity Name
-        /// and related source alias.
+        /// to the subquery QueryStructure created for the given target's entity name
+        /// and related target table source alias (name of table used in subquery).
+        /// There are only a couple of options for the foreign key - we only use the
+        /// valid foreign key definition. It is guaranteed at least one fk definition
+        /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
+        /// </summary>
+        /// <param name="fkLookupKey">{entityName, relationshipName} used to lookup foreign key metadata.</param>
+        /// <param name="targetEntityName">Related(target) entity's name.</param>
+        /// <param name="subqueryTargetTableAlias">The alias assigned for the underlying source of this related entity.</param>
+        /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
+        public void AddJoinPredicatesForRelationship(
+            EntityRelationshipKey fkLookupKey,
+            string targetEntityName,
+            string subqueryTargetTableAlias,
+            BaseSqlQueryStructure subQuery)
+        {
+            if (string.Equals(fkLookupKey.EntityName, targetEntityName))
+            {
+                AddJoinPredicatesForSelfJoinedEntity(
+                    fkLookupKey: fkLookupKey,
+                    subqueryTargetTableAlias: subqueryTargetTableAlias,
+                    subQuery: subQuery);
+            }
+            else
+            {
+                AddJoinPredicatesForRelatedEntity(
+                    targetEntityName: targetEntityName,
+                    relatedSourceAlias: subqueryTargetTableAlias,
+                    subQuery: subQuery);
+            }
+        }
+
+        /// <summary>
+        /// Add query predicates for self-joined entity.
+        /// Example pseudo tsql to illustrate what the predicates enable:
+        /// SELECT [columns] FROM [SqlQueryStructure.SourceAlias] // table0
+        /// JSON_QUERY(...) AS [fkLookupKey.relationshipName] // RelationshipName represents the sub query.
+        /// OUTER APPLY (
+        ///     // The param 'subQuery' captures the contents of this OUTER APPLY
+        ///     SELECT [columns] FROM [functionParams.subqueryTargetTableAlias] // table1
+        ///     WHERE [table0].[fk.SourceColumn] = [table1].[fk.TargetColumn]
+        /// )
+        /// WHERE [table0].[fk.SourceColumn] = [@param value from request]
+        ///
+        /// Process self-joining entity relationship. Excludes support for processing
+        /// self-joining relationships in GraphQL query filters (nested filter entities).
+        /// </summary>
+        /// <param name="fkLookupKey">{entityName, relationshipName} used to lookup foreign key metadata.</param>
+        /// <param name="subqueryTargetTableAlias">The table alias of the target entity/ subject of the sub-query.</param>
+        /// <param name="subQuery">The subquery to which the join predicates are to be added.</param>
+        /// <exception cref="DataApiBuilderException">Raised when an entity's relationship config is not found in the
+        /// metadata provider.</exception>
+        private void AddJoinPredicatesForSelfJoinedEntity(
+            EntityRelationshipKey fkLookupKey,
+            string subqueryTargetTableAlias,
+            BaseSqlQueryStructure subQuery)
+        {
+            if (MetadataProvider.RelationshipToFkDefinition.TryGetValue(key: fkLookupKey, out ForeignKeyDefinition? fkDef))
+            {
+                subQuery.Predicates.AddRange(
+                        CreateJoinPredicates(
+                            leftTableAlias: SourceAlias,
+                            leftColumnNames: fkDef.ResolveSourceColumns(),
+                            rightTableAlias: subqueryTargetTableAlias,
+                            rightColumnNames: fkDef.ResolveTargetColumns()));
+            }
+            else
+            {
+                throw new DataApiBuilderException(
+                    message: $"Could not find relationship between self-joined entity: {EntityName}.",
+                    statusCode: HttpStatusCode.BadRequest,
+                    subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+        }
+
+        /// <summary>
+        /// Based on the relationship metadata involving referenced and
+        /// referencing columns of a foreign key, add the join predicates
+        /// to the subquery Query structure created for linking objects.
         /// There are only a couple of options for the foreign key - we only use the
         /// valid foreign key definition. It is guaranteed at least one fk definition
         /// will be valid since the MetadataProvider.ValidateAllFkHaveBeenInferred.
@@ -173,8 +251,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     out foreignKeyDefinitions))
             {
                 Dictionary<DatabaseObject, string> associativeTableAndAliases = new();
-                // For One-One and One-Many, not all fk definitions would be valid
-                // but at least 1 will be.
+                // For One-One and One-Many, not all fk definitions are valid
+                // and at least 1 will be.
                 // Identify the side of the relationship first, then check if its valid
                 // by ensuring the referencing and referenced column count > 0
                 // before adding the predicates.
@@ -186,8 +264,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     {
                         // Case where fk in parent entity references the nested entity.
                         // Verify this is a valid fk definition before adding the join predicate.
-                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
-                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        if (foreignKeyDefinition.ReferencingColumns.Count > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count > 0)
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 SourceAlias,
@@ -199,8 +277,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     else if (foreignKeyDefinition.Pair.ReferencingDbTable.Equals(relatedEntityDbObject))
                     {
                         // Case where fk in nested entity references the parent entity.
-                        if (foreignKeyDefinition.ReferencingColumns.Count() > 0
-                            && foreignKeyDefinition.ReferencedColumns.Count() > 0)
+                        if (foreignKeyDefinition.ReferencingColumns.Count > 0
+                            && foreignKeyDefinition.ReferencedColumns.Count > 0)
                         {
                             subQuery.Predicates.AddRange(CreateJoinPredicates(
                                 relatedSourceAlias,
@@ -274,8 +352,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     (leftColumnName, rightColumnName) =>
                     {
                         // no table name or schema here is needed because this is a subquery that joins on table alias
-                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, leftColumnName, leftTableAlias);
-                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, rightColumnName, rightTableAlias);
+                        Column leftColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: leftColumnName, tableAlias: leftTableAlias);
+                        Column rightColumn = new(tableSchema: string.Empty, tableName: string.Empty, columnName: rightColumnName, tableAlias: rightTableAlias);
                         return new Predicate(
                             new PredicateOperand(leftColumn),
                             PredicateOperation.Equal,
@@ -361,7 +439,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 "Double" => double.Parse(param),
                 "Decimal" => decimal.Parse(param),
                 "Boolean" => bool.Parse(param),
-                "DateTime" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal).DateTime,
+                // When GraphQL input specifies a TZ offset "12-31-2024T12:00:00+03:00"
+                // and DAB has resolved the ColumnDefinition.SystemType to DateTime,
+                // DAB converts the input to UTC because:
+                // - DAB assumes that values without timezone offset are UTC.
+                // - DAB shouldn't store values in the backend database which the user did not intend
+                //   - e.g. Storing this value for the original example would be incorrect: "12-31-2024T12:00:00"
+                //   - The correct value to store would be "12-31-2024T09:00:00" (UTC)
+                "DateTime" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal).UtcDateTime,
                 "DateTimeOffset" => DateTimeOffset.Parse(param, DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AssumeUniversal),
                 "Date" => DateOnly.Parse(param),
                 "Guid" => Guid.Parse(param),
@@ -431,18 +516,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             {
                 IObjectField fieldSchema = context.Selection.Field;
                 IInputField itemsArgumentSchema = fieldSchema.Arguments[fieldName];
-                InputObjectType itemsArgumentObject = ResolverMiddleware.InputObjectTypeFromIInputField(itemsArgumentSchema);
+                InputObjectType itemsArgumentObject = ExecutionHelper.InputObjectTypeFromIInputField(itemsArgumentSchema);
 
-                Dictionary<string, object?> mutationInput;
                 // An inline argument was set
                 // TODO: This assumes the input was NOT nullable.
                 if (item is List<ObjectFieldNode> mutationInputRaw)
                 {
-                    mutationInput = new Dictionary<string, object?>();
+                    Dictionary<string, object?> mutationInput = new();
                     foreach (ObjectFieldNode node in mutationInputRaw)
                     {
                         string nodeName = node.Name.Value;
-                        mutationInput.Add(nodeName, ResolverMiddleware.ExtractValueFromIValueNode(
+                        mutationInput.Add(nodeName, ExecutionHelper.ExtractValueFromIValueNode(
                             value: node.Value,
                             argumentSchema: itemsArgumentObject.Fields[nodeName],
                             variables: context.Variables));

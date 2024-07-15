@@ -143,7 +143,7 @@ public enum PredicateOperation
     None,
     Equal, GreaterThan, LessThan, GreaterThanOrEqual, LessThanOrEqual, NotEqual,
     AND, OR, LIKE, NOT_LIKE,
-    IS, IS_NOT, EXISTS
+    IS, IS_NOT, EXISTS, ARRAY_CONTAINS, NOT_ARRAY_CONTAINS
 }
 
 /// <summary>
@@ -165,7 +165,7 @@ public class PredicateOperand
     /// </summary>
     private readonly Predicate? _predicateOperand;
 
-    private readonly BaseSqlQueryStructure? _queryStructure;
+    private readonly BaseQueryStructure? _queryStructure;
 
     /// <summary>
     /// Initialize operand as Column
@@ -186,7 +186,7 @@ public class PredicateOperand
     /// <summary>
     /// Initialize operand as a query structure.
     /// </summary>
-    public PredicateOperand(BaseSqlQueryStructure? queryStructure)
+    public PredicateOperand(BaseQueryStructure? queryStructure)
     {
         if (queryStructure == null)
         {
@@ -260,9 +260,27 @@ public class PredicateOperand
     /// Resolve operand as a BaseSqlQueryStructure
     /// </summary>
     /// <returns> null if operand is not intialized as BaseSqlQueryStructure </returns>
-    public BaseSqlQueryStructure? AsSqlQueryStructure()
+    public BaseQueryStructure? AsBaseQueryStructure()
     {
         return _queryStructure;
+    }
+
+    /// <summary>
+    /// Resolve operand as a BaseSqlQueryStructure
+    /// </summary>
+    /// <returns> null if operand is not intialized as BaseSqlQueryStructure </returns>
+    public BaseSqlQueryStructure? AsSqlQueryStructure()
+    {
+        return _queryStructure as BaseSqlQueryStructure;
+    }
+
+    /// <summary>
+    /// Resolve operand as a CosmosQueryStructure
+    /// </summary>
+    /// <returns> null if operand is not intialized as CosmosQueryStructure </returns>
+    public CosmosQueryStructure? AsCosmosQueryStructure()
+    {
+        return _queryStructure as CosmosQueryStructure;
     }
 
     /// <summary>
@@ -368,8 +386,7 @@ public class IncrementingInteger
 }
 
 /// <summary>
-/// A simple class that is used to hold the information about joins that
-/// are part of a SQL query.
+/// Holds the information about joins that are part of a SQL query.
 /// <summary>
 /// <param name="DbObject">The name of the database object containing table metadata like joined tables.</param>
 /// <param name="TableAlias">The alias of the table that is joined with.</param>

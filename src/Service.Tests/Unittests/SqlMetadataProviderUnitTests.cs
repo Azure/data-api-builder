@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Threading.Tasks;
+using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
@@ -114,7 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             RuntimeConfig baseConfigFromDisk = SqlTestHelper.SetupRuntimeConfig();
             RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(baseConfigFromDisk);
             RuntimeConfig runtimeConfig = runtimeConfigProvider.GetConfig();
-            string dataSourceName = runtimeConfig.GetDefaultDataSourceName();
+            string dataSourceName = runtimeConfig.DefaultDataSourceName;
 
             ILogger<ISqlMetadataProvider> sqlMetadataLogger = new Mock<ILogger<ISqlMetadataProvider>>().Object;
             Mock<IQueryExecutor> queryExecutor = new();
@@ -165,8 +166,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
         [DataRow("")]
         public async Task CheckExceptionForBadConnectionStringForPgSql(string connectionString)
         {
+
+            // For strings that are an invalid format for the connection string builder, need to
+            // redirect std error to a string writer for comparison to expected error messaging later.
+            StringWriter sw = new();
+            Console.SetError(sw);
+
             DatabaseEngine = TestCategory.POSTGRESQL;
-            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString);
+            await CheckExceptionForBadConnectionStringHelperAsync(DatabaseEngine, connectionString, sw);
         }
 
         /// <summary>
@@ -191,10 +198,14 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             {
                 _queryBuilder = new MySqlQueryBuilder();
             }
+            else if (string.Equals(databaseType, TestCategory.POSTGRESQL))
+            {
+                _queryBuilder = new PostgresQueryBuilder();
+            }
 
             try
             {
-                string dataSourceName = runtimeConfigProvider.GetConfig().GetDefaultDataSourceName();
+                string dataSourceName = runtimeConfigProvider.GetConfig().DefaultDataSourceName;
                 // Setup Mock query manager Factory
                 Mock<IAbstractQueryManagerFactory> queryManagerFactory = new();
                 queryManagerFactory.Setup(x => x.GetQueryBuilder(It.IsAny<DatabaseType>())).Returns(_queryBuilder);
@@ -212,16 +223,13 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
             }
             catch (DataApiBuilderException ex)
             {
-                // use contains to correctly cover db/user unique error messaging
-                // if sw is not null it holds the error messaging
-                string error = sw is null ? ex.Message : sw.ToString();
-                Assert.IsTrue(error.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
+                // Combine both the console and exception messages because they both
+                // may contain the connection string errors this function expects to exist.
+                string consoleMessages = sw is not null ? sw.ToString() : string.Empty;
+                string allErrorMessages = ex.Message + " " + consoleMessages;
+                Assert.IsTrue(allErrorMessages.Contains(DataApiBuilderException.CONNECTION_STRING_ERROR_MESSAGE));
                 Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ErrorInInitialization, ex.SubStatusCode);
                 Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                if (sw is not null)
-                {
-                    Assert.IsTrue(error.StartsWith("Deserialization of the configuration file failed during a post-processing step."));
-                }
             }
 
             TestHelper.UnsetAllDABEnvironmentVariables();
@@ -353,6 +361,132 @@ namespace Azure.DataApiBuilder.Service.Tests.UnitTests
                 expected: false,
                 actual: isViolationWithGraphQLGloballyDisabled,
                 message: "Unexpected failure. fieldName: " + dbColumnName + " | fieldMapping:" + mappedName);
+        }
+
+        /// <summary>
+        /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
+        /// collected from the MsSql database.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MSSQL)]
+        public async Task ValidateInferredRelationshipInfoForMsSql()
+        {
+            DatabaseEngine = TestCategory.MSSQL;
+            await SetupTestFixtureAndInferMetadata();
+            ValidateInferredRelationshipInfoForTables();
+        }
+
+        /// <summary>
+        /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
+        /// collected from the MySql database.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.MYSQL)]
+        public async Task ValidateInferredRelationshipInfoForMySql()
+        {
+            DatabaseEngine = TestCategory.MYSQL;
+            await SetupTestFixtureAndInferMetadata();
+            ValidateInferredRelationshipInfoForTables();
+        }
+
+        /// <summary>
+        /// Test to validate successful inference of relationship data based on data provided in the config and the metadata
+        /// collected from the PgSql database.
+        /// </summary>
+        [TestMethod, TestCategory(TestCategory.POSTGRESQL)]
+        public async Task ValidateInferredRelationshipInfoForPgSql()
+        {
+            DatabaseEngine = TestCategory.POSTGRESQL;
+            await SetupTestFixtureAndInferMetadata();
+            ValidateInferredRelationshipInfoForTables();
+        }
+
+        /// <summary>
+        /// Helper method for test methods ValidateInferredRelationshipInfoFor{MsSql, MySql, and PgSql}.
+        /// This helper validates that an entity's relationship data is correctly inferred based on config and database supplied relationship metadata.
+        /// Each test verifies that the referencing entity is correctly determined based on the FK constraints in the database.
+        /// </summary>
+        private static void ValidateInferredRelationshipInfoForTables()
+        {
+            // Validate that when for an 1:N relationship between Book - Review, an FK constraint
+            // exists from Review->Book.
+            // DAB determines that Review is the referencing entity during startup.
+            ValidateReferencingEntitiesForRelationship(
+                sourceEntityName: "Book",
+                targetEntityName: "Review",
+                expectedReferencingEntityNames: new List<string>() { "Review" });
+
+            // Validate that when for an 1:1 relationship between Stock - stocks_price, an FK constraint
+            // exists from stocks_price -> Stock.
+            // DAB determines that stocks_price is the referencing entity during startup.
+            ValidateReferencingEntitiesForRelationship(
+                sourceEntityName: "Stock",
+                targetEntityName: "stocks_price",
+                expectedReferencingEntityNames: new List<string>() { "stocks_price" });
+
+            // Validate that when for an N:1 relationship between Book - Publisher, an FK constraint
+            // exists from Book->Publisher.
+            // DAB determiens that Book is the referencing entity during startup.
+            ValidateReferencingEntitiesForRelationship(
+                sourceEntityName: "Book",
+                targetEntityName: "Publisher",
+                expectedReferencingEntityNames: new List<string>() { "Book" });
+        }
+
+        /// <summary>
+        /// Helper method to validate that for a given pair of source and target entities, DAB correctly infers the referencing entity/entities
+        /// during startup.
+        /// 1. For relationships backed by an FK, there is only one referencing entity.
+        /// 2. For relationships not backed by an FK, there are two referencing entities because
+        /// at startup, DAB can't determine which entity is the referencing entity. DAB can only determine the referecing entity
+        /// during request execution.
+        /// </summary>
+        /// <param name="sourceEntityName">Source entity name.</param>
+        /// <param name="targetEntityName">Target entity name.</param>
+        /// <param name="expectedReferencingEntityNames">List of expected referencing entity names.</param>
+        private static void ValidateReferencingEntitiesForRelationship(
+            string sourceEntityName,
+            string targetEntityName,
+            List<string> expectedReferencingEntityNames)
+        {
+            _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(sourceEntityName, out DatabaseObject sourceDbo);
+            _sqlMetadataProvider.GetEntityNamesAndDbObjects().TryGetValue(targetEntityName, out DatabaseObject targetDbo);
+            DatabaseTable sourceTable = (DatabaseTable)sourceDbo;
+            DatabaseTable targetTable = (DatabaseTable)targetDbo;
+            List<ForeignKeyDefinition> foreignKeys = sourceDbo.SourceDefinition.SourceEntityRelationshipMap[sourceEntityName].TargetEntityToFkDefinitionMap[targetEntityName];
+            HashSet<DatabaseTable> expectedReferencingTables = new();
+            HashSet<DatabaseTable> actualReferencingTables = new();
+            foreach (string referencingEntityName in expectedReferencingEntityNames)
+            {
+                DatabaseTable referencingTable = referencingEntityName.Equals(sourceEntityName) ? sourceTable : targetTable;
+                expectedReferencingTables.Add(referencingTable);
+            }
+
+            foreach (ForeignKeyDefinition foreignKey in foreignKeys)
+            {
+                if (foreignKey.ReferencedColumns.Count == 0)
+                {
+                    continue;
+                }
+
+                DatabaseTable actualReferencingTable = foreignKey.Pair.ReferencingDbTable;
+                actualReferencingTables.Add(actualReferencingTable);
+            }
+
+            Assert.IsTrue(actualReferencingTables.SetEquals(expectedReferencingTables));
+        }
+
+        /// <summary>
+        /// Resets the database state and infers metadata for all the entities exposed in the config.
+        /// The `ResetDbStateAsync()` method executes the .sql script of the respective database type and
+        /// serves as a setup phase for this test. 
+        /// </summary>
+        private static async Task SetupTestFixtureAndInferMetadata()
+        {
+            TestHelper.SetupDatabaseEnvironment(DatabaseEngine);
+            RuntimeConfig runtimeConfig = SqlTestHelper.SetupRuntimeConfig();
+            RuntimeConfigProvider runtimeConfigProvider = TestHelper.GenerateInMemoryRuntimeConfigProvider(runtimeConfig);
+            SetUpSQLMetadataProvider(runtimeConfigProvider);
+            await ResetDbStateAsync();
+            await _sqlMetadataProvider.InitializeAsync();
         }
     }
 }

@@ -32,6 +32,7 @@ DROP TABLE IF EXISTS bookmarks;
 DROP TABLE IF EXISTS mappedbookmarks;
 DROP TABLE IF EXISTS publishers;
 DROP TABLE IF EXISTS authors_history;
+DROP TABLE IF EXISTS [DimAccount]
 DROP PROCEDURE IF EXISTS get_books;
 DROP PROCEDURE IF EXISTS get_book_by_id;
 DROP PROCEDURE IF EXISTS get_publisher_by_id;
@@ -195,7 +196,8 @@ CREATE TABLE trees (
 
 CREATE TABLE fungi (
     speciesid int,
-    region varchar(2048)
+    region varchar(2048),
+    habitat varchar(6)
 );
 
 CREATE TABLE type_table(
@@ -204,6 +206,7 @@ CREATE TABLE type_table(
     int_types int,
     long_types bigint,
     string_types varchar(2048),
+    nvarchar_string_types varchar(2048),
     single_types real,
     float_types float(53),
     decimal_types decimal(18,3),
@@ -224,6 +227,28 @@ CREATE TABLE authors_history (
     year_of_publish int,
     books_published int
 );
+
+CREATE TABLE [dbo].[DimAccount] (
+    [AccountKey]                    [INT]           IDENTITY(1, 1) NOT NULL,
+    [ParentAccountKey]              [INT]           NULL,
+    CONSTRAINT [PK_DimAccount]
+        PRIMARY KEY CLUSTERED ([AccountKey] ASC)
+);
+
+ALTER TABLE [dbo].[DimAccount] WITH CHECK
+ADD CONSTRAINT [FK_DimAccount_DimAccount]
+    FOREIGN KEY ([ParentAccountKey])
+    REFERENCES [dbo].[DimAccount] ([AccountKey]);
+
+ALTER TABLE [dbo].[DimAccount] CHECK CONSTRAINT [FK_DimAccount_DimAccount];
+
+SET IDENTITY_INSERT DimAccount ON
+INSERT INTO DimAccount(AccountKey, ParentAccountKey)
+VALUES (1, null),
+(2, 1),
+(3, 2),
+(4, 2);
+SET IDENTITY_INSERT DimAccount OFF
 
 EXEC('CREATE PROCEDURE get_publisher_by_id @id int AS
       SELECT * FROM dbo.publishers
@@ -329,30 +354,40 @@ INSERT INTO book_author_link(book_id, author_id) VALUES (1, 123), (2, 124), (3, 
 INSERT INTO stocks(categoryid, pieceid, categoryName, piecesAvailable, piecesRequired) VALUES (1,1,'SciFi',0,0),(2,1,'Tales',0,0),(0,1,'',0,0),(100,99,'Historical',0,0);
 INSERT INTO stocks_price (categoryid, pieceid, instant, price, is_wholesale_price) VALUES (2, 1, '2023-08-21 15:11:04', 100, 1);
 INSERT INTO notebooks(id, notebookname, color, ownername) VALUES (1, 'Notebook1', 'red', 'Sean'), (2, 'Notebook2', 'green', 'Ani'), (3, 'Notebook3', 'blue', 'Jarupat'), (4, 'Notebook4', 'yellow', 'Aaron');
-INSERT INTO journals(id, journalname, color, ownername) VALUES (1, 'Journal1', 'red', 'Sean'), (2, 'Journal2', 'green', 'Ani'), (3, 'Journal3', 'blue', 'Jarupat'), (4, 'Journal4', 'yellow', 'Aaron');
+INSERT INTO journals(id, journalname, color, ownername)
+VALUES
+    (1, 'Journal1', 'red', 'Sean'),
+    (2, 'Journal2', 'green', 'Ani'),
+    (3, 'Journal3', 'blue', 'Jarupat'),
+    (4, 'Journal4', 'yellow', 'Aaron'),
+    (5, 'Journal5', null, 'Abhishek'),
+    (6, 'Journal6', 'green', null),
+    (7, 'Journal7', null, null);
 INSERT INTO aow(NoteNum, DetailAssessmentAndPlanning, WagingWar, StrategicAttack) VALUES (1, 'chapter one notes: ', 'chapter two notes: ', 'chapter three notes: ');
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
-INSERT INTO fungi(speciesid, region) VALUES (1, 'northeast'), (2, 'southwest');
+INSERT INTO trees(treeId, species, region, height) VALUES (4, 'test', 'Pacific Northwest', '0m');
+INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');
+INSERT INTO fungi(speciesid, region, habitat) VALUES (3, 'northeast', 'test');
 INSERT INTO type_table(id, short_types, int_types, long_types,
-string_types,
+string_types, nvarchar_string_types,
 single_types, float_types, decimal_types,
 boolean_types,
 date_types, datetime_types, datetime2_types, time_types,
 bytearray_types)
 VALUES
-    (1, 1, 1, 1, '', 0.33, 0.33, 0.333333, 1,
+    (1, 1, 1, 1, '', '', 0.33, 0.33, 0.333333, 1,
     '1999-01-08', '1999-01-08 10:23:54', '1999-01-08 10:23:54.9999999', '10:23:54.9999999',
     0xABCDEF0123),
-    (2, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
+    (2, -1, -1, -1, 'lksa;jdflasdf;alsdflksdfkldj', 'lksa;jdflasdf;alsdflksdfkldj', -9.2, -9.2, -9.292929, 0,
     '1999-01-08', '1999-01-08 10:23:00', '1999-01-08 10:23:00.9999999', '10:23:00.9999999',
     0x98AB7511AABB1234),
-    (3, -32768, -2147483648, -9223372036854775808, 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
+    (3, -32768, -2147483648, -9223372036854775808, 'null', 'null', -3.4E38, -1.7E308, 2.929292E-19, 1,
     '0001-01-01', '1753-01-01 00:00:00.000', '0001-01-01 00:00:00.0000000', '00:00:00.0000000',
     0x00000000),
-    (4, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
+    (4, 32767, 2147483647, 9223372036854775807, 'null', 'null', 3.4E38, 1.7E308, 2.929292E-14, 1,
     '9999-12-31', '9999-12-31 23:59:59', '9999-12-31 23:59:59.9999999', '23:59:59.9999999',
     0xFFFFFFFF),
-    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+    (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 DECLARE @UpperBound INT = 10000;
 

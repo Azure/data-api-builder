@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System;
-using System.IdentityModel.Tokens.Jwt;
 using System.IO.Abstractions;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -24,7 +23,9 @@ using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
+using Azure.DataApiBuilder.Service.HealthCheck;
 using HotChocolate.AspNetCore;
+using HotChocolate.Execution.Configuration;
 using HotChocolate.Types;
 using Microsoft.ApplicationInsights;
 using Microsoft.ApplicationInsights.Channel;
@@ -33,6 +34,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -75,7 +77,7 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            string configFileName = Configuration.GetValue<string>("ConfigFileName", FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME);
+            string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
@@ -105,7 +107,8 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<RuntimeConfigValidator>();
 
             services.AddSingleton<CosmosClientProvider>();
-            services.AddHealthChecks();
+            services.AddHealthChecks()
+                .AddCheck<DabHealthCheck>("DabHealthCheck");
 
             services.AddSingleton<ILogger<SqlQueryEngine>>(implementationFactory: (serviceProvider) =>
             {
@@ -139,6 +142,14 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<GQLFilterParser>();
             services.AddSingleton<RequestValidator>();
             services.AddSingleton<RestService>();
+            services.AddSingleton<HealthReportResponseWriter>();
+
+            // ILogger explicit creation required for logger to use --LogLevel startup argument specified.
+            services.AddSingleton<ILogger<HealthReportResponseWriter>>(implementationFactory: (serviceProvider) =>
+            {
+                ILoggerFactory? loggerFactory = CreateLoggerFactoryForHostedAndNonHostedScenario(serviceProvider);
+                return loggerFactory.CreateLogger<HealthReportResponseWriter>();
+            });
 
             services.AddSingleton<ILogger<RestController>>(implementationFactory: (serviceProvider) =>
             {
@@ -179,7 +190,7 @@ namespace Azure.DataApiBuilder.Service
             services.AddSingleton<IAuthorizationResolver, AuthorizationResolver>();
             services.AddSingleton<IOpenApiDocumentor, OpenApiDocumentor>();
 
-            AddGraphQLService(services);
+            AddGraphQLService(services, runtimeConfig?.Runtime?.GraphQL);
             services.AddFusionCache()
                 .WithOptions(options =>
                 {
@@ -203,48 +214,61 @@ namespace Azure.DataApiBuilder.Service
         /// when determining whether to allow introspection requests to proceed.
         /// </summary>
         /// <param name="services">Service Collection</param>
-        private void AddGraphQLService(IServiceCollection services)
+        private void AddGraphQLService(IServiceCollection services, GraphQLRuntimeOptions? graphQLRuntimeOptions)
         {
-            services.AddGraphQLServer()
-                    .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
-                    .ConfigureSchema((serviceProvider, schemaBuilder) =>
-                    {
-                        GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
-                        graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
-                    })
-                    .AddHttpRequestInterceptor<IntrospectionInterceptor>()
-                    .AddAuthorization()
-                    .AllowIntrospection(false)
-                    .AddAuthorizationHandler<GraphQLAuthorizationHandler>()
-                    .AddErrorFilter(error =>
-                    {
-                        if (error.Exception is not null)
-                        {
-                            _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
-                            return error.WithMessage(error.Exception.Message);
-                        }
+            IRequestExecutorBuilder server = services.AddGraphQLServer()
+                .AddHttpRequestInterceptor<DefaultHttpRequestInterceptor>()
+                .ConfigureSchema((serviceProvider, schemaBuilder) =>
+                {
+                    GraphQLSchemaCreator graphQLService = serviceProvider.GetRequiredService<GraphQLSchemaCreator>();
+                    graphQLService.InitializeSchemaAndResolvers(schemaBuilder);
+                })
+                .AddHttpRequestInterceptor<IntrospectionInterceptor>()
+                .AddAuthorization()
+                .AllowIntrospection(false)
+                .AddAuthorizationHandler<GraphQLAuthorizationHandler>();
 
-                        if (error.Code is not null)
-                        {
-                            _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
-                            return error.WithMessage(error.Message);
-                        }
+            // Conditionally adds a maximum depth rule to the GraphQL queries/mutation selection set.
+            // This rule is only added if a positive depth limit is specified, ensuring that the server
+            // enforces a limit on the depth of incoming GraphQL queries/mutation to prevent extremely deep queries
+            // that could potentially lead to performance issues.
+            // Additionally, the skipIntrospectionFields parameter is set to true to skip depth limit enforcement on introspection queries.
+            if (graphQLRuntimeOptions is not null && graphQLRuntimeOptions.DepthLimit.HasValue && graphQLRuntimeOptions.DepthLimit.Value > 0)
+            {
+                server = server.AddMaxExecutionDepthRule(maxAllowedExecutionDepth: graphQLRuntimeOptions.DepthLimit.Value, skipIntrospectionFields: true);
+            }
 
-                        return error;
-                    })
-                    .AddErrorFilter(error =>
+            server.AddErrorFilter(error =>
+                {
+                    if (error.Exception is not null)
                     {
-                        if (error.Exception is DataApiBuilderException thrownException)
-                        {
-                            return error.RemoveException()
-                                    .RemoveLocations()
-                                    .RemovePath()
-                                    .WithMessage(thrownException.Message)
-                                    .WithCode($"{thrownException.SubStatusCode}");
-                        }
+                        _logger.LogError(exception: error.Exception, message: "A GraphQL request execution error occurred.");
+                        return error.WithMessage(error.Exception.Message);
+                    }
 
-                        return error;
-                    });
+                    if (error.Code is not null)
+                    {
+                        _logger.LogError(message: "Error code: {errorCode}\nError message: {errorMessage}", error.Code, error.Message);
+                        return error.WithMessage(error.Message);
+                    }
+
+                    return error;
+                })
+                .AddErrorFilter(error =>
+                {
+                    if (error.Exception is DataApiBuilderException thrownException)
+                    {
+                        return error.RemoveException()
+                                .RemoveLocations()
+                                .RemovePath()
+                                .WithMessage(thrownException.Message)
+                                .WithCode($"{thrownException.SubStatusCode}");
+                    }
+
+                    return error;
+                })
+                .UseRequest<BuildRequestStateMiddleware>()
+                .UseDefaultPipeline();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -348,8 +372,6 @@ namespace Azure.DataApiBuilder.Service
                 }
             });
 
-            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
-
             app.UseAuthentication();
 
             app.UseClientRoleHeaderAuthenticationMiddleware();
@@ -385,7 +407,10 @@ namespace Azure.DataApiBuilder.Service
                     Enable = false
                 });
 
-                endpoints.MapHealthChecks("/");
+                endpoints.MapHealthChecks("/", new HealthCheckOptions
+                {
+                    ResponseWriter = app.ApplicationServices.GetRequiredService<HealthReportResponseWriter>().WriteResponse
+                });
             });
         }
 
@@ -450,6 +475,7 @@ namespace Azure.DataApiBuilder.Service
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
                     {
+                        options.MapInboundClaims = false;
                         options.Audience = authOptions.Jwt!.Audience;
                         options.Authority = authOptions.Jwt!.Issuer;
                         options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters()
@@ -619,21 +645,27 @@ namespace Azure.DataApiBuilder.Service
                 if (runtimeConfig.IsDevelopmentMode())
                 {
                     // Running only in developer mode to ensure fast and smooth startup in production.
-                    runtimeConfigValidator.ValidateRelationshipsInConfig(runtimeConfig, sqlMetadataProviderFactory!);
+                    runtimeConfigValidator.ValidateRelationshipConfigCorrectness(runtimeConfig);
+                    runtimeConfigValidator.ValidateRelationships(runtimeConfig, sqlMetadataProviderFactory!);
                 }
 
-                // Attempt to create OpenAPI document.
-                // Errors must not crash nor halt the intialization of the engine
-                // because OpenAPI document creation is not required for the engine to operate.
-                // Errors will be logged.
-                try
+                // OpenAPI document creation is only attempted for REST supporting database types.
+                // CosmosDB is not supported for OpenAPI document creation.
+                if (!runtimeConfig.CosmosDataSourceUsed)
                 {
-                    IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
-                    openApiDocumentor.CreateDocument();
-                }
-                catch (DataApiBuilderException dabException)
-                {
-                    _logger.LogError(exception: dabException, message: "OpenAPI Documentor initialization failed.");
+                    // Attempt to create OpenAPI document.
+                    // Errors must not crash nor halt the intialization of the engine
+                    // because OpenAPI document creation is not required for the engine to operate.
+                    // Errors will be logged.
+                    try
+                    {
+                        IOpenApiDocumentor openApiDocumentor = app.ApplicationServices.GetRequiredService<IOpenApiDocumentor>();
+                        openApiDocumentor.CreateDocument();
+                    }
+                    catch (DataApiBuilderException dabException)
+                    {
+                        _logger.LogWarning(exception: dabException, message: "OpenAPI Documentor initialization failed. This will not affect dab startup.");
+                    }
                 }
 
                 _logger.LogInformation("Successfully completed runtime initialization.");

@@ -772,6 +772,12 @@
           authors: {
             Cardinality: Many,
             TargetEntity: Author,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              id
+            ],
             LinkingObject: book_author_link,
             LinkingSourceFields: [
               book_id
@@ -1370,6 +1376,17 @@
         ],
         Mappings: {
           species: fancyName
+        },
+        Relationships: {
+          fungus: {
+            TargetEntity: Fungus,
+            SourceFields: [
+              species
+            ],
+            TargetFields: [
+              habitat
+            ]
+          }
         }
       }
     },
@@ -1441,6 +1458,156 @@
         ],
         Mappings: {
           spores: hazards
+        },
+        Relationships: {
+          Shrub: {
+            TargetEntity: Shrub,
+            SourceFields: [
+              habitat
+            ],
+            TargetFields: [
+              species
+            ]
+          }
+        }
+      }
+    },
+    {
+      User_NonAutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_NonAutogenRelationshipColumn,
+          Plural: User_NonAutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_NonAutogenRelationshipColumn: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              username
+            ],
+            TargetFields: [
+              username
+            ]
+          }
+        }
+      }
+    },
+    {
+      UserProfile: {
+        Source: {
+          Object: user_profiles,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: UserProfile,
+          Plural: UserProfiles,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      User_AutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_AutogenRelationshipColumn,
+          Plural: User_AutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_AutogenRelationshipColumn: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              userid
+            ],
+            TargetFields: [
+              profileid
+            ]
+          }
+        }
+      }
+    },
+    {
+      User_AutogenToNonAutogenRelationshipColumn: {
+        Source: {
+          Object: users,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: User_AutogenToNonAutogenRelationshipColumn,
+          Plural: User_AutogenToNonAutogenRelationshipColumns,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Relationships: {
+          UserProfile_AutogenToNonAutogenRelationshipColumn: {
+            TargetEntity: UserProfile,
+            SourceFields: [
+              userid,
+              username
+            ],
+            TargetFields: [
+              userid,
+              username
+            ]
+          }
         }
       }
     },
@@ -2251,6 +2418,12 @@
           authors: {
             Cardinality: Many,
             TargetEntity: AuthorNF,
+            SourceFields: [
+              id
+            ],
+            TargetFields: [
+              id
+            ],
             LinkingObject: book_author_link,
             LinkingSourceFields: [
               book_id
@@ -2352,6 +2525,57 @@
             Cardinality: Many,
             TargetEntity: BookNF,
             LinkingObject: book_author_link
+          }
+        }
+      }
+    },
+    {
+      dbo_DimAccount: {
+        Source: {
+          Object: dimaccount,
+          Type: Table
+        },
+        GraphQL: {
+          Singular: dbo_DimAccount,
+          Plural: dbo_DimAccounts,
+          Enabled: true
+        },
+        Rest: {
+          Enabled: true
+        },
+        Permissions: [
+          {
+            Role: anonymous,
+            Actions: [
+              {
+                Action: *
+              }
+            ]
+          }
+        ],
+        Mappings: {
+          accountkey: AccountKey,
+          parentaccountkey: ParentAccountKey
+        },
+        Relationships: {
+          child_accounts: {
+            Cardinality: Many,
+            TargetEntity: dbo_DimAccount,
+            SourceFields: [
+              accountkey
+            ],
+            TargetFields: [
+              parentaccountkey
+            ]
+          },
+          parent_account: {
+            TargetEntity: dbo_DimAccount,
+            SourceFields: [
+              parentaccountkey
+            ],
+            TargetFields: [
+              accountkey
+            ]
           }
         }
       }

@@ -1,14 +1,18 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-# nullable disable
+#nullable disable
 using System.Text;
 using System.Text.Json;
 using Azure.DataApiBuilder.Auth;
+using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Core.Services;
+using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
 using Azure.DataApiBuilder.Service.GraphQLBuilder.Queries;
+using Azure.DataApiBuilder.Service.Services;
 using HotChocolate.Language;
 using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Mvc;
@@ -27,6 +31,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         private readonly CosmosQueryBuilder _queryBuilder;
         private readonly GQLFilterParser _gQLFilterParser;
         private readonly IAuthorizationResolver _authorizationResolver;
+        private readonly RuntimeConfigProvider _runtimeConfigProvider;
+        private readonly DabCacheService _cache;
 
         /// <summary>
         /// Constructor 
@@ -35,13 +41,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             CosmosClientProvider clientProvider,
             IMetadataProviderFactory metadataProviderFactory,
             IAuthorizationResolver authorizationResolver,
-            GQLFilterParser gQLFilterParser)
+            GQLFilterParser gQLFilterParser,
+            RuntimeConfigProvider runtimeConfigProvider,
+            DabCacheService cache
+            )
         {
             _clientProvider = clientProvider;
             _metadataProviderFactory = metadataProviderFactory;
             _queryBuilder = new CosmosQueryBuilder();
             _gQLFilterParser = gQLFilterParser;
             _authorizationResolver = authorizationResolver;
+            _runtimeConfigProvider = runtimeConfigProvider;
+            _cache = cache;
         }
 
         /// <summary>
@@ -53,22 +64,21 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IDictionary<string, object> parameters,
             string dataSourceName)
         {
-            // TODO: fixme we have multiple rounds of serialization/deserialization JsomDocument/JObject
             // TODO: add support for join query against another container
             // TODO: add support for TOP and Order-by push-down
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
 
-            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            CosmosQueryStructure structure = new(context, parameters, _runtimeConfigProvider, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
 
-            string requestContinuation = null;
             string queryString = _queryBuilder.Build(structure);
             QueryDefinition querySpec = new(queryString);
             QueryRequestOptions queryRequestOptions = new();
 
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
-            (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(parameters, container, structure, metadataStoreProvider);
+            (string idValue, string partitionKeyValue) = await GetIdAndPartitionKey(context, parameters, container, structure, metadataStoreProvider);
 
             foreach (KeyValuePair<string, DbConnectionParam> parameterEntry in structure.Parameters)
             {
@@ -80,6 +90,49 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 queryRequestOptions.PartitionKey = new PartitionKey(partitionKeyValue);
             }
 
+            JObject executeQueryResult = null;
+
+            if (runtimeConfig.CanUseCache() && runtimeConfig.Entities[structure.EntityName].IsCachingEnabled)
+            {
+                StringBuilder dataSourceKey = new(dataSourceName);
+
+                // to support caching for paginated query adding continuation token in the datasource
+                dataSourceKey.Append(":");
+                dataSourceKey.Append(structure.Continuation);
+
+                DatabaseQueryMetadata queryMetadata = new(queryText: queryString, dataSource: dataSourceKey.ToString(), queryParameters: structure.Parameters);
+
+                executeQueryResult = await _cache.GetOrSetAsync<JObject>(async () => await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue), queryMetadata, runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+            }
+            else
+            {
+                executeQueryResult = await ExecuteQueryAsync(structure, querySpec, queryRequestOptions, container, idValue, partitionKeyValue);
+            }
+
+            JsonDocument response = executeQueryResult != null ? JsonDocument.Parse(executeQueryResult.ToString()) : null;
+
+            return new Tuple<JsonDocument, IMetadata>(response, null);
+        }
+
+        /// <summary>
+        /// ExecuteQueryAsync Performs single partition and cross partition queries. 
+        /// </summary>
+        /// <param name="structure">CosmosQueryStructure</param>
+        /// <param name="querySpec">QueryDefinition defining a Cosmos SQL Query</param>
+        /// <param name="queryRequestOptions">The Cosmos query request options</param>
+        /// <param name="container">CosmosDB Container</param>
+        /// <param name="idValue">Id param</param>
+        /// <param name="partitionKeyValue">PartitionKey Value</param>
+        /// <returns>JObject</returns>
+        private static async Task<JObject> ExecuteQueryAsync(
+            CosmosQueryStructure structure,
+            QueryDefinition querySpec,
+            QueryRequestOptions queryRequestOptions,
+            Container container,
+            string idValue,
+            string partitionKeyValue)
+        {
+            string requestContinuation = null;
             if (structure.IsPaginated)
             {
                 queryRequestOptions.MaxItemCount = (int?)structure.MaxItemCount;
@@ -121,20 +174,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, responseContinuation != null),
                             new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, jarray));
 
-                        // This extra deserialize/serialization will be removed after moving to Newtonsoft from System.Text.Json
-                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                        return res;
                     }
 
                     if (page.Count > 0)
                     {
-                        return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(page.First().ToString()), null);
+                        return page.First();
                     }
                 }
                 while (query.HasMoreResults);
             }
 
-            // Return empty list when query gets no result back
-            return new Tuple<JsonDocument, IMetadata>(null, null);
+            // Return null when query gets no result back
+            return null;
         }
 
         /// <summary>
@@ -149,7 +201,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // TODO: add support for TOP and Order-by push-down
 
             ISqlMetadataProvider metadataStoreProvider = _metadataProviderFactory.GetMetadataProvider(dataSourceName);
-            CosmosQueryStructure structure = new(context, parameters, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
+            CosmosQueryStructure structure = new(context, parameters, _runtimeConfigProvider, metadataStoreProvider, _authorizationResolver, _gQLFilterParser);
             CosmosClient client = _clientProvider.Clients[dataSourceName];
             Container container = client.GetDatabase(structure.Database).GetContainer(structure.Container);
             QueryDefinition querySpec = new(_queryBuilder.Build(structure));
@@ -189,14 +241,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
         /// <inheritdoc />
-        public JsonDocument ResolveInnerObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        public JsonElement ResolveObject(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
         {
-            //TODO: Try to avoid additional deserialization/serialization here.
-            return JsonDocument.Parse(element.ToString());
+            return element;
         }
 
         /// <inheritdoc />
-        public object ResolveListType(JsonElement element, IObjectField fieldSchema, ref IMetadata metadata)
+        /// metadata is not used in this method, but it is required by the interface.
+        public object ResolveList(JsonElement array, IObjectField fieldSchema, ref IMetadata metadata)
         {
             IType listType = fieldSchema.Type;
             // Is the List type nullable? [...]! vs [...]
@@ -217,10 +269,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             if (listType.IsObjectType())
             {
-                return JsonSerializer.Deserialize<List<JsonElement>>(element);
+                return JsonSerializer.Deserialize<List<JsonElement>>(array);
             }
 
-            return JsonSerializer.Deserialize(element, fieldSchema.RuntimeType);
+            return JsonSerializer.Deserialize(array, fieldSchema.RuntimeType);
         }
 
         /// <summary>
@@ -231,7 +283,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="partitionKeyValue"></param>
         /// <param name="IsPaginated"></param>
         /// <returns></returns>
-        private static async Task<Tuple<JsonDocument, IMetadata>> QueryByIdAndPartitionKey(Container container, string idValue, string partitionKeyValue, bool IsPaginated)
+        private static async Task<JObject> QueryByIdAndPartitionKey(Container container, string idValue, string partitionKeyValue, bool IsPaginated)
         {
             try
             {
@@ -241,17 +293,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (IsPaginated)
                 {
                     JObject res = new(
-                        new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, null),
-                        new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, false),
-                        new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, new JArray { item }));
-                    return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(res.ToString()), null);
+                         new JProperty(QueryBuilder.PAGINATION_TOKEN_FIELD_NAME, null),
+                         new JProperty(QueryBuilder.HAS_NEXT_PAGE_FIELD_NAME, false),
+                         new JProperty(QueryBuilder.PAGINATION_FIELD_NAME, new JArray { item }));
+                    return res;
                 }
 
-                return new Tuple<JsonDocument, IMetadata>(JsonDocument.Parse(item.ToString()), null);
+                return item;
             }
             catch (CosmosException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                return new Tuple<JsonDocument, IMetadata>(null, null);
+                return null;
             }
         }
 
@@ -271,7 +323,22 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         }
 
 #nullable enable
-        private static async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(IDictionary<string, object?> parameters, Container container, CosmosQueryStructure structure, ISqlMetadataProvider metadataStoreProvider)
+
+        /// <summary>
+        /// Resolve partition key and id value from input parameters.
+        /// </summary>
+        /// <param name="context">Provide the information about variables and filters</param>
+        /// <param name="parameters">Contains argument information such as id, filter</param>
+        /// <param name="container">Container instance to get the container properties such as partition path</param>
+        /// <param name="structure">Fallback to get partition path information</param>
+        /// <param name="metadataStoreProvider">Set partition key path, fetched from container properties</param>
+        /// <returns></returns>
+        private static async Task<(string? idValue, string? partitionKeyValue)> GetIdAndPartitionKey(
+            IMiddlewareContext context,
+            IDictionary<string, object?> parameters,
+            Container container,
+            CosmosQueryStructure structure,
+            ISqlMetadataProvider metadataStoreProvider)
         {
             string? partitionKeyValue = null, idValue = null;
             string partitionKeyPath = await GetPartitionKeyPath(container, metadataStoreProvider);
@@ -287,8 +354,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 else if (parameterEntry.Key == QueryBuilder.FILTER_FIELD_NAME)
                 {
                     // Mapping partitionKey and id value from filter object if filter keyword exists in args
-                    partitionKeyValue = GetPartitionKeyValue(partitionKeyPath, parameterEntry.Value);
-                    idValue = GetIdValue(parameterEntry.Value);
+                    partitionKeyValue = GetPartitionKeyValue(context, partitionKeyPath, parameterEntry.Value);
+                    idValue = GetIdValue(context, parameterEntry.Value);
                 }
             }
 
@@ -310,7 +377,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="parameter"></param>
         /// <returns></returns>
 #nullable enable
-        private static string? GetPartitionKeyValue(string? partitionKeyPath, object? parameter)
+        private static string? GetPartitionKeyValue(IMiddlewareContext context, string? partitionKeyPath, object? parameter)
         {
             if (parameter is null || partitionKeyPath is null)
             {
@@ -324,7 +391,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 if (partitionKeyPath == string.Empty
                     && string.Equals(item.Name.Value, "eq", StringComparison.OrdinalIgnoreCase))
                 {
-                    return item.Value.Value?.ToString();
+                    return ExecutionHelper.ExtractValueFromIValueNode(
+                        item.Value,
+                        context.Selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
+                        context.Variables)?.ToString();
                 }
 
                 if (partitionKeyPath != string.Empty
@@ -333,7 +403,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // Recursion to mapping next inner object
                     int index = partitionKeyPath.IndexOf(currentEntity);
                     string newPartitionKeyPath = partitionKeyPath[(index + currentEntity.Length)..partitionKeyPath.Length];
-                    return GetPartitionKeyValue(newPartitionKeyPath, item.Value.Value);
+                    return GetPartitionKeyValue(context, newPartitionKeyPath, item.Value.Value);
                 }
             }
 
@@ -345,7 +415,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// </summary>
         /// <param name="parameter"></param>
         /// <returns></returns>
-        private static string? GetIdValue(object? parameter)
+        private static string? GetIdValue(IMiddlewareContext context, object? parameter)
         {
             if (parameter != null)
             {
@@ -354,7 +424,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     if (string.Equals(item.Name.Value, "id", StringComparison.OrdinalIgnoreCase))
                     {
                         IList<ObjectFieldNode>? idValueObj = (IList<ObjectFieldNode>?)item.Value.Value;
-                        return idValueObj?.FirstOrDefault(x => x.Name.Value == "eq")?.Value?.Value?.ToString();
+
+                        ObjectFieldNode? itemToResolve = idValueObj?.FirstOrDefault(x => x.Name.Value == "eq");
+                        if (itemToResolve is null)
+                        {
+                            return null;
+                        }
+
+                        return ExecutionHelper.ExtractValueFromIValueNode(
+                            itemToResolve.Value,
+                            context.Selection.Field.Arguments[QueryBuilder.FILTER_FIELD_NAME],
+                            context.Variables)?
+                            .ToString();
                     }
                 }
             }

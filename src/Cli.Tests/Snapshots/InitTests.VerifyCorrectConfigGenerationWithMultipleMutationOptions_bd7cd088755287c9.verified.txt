@@ -1,0 +1,34 @@
+﻿{
+  DataSource: {
+    Options: {
+      container: testcontainer,
+      database: testdb,
+      schema: test-schema.gql
+    }
+  },
+  Runtime: {
+    Rest: {
+      Enabled: false,
+      Path: /api,
+      RequestBodyStrict: true
+    },
+    GraphQL: {
+      Enabled: true,
+      Path: /graphql,
+      AllowIntrospection: true
+    },
+    Host: {
+      Cors: {
+        Origins: [
+          http://localhost:3000,
+          http://nolocalhost:80
+        ],
+        AllowCredentials: false
+      },
+      Authentication: {
+        Provider: StaticWebApps
+      }
+    }
+  },
+  Entities: []
+}

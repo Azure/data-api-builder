@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Diagnostics.CodeAnalysis;
 using System.IO.Abstractions;
 using System.Net;
 using System.Text.Json;
@@ -130,11 +131,14 @@ public record RuntimeConfig
         }
     }
 
-    private string _defaultDataSourceName;
+    [JsonIgnore]
+    public string DefaultDataSourceName { get; private set; }
 
     private Dictionary<string, DataSource> _dataSourceNameToDataSource;
 
-    private Dictionary<string, string> _entityNameToDataSourceName;
+    private Dictionary<string, string> _entityNameToDataSourceName = new();
+
+    private Dictionary<string, string> _entityPathNameToEntityName = new();
 
     /// <summary>
     /// List of all datasources.
@@ -153,6 +157,16 @@ public record RuntimeConfig
         return _dataSourceNameToDataSource.AsEnumerable();
     }
 
+    public bool TryAddEntityPathNameToEntityName(string entityPathName, string entityName)
+    {
+        return _entityPathNameToEntityName.TryAdd(entityPathName, entityName);
+    }
+
+    public bool TryGetEntityNameFromPath(string entityPathName, [NotNullWhen(true)] out string? entityName)
+    {
+        return _entityPathNameToEntityName.TryGetValue(entityPathName, out entityName);
+    }
+
     /// <summary>
     /// Constructor for runtimeConfig.
     /// To be used when setting up from cli json scenario.
@@ -169,18 +183,18 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        _defaultDataSourceName = Guid.NewGuid().ToString();
+        this.DefaultDataSourceName = Guid.NewGuid().ToString();
 
         // we will set them up with default values
         _dataSourceNameToDataSource = new Dictionary<string, DataSource>
         {
-            { _defaultDataSourceName, this.DataSource }
+            { DefaultDataSourceName, this.DataSource }
         };
 
         _entityNameToDataSourceName = new Dictionary<string, string>();
         foreach (KeyValuePair<string, Entity> entity in Entities)
         {
-            _entityNameToDataSourceName.TryAdd(entity.Key, _defaultDataSourceName);
+            _entityNameToDataSourceName.TryAdd(entity.Key, DefaultDataSourceName);
         }
 
         // Process data source and entities information for each database in multiple database scenario.
@@ -195,7 +209,7 @@ public record RuntimeConfig
 
             foreach (string dataSourceFile in DataSourceFiles.SourceFiles)
             {
-                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config))
+                if (loader.TryLoadConfig(dataSourceFile, out RuntimeConfig? config, replaceEnvVar: true))
                 {
                     try
                     {
@@ -241,7 +255,7 @@ public record RuntimeConfig
         this.DataSource = DataSource;
         this.Runtime = Runtime;
         this.Entities = Entities;
-        _defaultDataSourceName = DefaultDataSourceName;
+        this.DefaultDataSourceName = DefaultDataSourceName;
         _dataSourceNameToDataSource = DataSourceNameToDataSource;
         _entityNameToDataSourceName = EntityNameToDataSourceName;
         this.DataSourceFiles = DataSourceFiles;
@@ -274,6 +288,40 @@ public record RuntimeConfig
     }
 
     /// <summary>
+    /// In a Hot Reload scenario we should maintain the same default data source
+    /// name before the hot reload as after the hot reload. This is because we hold
+    /// references to the Data Source itself which depend on this data source name
+    /// for lookups. To correctly retrieve this information after a hot reload
+    /// we need the data source name to stay the same after hot reloading. This method takes
+    /// a default data source name, such as the one from before hot reload, and
+    /// replaces the current dictionary entries of this RuntimeConfig that were
+    /// built using a new, unique guid during the construction of this RuntimeConfig
+    /// with entries using the provided default data source name. We then update the DefaultDataSourceName.
+    /// </summary>
+    /// <param name="initialDefaultDataSourceName">The name used to update the dictionaries.</param>
+    public void UpdateDefaultDataSourceName(string initialDefaultDataSourceName)
+    {
+        _dataSourceNameToDataSource.Remove(DefaultDataSourceName);
+        if (!_dataSourceNameToDataSource.TryAdd(initialDefaultDataSourceName, this.DataSource))
+        {
+            // An exception here means that a default data source name was generated as a GUID that
+            // matches the original default data source name. This should never happen but we add this
+            // to be extra safe.
+            throw new DataApiBuilderException(
+                message: $"Duplicate data source name: {initialDefaultDataSourceName}.",
+                statusCode: HttpStatusCode.InternalServerError,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.UnexpectedError);
+        }
+
+        foreach (KeyValuePair<string, Entity> entity in Entities)
+        {
+            _entityNameToDataSourceName[entity.Key] = initialDefaultDataSourceName;
+        }
+
+        DefaultDataSourceName = initialDefaultDataSourceName;
+    }
+
+    /// <summary>
     /// Gets datasourceName from EntityNameToDatasourceName dictionary.
     /// </summary>
     /// <param name="entityName">entityName</param>
@@ -301,17 +349,6 @@ public record RuntimeConfig
     public bool CheckDataSourceExists(string dataSourceName)
     {
         return _dataSourceNameToDataSource.ContainsKey(dataSourceName);
-    }
-
-    /// <summary>
-    /// Get the default datasource name.
-    /// </summary>
-    /// <returns>default datasourceName.</returns>
-#pragma warning disable CA1024 // Use properties where appropriate. Reason: Do not want datasource serialized and want to keep it private to restrict set;
-    public string GetDefaultDataSourceName()
-#pragma warning restore CA1024 // Use properties where appropriate
-    {
-        return _defaultDataSourceName;
     }
 
     /// <summary>
@@ -374,7 +411,7 @@ public record RuntimeConfig
     public bool CanUseCache()
     {
         bool setSessionContextEnabled = DataSource.GetTypedOptions<MsSqlOptions>()?.SetSessionContext ?? true;
-        return IsCachingEnabled && SqlDataSourceUsed && !setSessionContextEnabled;
+        return IsCachingEnabled && !setSessionContextEnabled;
     }
 
     /// <summary>
@@ -415,5 +452,88 @@ public record RuntimeConfig
 
         CosmosDataSourceUsed = _dataSourceNameToDataSource.Values.Any
             (x => x.DatabaseType is DatabaseType.CosmosDB_NoSQL);
+    }
+
+    /// <summary>
+    /// Handles the logic for determining if we are in a scenario where hot reload is possible.
+    /// Hot reload is currently not available, and so this will always return false. When hot reload
+    /// becomes an available feature this logic will change to reflect the correct state based on
+    /// the state of the runtime config and any other relevant factors.
+    /// </summary>
+    /// <returns>True in a scenario that support hot reload, false otherwise.</returns>
+    public static bool IsHotReloadable()
+    {
+        // always return false while hot reload is not an available feature.
+        return false;
+    }
+
+    /// <summary>
+    /// Helper method to check if multiple create option is supported and enabled.
+    /// 
+    /// Returns true when
+    /// 1. Multiple create operation is supported by the database type and
+    /// 2. Multiple create operation is enabled in the runtime config.
+    /// 
+    /// </summary>
+    public bool IsMultipleCreateOperationEnabled()
+    {
+        return Enum.GetNames(typeof(MultipleCreateSupportingDatabaseType)).Any(x => x.Equals(DataSource.DatabaseType.ToString(), StringComparison.OrdinalIgnoreCase)) &&
+               (Runtime is not null &&
+               Runtime.GraphQL is not null &&
+               Runtime.GraphQL.MultipleMutationOptions is not null &&
+               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions is not null &&
+               Runtime.GraphQL.MultipleMutationOptions.MultipleCreateOptions.Enabled);
+    }
+
+    public uint DefaultPageSize()
+    {
+        return (uint?)Runtime?.Pagination?.DefaultPageSize ?? PaginationOptions.DEFAULT_PAGE_SIZE;
+    }
+
+    public uint MaxPageSize()
+    {
+        return (uint?)Runtime?.Pagination?.MaxPageSize ?? PaginationOptions.MAX_PAGE_SIZE;
+    }
+
+    public int MaxResponseSizeMB()
+    {
+        return Runtime?.Host?.MaxResponseSizeMB ?? HostOptions.MAX_RESPONSE_LENGTH_DAB_ENGINE_MB;
+    }
+
+    public bool MaxResponseSizeLogicEnabled()
+    {
+        // If the user has provided a max response size, we should use new logic to enforce it.
+        return Runtime?.Host?.UserProvidedMaxResponseSizeMB ?? false;
+    }
+
+    /// <summary>
+    /// Get the pagination limit from the runtime configuration.
+    /// </summary>
+    /// <param name="first">The pagination input from the user. Example: $first=10</param>
+    /// <returns></returns>
+    /// <exception cref="DataApiBuilderException"></exception>
+    public uint GetPaginationLimit(int? first)
+    {
+        uint defaultPageSize = this.DefaultPageSize();
+        uint maxPageSize = this.MaxPageSize();
+
+        if (first is not null)
+        {
+            if (first < -1 || first == 0 || first > maxPageSize)
+            {
+                throw new DataApiBuilderException(
+                message: $"Invalid number of items requested, {nameof(first)} argument must be either -1 or a positive number within the max page size limit of {maxPageSize}. Actual value: {first}",
+                statusCode: HttpStatusCode.BadRequest,
+                subStatusCode: DataApiBuilderException.SubStatusCodes.BadRequest);
+            }
+            else
+            {
+                return (first == -1 ? maxPageSize : (uint)first);
+            }
+        }
+        else
+        {
+            return defaultPageSize;
+        }
     }
 }

@@ -4,6 +4,7 @@
 using System.Net;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Language;
 using Microsoft.OData;
 using Microsoft.OData.Edm;
 using Microsoft.OData.UriParser;
@@ -24,6 +25,12 @@ namespace Azure.DataApiBuilder.Core.Parsers
         {
             EdmModelBuilder builder = new();
             _model = builder.BuildModel(sqlMetadataProvider).GetModel();
+        }
+
+        public void BuildModel(DocumentNode graphQLSchemaRoot)
+        {
+            EdmModelBuilder builder = new();
+            _model = builder.BuildModel(graphQLSchemaRoot).GetModel();
         }
 
         /// <summary>

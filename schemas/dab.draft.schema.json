@@ -175,6 +175,30 @@
             "enabled": {
               "type": "boolean",
               "description": "Allow enabling/disabling GraphQL requests for all entities."
+            },
+            "depth-limit": {
+              "type": [ "integer", "null" ],
+              "description": "Maximum allowed depth of a GraphQL query.",
+              "default": null
+            },
+            "multiple-mutations": {
+              "type": "object",
+              "description": "Configuration properties for multiple mutation operations",
+              "additionalProperties": false,
+              "properties": {
+                "create":{
+                  "type": "object",
+                  "description": "Options for multiple create operations",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "description": "Allow enabling/disabling multiple create operations for all entities.",
+                      "default": false
+                    }
+                  }
+                }
+              }
             }
           }
         },

@@ -39,6 +39,40 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         name = name + "_star"
                     }
                 },
+                stars = new[]
+                {
+                    new
+                    {
+                        id = id,
+                        name = name + "_star",
+                        tag =
+                            new {
+                                id = id,
+                                name = "tag1"
+                            }
+                    },
+                    new {
+                        id = id,
+                        name = name + "_star",
+                        tag =
+                            new {
+                                id = id,
+                                name = "tag2"
+                            }
+                    }
+                },
+                suns = new[]
+                {
+                    new
+                    {
+                        id = id,
+                        name = name + "_sun"
+                    },
+                    new {
+                        id = id,
+                        name = name + "_sun"
+                    }
+                },
                 moons = new[]
                 {
                     new
@@ -135,7 +169,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 earth = new
                 {
                     id = id,
-                    name = "blue earth"
+                    name = "blue earth" + numericVal,
+                    type = "earth" + numericVal
                 },
                 additionalAttributes = new[]
                 {

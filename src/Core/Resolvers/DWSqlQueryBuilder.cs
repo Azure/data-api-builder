@@ -108,7 +108,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 // If the column is not a subquery column and is not a string, cast it to string
                 if (!subQueryColumn && structure.GetColumnSystemType(column.ColumnName) != typeof(string))
                 {
-                    col_value = $"CAST([{col_value}] AS NVARCHAR(MAX))";
+                    col_value = $"CONVERT(NVARCHAR(MAX), [{col_value}])";
 
                     Type col_type = structure.GetColumnSystemType(column.ColumnName);
 

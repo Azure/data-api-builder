@@ -27,7 +27,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public void TestFixtureSetup()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             cosmosClient.CreateDatabaseIfNotExistsAsync(DATABASE_NAME).Wait();
             cosmosClient.GetDatabase(DATABASE_NAME).CreateContainerIfNotExistsAsync(_containerName, "/id").Wait();
             _idList = CreateItems(DATABASE_NAME, _containerName, 10);
@@ -89,7 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         and: [
                             { additionalAttributes: {name: {eq: ""volcano1""}}}
                             { moons: {name: {eq: ""1 moon""}}}
-                            { moons: {details: {contains: ""v1""}}}
+                            { moons: {details: {contains: ""11""}}}
                         ]   
                      })
                 {
@@ -99,10 +99,17 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQueryWithJoin = "SELECT c.name FROM c " +
-                "JOIN a IN c.additionalAttributes " +
-                "JOIN b IN c.moons " +
-                "WHERE a.name = \"volcano1\" and b.name = \"1 moon\" and b.details LIKE \"%v1%\"";
+            string dbQueryWithJoin = "SELECT c.name " +
+                                     "FROM c " +
+                                     "WHERE (EXISTS (SELECT 1 " +
+                                                    "FROM table0 IN c.additionalAttributes " +
+                                                    "WHERE table0.name = \"volcano1\" ) AND " +
+                                            "EXISTS (SELECT 1 " +
+                                                    "FROM table2 IN c.moons " +
+                                                    "WHERE table2.name = \"1 moon\" ) AND " +
+                                            "EXISTS (SELECT 1 " +
+                                                    "FROM table4 IN c.moons " +
+                                                    "WHERE table4.details LIKE \"%11%\" )  )";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -147,9 +154,11 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQueryWithJoin = "SELECT c.name FROM c " +
-                "JOIN a IN c.moons " +
-                "JOIN b IN a.moonAdditionalAttributes " +
-                "WHERE b.name = \"moonattr0\"";
+                                     "WHERE EXISTS (SELECT 1 " +
+                                                   "FROM table0 IN c.moons " +
+                                                   "WHERE EXISTS (SELECT 1 " +
+                                                                 "FROM table1 IN table0.moonAdditionalAttributes " +
+                                                                 "WHERE table1.name = \"moonattr0\" ))";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -171,10 +180,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQueryWithJoin = "SELECT c.name FROM c " +
-                "JOIN a IN c.moons " +
-                "JOIN b IN a.moonAdditionalAttributes " +
-                "JOIN d IN b.moreAttributes " +
-                "WHERE d.name = \"moonattr0\"";
+                                     "WHERE EXISTS(SELECT 1 " +
+                                                  "FROM table0 IN c.moons " +
+                                                  "WHERE EXISTS(SELECT 1 " +
+                                                               "FROM table1 IN table0.moonAdditionalAttributes " +
+                                                               "WHERE EXISTS(SELECT 1 " +
+                                                                            "FROM table2 IN table1.moreAttributes " +
+                                                                            "WHERE table2.name = \"moonattr0\")))";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
@@ -254,26 +266,38 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQueryWithJoin = "SELECT c.name FROM c " +
-                "JOIN a IN c.additionalAttributes " +
-                "JOIN b IN c.moons " +
-                "WHERE a.name = \"volcano1\" OR b.name = \"1 moon\"";
+            string dbQueryWithJoin = "SELECT c.name " +
+                                     "FROM c " +
+                                     "WHERE (EXISTS (SELECT 1 " +
+                                                    "FROM table0 IN c.additionalAttributes " +
+                                                    "WHERE table0.name = \"volcano1\" ) OR " +
+                                            "EXISTS (SELECT 1 " +
+                                                    "FROM table2 IN c.moons " +
+                                                    "WHERE table2.name = \"1 moon\" ) )";
 
             await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQueryWithJoin);
         }
 
-        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery)
+        private async Task ExecuteAndValidateResult(string graphQLQueryName, string gqlQuery, string dbQuery, bool ignoreBlankResults = false, Dictionary<string, object> variables = null)
         {
             string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: AuthorizationType.Authenticated.ToString());
-            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken);
+            JsonElement actual = await ExecuteGraphQLRequestAsync(graphQLQueryName, query: gqlQuery, authToken: authToken, variables: variables);
             JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
-            ValidateResults(actual.GetProperty("items"), expected.RootElement);
+            ValidateResults(actual.GetProperty("items"), expected.RootElement, ignoreBlankResults);
         }
 
-        private static void ValidateResults(JsonElement actual, JsonElement expected)
+        private static void ValidateResults(JsonElement actual, JsonElement expected, bool ignoreBlankResults)
         {
             Assert.IsNotNull(expected);
             Assert.IsNotNull(actual);
+
+            if (!ignoreBlankResults)
+            {
+                // Making sure we are not asserting empty results
+                Assert.IsFalse(expected.ToString().Equals("[]"), "Expected  Response is Empty.");
+                Assert.IsFalse(actual.ToString().Equals("[]"), "Actual  Response is Empty.");
+            }
+
             Assert.IsTrue(JToken.DeepEquals(JToken.Parse(actual.ToString()), JToken.Parse(expected.ToString())));
         }
 
@@ -673,7 +697,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "select c.name, c.age from c where IS_NULL(c.age)";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, ignoreBlankResults: true);
         }
 
         /// <summary>
@@ -693,7 +717,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "select c.name, c.age from c where IS_NULL(c.name)";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, ignoreBlankResults: true);
         }
 
         /// <summary>
@@ -757,7 +781,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
 
             string dbQuery = "SELECT c.name, c.age FROM c WHERE 1 != 1";
-            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, ignoreBlankResults: true);
         }
 
         /// <summary>
@@ -861,19 +885,61 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestFilterWithEntityNameAlias()
         {
             string gqlQuery = @"{
-                stars(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {tag : {name : {eq : ""test name""}}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {stars : {tag: {name : {eq : ""tag1""}}}})
                 {
                     items {
-                        tag {
-                            id
-                            name
-                        }
+                        id
                     }
                  }
             }";
 
-            string dbQuery = "SELECT top 1 c.tag FROM c where c.tag.name = \"test name\"";
-            await ExecuteAndValidateResult("stars", gqlQuery, dbQuery);
+            string dbQuery = "SELECT top 1 c.id FROM c JOIN starAlias  IN c.stars where starAlias.tag.name = \"tag1\"";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// For "item-level-permission-role" role, DB policies are defined. This test confirms that all the DB policies are considered.
+        /// For the reference, Below conditions are applied for an Entity in Db Config file.
+        /// MoonAdditionalAttributes (array inside moon object which is an array in container): "@item.name eq 'moonattr0'"
+        /// Earth(object in object): "@item.type eq 'earth0'"
+        /// AdditionalAttribute (array in container): "@item.type eq 'volcano0'"
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterFieldAuth_Only_AuthorizedArrayItem()
+        {
+            string gqlQuery = @"{
+                 planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : { character: {type: {eq: ""Mars""}}})
+                 {
+                     items {
+                         id
+                     }
+                 }
+            }";
+
+            // Now get the item with item level permission
+            string clientRoleHeader = "item-level-permission-role";
+            // string clientRoleHeader = "authenticated";
+            JsonElement actual = await ExecuteGraphQLRequestAsync(
+                queryName: _graphQLQueryName,
+                query: gqlQuery,
+                authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
+                clientRoleHeader: clientRoleHeader);
+
+            string dbQuery = $"SELECT c.id " +
+                $"FROM c " +
+                $"WHERE c.character.type = 'Mars' " +
+                $"AND c.earth.type = 'earth0' " + // From DB Policy
+                $"AND EXISTS (SELECT VALUE 1 " +
+                            $"FROM  table1 IN c.additionalAttributes " +
+                            $"WHERE (table1.name = 'volcano0')) " + // From DB Policy
+                $"AND EXISTS (SELECT VALUE 1 " +
+                            $"FROM  table2 IN c.moons " +
+                            $"JOIN  table3 IN table2.moonAdditionalAttributes " +
+                            $"WHERE (table3.name = 'moonattr0'))"; // From DB Policy
+
+            JsonDocument expected = await ExecuteCosmosRequestAsync(dbQuery, _pageSize, null, _containerName);
+            // Validate the result contains the GraphQL authorization error code.
+            ValidateResults(actual.GetProperty("items"), expected.RootElement, false);
         }
 
         #region Field Level Auth
@@ -884,7 +950,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuth_AuthorizedField()
         {
             string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth: {id : {eq : """ + _idList[0] + @"""}}})
                 {
                     items {
                         id
@@ -892,8 +958,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQuery = $"SELECT top 1 c.id FROM c where c.id = \"{_idList[0]}\"";
-            await ExecuteAndValidateResult("earths", gqlQuery, dbQuery);
+            string dbQuery = $"SELECT top 1 c.id FROM c where c.earth.id = \"{_idList[0]}\"";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
         /// <summary>
@@ -906,7 +972,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             // Run query
             string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth: {name : {eq : ""test name""}}})
                 {
                     items {
                         name
@@ -915,7 +981,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }";
             string clientRoleHeader = "limited-read-role";
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "earths",
+                queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
@@ -1013,7 +1079,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
         /// <summary>
         /// Tests that the nested field level query filter fails authorization when nested object is
-        /// unauthorized. Here, Nested array type 'moreAttributes' is avaliable for 'Authenticated' role only and
+        /// unauthorized. Here, Nested array type 'moreAttributes' is available for 'Authenticated' role only and
         /// we are trying to access it with 'anonymous' role.
         /// </summary>
         [TestMethod]
@@ -1045,7 +1111,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// <summary>
         /// This is for testing the scenario when the filter field is authorized, but the query field is unauthorized.
         /// For "type" field in "Earth" GraphQL type, it has @authorize(policy: "authenticated") directive in the test schema,
-        /// but in the runtime config, this field is marked as included field for read operation with anonymous role,
+        /// but in the runtime config, this field is marked as included field for read operation with "limited-read-role" role,
         /// this should return unauthorized.
         /// </summary>
         [TestMethod]
@@ -1053,16 +1119,23 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             // Run query
             string gqlQuery = @"{
-                earths(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {earth: {id : {eq : """ + _idList[0] + @"""}}})
                 {
                     items {
-                        id
-                        type
+                        earth {
+                            id
+                            type
+                        } 
                     }
                 }
             }";
 
-            JsonElement response = await ExecuteGraphQLRequestAsync(_graphQLQueryName, query: gqlQuery);
+            string clientRoleHeader = "limited-read-role";
+            string authToken = AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader);
+            JsonElement response = await ExecuteGraphQLRequestAsync(_graphQLQueryName,
+                query: gqlQuery,
+                authToken: authToken,
+                clientRoleHeader: clientRoleHeader);
 
             // Validate the result contains the GraphQL authorization error code.
             string errorMessage = response.ToString();
@@ -1079,7 +1152,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuthWithoutSingularType()
         {
             string gqlQuery = @"{
-                suns(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {id : {eq : """ + _idList[0] + @"""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {suns: {id : {eq : """ + _idList[0] + @"""}}})
                 {
                     items {
                         id
@@ -1088,8 +1161,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
             }";
 
-            string dbQuery = $"SELECT top 1 c.id, c.name FROM c where c.id = \"{_idList[0]}\"";
-            await ExecuteAndValidateResult("suns", gqlQuery, dbQuery);
+            string dbQuery = $"SELECT top 1 c.id, c.name FROM c JOIN sun IN c.suns where sun.id = \"{_idList[0]}\"";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
         }
 
         /// <summary>
@@ -1101,18 +1174,20 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestQueryFilterFieldAuth_ExcludeTakesPredecence()
         {
             string gqlQuery = @"{
-                suns(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {name : {eq : ""test name""}})
+                planets(first: 1, " + QueryBuilder.FILTER_FIELD_NAME + @" : {suns: { name : {eq : ""test name""}}})
                 {
                     items {
-                        id
-                        name
+                        suns {
+                            id
+                            name
+                        }
                     }
                 }
             }";
 
             string clientRoleHeader = AuthorizationType.Anonymous.ToString();
             JsonElement response = await ExecuteGraphQLRequestAsync(
-                queryName: "suns",
+                queryName: _graphQLQueryName,
                 query: gqlQuery,
                 variables: new() { { "name", "test name" } },
                 authToken: AuthTestHelper.CreateStaticWebAppsEasyAuthToken(specificRole: clientRoleHeader),
@@ -1123,13 +1198,75 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             Assert.IsTrue(errorMessage.Contains(DataApiBuilderException.GRAPHQL_FILTER_FIELD_AUTHZ_FAILURE));
 
         }
+
+        /// <summary>
+        /// Tests that the field level query filter work with list type for 'contains' operator
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterContains_WithStringArray()
+        {
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {tags: { contains : ""tag1""}})
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where ARRAY_CONTAINS(c.tags, 'tag1')";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests that the field level query filter work with list type for 'notcontains' operator.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryFilterNotContains_WithStringArray()
+        {
+            string gqlQuery = @"{
+                planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {tags: { notContains : ""tag3""}})
+                {
+                    items {
+                        id
+                        name
+                    }
+                }
+            }";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where NOT ARRAY_CONTAINS(c.tags, 'tag3')";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery);
+        }
+
+        /// <summary>
+        /// Tests that the pk level query filter is working with variables.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryIdFilterField_WithVariables()
+        {
+            string gqlQuery = @"
+            query ($id: ID) {
+                    planets(" + QueryBuilder.FILTER_FIELD_NAME + @" : {id: {eq : $id}})
+                    {
+                        items {
+                            id
+                            name
+                        }
+                    }
+                }
+            ";
+
+            string dbQuery = $"SELECT c.id, c.name FROM c where c.id = \"{_idList[0]}\"";
+            await ExecuteAndValidateResult(_graphQLQueryName, gqlQuery, dbQuery, variables: new() { { "id", _idList[0] } });
+        }
         #endregion
 
         [TestCleanup]
         public void TestFixtureTearDown()
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
-            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().GetDefaultDataSourceName()];
+            CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
             cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }

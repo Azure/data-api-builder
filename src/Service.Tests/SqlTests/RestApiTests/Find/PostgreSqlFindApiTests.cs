@@ -449,6 +449,18 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 "
             },
             {
+                "FindTest_Negative1QueryParams_Pagination",
+                @"
+                    SELECT json_agg(to_jsonb(subq)) AS data
+                    FROM (
+                        SELECT *
+                        FROM " + _integrationPaginationTableName + @"
+                        ORDER BY id asc
+                        LIMIT 100000
+                    ) AS subq
+                "
+            },
+            {
                 "FindTest_OrderByNotFirstQueryParam_PaginationNextLink",
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
@@ -808,9 +820,9 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                 @"
                     SELECT json_agg(to_jsonb(subq)) AS data
                     FROM (
-                        SELECT  ""treeId"", ""species"" AS ""fancyName"", ""region"", ""height""
+                        SELECT  ""treeId"", species AS ""fancyName"", region, height
                         FROM " + _integrationMappingTable + @"
-                        WHERE ""treeId"" < 2
+                        WHERE species > 'Pseudotsuga menziesii'
                         ORDER BY species asc, ""treeId"" asc
                         LIMIT 101
                     ) AS subq
@@ -979,6 +991,36 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Find
                     FROM (
                         SELECT id, title FROM " + _simple_all_books + @"
                         ORDER BY publisher_id, id
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNullAndNonNullValues",
+                @"
+                    SELECT COALESCE( json_agg(to_jsonb(subq)), '[]') AS data
+                    FROM (
+                        SELECT * FROM " + _tableWithVarcharMax + @"
+                        WHERE color IS NULL AND ownername = 'Abhishek'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSize",
+                @"
+                    SELECT COALESCE( json_agg(to_jsonb(subq)), '[]') AS data
+                    FROM (
+                        SELECT * FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'sand'
+                    ) AS subq
+                "
+            },
+            {
+                "FindTestFilterForVarcharColumnWithNotMaximumSizeAndNoTruncation",
+                @"
+                    SELECT COALESCE( json_agg(to_jsonb(subq)), '[]') AS data
+                    FROM (
+                        SELECT * FROM " + _integrationBrokenMappingTable + @"
+                        WHERE habitat = 'forestland'
                     ) AS subq
                 "
             }

@@ -30,7 +30,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
             },
             {
                 "InsertOneInSupportedTypes",
-                $"SELECT [id] as [typeid], [byte_types], [short_types], [int_types], [long_types],string_types, [single_types], [float_types], " +
+                $"SELECT [id] as [typeid], [byte_types], [short_types], [int_types], [long_types],[string_types], [nvarchar_string_types], [single_types], [float_types], " +
                 $"[decimal_types], [boolean_types], [date_types], [datetime_types], [datetime2_types], [datetimeoffset_types], [smalldatetime_types], " +
                 $"[time_types], [bytearray_types], LOWER([uuid_types]) as [uuid_types] FROM { _integrationTypeTable } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [bytearray_types] is NULL " +
@@ -92,13 +92,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.RestApiTests.Insert
                 // This query is the query for the result we get back from the database
                 // after the insert operation. Not the query that we generate to perform
                 // the insertion.
-                $"SELECT [id], [content], [book_id] FROM { _tableWithCompositePrimaryKey } " +
+                $"SELECT [id], [content], [book_id], [websiteuser_id] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS } AND [book_id] = 1 " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },
             {
                 "InsertOneInDefaultTestTable",
-                $"SELECT [id], [book_id], [content] FROM { _tableWithCompositePrimaryKey } " +
+                $"SELECT [id], [book_id], [content], [websiteuser_id] FROM { _tableWithCompositePrimaryKey } " +
                 $"WHERE [id] = { STARTING_ID_FOR_TEST_INSERTS + 1} AND [book_id] = 2 AND [content] = 'Its a classic' " +
                 $"FOR JSON PATH, INCLUDE_NULL_VALUES, WITHOUT_ARRAY_WRAPPER"
             },

@@ -100,7 +100,7 @@ public class RestAuthorizationHandler : IAuthorizationHandler
                     );
                 }
 
-                string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
                 IEnumerable<EntityActionOperation> operations = HttpVerbToOperations(httpContext.Request.Method);
 
                 foreach (EntityActionOperation operation in operations)
@@ -140,7 +140,7 @@ public class RestAuthorizationHandler : IAuthorizationHandler
                 }
 
                 string entityName = restContext.EntityName;
-                string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
                 IEnumerable<EntityActionOperation> operations = HttpVerbToOperations(httpContext.Request.Method);
 
                 // Delete operations do not have column level restrictions.
@@ -224,7 +224,7 @@ public class RestAuthorizationHandler : IAuthorizationHandler
                     );
                 }
 
-                string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER];
+                string roleName = httpContext.Request.Headers[AuthorizationResolver.CLIENT_ROLE_HEADER].ToString();
                 Enum.TryParse<SupportedHttpVerb>(httpContext.Request.Method, ignoreCase: true, out SupportedHttpVerb httpVerb);
                 bool isAuthorized = _authorizationResolver.IsStoredProcedureExecutionPermitted(entityName, roleName, httpVerb);
                 if (!isAuthorized)

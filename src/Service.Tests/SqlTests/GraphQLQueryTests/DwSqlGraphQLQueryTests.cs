@@ -98,6 +98,31 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         }
 
         /// <summary>
+        /// Test query on One-To-One relationship when the fields defining
+        /// the relationship in the entity include fields that are mapped in
+        /// that same entity.
+        /// </summary>
+        /// <exception cref="NotImplementedException"></exception>
+        [TestMethod]
+        public async Task OneToOneJoinQueryWithMappedFieldNamesInRelationship()
+        {
+            string dwSqlQuery = @"
+                SELECT COALESCE('['+STRING_AGG('{'+N'""fancyName"":' + ISNULL('""' + STRING_ESCAPE([fancyName],'json') + '""','null')+','+N'""fungus"":' + ISNULL([fungus],'null')+'}',', ')+']','[]')
+                FROM (
+                    SELECT TOP 100 [table0].[species] AS [fancyName], 
+                        (SELECT TOP 1 '{""habitat"":""' + STRING_ESCAPE([table1].[habitat], 'json') + '""}'
+                         FROM [dbo].[fungi] AS [table1]
+                         WHERE [table0].[species] = [table1].[habitat] AND [table1].[habitat] = [table0].[species]
+                         ORDER BY [table1].[speciesid] ASC) AS [fungus]
+                    FROM [dbo].[trees] AS [table0]
+                    WHERE 1 = 1
+                    ORDER BY [table0].[treeId] ASC
+                ) AS [table0]";
+
+            await OneToOneJoinQueryWithMappedFieldNamesInRelationship(dwSqlQuery);
+        }
+
+        /// <summary>
         /// Test getting a single item by use of primary key
         /// <summary>
         [TestMethod]
@@ -180,6 +205,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLQueryTests
         {
             string msSqlQuery = $"SELECT TOP 100 id, title, issue_number FROM [foo].[magazines] ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
             await TestQueryingTypeWithNullableIntFields(msSqlQuery);
+        }
+
+        /// <summary>
+        /// Test where data in the db has a nullable datetime field. The query should successfully return the date in the published_date field if present, else return null.
+        /// </summary>
+        [TestMethod]
+        public async Task TestQueryingTypeWithNullableDateTimeFields()
+        {
+            string msSqlQuery = $"SELECT datetime_types FROM type_table ORDER BY id asc FOR JSON PATH, INCLUDE_NULL_VALUES";
+            await TestQueryingTypeWithNullableDateTimeFields(msSqlQuery);
         }
 
         /// <summary>

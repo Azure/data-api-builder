@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using Microsoft.IdentityModel.Tokens;
+
 namespace Cli.Tests
 {
     public static class TestHelper
@@ -12,6 +14,8 @@ namespace Cli.Tests
         public const string TEST_ENV_CONN_STRING = "@env('connection-string')";
 
         public const string SAMPLE_TEST_CONN_STRING = "Data Source=<>;Initial Catalog=<>;User ID=<>;Password=<>;";
+
+        public const string SAMPLE_TEST_PGSQL_CONN_STRING = "Host=<>;Database=<>;username=<>;password=<>";
 
         // test schema for cosmosDB
         public const string TEST_SCHEMA_FILE = "test-schema.gql";
@@ -109,7 +113,8 @@ namespace Cli.Tests
           ""runtime"": {
               ""rest"": {
                   ""path"": ""/api"",
-                  ""enabled"": true
+                  ""enabled"": true,
+                  ""request-body-strict"": true
               },
               ""graphql"": {
                   ""path"": ""/graphql"",
@@ -156,6 +161,68 @@ namespace Cli.Tests
               }
           },
           ""entities"": {}";
+
+        /// <summary>
+        /// Configuration with unresolved environment variable references on
+        /// properties of various data types (string, enum, bool, int).
+        /// </summary>
+        public const string CONFIG_ENV_VARS = @"
+            {
+               ""data-source"": {
+              ""database-type"": ""@env('database-type')"",
+              ""connection-string"": ""@env('connection-string')""
+            },
+          ""runtime"": {
+              ""rest"": {
+                  ""path"": ""/api"",
+                  ""enabled"": false
+              },
+              ""graphql"": {
+                  ""path"": ""/graphql"",
+                  ""enabled"": true,
+                  ""allow-introspection"": true
+              },
+              ""host"": {
+                  ""mode"": ""development"",
+                  ""cors"": {
+                      ""origins"": [],
+                      ""allow-credentials"": false
+                  },
+                  ""authentication"": {
+                      ""provider"": ""StaticWebApps""
+                  }
+              }
+          },
+              ""entities"": {
+              ""MyEntity"": {
+                ""source"": {
+                  ""type"": ""stored-procedure"",
+                  ""object"": ""s001.book"",
+                  ""parameters"": {
+                      ""param1"": ""@env('sp_param1_int')"",
+                      ""param2"": ""hello"",
+                      ""param3"": ""@env('sp_param3_bool')""
+                  }
+                },
+                ""permissions"": [
+                  {
+                    ""role"": ""anonymous"",
+                    ""actions"": [
+                      ""execute""
+                    ]
+                  }
+                ],
+                ""rest"": {
+                    ""methods"": [
+                      ""post""
+                    ]
+                  },
+                  ""graphql"": {
+                    ""operation"": ""mutation""
+                      }
+                    }
+                  }
+          }";
 
         /// <summary>
         /// A minimal valid config json without any entities. This config string is used in unit tests.
@@ -1064,6 +1131,141 @@ namespace Cli.Tests
           }
         }
       }";
+
+        public const string COMPLETE_CONFIG_WITH_RELATIONSHIPS_NON_WORKING_CONN_STRING = @"
+        {
+  ""$schema"": ""https://github.com/Azure/data-api-builder/releases/download/vmajor.minor.patch/dab.draft.schema.json"",
+  ""data-source"": {
+    ""database-type"": ""mssql"",
+    ""options"": {
+      ""set-session-context"": false
+    },
+    ""connection-string"": ""Server=XXXXX;Persist Security Info=False;User ID=<USERHERE>;Password=<PWD HERE> ;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=5;""
+  },
+  ""runtime"": {
+    ""rest"": {
+      ""enabled"": true,
+      ""path"": ""/api""
+    },
+    ""graphql"": {
+      ""allow-introspection"": true,
+      ""enabled"": true,
+      ""path"": ""/graphql""
+    },
+    ""host"": {
+      ""mode"": ""development"",
+      ""cors"": {
+        ""origins"": [],
+        ""allow-credentials"": false
+      },
+      ""authentication"": {
+        ""provider"": ""StaticWebApps""
+      }
+    }
+  },
+  ""entities"": {
+    ""Publisher"": {
+      ""source"": {
+        ""object"": ""publishers"",
+        ""type"": ""table"",
+        ""key-fields"": [ ""id"" ]
+      },
+      ""graphql"": {
+        ""enabled"": true,
+        ""type"": {
+          ""singular"": ""Publisher"",
+          ""plural"": ""Publishers""
+        }
+      },
+      ""rest"": {
+        ""enabled"": true
+      },
+      ""permissions"": [
+      ],
+      ""relationships"": {
+        ""books"": {
+          ""cardinality"": ""many"",
+          ""target.entity"": ""Book"",
+          ""source.fields"": [ ""id"" ],
+          ""target.fields"": [ ""publisher_id"" ],
+          ""linking.source.fields"": [],
+          ""linking.target.fields"": []
+        }
+      }
+    },
+    ""Book"": {
+      ""source"": {
+        ""object"": ""books"",
+        ""type"": ""table"",
+        ""key-fields"": [ ""id"" ]
+      },
+      ""graphql"": {
+        ""enabled"": true,
+        ""type"": {
+          ""singular"": ""book"",
+          ""plural"": ""books""
+        }
+      },
+      ""rest"": {
+        ""enabled"": true
+      },
+      ""permissions"": [
+      ],
+      ""mappings"": {
+        ""id"": ""id"",
+        ""title"": ""title""
+      },
+      ""relationships"": {
+        ""publishers"": {
+          ""cardinality"": ""one"",
+          ""target.entity"": ""Publisher"",
+          ""source.fields"": [ ""publisher_id"" ],
+          ""target.fields"": [ ""id"" ],
+          ""linking.source.fields"": [],
+          ""linking.target.fields"": []
+        }
+      }
+    }
+  }
+}
+";
+        /// <summary>
+        /// Generates the config json string with the given depth limit in the form of json string.
+        /// example: { ""depth-limit"": 10 }
+        /// </summary>
+        /// <returns></returns>
+        public static string GenerateConfigWithGivenDepthLimit(string? depthLimitJson = null)
+        {
+            string depthLimitSection = depthLimitJson.IsNullOrEmpty() ? string.Empty : ("," + depthLimitJson);
+
+            string runtimeSection = $@"
+            ""runtime"": {{
+                ""rest"": {{
+                    ""path"": ""/api"",
+                    ""enabled"": true,
+                    ""request-body-strict"": true
+                }},
+                ""graphql"": {{
+                    ""path"": ""/graphql"",
+                    ""enabled"": true,
+                    ""allow-introspection"": true
+                    {depthLimitSection}
+                }},
+                ""host"": {{
+                    ""mode"": ""development"",
+                    ""cors"": {{
+                        ""origins"": [],
+                        ""allow-credentials"": false
+                    }},
+                    ""authentication"": {{
+                        ""provider"": ""StaticWebApps""
+                    }}
+                }}
+            }},
+            ""entities"": {{}}";
+
+            return $"{{{SAMPLE_SCHEMA_DATA_SOURCE},{runtimeSection}}}";
+        }
 
         /// <summary>
         /// Creates basic initialization options for MS SQL config.

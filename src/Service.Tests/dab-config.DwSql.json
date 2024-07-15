@@ -1465,6 +1465,16 @@
       ],
       "mappings": {
         "species": "fancyName"
+      },
+      "relationships": {
+        "fungus": {
+          "cardinality": "one",
+          "target.entity": "Fungus",
+          "source.fields": [ "species" ],
+          "target.fields": [ "habitat" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "Fungus": {
@@ -1540,6 +1550,16 @@
       ],
       "mappings": {
         "spores": "hazards"
+      },
+      "relationships": {
+        "shrub": {
+          "cardinality": "one",
+          "target.entity": "Shrub",
+          "source.fields": [ "habitat" ],
+          "target.fields": [ "species" ],
+          "linking.source.fields": [],
+          "linking.target.fields": []
+        }
       }
     },
     "books_view_all": {
@@ -2227,6 +2247,44 @@
         }
       ]
     },
+    "GetBook": {
+      "source": {
+        "object": "get_book_by_id",
+        "type": "stored-procedure"
+      },
+      "graphql": {
+        "enabled": false,
+        "operation": "mutation",
+        "type": {
+          "singular": "GetBook",
+          "plural": "GetBooks"
+        }
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        },
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
+        }
+      ]
+    },
     "GetPublisher": {
       "source": {
         "object": "get_publisher_by_id",
@@ -2507,6 +2565,43 @@
           ]
         }
       ]
+    },
+    "dbo_DimAccount": {
+      "source": "dbo.DimAccount",
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [
+            "read",
+            "create",
+            "update",
+            "delete"
+          ]
+    }
+      ],
+      "relationships": {
+
+        "parent_account": {
+          "cardinality": "one",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "ParentAccountKey"
+          ],
+          "target.fields": [
+            "AccountKey"
+          ]
+        },
+        "child_accounts": {
+          "cardinality": "many",
+          "target.entity": "dbo_DimAccount",
+          "source.fields": [
+            "AccountKey"
+          ],
+          "target.fields": [
+            "ParentAccountKey"
+          ]
+        }
+      }
     }
   }
 }

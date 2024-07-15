@@ -1,4 +1,4 @@
-type Containername @model {
+type ContainerName @model {
   name : String
   age : Int
   email : String

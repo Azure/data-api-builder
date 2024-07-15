@@ -2,7 +2,6 @@
 // Licensed under the MIT License.
 
 using System.Text;
-using DotNetEnv;
 using Humanizer;
 using Newtonsoft.Json.Linq;
 
@@ -122,7 +121,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="parentType"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
-        private string ProcessJsonToken(JToken token, string fieldName, string parentType, bool isArray)
+        private string ProcessJsonToken(JToken token, string fieldName, string parentType, bool isArray, int parentArrayLength = 1)
         {
             parentType = parentType.Pascalize();
 
@@ -177,7 +176,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             }
 
-            AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType);
+            AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType, parentArrayLength);
 
             return gqlFieldType;
         }
@@ -193,11 +192,22 @@ namespace Azure.DataApiBuilder.Core.Generator
         {
             if (jsonArray.Count == 0)
             {
-                return "String";
+                return "String"; // Assuming empty array as array of string
             }
 
-            // Take first element out of the array, Assuming array contains similar objects and process it
-            return ProcessJsonToken(jsonArray[0], fieldName, parentType, true);
+            HashSet<string> gqlFieldType = new ();
+            // Process each element of the array
+            foreach (JToken obj in jsonArray)
+            {
+                gqlFieldType.Add(ProcessJsonToken(obj, fieldName, parentType, true, jsonArray.Count));
+            }
+
+            if (gqlFieldType.Count is not 1)
+            {
+                throw new InvalidOperationException($"Same attributes {parentType} contains multiple types of elements.");
+            }
+
+            return gqlFieldType.First<string>();
         }
 
         /// <summary>
@@ -208,38 +218,42 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="parentType"></param>
         /// <param name="isArray"></param>
         /// <param name="gqlFieldType"></param>
-        private void AddOrUpdateAttributeInfo(JToken token, string fieldName, string parentType, bool isArray, string gqlFieldType)
+        private void AddOrUpdateAttributeInfo(JToken token, string fieldName, string parentType, bool isArray, string gqlFieldType, int parentArrayLength)
         {
             object? value = (token is JValue jValue) ? jValue.Value : gqlFieldType;
             // Check if this attribute is already recorded for this entity
             if (!_attrMapping.ContainsKey(parentType))
             {
-                _attrMapping.Add(parentType, new HashSet<AttributeObject>()
-                {
-                    new(name: fieldName,
+                AttributeObject attributeObject = new(name: fieldName,
                         type: gqlFieldType,
                         parent: parentType,
                         isArray: isArray,
-                        value: value)
-                });
+                        value: value,
+                        arrayLength: parentArrayLength);
+
+                _attrMapping.Add(parentType, new HashSet<AttributeObject>() { attributeObject });
             }
             else
             {
                 AttributeObject? attributeObject = _attrMapping[parentType].FirstOrDefault(a => a.Name == fieldName);
                 if(attributeObject is null)
                 {
-                    _attrMapping[parentType].Add(new(name: fieldName,
+                    attributeObject = new(name: fieldName,
                         type: gqlFieldType,
                         parent: parentType,
                         isArray: isArray,
-                        value: value));
+                        value: value,
+                        arrayLength: parentArrayLength);
+
+                    _attrMapping[parentType].Add(attributeObject);
                 }
                 else if(value is not null)
                 {
                     attributeObject.Values.Add(value);
                 }
-            }
 
+                attributeObject.ParentArrayLength += parentArrayLength;
+            }
         }
     }
 }

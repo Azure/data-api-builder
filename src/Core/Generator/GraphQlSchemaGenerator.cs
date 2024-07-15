@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             JArray dataArray = await sampler.GetSampleAsync(container);
 
             // Generate GQL Schema
-            return SchemaGenerator.Run(dataArray, container.Id);
+            return SchemaGenerator.Generate(dataArray, container.Id);
         }
     }
 }

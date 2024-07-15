@@ -1,8 +1,8 @@
 type ContainerName @model {
   id : ID
   name : String
-  dimension : String
-  age : Int
+  dimension : String!
+  age : Int!
   myBooleanProp : Boolean
   anotherPojo : AnotherPojo
   character : Character
@@ -20,7 +20,7 @@ type AnotherPojo {
 }
 type Person {
   firstName : String
-  lastName : String
+  lastName : String!
   zipCode : Int
 }
 type Character {
@@ -33,7 +33,7 @@ type Character {
 }
 type Star {
   name : String
-  id : ID
+  id : ID!
   tag : Tag
 }
 type Tag {

@@ -1,15 +1,13 @@
 {
   "id": "15be8d96-f43d-4dc2-ada2-f15cb06af016",
   "name": "Mars",
-  "dimension": "space",
-  "age": 1,
+  "dimension": null,
   "myBooleanProp": true,
   "anotherPojo": {
     "anotherProp": "myname",
     "anotherIntProp": 55,
     "person": {
       "firstName": "A Person",
-      "lastName": "the last name",
       "zipCode": 784298
     }
   },
@@ -25,7 +23,7 @@
   },
   "stars": [
     {
-      "id": "15be8d96-f43d-4dc2-ada2-f15cb06af016",
+      "id": null,
       "name": "Mars_star",
       "tag": {
         "id": "15be8d96-f43d-4dc2-ada2-f15cb06af016",

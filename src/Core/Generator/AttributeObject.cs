@@ -5,12 +5,17 @@ namespace Azure.DataApiBuilder.Core.Generator
 {
     internal class AttributeObject
     {
-        public AttributeObject(string name, string type, string parent, bool isArray)
+        public AttributeObject(string name, string type, string parent, bool isArray, object? value = null)
         {
-            Name = name;
-            Type = type;
-            Parent = parent;
-            IsArray = isArray;
+            this.Name = name;
+            this.Type = type;
+            this.Parent = parent;
+            this.IsArray = isArray;
+
+            if (value is not null)
+            {
+                this.Values.Add(value);
+            }
         }
 
         public string Name { get; set; }

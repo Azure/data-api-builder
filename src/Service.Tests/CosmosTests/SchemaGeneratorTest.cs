@@ -23,13 +23,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             foreach (string payloadFile in successPayloadFiles)
             {
                 string json = Regex.Replace(File.ReadAllText(payloadFile, Encoding.UTF8), @"\s+", string.Empty);
-                
-                string filename = Path.GetFileNameWithoutExtension(payloadFile);
-
                 JArray jsonArray = new(JsonConvert.DeserializeObject<JObject>(json));
-                string schema = SchemaGenerator.Run(jsonArray, "containerName");
 
-                File.WriteAllText(@$"C:\Workspace\Azure\data-api-builder\src\Service.Tests\CosmosTests\TestData\Gql\/{filename}.gql", schema);
+                string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
+
+                string filename = Path.GetFileNameWithoutExtension(payloadFile);
+                string expectedSchema = File.ReadAllText($"{gqlFilePath}/{filename}.gql");
+
+                AreEqualAfterCleanup(expectedSchema, actualSchema);
             }
         }
 
@@ -46,31 +47,30 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 jArray.Add(JsonConvert.DeserializeObject<JObject>(json));
             }
 
-            // Act
-            string schema = SchemaGenerator.Run(jArray, "containerName");
+            string actualSchema = SchemaGenerator.Generate(jArray, "containerName");
+            string expectedSchema = File.ReadAllText($"{gqlFilePath}/MultiItems.gql");
 
-            //File.Create(@$"C:\Workspace\Azure\data-api-builder\src\Service.Tests\CosmosTests\TestData\Gql\/{item.Key}.gql");
-            File.WriteAllText(@$"C:\Workspace\Azure\data-api-builder\src\Service.Tests\CosmosTests\TestData\Gql\/MultiItems.gql", schema);
+            AreEqualAfterCleanup(expectedSchema, actualSchema);
         }
 
         [TestMethod]
         public void TestMixedJsonArray()
         {
-            var jsonArray = JArray.Parse(@"[
-            { ""name"": ""John"", ""age"": 30, ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" },
-            { ""email"": ""john@example.com"", ""phone"": ""123-456-7890"" }
-        ]");
+            JArray jsonArray = JArray.Parse(@"[
+                { ""name"": ""John"", ""age"": 30, ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" },
+                { ""email"": ""john@example.com"", ""phone"": ""123-456-7890"" }
+            ]");
 
-            string gqlSchema = SchemaGenerator.Run(jsonArray, "containerName");
+            string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
             string expectedSchema = @"type ContainerName @model {
-  name: String!
-  age: Int!
-  isStudent: Boolean!
-  birthDate: String!
-  email: String!
-  phone: String!
-}";
+              name: String!
+              age: Int!
+              isStudent: Boolean!
+              birthDate: String!
+              email: String!
+              phone: String!
+            }";
 
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
         }
@@ -78,30 +78,30 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public void TestEmptyJsonArray()
         {
-            var jsonArray = new JArray();
+            JArray jsonArray = new ();
 
-            Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Run(jsonArray, "containerName"));
+            Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
         }
 
         [TestMethod]
         public void TestJsonArrayWithNonObjectElements()
         {
-            var jsonArray = JArray.Parse(@"[1, 2, 3]");
+            JArray jsonArray = JArray.Parse(@"[1, 2, 3]");
 
-            Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Run(jsonArray, "containerName"));
+            Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
         }
 
         [TestMethod]
         public void TestJsonArrayWithNullElement()
         {
-            var jsonArray = JArray.Parse(@"[{ ""name"": ""John"", ""age"": null }]");
+            JArray jsonArray = JArray.Parse(@"[{ ""name"": ""John"", ""age"": null }]");
 
-            string gqlSchema = SchemaGenerator.Run(jsonArray, "containerName");
+            string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
             string expectedSchema = @"type ContainerName @model {
-  name: String
-  age: String
-}";
+              name: String
+              age: String
+            }";
 
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
         }

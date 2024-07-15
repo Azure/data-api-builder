@@ -1,8 +1,4 @@
-type Emptyobject {
-}
-
-
-type Containername @model {
-  emptyObject : Emptyobject
-  emptyArray : emptyArray: [String]
+type ContainerName @model {
+  emptyObject : EmptyObject
+  emptyArray : String
 }

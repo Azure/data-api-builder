@@ -63,13 +63,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             string gqlSchema = SchemaGenerator.Run(jsonArray, "containerName");
 
-            string expectedSchema = @"type Containername @model {
-  name: String
-  age: Int
-  isStudent: Boolean
-  birthDate: String
-  email: String
-  phone: String
+            string expectedSchema = @"type ContainerName @model {
+  name: String!
+  age: Int!
+  isStudent: Boolean!
+  birthDate: String!
+  email: String!
+  phone: String!
 }";
 
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
@@ -98,7 +98,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             string gqlSchema = SchemaGenerator.Run(jsonArray, "containerName");
 
-            string expectedSchema = @"type Containername @model {
+            string expectedSchema = @"type ContainerName @model {
   name: String
   age: String
 }";

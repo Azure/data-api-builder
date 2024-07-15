@@ -1,22 +1,28 @@
+type ContainerName @model {
+  id : ID
+  name : String
+  dimension : String
+  age : Int
+  myBooleanProp : Boolean
+  anotherPojo : AnotherPojo
+  character : Character
+  stars : [Star]
+  suns : [Sun]
+  moons : [Moon]
+  earth : Earth
+  additionalAttributes : [AdditionalAttribute]
+  tags : [String]
+}
+type AnotherPojo {
+  anotherProp : String
+  anotherIntProp : Int
+  person : Person
+}
 type Person {
   firstName : String
   lastName : String
   zipCode : Int
 }
-
-
-type Anotherpojo {
-  anotherProp : String
-  anotherIntProp : Int
-  person : Person
-}
-
-
-type Star {
-  name : String
-}
-
-
 type Character {
   id : ID
   name : String
@@ -25,73 +31,40 @@ type Character {
   primaryFunction : String
   star : Star
 }
-
-
+type Star {
+  name : String
+  id : ID
+  tag : Tag
+}
 type Tag {
   id : ID
   name : String
 }
-
-
-type Stars {
-  id : ID
-  name : String
-  tag : Tag
-}
-
-
-type Suns {
+type Sun {
   id : ID
   name : String
 }
-
-
-type Moreattributes {
-  id : ID
-  name : String
-}
-
-
-type Moonadditionalattributes {
-  id : ID
-  name : String
-  moreAttributes : [Moreattributes]
-}
-
-
-type Moons {
+type Moon {
   id : ID
   name : String
   details : String
-  moonAdditionalAttributes : [Moonadditionalattributes]
+  moonAdditionalAttributes : [MoonAdditionalAttribute]
 }
-
-
+type MoonAdditionalAttribute {
+  id : ID
+  name : String
+  moreAttributes : [MoreAttribute]
+}
+type MoreAttribute {
+  id : ID
+  name : String
+}
 type Earth {
   id : ID
   name : String
   type : String
 }
-
-
-type Additionalattributes {
+type AdditionalAttribute {
   id : ID
   name : String
-}
-
-
-type Containername @model {
-  id : ID
-  name : String
-  dimension : String
-  age : Int
-  myBooleanProp : Boolean
-  anotherPojo : Anotherpojo
-  character : Character
-  stars : [Stars]
-  suns : [Suns]
-  moons : [Moons]
-  earth : Earth
-  additionalAttributes : [Additionalattributes]
-  tags : [String]
 }

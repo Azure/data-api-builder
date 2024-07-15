@@ -19,7 +19,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using Azure.DataApiBuilder.Config;
-using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.AuthenticationHelpers;
 using Azure.DataApiBuilder.Core.Authorization;
@@ -432,7 +431,7 @@ type Character {
     moons: [Moon],
 }
 
-type Planet @model(name:""Planet"") {
+type Planet @model(name:""PlanetAlias"") {
     id : ID!,
     name : String,
     character: Character
@@ -453,7 +452,7 @@ type Character {
     moons: Moon,
 }
 
-type Planet @model(name:""Planet"") {
+type Planet @model(name:""PlanetAlias"") {
     id : ID!,
     name : String,
     character: Character
@@ -1297,6 +1296,73 @@ type Moon {
             {
                 Assert.Fail(e.Message);
             }
+        }
+
+        /// <summary>
+        /// Test to verify that provided invalid value of depth-limit in the config file should
+        /// result in validation failure during `dab validate` and `dab start`.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(0, DisplayName = "[FAIL]: Invalid Value: 0 for depth-limit.")]
+        [DataRow(-2, DisplayName = "[FAIL]: Invalid Value: -2 for depth-limit.")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestValidateConfigForInvalidDepthLimit(int? depthLimit)
+        {
+            await ValidateConfigWithDepthLimit(depthLimit, expectedSuccess: false);
+        }
+
+        /// <summary>
+        /// Test to verify that provided valid value of depth-limit in the config file should not
+        /// result in any validation failure during `dab validate` and `dab start`.
+        /// -1 and null are special values.
+        /// -1 can be set to remove the depth limit, while `null` is the default value which means no depth limit check.
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(-1, DisplayName = "[PASS]: Valid Value: -1 to disable depth limit")]
+        [DataRow(2, DisplayName = "[PASS]: Valid Value: 2 for depth-limit.")]
+        [DataRow(2147483647, DisplayName = "[PASS]: Valid Value: Using Int32.MaxValue(2147483647) for depth-limit.")]
+        [DataRow(null, DisplayName = "[PASS]: Default Value: null for depth-limit.")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestValidateConfigForValidDepthLimit(int? depthLimit)
+        {
+            await ValidateConfigWithDepthLimit(depthLimit, expectedSuccess: true);
+        }
+
+        /// <summary>
+        /// This method validates that depth-limit outside the valid range should fail validation
+        /// during `dab validate` and `dab start`.     
+        /// </summary>
+        /// <param name="depthLimit"></param>
+        /// <param name="expectedSuccess"></param>
+        private static async Task ValidateConfigWithDepthLimit(int? depthLimit, bool expectedSuccess)
+        {
+            // Arrange: Common setup logic
+            TestHelper.SetupDatabaseEnvironment(MSSQL_ENVIRONMENT);
+            const string CUSTOM_CONFIG = "custom-config.json";
+            FileSystemRuntimeConfigLoader testConfigPath = TestHelper.GetRuntimeConfigLoader();
+            RuntimeConfig configuration = TestHelper.GetRuntimeConfigProvider(testConfigPath).GetConfig();
+            configuration = configuration with
+            {
+                Runtime = configuration.Runtime with
+                {
+                    GraphQL = configuration.Runtime.GraphQL with { DepthLimit = depthLimit, UserProvidedDepthLimit = true }
+                }
+            };
+
+            MockFileSystem fileSystem = new();
+            fileSystem.AddFile(CUSTOM_CONFIG, new MockFileData(configuration.ToJson()));
+            FileSystemRuntimeConfigLoader configLoader = new(fileSystem);
+            configLoader.UpdateConfigFilePath(CUSTOM_CONFIG);
+            RuntimeConfigProvider configProvider = TestHelper.GetRuntimeConfigProvider(configLoader);
+
+            Mock<ILogger<RuntimeConfigValidator>> configValidatorLogger = new();
+            RuntimeConfigValidator configValidator = new(configProvider, fileSystem, configValidatorLogger.Object, true);
+
+            // Act
+            bool isSuccess = await configValidator.TryValidateConfig(CUSTOM_CONFIG, TestHelper.ProvisionLoggerFactory());
+
+            // Assert based on expected success
+            Assert.AreEqual(expectedSuccess, isSuccess);
         }
 
         /// <summary>
@@ -3068,67 +3134,55 @@ type Moon {
         }
 
         /// <summary>
-        /// When you query, DAB loads schema and check for defined entities in the config file which get load during DAB initialization, and
-        /// it fails during this check if entity is not defined in the config file. In this test case, we are testing the error message is appropriate.
+        /// GraphQL Schema types defined -> Character and Planet
+        /// DAB runtime config entities defined -> Planet(Not defined: Character)
+        /// Mismatch of entities and types between provided GraphQL schema file and DAB config results in actionable error message.
         /// </summary>
+        /// <exception cref="ApplicationException"></exception>
         [TestMethod, TestCategory(TestCategory.COSMOSDBNOSQL)]
-        public async Task TestErrorMessageWithoutKeyFieldsInConfig()
+        public void ValidateGraphQLSchemaEntityPresentInConfig()
         {
-            Dictionary<string, object> dbOptions = new();
-            HyphenatedNamingPolicy namingPolicy = new();
+            string GRAPHQL_SCHEMA = @"
+type Character {
+    id : ID,
+    name : String,
+}
 
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Database)), "graphqldb");
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Container)), "dummy");
-            dbOptions.Add(namingPolicy.ConvertName(nameof(CosmosDbNoSQLDataSourceOptions.Schema)), "custom-schema.gql");
-
-            DataSource dataSource = new(DatabaseType.CosmosDB_NoSQL,
-                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.COSMOSDBNOSQL), Options: dbOptions);
-
-            // Add a dummy entity in config file just to make sure the config file is valid.
-            Entity entity = new(
-                Source: new("EntityName", EntitySourceType.Table, null, null),
-                Rest: new(Enabled: false),
-                GraphQL: new("", ""),
-                Permissions: new[] { GetMinimalPermissionConfig(AuthorizationResolver.ROLE_ANONYMOUS) },
-                Relationships: null,
-                Mappings: null
-            );
-            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, new(), new(), entity, "EntityName");
-
-            const string CUSTOM_CONFIG = "custom-config.json";
-
-            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
-
-            string[] args = new[]
+type Planet @model(name:""PlanetAlias"") {
+    id : ID!,
+    name : String,
+    characters : [Character]
+}";
+            // Read the base config from the file system
+            TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
+            FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+            if (!baseLoader.TryLoadKnownConfig(out RuntimeConfig baseConfig))
             {
-                $"--ConfigFileName={CUSTOM_CONFIG}"
-            };
-
-            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
-            using (HttpClient client = server.CreateClient())
-            {
-                // When you query, DAB loads schema and check for defined entities in the config file and
-                // it fails during that, since entity is not defined in the config file.
-                string query = @"{
-                    Planet {
-                        items{
-                            id
-                        }
-                    }
-                }";
-
-                object payload = new { query };
-
-                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
-                {
-                    Content = JsonContent.Create(payload)
-                };
-
-                DataApiBuilderException ex = await Assert.ThrowsExceptionAsync<DataApiBuilderException>(async () => await client.SendAsync(graphQLRequest));
-                Assert.AreEqual("The entity 'Planet' was not found in the runtime config.", ex.Message);
-                Assert.AreEqual(HttpStatusCode.ServiceUnavailable, ex.StatusCode);
-                Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, ex.SubStatusCode);
+                throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
             }
+
+            Dictionary<string, Entity> entities = new(baseConfig.Entities);
+            entities.Remove("Character");
+
+            RuntimeConfig runtimeConfig = new(Schema: baseConfig.Schema,
+                                             DataSource: baseConfig.DataSource,
+                                             Runtime: baseConfig.Runtime,
+                                             Entities: new(entities));
+
+            // Setup a mock file system, and use that one with the loader/provider for the config
+            MockFileSystem fileSystem = new(new Dictionary<string, MockFileData>()
+            {
+                { @"../schema.gql", new MockFileData(GRAPHQL_SCHEMA) },
+                { DEFAULT_CONFIG_FILE_NAME, new MockFileData(runtimeConfig.ToJson()) }
+            });
+            FileSystemRuntimeConfigLoader loader = new(fileSystem);
+            RuntimeConfigProvider provider = new(loader);
+
+            DataApiBuilderException exception =
+                Assert.ThrowsException<DataApiBuilderException>(() => new CosmosSqlMetadataProvider(provider, fileSystem));
+            Assert.AreEqual("The entity 'Character' was not found in the runtime config.", exception.Message);
+            Assert.AreEqual(HttpStatusCode.ServiceUnavailable, exception.StatusCode);
+            Assert.AreEqual(DataApiBuilderException.SubStatusCodes.ConfigValidationError, exception.SubStatusCode);
         }
 
         /// <summary>
@@ -3708,6 +3762,273 @@ type Moon {
             catch (FormatException)
             {
                 Assert.Fail(message: "$after query parameter was not a valid base64 encoded value.");
+            }
+        }
+
+        /// <summary>
+        /// Tests the enforcement of depth limit restrictions on GraphQL queries and mutations in non-hosted mode.
+        /// Verifies that requests exceeding the specified depth limit result in a BadRequest, 
+        /// while requests within the limit succeed with the expected status code.
+        /// Also verifies that the error message contains the current and allowed max depth limit value.
+        /// Example:
+        /// Query:
+        /// query book_by_pk{
+        ///     book_by_pk(id: 1) {         // depth: 1
+        ///         id,                     // depth: 2
+        ///         title,                  // depth: 2
+        ///         publisher_id            // depth: 2
+        ///     }
+        /// }
+        /// Mutation:
+        /// mutation createbook {
+        ///    createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {         // depth: 1
+        ///       title,                                                              // depth: 2
+        ///       publisher_id                                                        // depth: 2
+        ///   }
+        /// </summary>
+        /// <param name="depthLimit">The maximum allowed depth for GraphQL queries and mutations.</param>
+        /// <param name="operationType">Indicates whether the operation is a mutation or a query.</param>
+        /// <param name="expectedStatusCodeForGraphQL">The expected HTTP status code for the operation.</param>
+        [DataTestMethod]
+        [DataRow(1, GraphQLOperation.Query, HttpStatusCode.BadRequest, DisplayName = "Failed Query execution when max depth limit is set to 1")]
+        [DataRow(2, GraphQLOperation.Query, HttpStatusCode.OK, DisplayName = "Query execution successful when max depth limit is set to 2")]
+        [DataRow(1, GraphQLOperation.Mutation, HttpStatusCode.BadRequest, DisplayName = "Failed Mutation execution when max depth limit is set to 1")]
+        [DataRow(2, GraphQLOperation.Mutation, HttpStatusCode.OK, DisplayName = "Mutation execution successful when max depth limit is set to 2")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestDepthLimitRestrictionOnGraphQLInNonHostedMode(
+            int depthLimit,
+            GraphQLOperation operationType,
+            HttpStatusCode expectedStatusCodeForGraphQL)
+        {
+            // Arrange
+            GraphQLRuntimeOptions graphqlOptions = new(DepthLimit: depthLimit);
+            graphqlOptions = graphqlOptions with { UserProvidedDepthLimit = true };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                string query;
+                if (operationType is GraphQLOperation.Mutation)
+                {
+                    // requested mutation operation has depth of 2
+                    query = @"mutation createbook{
+                                createbook(item: { title: ""Book #1"", publisher_id: 1234 }) {
+                                    title
+                                    publisher_id
+                                }
+                            }";
+                }
+                else
+                {
+                    // requested query operation has depth of 2
+                    query = @"query book_by_pk{
+                                book_by_pk(id: 1) {
+                                    id,
+                                    title,
+                                    publisher_id
+                                }
+                            }";
+                }
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                // Act
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+
+                // Assert
+                Assert.AreEqual(expectedStatusCodeForGraphQL, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+                JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
+                if (graphQLResponse.StatusCode == HttpStatusCode.OK)
+                {
+                    Assert.IsTrue(responseJson.TryGetProperty("data", out JsonElement data), "The response should contain data.");
+                    Assert.IsFalse(data.TryGetProperty("errors", out _), "The response should not contain any errors.");
+                }
+                else
+                {
+                    Assert.IsTrue(responseJson.TryGetProperty("errors", out JsonElement data), "The response should contain errors.");
+                    Assert.IsTrue(data.EnumerateArray().Any(), "The response should contain at least one error.");
+                    Assert.IsTrue(data.EnumerateArray().FirstOrDefault().TryGetProperty("message", out JsonElement message), "The error should contain a message.");
+                    string errorMessage = message.GetString();
+                    string expectedErrorMessage = $"The GraphQL document has an execution depth of 2 which exceeds the max allowed execution depth of {depthLimit}.";
+                    Assert.AreEqual(expectedErrorMessage, errorMessage, "The error message should contain the current and allowed max depth limit value.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// This test verifies that the depth-limit specified for GraphQL does not affect introspection queries.
+        /// In this test, we have specified the depth limit as 2 and we are sending introspection query with depth 6.
+        /// The expected result is that the query should be successful and should not return any errors.
+        /// Example:
+        /// {
+        ///    __schema {               // depth: 1
+        ///       types {               // depth: 2
+        ///         name                // depth: 3
+        ///         fields {            // depth: 3
+        ///           name              // depth: 4
+        ///           type {            // depth: 4
+        ///            name             // depth: 5
+        ///            kind             // depth: 5
+        ///            ofType {         // depth: 5
+        ///              name           // depth: 6
+        ///              kind           // depth: 6
+        ///             }
+        ///         }
+        ///     }
+        /// }
+        /// </summary>
+        [TestCategory(TestCategory.MSSQL)]
+        [TestMethod]
+        public async Task TestGraphQLIntrospectionQueriesAreNotImpactedByDepthLimit()
+        {
+            // Arrange
+            GraphQLRuntimeOptions graphqlOptions = new(DepthLimit: 2);
+            graphqlOptions = graphqlOptions with { UserProvidedDepthLimit = true };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // nested depth:6
+                string query = @"{
+                                    __schema {
+                                        types {
+                                        name
+                                        fields {
+                                            name
+                                            type {
+                                                name
+                                                kind
+                                                    ofType {
+                                                        name
+                                                        kind
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                // Act
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+
+                // Assert
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+
+                JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
+                Assert.IsNotNull(responseJson, "The response should be a valid JSON.");
+                Assert.IsTrue(responseJson.TryGetProperty("data", out JsonElement data), "The response should contain data.");
+                Assert.IsFalse(data.TryGetProperty("errors", out _), "The response should not contain any errors.");
+                Assert.IsTrue(responseJson.GetProperty("data").TryGetProperty("__schema", out JsonElement schema));
+                Assert.IsNotNull(schema, "The response should contain schema information.");
+            }
+        }
+
+        /// <summary>
+        /// Tests the behavior of GraphQL queries in non-hosted mode when the depth limit is explicitly set to -1 or null.
+        /// Setting the depth limit to -1 is intended to disable the depth limit check, allowing queries of any depth.
+        /// Using null as default value of dab which also disables the depth limit check.
+        /// This test verifies that queries are processed successfully without any errors under these configurations.
+        /// Example Query:
+        /// {
+        ///     book_by_pk(id: 1) {         // depth: 1
+        ///         id,                     // depth: 2
+        ///         title,                  // depth: 2
+        ///         publisher_id            // depth: 2
+        ///     }
+        /// }
+        /// </summary>
+        /// <param name="depthLimit"> </param>
+        [DataTestMethod]
+        [DataRow(-1, DisplayName = "Setting -1 for depth-limit will disable the depth limit")]
+        [DataRow(null, DisplayName = "Using default value: null for depth-limit which also disables the depth limit check")]
+        [TestCategory(TestCategory.MSSQL)]
+        public async Task TestNoDepthLimitOnGrahQLInNonHostedMode(int? depthLimit)
+        {
+            // Arrange
+            GraphQLRuntimeOptions graphqlOptions = new(DepthLimit: depthLimit);
+            graphqlOptions = graphqlOptions with { UserProvidedDepthLimit = true };
+
+            DataSource dataSource = new(DatabaseType.MSSQL,
+                GetConnectionStringFromEnvironmentConfig(environment: TestCategory.MSSQL), Options: null);
+
+            RuntimeConfig configuration = InitMinimalRuntimeConfig(dataSource, graphqlOptions, restOptions: new());
+            const string CUSTOM_CONFIG = "custom-config.json";
+            File.WriteAllText(CUSTOM_CONFIG, configuration.ToJson());
+
+            string[] args = new[]
+            {
+                $"--ConfigFileName={CUSTOM_CONFIG}"
+            };
+
+            using (TestServer server = new(Program.CreateWebHostBuilder(args)))
+            using (HttpClient client = server.CreateClient())
+            {
+                // requested query operation has depth of 2
+                string query = @"{
+                                    book_by_pk(id: 1) {
+                                        id,
+                                        title,
+                                        publisher_id
+                                    }
+                                }";
+
+                object payload = new { query };
+
+                HttpRequestMessage graphQLRequest = new(HttpMethod.Post, "/graphql")
+                {
+                    Content = JsonContent.Create(payload)
+                };
+
+                // Act
+                HttpResponseMessage graphQLResponse = await client.SendAsync(graphQLRequest);
+
+                // Assert
+                Assert.AreEqual(HttpStatusCode.OK, graphQLResponse.StatusCode);
+                string body = await graphQLResponse.Content.ReadAsStringAsync();
+
+                JsonElement responseJson = JsonSerializer.Deserialize<JsonElement>(body);
+                Assert.IsNotNull(responseJson, "The response should be a valid JSON.");
+                Assert.IsTrue(responseJson.TryGetProperty("data", out JsonElement data), "The response should contain data.");
+                Assert.IsFalse(data.TryGetProperty("errors", out _), "The response should not contain any errors.");
+                Assert.IsTrue(data.TryGetProperty("book_by_pk", out _), "The response data should contain book_by_pk data.");
             }
         }
 

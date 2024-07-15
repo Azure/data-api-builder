@@ -24,13 +24,39 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             await InitializeTestFixture();
         }
 
-        protected override string MakeQueryOnTypeTable(List<string> columnsToQuery, int id)
+        /// <summary>
+        /// Postgres Single Type Test.
+        /// Postgres requires conversion of a float value, ex: 0.33 to 'real' type otherwise precision is lost.
+        /// </summary>
+        /// <param name="type">GraphQL Type</param>
+        /// <param name="filterOperator">Comparison operator: gt, lt, gte, lte, etc.</param>
+        /// <param name="sqlValue">Value to be set in "expected value" sql query.</param>
+        /// <param name="gqlValue">GraphQL input value supplied.</param>
+        /// <param name="queryOperator">Query operator for "expected value" sql query.</param>
+        [DataRow(SINGLE_TYPE, "gt", "real '-9.3'", "-9.3", ">")]
+        [DataRow(SINGLE_TYPE, "gte", "real '-9.2'", "-9.2", ">=")]
+        [DataRow(SINGLE_TYPE, "lt", "real '.33'", "0.33", "<")]
+        [DataRow(SINGLE_TYPE, "lte", "real '.33'", "0.33", "<=")]
+        [DataRow(SINGLE_TYPE, "neq", "real '9.2'", "9.2", "!=")]
+        [DataRow(SINGLE_TYPE, "eq", "real '0.33'", "0.33", "=")]
+        [DataTestMethod]
+        public async Task PG_real_graphql_single_filter_expectedValues(
+            string type,
+            string filterOperator,
+            string sqlValue,
+            string gqlValue,
+            string queryOperator)
         {
-            return MakeQueryOnTypeTable(columnsToQuery, filterValue: id.ToString(), filterField: "id");
+            await QueryTypeColumnFilterAndOrderBy(type, filterOperator, sqlValue, gqlValue, queryOperator);
+        }
+
+        protected override string MakeQueryOnTypeTable(List<DabField> queryFields, int id)
+        {
+            return MakeQueryOnTypeTable(queryFields, filterValue: id.ToString(), filterField: "id");
         }
 
         protected override string MakeQueryOnTypeTable(
-            List<string> queriedColumns,
+            List<DabField> queryFields,
             string filterValue = "1",
             string filterOperator = "=",
             string filterField = "1",
@@ -42,7 +68,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
             return @"
                 " + formattedSelect + @"
                 FROM
-                  (SELECT " + string.Join(", ", queriedColumns.Select(c => ProperlyFormatTypeTableColumn(c) + $" AS {c}")) + @"
+                  (SELECT " + string.Join(", ", queryFields.Select(field => ProperlyFormatTypeTableColumn(field.BackingColumnName) + $" AS {field.Alias}")) + @"
                    FROM public.type_table AS table0
                    WHERE " + filterField + " " + filterOperator + " " + filterValue + @"
                    ORDER BY " + orderBy + @" asc
@@ -60,6 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLSupportedTypesTests
                 DATETIME2_TYPE => false,
                 DATETIMEOFFSET_TYPE => false,
                 TIME_TYPE => false,
+                LOCALTIME_TYPE => false,
                 _ => true
             };
         }

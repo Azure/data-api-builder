@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text;
+using DotNetEnv;
 using Humanizer;
 using Newtonsoft.Json.Linq;
 
@@ -15,41 +16,50 @@ namespace Azure.DataApiBuilder.Core.Generator
         // Cosmos DB reserved properties, these properties will be ignored in the schema generation as they are not user-defined properties.
         private readonly List<string> _cosmosDbReservedProperties = new() { "_ts", "_etag", "_rid", "_self", "_attachments" };
 
+        // Contains the mapping of GQL Entities and their corresponding attributes.
         private Dictionary<string, HashSet<AttributeObject>> _attrMapping = new();
+
+        private JArray _data;
+        private string _containerName;
+
+        private SchemaGenerator(JArray data, string containerName)
+        {
+            this._data = data;
+            this._containerName = containerName;
+        }
 
         /// <summary>
         /// Processes a JArray of JSON objects and generates a GraphQL schema.
         /// </summary>
-        /// <param name="jsonArray">Sampled JSON Data</param>
+        /// <param name="jsonData">Sampled JSON Data</param>
         /// <param name="containerName">Cosmos DB Container Name</param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException">If JsonArray or Container Name is Empty or null</exception>
-        public static string Run(JArray jsonArray, string containerName)
+        public static string Generate(JArray jsonData, string containerName)
         {
             // Validating if passed inputs are not null or empty
-            if (jsonArray == null || jsonArray.Count == 0 || string.IsNullOrEmpty(containerName))
+            if (jsonData == null || jsonData.Count == 0 || string.IsNullOrEmpty(containerName))
             {
-                throw new InvalidOperationException("JArray must contain at least one JSON object.");
+                throw new InvalidOperationException("JArray must contain at least one JSON object and Container Name can not be blank");
             }
 
-            return new SchemaGenerator().ConvertJsonToGQLSchema(jsonArray, containerName);
+            return new SchemaGenerator(jsonData, containerName)
+                        .ConvertJsonToGQLSchema();
         }
 
         /// <summary>
-        /// This method converts a JArray of JSON objects to a GraphQL schema.
+        /// This method takes data and container name, from which GQL Schema needs to be fetched.
         /// </summary>
-        /// <param name="jsonArray"></param>
-        /// <param name="containerName"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException">If JArray doesn't contains JObject</exception>
-        private string ConvertJsonToGQLSchema(JArray jsonArray, string containerName)
+        private string ConvertJsonToGQLSchema()
         {
-            foreach (JToken token in jsonArray)
+            // Process each JSON object in the JArray to collect GQL Entities and their attributes.
+            foreach (JToken token in _data)
             {
                 if (token is JObject jsonObject)
                 {
-                    Console.WriteLine("_-----------------");
-                    TraverseJsonObject(jsonObject, containerName);
+                    TraverseJsonObject(jsonObject, _containerName);
                 }
                 else
                 {
@@ -57,16 +67,26 @@ namespace Azure.DataApiBuilder.Core.Generator
                 }
             }
 
-            StringBuilder sb = new ();
+            // Generate string out of the traversed information
+            return GenerateGQLSchema();
+        }
 
+        /// <summary>
+        /// Take Traversed information and convert that to GQL string
+        /// </summary>
+        /// <param name="containerName"></param>
+        /// <returns></returns>
+        private string GenerateGQLSchema()
+        {
+            StringBuilder sb = new();
             foreach (KeyValuePair<string, HashSet<AttributeObject>> entity in _attrMapping)
             {
-                bool isRoot = entity.Key == containerName.Pascalize();
+                bool isRoot = entity.Key == _containerName.Pascalize();
                 sb.AppendLine($"type {entity.Key} {(isRoot ? "@model " : "")}{{");
 
                 foreach (AttributeObject field in entity.Value)
                 {
-                    sb.AppendLine($"  {field.GetString(jsonArray.Count)}");
+                    sb.AppendLine($"  {field.GetString(_data.Count)}");
                 }
 
                 sb.AppendLine("}");
@@ -79,7 +99,6 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// This function takes the JSON Object and Traverse through it to collect all the GQL Entities which corresponding schema
         /// </summary>
         /// <param name="jsonObject"></param>
-        /// <param name="gqlFields"></param>
         /// <param name="parentType"></param>
         private void TraverseJsonObject(JObject jsonObject, string parentType)
         {
@@ -119,6 +138,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 switch (token.Type)
                 {
                     case JTokenType.Object:
+                    {
                         string objectTypeName = fieldName.Pascalize();
 
                         if (isArray)
@@ -130,7 +150,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
                         gqlFieldType = objectTypeName;
                         break;
-
+                    }
                     case JTokenType.Array:
                         gqlFieldType = ProcessJsonArray((JArray)token, fieldName, parentType.Singularize());
                         break;
@@ -148,7 +168,6 @@ namespace Azure.DataApiBuilder.Core.Generator
                         break;
 
                     case JTokenType.Date or JTokenType.Null or JTokenType.String:
-                        // Example: Representing date as ISO 8601 string
                         gqlFieldType = "String";
                         break;
 
@@ -158,44 +177,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             }
 
-            AttributeObject? attr;
-            HashSet<AttributeObject> attrSet;
-            if (!_attrMapping.ContainsKey(parentType))
-            {
-                attr = new(fieldName, gqlFieldType, parentType, isArray);
-                attrSet = new HashSet<AttributeObject>() { attr };
-                _attrMapping.Add(parentType, attrSet);
-            }
-            else
-            {
-                attrSet = _attrMapping[parentType];
-                attr = attrSet.FirstOrDefault(a => a.Name == fieldName);
-                if (attr == null)
-                {
-                    attr = new(fieldName, gqlFieldType, parentType, isArray);
-                    attrSet.Add(attr);
-                }
-
-                attrSet.Add(attr);
-                _attrMapping[parentType] = attrSet;
-            }
-           
-            object? value;
-            if (token is JValue jValue)
-            {
-                value = jValue.Value;
-            }
-            else
-            {
-                value = gqlFieldType;
-            }
-
-            if (value != null)
-            {
-                attr.Values.Add(value);
-            }
-
-            Console.WriteLine(attr.Print());
+            AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType);
 
             return gqlFieldType;
         }
@@ -216,6 +198,48 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             // Take first element out of the array, Assuming array contains similar objects and process it
             return ProcessJsonToken(jsonArray[0], fieldName, parentType, true);
+        }
+
+        /// <summary>
+        /// Add or Update the Attribute Information in the Entity Map
+        /// </summary>
+        /// <param name="token"></param>
+        /// <param name="fieldName"></param>
+        /// <param name="parentType"></param>
+        /// <param name="isArray"></param>
+        /// <param name="gqlFieldType"></param>
+        private void AddOrUpdateAttributeInfo(JToken token, string fieldName, string parentType, bool isArray, string gqlFieldType)
+        {
+            object? value = (token is JValue jValue) ? jValue.Value : gqlFieldType;
+            // Check if this attribute is already recorded for this entity
+            if (!_attrMapping.ContainsKey(parentType))
+            {
+                _attrMapping.Add(parentType, new HashSet<AttributeObject>()
+                {
+                    new(name: fieldName,
+                        type: gqlFieldType,
+                        parent: parentType,
+                        isArray: isArray,
+                        value: value)
+                });
+            }
+            else
+            {
+                AttributeObject? attributeObject = _attrMapping[parentType].FirstOrDefault(a => a.Name == fieldName);
+                if(attributeObject is null)
+                {
+                    _attrMapping[parentType].Add(new(name: fieldName,
+                        type: gqlFieldType,
+                        parent: parentType,
+                        isArray: isArray,
+                        value: value));
+                }
+                else if(value is not null)
+                {
+                    attributeObject.Values.Add(value);
+                }
+            }
+
         }
     }
 }

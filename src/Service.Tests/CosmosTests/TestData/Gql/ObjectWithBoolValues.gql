@@ -1,4 +1,4 @@
-type Containername @model {
+type ContainerName @model {
   isActive : Boolean
   isVerified : Boolean
   name : String

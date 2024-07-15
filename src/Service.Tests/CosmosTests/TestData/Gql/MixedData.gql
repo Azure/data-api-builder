@@ -1,11 +1,4 @@
-type Dimensions {
-  length : Float
-  width : Float
-  height : Float
-}
-
-
-type Containername @model {
+type ContainerName @model {
   id : ID
   name : String
   price : Float
@@ -14,4 +7,9 @@ type Containername @model {
   dimensions : Dimensions
   manufacturedDate : String
   relatedProducts : [Int]
+}
+type Dimensions {
+  length : Float
+  width : Float
+  height : Float
 }

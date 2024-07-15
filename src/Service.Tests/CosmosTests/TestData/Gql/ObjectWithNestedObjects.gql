@@ -1,40 +1,33 @@
-type Profile {
-  firstName : String
-  lastName : String
-  dob : String
-}
-
-
 type User {
   id : ID
   username : String
   profile : Profile
 }
-
-
+type Profile {
+  firstName : String
+  lastName : String
+  dob : String
+}
+type ContainerName @model {
+  user : User
+  settings : Settings
+  posts : [Post]
+}
 type Settings {
   notifications : Boolean
   theme : String
+  languages : String
+}
+type Setting {
   languages : [String]
 }
-
-
-type Comments {
-  user : String
-  message : String
-}
-
-
-type Posts {
+type Post {
   id : ID
   title : String
   content : String
-  comments : [Comments]
+  comments : [Comment]
 }
-
-
-type Containername @model {
-  user : User
-  settings : Settings
-  posts : [Posts]
+type Comment {
+  user : String
+  message : String
 }

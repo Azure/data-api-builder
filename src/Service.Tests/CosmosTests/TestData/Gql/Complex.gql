@@ -1,9 +1,10 @@
-type Coordinates {
-  latitude : Float
-  longitude : Float
+type ContainerName @model {
+  name : String
+  age : Int
+  address : Address
+  emails : [String]
+  phoneNumbers : [PhoneNumber]
 }
-
-
 type Address {
   street : String
   city : String
@@ -11,18 +12,11 @@ type Address {
   zip : String
   coordinates : Coordinates
 }
-
-
-type Phonenumbers {
+type Coordinates {
+  latitude : Float
+  longitude : Float
+}
+type PhoneNumber {
   type : String
   number : String
-}
-
-
-type Containername @model {
-  name : String
-  age : Int
-  address : Address
-  emails : [String]
-  phoneNumbers : [Phonenumbers]
 }

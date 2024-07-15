@@ -1,13 +1,11 @@
+type ContainerName @model {
+  name : String
+  age : Int
+  address : Address
+}
 type Address {
   street : String
   city : String
   state : String
   zip : String
-}
-
-
-type Containername @model {
-  name : String
-  age : Int
-  address : Address
 }

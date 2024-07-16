@@ -3,6 +3,7 @@
 
 using Azure.DataApiBuilder.Core.Generator.Sampler;
 using Microsoft.Azure.Cosmos;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
@@ -12,13 +13,17 @@ namespace Azure.DataApiBuilder.Core.Generator
         {
             ISchemaGeneratorSampler schemaGeneratorSampler = mode switch
             {
-                SamplingMode.TopNSampler => new TopNSampler(sampleCount),
-                SamplingMode.PartitionBasedSampler => new PartitionBasedSampler(partitionKeyPath, sampleCount, days),
-                SamplingMode.TimeBasedSampler => new TimeBasedSampler(groupCount, sampleCount, days),
+                SamplingMode.TopNSampler => new TopNSampler(container, sampleCount),
+                SamplingMode.PartitionBasedSampler => new PartitionBasedSampler(container, partitionKeyPath, sampleCount, days),
+                SamplingMode.TimeBasedSampler => new TimeBasedSampler(container, groupCount, sampleCount, days),
                 _ => throw new ArgumentException($"Invalid sampling mode: {mode}")
             };
 
-            return await GraphQLSchemaGenerator.Generate(schemaGeneratorSampler, container);
+            // Get Sample Data
+            List<JObject> dataArray = await schemaGeneratorSampler.GetSampleAsync();
+
+            // Generate GQL Schema
+            return SchemaGenerator.Generate(dataArray, container.Id);
         }
     }
 }

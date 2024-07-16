@@ -8,65 +8,78 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     internal class TimeBasedSampler : ISchemaGeneratorSampler
     {
+        // Default Configuration
+        private const int GROUP_COUNT = 10;
+        private const int RECORDS_PER_GROUP = 10;
+        private const int MAX_DAYS = 10;
+
+        // Query
+        private const string MIN_TIMESTAMP_QUERY = "SELECT VALUE MAX(c._ts) FROM c";
+        private const string MAX_TIMESTAMP_QUERY = "SELECT VALUE MIN(c._ts) FROM c";
+        private const string SELECT_TOP_QUERY = "SELECT TOP {0} * FROM c WHERE c._ts >= {1} AND c._ts <= {2} ORDER by _ts desc";
+
         private int _groupCount;
         private int _numberOfRecordsPerGroup;
-        private int _maxDaysPerGroup;
+        private int _maxDays;
 
-        private QueryExecutor _queryExecutor;
+        private CosmosExecutor _cosmosExecutor;
 
-        public TimeBasedSampler(Container container, int? groupCount, int? numberOfRecordsPerGroup, int? maxDaysPerGroup)
+        public TimeBasedSampler(Container container, int? groupCount, int? numberOfRecordsPerGroup, int? maxDays)
         {
-            this._groupCount = groupCount ?? 10;
-            this._numberOfRecordsPerGroup = numberOfRecordsPerGroup ?? 5;
-            this._maxDaysPerGroup = maxDaysPerGroup ?? 10;
+            this._groupCount = groupCount ?? GROUP_COUNT;
+            this._numberOfRecordsPerGroup = numberOfRecordsPerGroup ?? RECORDS_PER_GROUP;
+            this._maxDays = maxDays ?? MAX_DAYS;
 
-            this._queryExecutor = new QueryExecutor(container);
+            this._cosmosExecutor = new CosmosExecutor(container);
         }
 
+        /// <summary>
+        /// This Function return sampled data after going through below steps:
+        /// 1) Get the highest and lowest timestamps.
+        /// 2) Divide this time range into subranges (or groups).
+        /// 3) Get top N records, order by timestamp, from each subrange (or group).
+        /// </summary>
+        /// <returns></returns>
         public async Task<List<JObject>> GetSampleAsync()
         {
-            try
-            {
-                // Get the highest and lowest timestamps
-                (int minTimestamp, int maxTimestamp) = await GetHighestAndLowestTimestampsAsync();
+            // Get the highest and lowest timestamps
+            (long minTimestamp, long maxTimestamp) = await GetHighestAndLowestTimestampsAsync();
 
-                // Divide the range into subranges and get data
-                return await GetDataFromSubranges(minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);
-            }
-            catch (CosmosException ex)
-            {
-                Console.WriteLine($"Cosmos DB error: {ex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
-            }
-
-            return new List<JObject>();
+            // Divide the range into subranges and get data
+            return await GetDataFromSubranges(minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);
         }
 
-        private async Task<(int minTimestamp, int maxTimestamp)> GetHighestAndLowestTimestampsAsync()
+        private async Task<(long minTimestamp, long maxTimestamp)> GetHighestAndLowestTimestampsAsync()
         {
-            List<int> maxTimestampQuery = await this._queryExecutor.ExecuteQueryAsync<int>("SELECT VALUE MAX(c._ts) FROM c");
-            List<int> minTimestampQuery = await this._queryExecutor.ExecuteQueryAsync<int>("SELECT VALUE MIN(c._ts) FROM c");
+            List<long> minTimestamp = await this._cosmosExecutor.ExecuteQueryAsync<long>(MIN_TIMESTAMP_QUERY);
+            List<long> maxTimestamp = new (capacity: 1);
+            if (_maxDays > 0)
+            {
+                // Calculate the timestamp threshold for the timespan
+                maxTimestamp.Add(new DateTimeOffset(DateTime.UtcNow.AddDays(_maxDays)).ToUnixTimeSeconds());
+            }
+            else
+            {
+                maxTimestamp = await this._cosmosExecutor.ExecuteQueryAsync<long>(MAX_TIMESTAMP_QUERY);
+            }
 
-            return (minTimestampQuery[0], maxTimestampQuery[0]);
+            return (minTimestamp[0], maxTimestamp[0]);
         }
 
-        private async Task<List<JObject>> GetDataFromSubranges(int minTimestamp, int maxTimestamp, int numberOfSubranges, int itemsPerSubrange)
+        private async Task<List<JObject>> GetDataFromSubranges(long minTimestamp, long maxTimestamp, int numberOfSubranges, int itemsPerSubrange)
         {
             List<JObject> dataArray = new();
 
-            int rangeSize = (maxTimestamp - minTimestamp) / numberOfSubranges;
+            long rangeSize = (maxTimestamp - minTimestamp) / numberOfSubranges;
 
             for (int i = 0; i < numberOfSubranges; i++)
             {
-                int rangeStart = minTimestamp + (i * rangeSize);
-                int rangeEnd = (i == numberOfSubranges - 1) ? maxTimestamp : rangeStart + rangeSize - 1;
+                long rangeStart = minTimestamp + (i * rangeSize);
+                long rangeEnd = (i == numberOfSubranges - 1) ? maxTimestamp : rangeStart + rangeSize - 1;
 
-                string query = $"SELECT TOP {itemsPerSubrange} * FROM c WHERE c._ts >= {rangeStart} AND c._ts <= {rangeEnd}";
+                string query = string.Format(SELECT_TOP_QUERY, itemsPerSubrange, rangeStart, rangeEnd) ;
 
-                dataArray.AddRange(await this._queryExecutor.ExecuteQueryAsync<JObject>(query));
+                dataArray.AddRange(await this._cosmosExecutor.ExecuteQueryAsync<JObject>(query));
             }
 
             return dataArray;

@@ -9,6 +9,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -23,7 +25,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             foreach (string payloadFile in successPayloadFiles)
             {
                 string json = Regex.Replace(File.ReadAllText(payloadFile, Encoding.UTF8), @"\s+", string.Empty);
-                JArray jsonArray = new(JsonConvert.DeserializeObject<JObject>(json));
+                List<JObject> jsonArray = new () { JsonConvert.DeserializeObject<JObject>(json) };
 
                 string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
@@ -38,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [DataRow("CosmosTests/TestData/Json/MultiItems", "CosmosTests/TestData/Gql")]
         public void TestSchemaGeneratorUsingMultipleJson(string jsonFilePath, string gqlFilePath)
         {
-            JArray jArray = new ();
+            List<JObject> jArray = new ();
 
             string[] successPayloadFiles = Directory.GetFiles(jsonFilePath, "*.json");
             foreach (string payloadFile in successPayloadFiles)
@@ -56,10 +58,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public void TestMixedJsonArray()
         {
-            JArray jsonArray = JArray.Parse(@"[
-                { ""name"": ""John"", ""age"": 30, ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" },
-                { ""email"": ""john@example.com"", ""phone"": ""123-456-7890"" }
-            ]");
+            List<JObject> jsonArray = new() {
+                JObject.Parse(@"{ ""name"": ""John"", ""age"": 30, ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" }"),
+                JObject.Parse(@"{ ""email"": ""john@example.com"", ""phone"": ""123-456-7890"" }")};
 
             string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
@@ -78,16 +79,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public void TestEmptyJsonArray()
         {
-            JArray jsonArray = new ();
-
-            Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
-        }
-
-        [TestMethod]
-        public void TestJsonArrayWithNonObjectElements()
-        {
-            JArray jsonArray = JArray.Parse(@"[1, 2, 3]");
-
+            List<JObject> jsonArray = new ();
             Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
         }
 
@@ -96,7 +88,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         {
             JArray jsonArray = JArray.Parse(@"[{ ""name"": ""John"", ""age"": null }]");
 
-            string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
+            string gqlSchema = SchemaGenerator.Generate(jsonArray.Select(item => (JObject)item).ToList(), "containerName");
 
             string expectedSchema = @"type ContainerName @model {
               name: String

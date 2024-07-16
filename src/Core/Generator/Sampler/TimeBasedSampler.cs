@@ -12,22 +12,26 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private int _numberOfRecordsPerGroup;
         private int _maxDaysPerGroup;
 
-        public TimeBasedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDaysPerGroup)
+        private QueryExecutor _queryExecutor;
+
+        public TimeBasedSampler(Container container, int? groupCount, int? numberOfRecordsPerGroup, int? maxDaysPerGroup)
         {
             this._groupCount = groupCount ?? 10;
             this._numberOfRecordsPerGroup = numberOfRecordsPerGroup ?? 5;
             this._maxDaysPerGroup = maxDaysPerGroup ?? 10;
+
+            this._queryExecutor = new QueryExecutor(container);
         }
 
-        public async Task<JArray> GetSampleAsync(Container container)
+        public async Task<List<JObject>> GetSampleAsync()
         {
             try
             {
                 // Get the highest and lowest timestamps
-                (int minTimestamp, int maxTimestamp) = await GetHighestAndLowestTimestampsAsync(container);
+                (int minTimestamp, int maxTimestamp) = await GetHighestAndLowestTimestampsAsync();
 
                 // Divide the range into subranges and get data
-                return await GetDataFromSubranges(container, minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);
+                return await GetDataFromSubranges(minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);
             }
             catch (CosmosException ex)
             {
@@ -38,42 +42,20 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 Console.WriteLine($"Error: {ex.Message}");
             }
 
-            return new JArray();
+            return new List<JObject>();
         }
 
-        private static async Task<(int minTimestamp, int maxTimestamp)> GetHighestAndLowestTimestampsAsync(Container container)
+        private async Task<(int minTimestamp, int maxTimestamp)> GetHighestAndLowestTimestampsAsync()
         {
-            string maxTimestampQuery = "SELECT VALUE MAX(c._ts) FROM c";
-            string minTimestampQuery = "SELECT VALUE MIN(c._ts) FROM c";
+            List<int> maxTimestampQuery = await this._queryExecutor.ExecuteQueryAsync<int>("SELECT VALUE MAX(c._ts) FROM c");
+            List<int> minTimestampQuery = await this._queryExecutor.ExecuteQueryAsync<int>("SELECT VALUE MIN(c._ts) FROM c");
 
-            var maxTimestampIterator = container.GetItemQueryIterator<int>(new QueryDefinition(maxTimestampQuery));
-            var minTimestampIterator = container.GetItemQueryIterator<int>(new QueryDefinition(minTimestampQuery));
-
-            int maxTimestamp = 0;
-            int minTimestamp = 0;
-
-            if (maxTimestampIterator.HasMoreResults)
-            {
-                foreach (var maxTs in await maxTimestampIterator.ReadNextAsync())
-                {
-                    maxTimestamp = maxTs;
-                }
-            }
-
-            if (minTimestampIterator.HasMoreResults)
-            {
-                foreach (var minTs in await minTimestampIterator.ReadNextAsync())
-                {
-                    minTimestamp = minTs;
-                }
-            }
-
-            return (minTimestamp, maxTimestamp);
+            return (minTimestampQuery[0], maxTimestampQuery[0]);
         }
 
-        private static async Task<JArray> GetDataFromSubranges(Container container, int minTimestamp, int maxTimestamp, int numberOfSubranges, int itemsPerSubrange)
+        private async Task<List<JObject>> GetDataFromSubranges(int minTimestamp, int maxTimestamp, int numberOfSubranges, int itemsPerSubrange)
         {
-            JArray dataArray = new();
+            List<JObject> dataArray = new();
 
             int rangeSize = (maxTimestamp - minTimestamp) / numberOfSubranges;
 
@@ -84,16 +66,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
                 string query = $"SELECT TOP {itemsPerSubrange} * FROM c WHERE c._ts >= {rangeStart} AND c._ts <= {rangeEnd}";
 
-                var queryIterator = container.GetItemQueryIterator<dynamic>(new QueryDefinition(query));
-
-                Console.WriteLine($"Fetching data for range {rangeStart} to {rangeEnd}:");
-                while (queryIterator.HasMoreResults)
-                {
-                    foreach (var item in await queryIterator.ReadNextAsync())
-                    {
-                        dataArray.Add(item);
-                    }
-                }
+                dataArray.AddRange(await this._queryExecutor.ExecuteQueryAsync<JObject>(query));
             }
 
             return dataArray;

@@ -15,7 +15,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             if (value is not null)
             {
-                this.Values.Add(value);
+                this.Count++;
             }
         }
 
@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         public int ParentArrayLength { get; set; }
 
-        public List<object> Values { get; set; } = new();
+        public int Count { get; set; }
 
         public override string? ToString()
         {
@@ -40,8 +40,8 @@ namespace Azure.DataApiBuilder.Core.Generator
         {
             string t = Type;
             if (totalCount > 1 &&
-                (Values.Count < totalCount ||
-                    Values.Count < ParentArrayLength))
+                (Count < totalCount ||
+                    Count < ParentArrayLength))
             {
                 t = $"{Type}!";
             }
@@ -52,11 +52,6 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
 
             return $"{Name} : {t}";
-        }
-
-        public string? Print()
-        {
-            return $"{Name} : {Type} : {Parent} : {IsArray} : {Values.Count} ";
         }
     }
 }

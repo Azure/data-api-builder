@@ -18,10 +18,10 @@ namespace Azure.DataApiBuilder.Core.Generator
         // Contains the mapping of GQL Entities and their corresponding attributes.
         private Dictionary<string, HashSet<AttributeObject>> _attrMapping = new();
 
-        private JArray _data;
+        private List<JObject> _data;
         private string _containerName;
 
-        private SchemaGenerator(JArray data, string containerName)
+        private SchemaGenerator(List<JObject> data, string containerName)
         {
             this._data = data;
             this._containerName = containerName;
@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="containerName">Cosmos DB Container Name</param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException">If JsonArray or Container Name is Empty or null</exception>
-        public static string Generate(JArray jsonData, string containerName)
+        public static string Generate(List<JObject> jsonData, string containerName)
         {
             // Validating if passed inputs are not null or empty
             if (jsonData == null || jsonData.Count == 0 || string.IsNullOrEmpty(containerName))
@@ -249,7 +249,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 }
                 else if(value is not null)
                 {
-                    attributeObject.Values.Add(value);
+                    attributeObject.Count++;
                 }
 
                 attributeObject.ParentArrayLength += parentArrayLength;

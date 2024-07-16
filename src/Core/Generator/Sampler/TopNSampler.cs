@@ -9,27 +9,20 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     internal class TopNSampler : ISchemaGeneratorSampler
     {
         private int _numberOfRecords;
+        private QueryExecutor _queryExecutor;
 
-        public TopNSampler(int? numberOfRecords)
+        public TopNSampler(Container container, int? numberOfRecords)
         {
             this._numberOfRecords = numberOfRecords ?? 10;
+
+            this._queryExecutor = new QueryExecutor(container);
         }
 
-        public async Task<JArray> GetSampleAsync(Container container)
+        public async Task<List<JObject>> GetSampleAsync()
         {
-            JArray dataArray = new();
-            string query = $"SELECT TOP {_numberOfRecords} * FROM c";
+            string query = $"SELECT TOP {_numberOfRecords} * FROM c ORDER BY c._ts desc";
 
-            var queryIterator = container.GetItemQueryIterator<JObject>(new QueryDefinition(query));
-            while (queryIterator.HasMoreResults)
-            {
-                foreach (var item in await queryIterator.ReadNextAsync())
-                {
-                    dataArray.Add(item);
-                }
-            }
-
-            return dataArray;
+            return await _queryExecutor.ExecuteQueryAsync<JObject>(query);
         }
     }
 }

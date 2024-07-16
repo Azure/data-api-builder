@@ -5,11 +5,11 @@ using Microsoft.Azure.Cosmos;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
-    internal class QueryExecutor
+    internal class CosmosExecutor
     {
         private Container _container;
 
-        public QueryExecutor(Container container)
+        public CosmosExecutor(Container container)
         {
             this._container = container;
         }

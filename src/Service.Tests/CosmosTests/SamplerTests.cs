@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Core.Generator.Sampler;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -38,10 +40,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             CreateItems(DATABASE_NAME, CONTAINER_NAME_ID_PK, 10);
 
             // Arrange
-            ISchemaGeneratorSampler topNSampler = new TopNSampler(count);
+            ISchemaGeneratorSampler topNSampler = new TopNSampler(_containerWithIdPk, count);
 
             // Act
-            var result = await topNSampler.GetSampleAsync(_containerWithIdPk);
+            List<JObject> result = await topNSampler.GetSampleAsync();
 
             // Assert
             Assert.AreEqual(count, result.Count);
@@ -59,11 +61,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Arrange
             ISchemaGeneratorSampler partitionBasedSampler
-                = new PartitionBasedSampler(partitionKeyPath: "/id",
+                = new PartitionBasedSampler(container: _containerWithNamePk,
+                        partitionKeyPath: "/name",
                         numberOfRecordsPerPartition: numberOfRecordsPerPartition,
                         maxDaysPerPartition: maxDaysPerPartition);
             // Act
-            var result = await partitionBasedSampler.GetSampleAsync(_containerWithNamePk);
+            List<JObject> result = await partitionBasedSampler.GetSampleAsync();
 
             Assert.AreEqual(expectedResultCount, result.Count);
         }
@@ -79,11 +82,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Arrange
             ISchemaGeneratorSampler partitionBasedSampler
-                = new TimeBasedSampler(groupCount: groupCount,
+                = new TimeBasedSampler(container: _containerWithNamePk,
+                        groupCount: groupCount,
                         numberOfRecordsPerGroup: numberOfRecordsPerGroup,
                         maxDaysPerGroup: maxDaysPerGroup);
             // Act
-            var result = await partitionBasedSampler.GetSampleAsync(_containerWithNamePk);
+            List<JObject> result = await partitionBasedSampler.GetSampleAsync();
 
             Assert.AreEqual(expectedResultCount, result.Count);
         }

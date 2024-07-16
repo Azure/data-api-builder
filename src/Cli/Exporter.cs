@@ -4,6 +4,7 @@
 using System.IO.Abstractions;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Config.ObjectModel;
+using Azure.DataApiBuilder.Core.Generator;
 using Cli.Commands;
 using HotChocolate.Utilities.Introspection;
 using Microsoft.Extensions.Logging;
@@ -50,7 +51,7 @@ namespace Cli
                 {
                     try
                     {
-                        ExportGraphQL(options, runtimeConfig, fileSystem);
+                        ExportGraphQL(options, runtimeConfig, fileSystem, logger).Wait();
                         isSuccess = true;
                         break;
                     }
@@ -70,26 +71,49 @@ namespace Cli
             return isSuccess ? 0 : -1;
         }
 
-        private static void ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem)
+        private static async Task ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem,ILogger logger)
         {
-            HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
-                                        new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
-                                    )
-            { BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLPath}") };
+            string schemaText;
+            if (options.Generate)
+            {
+                logger.LogInformation("Generating schema from the CosmosDB database.");
 
-            IntrospectionClient introspectionClient = new();
-            Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
-            response.Wait();
+                schemaText = await SchemaGeneratorFactory.Create(runtimeConfig, options.Sampling, options.NumberOfRecords, options.PartitionKeyPath, options.MaxDays, options.GroupCount);
+            }
+            else
+            {
+                logger.LogInformation("Fetching schema from GraphQL API.");
 
-            HotChocolate.Language.DocumentNode node = response.Result;
+                HttpClient client = new( // CodeQL[SM02185] Loading internal server connection
+                                                        new HttpClientHandler { ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator }
+                                                    )
+                {
+                    BaseAddress = new Uri($"https://localhost:5001{runtimeConfig.GraphQLPath}")
+                };
 
+                IntrospectionClient introspectionClient = new();
+                Task<HotChocolate.Language.DocumentNode> response = introspectionClient.DownloadSchemaAsync(client);
+                response.Wait();
+
+                HotChocolate.Language.DocumentNode node = response.Result;
+
+                schemaText = node.ToString();
+            }
+            
+            WriteSchemaFile(options, fileSystem, schemaText);
+
+            logger.LogInformation($"Schema file exported successfully at {options.OutputDirectory}" );
+        }
+
+        private static void WriteSchemaFile(ExportOptions options, IFileSystem fileSystem, string content)
+        {
             if (!fileSystem.Directory.Exists(options.OutputDirectory))
             {
                 fileSystem.Directory.CreateDirectory(options.OutputDirectory);
             }
 
             string outputPath = fileSystem.Path.Combine(options.OutputDirectory, options.GraphQLSchemaFile);
-            fileSystem.File.WriteAllText(outputPath, node.ToString());
+            fileSystem.File.WriteAllText(outputPath, content);
         }
     }
 }

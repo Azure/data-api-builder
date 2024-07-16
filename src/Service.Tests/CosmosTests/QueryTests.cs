@@ -742,7 +742,7 @@ type Planet @model(name:""Planet"") {
         {
             CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
             CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
-            //cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
+            cosmosClient.GetDatabase(DATABASE_NAME).GetContainer(_containerName).DeleteContainerAsync().Wait();
         }
     }
 }

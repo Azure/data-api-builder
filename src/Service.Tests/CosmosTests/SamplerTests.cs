@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             CreateItems(DATABASE_NAME, CONTAINER_NAME_ID_PK, 10);
 
             // Arrange
-            ISchemaGeneratorSampler topNSampler = new TopNSampler(_containerWithIdPk, count);
+            ISchemaGeneratorSampler topNSampler = new TopNSampler(_containerWithIdPk, count, 0);
 
             // Act
             List<JObject> result = await topNSampler.GetSampleAsync();
@@ -72,11 +72,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         [TestMethod(displayName: "TimeBasedSampler Scenarios")]
-        [DataRow(1, 1, 1, 1, DisplayName = "TimeBasedSampler: Get 1 record if it is allowed to fetch 1 item in a group.")]
-        [DataRow(2, 1, 1, 2, DisplayName = "TimeBasedSampler: Get 2 record if it is allowed to fetch 2 items in a group.")]
-        [DataRow(null, 1, 1, 10, DisplayName = "TimeBasedSampler: Get 10 records if 1 item is allowed to fetch from each group and group information is not passed")]
-        [DataRow(null, null, null, 50, DisplayName = "TimeBasedSampler: Calculate number of item according to the default value")]
-        public async Task TestTimeBasedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDaysPerGroup, int expectedResultCount)
+        [DataRow(1, 1, 0, 1, DisplayName = "TimeBasedSampler: Get 1 record, if it is allowed to fetch 1 item from a group.")]
+        [DataRow(1, 10, 0, 10, DisplayName = "TimeBasedSampler: Get 10 records, if it is allowed to fetch 10 item from a group.")]
+        [DataRow(2, 1, 2, 1, DisplayName = "TimeBasedSampler: Get 2 record from 2 groups, if it is allowed to fetch 1 item in a group.")]
+        [DataRow(null, 1, 2, 1, DisplayName = "TimeBasedSampler: Get 10 records, if 1 item is allowed to fetch from each group")]
+        [DataRow(null, null, null, 10, DisplayName = "TimeBasedSampler: Calculate number of item according to the default value")]
+        public async Task TestTimeBasedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, int expectedResultCount)
         {
             CreateItems(DATABASE_NAME, CONTAINER_NAME_NAME_PK, 200, "/name");
 
@@ -85,7 +86,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 = new TimeBasedSampler(container: _containerWithNamePk,
                         groupCount: groupCount,
                         numberOfRecordsPerGroup: numberOfRecordsPerGroup,
-                        maxDaysPerGroup: maxDaysPerGroup);
+                        maxDays: maxDays);
             // Act
             List<JObject> result = await partitionBasedSampler.GetSampleAsync();
 

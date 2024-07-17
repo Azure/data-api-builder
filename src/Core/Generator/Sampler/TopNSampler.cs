@@ -6,6 +6,10 @@ using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
+    /// <summary>
+    /// It Returns the Top N records from K days,from the Cosmos DB.
+    /// If K is 0 or null, it will return the Top N records from the Cosmos DB.
+    /// </summary>
     internal class TopNSampler : ISchemaGeneratorSampler
     {
         // Default Configuration
@@ -38,7 +42,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
             if (_maxDays > 0)
             {
-                long timestampThreshold = new DateTimeOffset(DateTime.UtcNow.AddDays(_maxDays)).ToUnixTimeSeconds();
+                long timestampThreshold = new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDays)).ToUnixTimeSeconds();
 
                 daysFilterClause = $"WHERE c._ts <= {timestampThreshold}";
             }

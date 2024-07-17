@@ -31,19 +31,14 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         public int Count { get; set; }
 
-        public override string? ToString()
-        {
-            return $"{Name} : {Type} : {Parent} : {IsArray} : {ParentArrayLength}";
-        }
-
         public string? GetString(int totalCount)
         {
-            string t = Type;
+            string t = $"{Type}!";
             if (totalCount > 1 &&
                 (Count < totalCount ||
                     Count < ParentArrayLength))
             {
-                t = $"{Type}!";
+                t = $"{Type}";
             }
 
             if (IsArray)

@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Text;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Humanizer;
 using Newtonsoft.Json.Linq;
 
@@ -20,11 +21,13 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         private List<JObject> _data;
         private string _containerName;
+        private RuntimeConfig? _config;
 
-        private SchemaGenerator(List<JObject> data, string containerName)
+        private SchemaGenerator(List<JObject> data, string containerName, RuntimeConfig? config)
         {
             this._data = data;
             this._containerName = containerName;
+            this._config = config;
         }
 
         /// <summary>
@@ -34,7 +37,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="containerName">Cosmos DB Container Name</param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException">If JsonArray or Container Name is Empty or null</exception>
-        public static string Generate(List<JObject> jsonData, string containerName)
+        public static string Generate(List<JObject> jsonData, string containerName, RuntimeConfig? config = null)
         {
             // Validating if passed inputs are not null or empty
             if (jsonData == null || jsonData.Count == 0 || string.IsNullOrEmpty(containerName))
@@ -42,7 +45,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 throw new InvalidOperationException("JArray must contain at least one JSON object and Container Name can not be blank");
             }
 
-            return new SchemaGenerator(jsonData, containerName)
+            return new SchemaGenerator(jsonData, containerName, config)
                         .ConvertJsonToGQLSchema();
         }
 
@@ -83,9 +86,20 @@ namespace Azure.DataApiBuilder.Core.Generator
                 bool isRoot = entity.Key == _containerName.Pascalize();
                 sb.AppendLine($"type {entity.Key} {(isRoot ? "@model " : "")}{{");
 
+                int counter = 0;
                 foreach (AttributeObject field in entity.Value)
                 {
-                    sb.AppendLine($"  {field.GetString(_data.Count)}");
+                    sb.Append($"  {field.GetString(_data.Count)}");
+
+                    if (counter != entity.Value.Count - 1)
+                    {
+                        sb.AppendLine(",");
+                        counter++;
+
+                        continue;
+                    }
+
+                    sb.AppendLine();
                 }
 
                 sb.AppendLine("}");
@@ -105,6 +119,11 @@ namespace Azure.DataApiBuilder.Core.Generator
             {
                 // Skipping if the property is reserved Cosmos DB property
                 if (_cosmosDbReservedProperties.Contains(property.Name))
+                {
+                    continue;
+                }
+
+                if(_config != null && !_config.Entities.Entities.ContainsKey(property.Name))
                 {
                     continue;
                 }
@@ -173,7 +192,6 @@ namespace Azure.DataApiBuilder.Core.Generator
                     default:
                         throw new InvalidOperationException($"Unsupported JTokenType: {token.Type}");
                 }
-
             }
 
             AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType, parentArrayLength);

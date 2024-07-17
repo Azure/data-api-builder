@@ -22,9 +22,9 @@ namespace Azure.DataApiBuilder.Core.Generator
                 throw new ArgumentException("Config file passed is not compatible with this feature. Please make sure datasource type is configured as 'Cosmos DB'");
             }
 
-            string? connectionString = config?.DataSource?.ConnectionString;
-            string? databaseName = config?.DataSource?.Options?["database"]?.ToString();
-            string? containerName = config?.DataSource?.Options?["container"]?.ToString();
+            string? connectionString = config.DataSource?.ConnectionString;
+            string? databaseName = config.DataSource?.Options?["database"]?.ToString();
+            string? containerName = config.DataSource?.Options?["container"]?.ToString();
 
             if (connectionString == null || databaseName == null || containerName == null)
             {
@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             List<JObject> dataArray = await schemaGeneratorSampler.GetSampleAsync();
 
             // Generate GQL Schema
-            return SchemaGenerator.Generate(dataArray, container.Id);
+            return SchemaGenerator.Generate(dataArray, container.Id, config);
         }
 
         private static Container ConnectToCosmosDB(string connectionString, string database, string container)

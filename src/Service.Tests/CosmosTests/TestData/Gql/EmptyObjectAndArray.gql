@@ -1,4 +1,0 @@
-type ContainerName @model {
-  emptyObject : EmptyObject
-  emptyArray : String
-}

@@ -582,6 +582,56 @@ VALUES
     0xFFFFFFFF),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
+
+-- To test large pagination values
+DECLARE @counter INT = 1;
+
+WHILE @counter <= 100
+BEGIN
+    INSERT INTO type_table (
+		id,
+        byte_types,
+        short_types,
+        int_types,
+        long_types,
+        string_types,
+        nvarchar_string_types,
+        single_types,
+        float_types,
+        decimal_types,
+        boolean_types,
+        date_types,
+        datetime_types,
+        datetime2_types,
+        datetimeoffset_types,
+        smalldatetime_types,
+        time_types,
+        bytearray_types
+    )
+    VALUES (
+		@counter + 100,
+        255,
+        32767,
+        @counter,
+        @counter,
+        'Sample string',
+        N'Sample nvarchar string',
+        10.0,
+        20.0,
+        123456789.123456789,
+        @counter % 2,
+        '2023-01-01',
+        '2023-01-01 12:00:00',
+        '2023-01-01 12:00:00.00000',
+        '2023-01-01 12:00:00+00:00',
+        '2023-01-01 12:00:00',
+        '12:00:00.0000000',
+        NULL
+    );
+
+    SET @counter = @counter + 1;
+END;
+
 SET IDENTITY_INSERT type_table OFF
 
 SET IDENTITY_INSERT sales ON

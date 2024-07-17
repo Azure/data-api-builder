@@ -88,5 +88,46 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 endCursorIdValue,
                 isLastPage);
         }
+
+        /// <summary>
+        /// Tests the GraphQL query for retrieving supported types with a specified number of rows.
+        /// </summary>
+        /// <param name="pageSize">The number of rows to retrieve in the query.</param>
+        /// <remarks>
+        /// This test performs the following steps:
+        /// 1. Constructs a GraphQL query to retrieve the specified number of rows.
+        /// 2. Asserts that the response is not null and does not contain errors.
+        /// 3. Verifies that the 'data' and 'supportedTypes' fields are present in the response.
+        /// 4. Checks that the 'items' field contains the correct number of rows as specified by <paramref name="pageSize"/>.
+        /// 5. Ensures each item in the 'items' array contains all the required fields.
+        /// 6. Asserts that the 'hasNextPage' field is valid.
+        /// 7. Asserts that the 'endCursor' field is valid.
+        /// </remarks>
+        [DataTestMethod]
+        [DataRow(1, DisplayName = "1 item per page")]
+        [DataRow(2, DisplayName = "2 items per page")]
+        [DataRow(20, DisplayName = "20 items per page")]
+        [DataRow(50, DisplayName = "50 items per page")]
+        [DataRow(100, DisplayName = "100 items per page")]
+        [DataRow(1000, DisplayName = "1000 items per page")]
+        public async Task TestPaginantionForGivenPageSize(int pageSize)
+        {
+            string fields = @"
+                typeid,
+                byte_types,
+                short_types,
+                int_types,
+                long_types,
+                string_types,
+                single_types,
+                float_types,
+                decimal_types,
+                boolean_types,
+                datetime_types,
+                bytearray_types
+            ";
+
+            await TestPaginantionForGivenPageSize(pageSize, fields);
+        }
     }
 }

@@ -932,6 +932,55 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2.ToString());
         }
 
+        public async Task TestPaginantionForGivenPageSize(int pageSize, string fields)
+        {
+            // Arrange
+            string graphQLQueryName = "supportedTypes";
+            string graphQLQuery = $@"{{
+                supportedTypes(first: {pageSize}, after: null) {{
+                    items {{
+                        {fields}
+                    }}
+                    hasNextPage
+                    endCursor
+                }}
+            }}";
+
+            // Act
+            JsonElement graphQLResponse = await ExecuteGraphQLRequestAsync(graphQLQuery, graphQLQueryName, isAuthenticated: true);
+
+            // Assert
+            Assert.IsNotNull(graphQLResponse);
+
+            // Check for no errors
+            Assert.IsFalse(graphQLResponse.TryGetProperty("errors", out _), "Response contains errors");
+
+            // Check the number of items
+            JsonElement items = graphQLResponse.GetProperty("items");
+            Assert.AreEqual(items.GetArrayLength() == pageSize, pageSize <= 200);
+            Assert.AreEqual(items.GetArrayLength() < pageSize, pageSize > 200);
+
+            // Verify each item has all the requested fields.
+            foreach (JsonElement item in items.EnumerateArray())
+            {
+                foreach (string field in fields.Split(','))
+                {
+                    Assert.IsTrue(item.TryGetProperty(field.Trim(), out _), $"Item does not contain {field.Trim()}");
+                }
+            }
+
+            // Verify hasNextPage field
+            JsonElement hasNextPage = graphQLResponse.GetProperty("hasNextPage");
+            Assert.AreNotEqual(JsonValueKind.Null, hasNextPage.ValueKind, "hasNextPage is null");
+            bool expectedHasNextPageValue = pageSize < 200 ? true : false;
+            Assert.AreEqual(expectedHasNextPageValue, hasNextPage.GetBoolean(), "hasNextPage is not true");
+
+            // Verify endCursor field
+            JsonElement endCursor = graphQLResponse.GetProperty("endCursor");
+            JsonValueKind expectedEndCursorType = pageSize < 200 ? JsonValueKind.String : JsonValueKind.Null;
+            Assert.AreEqual(expectedEndCursorType, endCursor.ValueKind, "endCursor is null");
+        }
+
         #endregion
 
         #region Negative Tests

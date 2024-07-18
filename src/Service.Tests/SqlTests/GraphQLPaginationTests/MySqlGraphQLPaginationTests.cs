@@ -128,7 +128,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             ";
 
             string setupQuery = @"
-                DELIMITER $$
                 CREATE PROCEDURE InsertIntoTypeTableForPagination()
                 BEGIN
                     DECLARE counter INT DEFAULT 1;
@@ -165,8 +164,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
 
                         SET counter = counter + 1;
                     END WHILE;
-                END$$
-                DELIMITER ;
+                END;
 
                 CALL InsertIntoTypeTableForPagination();
                 ";

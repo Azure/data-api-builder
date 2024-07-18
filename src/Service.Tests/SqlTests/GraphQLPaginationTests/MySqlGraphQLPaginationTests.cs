@@ -127,7 +127,51 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 bytearray_types
             ";
 
-            await TestPaginantionForGivenPageSize(pageSize, fields);
+            string setupQuery = @"
+                DELIMITER $$
+                CREATE PROCEDURE InsertIntoTypeTableForPagination()
+                BEGIN
+                    DECLARE counter INT DEFAULT 1;
+
+                    WHILE counter <= 100 DO
+                        INSERT INTO type_table (
+                            id,
+                            byte_types,
+                            short_types,
+                            int_types,
+                            long_types,
+                            string_types,
+                            single_types,
+                            float_types,
+                            decimal_types,
+                            boolean_types,
+                            datetime_types,
+                            bytearray_types
+                        )
+                        VALUES (
+                            counter + 100,
+                            255,
+                            32767,
+                            counter,
+                            counter,
+                            'Sample string',
+                            10.0,
+                            20.0,
+                            123456789.123456789,
+                            counter % 2,
+                            '2023-01-01 12:00:00',
+                            NULL
+                        );
+
+                        SET counter = counter + 1;
+                    END WHILE;
+                END$$
+                DELIMITER ;
+
+                CALL InsertIntoTypeTableForPagination();
+                ";
+
+            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery);
         }
     }
 }

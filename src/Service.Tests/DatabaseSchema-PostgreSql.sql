@@ -399,41 +399,6 @@ INSERT INTO type_table(id, short_types, int_types, long_types, string_types, sin
     (4, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, true, '9999-12-31 23:59:59.997', '\xFFFFFFFF'),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
--- To test large pagination values
-DO $$
-DECLARE
-    counter INT := 1;
-BEGIN
-    FOR counter IN 1..100 LOOP
-        INSERT INTO type_table (
-            id,
-            short_types,
-            int_types,
-            long_types,
-            string_types,
-            single_types,
-            float_types,
-            decimal_types,
-            boolean_types,
-            datetime_types,
-            bytearray_types
-        )
-        VALUES (
-            counter + 100,
-            32767,
-            counter,
-            counter,
-            'Sample string',
-            10.0,
-            20.0,
-            123456789.123456789,
-            (counter % 2) = 1,
-            '2023-01-01 12:00:00',
-            NULL
-        );
-    END LOOP;
-END $$;
-
 INSERT INTO type_table(id, uuid_types) values(10, 'D1D021A8-47B4-4AE4-B718-98E89C41A161');
 INSERT INTO trees("treeId", species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO trees("treeId", species, region, height) VALUES (4, 'test', 'Pacific Northwest', '0m');

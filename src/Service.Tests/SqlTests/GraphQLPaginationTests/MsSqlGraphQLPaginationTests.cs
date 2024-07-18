@@ -158,7 +158,53 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 uuid_types
             ";
 
-            await TestPaginantionForGivenPageSize(pageSize, fields);
+            string setupQuery = @"
+                SET IDENTITY_INSERT type_table ON
+                DECLARE @counter INT = 1;
+
+                WHILE @counter <= 100
+                BEGIN
+                    INSERT INTO type_table (
+                        id,
+                        short_types,
+                        int_types,
+                        long_types,
+                        string_types,
+                        nvarchar_string_types,
+                        single_types,
+                        float_types,
+                        decimal_types,
+                        boolean_types,
+                        date_types,
+                        datetime_types,
+                        datetime2_types,
+                        time_types,
+                        bytearray_types
+                    )
+                    VALUES (
+                        @counter + 100,
+                        32767,
+                        @counter,
+                        @counter,
+                        'Sample string',
+                        N'Sample nvarchar string',
+                        10.0,
+                        20.0,
+                        123456789.123456789,
+                        @counter % 2,
+                        '2023-01-01',
+                        '2023-01-01 12:00:00',
+                        '2023-01-01 12:00:00.00000',
+                        '12:00:00.0000000',
+                        NULL
+                    );
+
+                    SET @counter = @counter + 1;
+                END;
+                SET IDENTITY_INSERT type_table OFF
+                ";
+
+            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery);
 
         }
     }

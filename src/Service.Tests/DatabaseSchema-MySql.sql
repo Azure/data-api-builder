@@ -396,52 +396,6 @@ INSERT INTO type_table(id, byte_types, short_types, int_types, long_types, strin
     (4, 255, 32767, 2147483647, 9223372036854775807, 'null', 3.4E38, 1.7E308, 2.929292E-14, true, '9999-12-31 23:59:59', 0xFFFFFFFF),
     (5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
--- To test large pagination values
-DELIMITER $$
-
-CREATE PROCEDURE InsertIntoTypeTableForPagination()
-BEGIN
-    DECLARE counter INT DEFAULT 1;
-
-    WHILE counter <= 100 DO
-        INSERT INTO type_table (
-            id,
-            byte_types,
-            short_types,
-            int_types,
-            long_types,
-            string_types,
-            single_types,
-            float_types,
-            decimal_types,
-            boolean_types,
-            datetime_types,
-            bytearray_types
-        )
-        VALUES (
-            counter + 100,
-            255,
-            32767,
-            counter,
-            counter,
-            'Sample string',
-            10.0,
-            20.0,
-            123456789.123456789,
-            counter % 2,
-            '2023-01-01 12:00:00',
-            NULL
-        );
-
-        SET counter = counter + 1;
-    END WHILE;
-END$$
-
-DELIMITER ;
-
--- Call the procedure to execute the inserts for type table
-CALL InsertIntoTypeTableForPagination();
-
 INSERT INTO trees(treeId, species, region, height) VALUES (1, 'Tsuga terophylla', 'Pacific Northwest', '30m'), (2, 'Pseudotsuga menziesii', 'Pacific Northwest', '40m');
 INSERT INTO trees(treeId, species, region, height) VALUES (4, 'test', 'Pacific Northwest', '0m');
 INSERT INTO fungi(speciesid, region, habitat) VALUES (1, 'northeast', 'forest'), (2, 'southwest', 'sand');

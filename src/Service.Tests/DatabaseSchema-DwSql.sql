@@ -396,7 +396,6 @@ WHILE @counter <= 100
 BEGIN
     INSERT INTO type_table (
 		id,
-        byte_types,
         short_types,
         int_types,
         long_types,
@@ -409,14 +408,11 @@ BEGIN
         date_types,
         datetime_types,
         datetime2_types,
-        datetimeoffset_types,
-        smalldatetime_types,
         time_types,
         bytearray_types
     )
     VALUES (
 		@counter + 100,
-        255,
         32767,
         @counter,
         @counter,
@@ -429,8 +425,6 @@ BEGIN
         '2023-01-01',
         '2023-01-01 12:00:00',
         '2023-01-01 12:00:00.00000',
-        '2023-01-01 12:00:00+00:00',
-        '2023-01-01 12:00:00',
         '12:00:00.0000000',
         NULL
     );

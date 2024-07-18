@@ -243,9 +243,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// <param name="array">JsonElement representing a JSON array. The possible representations:
         /// JsonValueKind.Array -> ["item1","itemN"]
         /// JsonValueKind.String -> "[ { "field1": "field1Value" }, { "field2": "field2Value" }, { ... } ]"
-        ///   - Input JsonElement is JsonValueKind.String because the array and enclosed objects haven't been deserialized yet.
-        ///   - This method deserializes the JSON string (representing a JSON array) and collects each element (Json object) within the
-        ///     list of JsonElements returned by this method.</param>
+        /// - Input JsonElement is JsonValueKind.String because the array and enclosed objects haven't been deserialized yet.
+        /// - This method deserializes the JSON string (representing a JSON array) and collects each element (Json object) within the
+        /// list of JsonElements returned by this method.</param>
         /// <param name="fieldSchema">Definition of field being resolved. For lists: [/]items:[entity!]!]</param>
         /// <param name="metadata">PaginationMetadata of the parent field of the currently processed field in HC middlewarecontext.</param>
         /// <returns>List of JsonElements parsed from the provided JSON array.</returns>

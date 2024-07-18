@@ -932,9 +932,16 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2.ToString());
         }
 
-        public async Task TestPaginantionForGivenPageSize(int pageSize, string fields, string setupQuery, string cleanupQuery)
+        /// <summary>
+        /// Tests the GraphQL query for retrieving supported types with a specified number of rows.
+        /// </summary>
+        /// <param name="pageSize">The number of rows to retrieve in the query.</param>
+        /// <param name="fields">The fields to retrieve in the query.</param>
+        /// <param name="setupQuery">The query to setup the database for the test.</param>
+        /// <param name="cleanupQuery">The query to cleanup the database after the test.</param>
+        protected async Task TestPaginantionForGivenPageSize(int pageSize, string fields, string setupQuery, string cleanupQuery)
         {
-            // Setup
+            // Setup for pagination adding 100 rows to the database
             await GetDatabaseResultAsync(setupQuery);
 
             // Arrange

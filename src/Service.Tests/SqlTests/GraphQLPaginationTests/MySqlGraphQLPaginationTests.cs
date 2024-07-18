@@ -89,20 +89,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 isLastPage);
         }
 
-        /// <summary>
-        /// Tests the GraphQL query for retrieving supported types with a specified number of rows.
-        /// </summary>
-        /// <param name="pageSize">The number of rows to retrieve in the query.</param>
-        /// <remarks>
-        /// This test performs the following steps:
-        /// 1. Constructs a GraphQL query to retrieve the specified number of rows.
-        /// 2. Asserts that the response is not null and does not contain errors.
-        /// 3. Verifies that the 'data' and 'supportedTypes' fields are present in the response.
-        /// 4. Checks that the 'items' field contains the correct number of rows as specified by <paramref name="pageSize"/>.
-        /// 5. Ensures each item in the 'items' array contains all the required fields.
-        /// 6. Asserts that the 'hasNextPage' field is valid.
-        /// 7. Asserts that the 'endCursor' field is valid.
-        /// </remarks>
+        /// <inheritdoc />
         [DataTestMethod]
         [DataRow(1, DisplayName = "1 item per page")]
         [DataRow(2, DisplayName = "2 items per page")]
@@ -112,6 +99,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         [DataRow(1000, DisplayName = "1000 items per page")]
         public async Task TestPaginantionForGivenPageSize(int pageSize)
         {
+            // Fields to select
             string fields = @"
                 typeid,
                 byte_types,
@@ -127,6 +115,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 bytearray_types
             ";
 
+            // Setup query to insert 100 new rows into the table
             string setupQuery = @"
                 CREATE PROCEDURE InsertIntoTypeTableForPagination()
                 BEGIN
@@ -169,6 +158,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 CALL InsertIntoTypeTableForPagination();
                 ";
 
+            // Cleanup query to delete the rows inserted by the setup query
             string cleanupQuery = @"
                 DROP PROCEDURE IF EXISTS InsertIntoTypeTableForPagination;
                 DELETE FROM type_table

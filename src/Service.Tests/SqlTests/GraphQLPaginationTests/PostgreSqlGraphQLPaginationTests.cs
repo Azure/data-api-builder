@@ -160,8 +160,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                     END LOOP;
                 END $$;
                 ";
+            
+            string cleanupQuery = @"
+                DELETE FROM type_table
+                WHERE id > 100 and id < 1000;
+                ";
 
-            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery);
+            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery, cleanupQuery);
         }
     }
 }

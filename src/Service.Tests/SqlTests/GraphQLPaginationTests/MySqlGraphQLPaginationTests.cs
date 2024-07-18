@@ -169,7 +169,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 CALL InsertIntoTypeTableForPagination();
                 ";
 
-            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery);
+            string cleanupQuery = @"
+                DROP PROCEDURE IF EXISTS InsertIntoTypeTableForPagination;
+                DELETE FROM type_table
+                WHERE id > 100 and id < 1000;
+                ";
+
+            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery, cleanupQuery);
         }
     }
 }

@@ -932,7 +932,7 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             SqlTestHelper.PerformTestEqualJsonStrings(expected2, actual2.ToString());
         }
 
-        public async Task TestPaginantionForGivenPageSize(int pageSize, string fields, string setupQuery)
+        public async Task TestPaginantionForGivenPageSize(int pageSize, string fields, string setupQuery, string cleanupQuery)
         {
             // Setup
             await GetDatabaseResultAsync(setupQuery);
@@ -984,11 +984,6 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
             Assert.AreEqual(expectedEndCursorType, endCursor.ValueKind, "endCursor is null");
 
             // Clean up: Delete the inserted records
-            string cleanupQuery = @"
-                DELETE FROM type_table
-                WHERE id > 100 and id < 1000;
-                ";
-
             await GetDatabaseResultAsync(cleanupQuery);
         }
 

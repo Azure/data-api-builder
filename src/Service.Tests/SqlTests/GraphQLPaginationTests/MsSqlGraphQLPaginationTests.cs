@@ -203,8 +203,13 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
                 END;
                 SET IDENTITY_INSERT type_table OFF
                 ";
+            
+            string cleanupQuery = @"
+                DELETE FROM type_table
+                WHERE id > 100 and id < 1000;
+                ";
 
-            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery);
+            await TestPaginantionForGivenPageSize(pageSize, fields, setupQuery, cleanupQuery);
 
         }
     }

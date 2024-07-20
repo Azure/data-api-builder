@@ -123,7 +123,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                     continue;
                 }
 
-                if(_config != null && !_config.Entities.Entities.ContainsKey(property.Name))
+                if (_config != null && !_config.Entities.Entities.ContainsKey(property.Name))
                 {
                     continue;
                 }
@@ -213,7 +213,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 return "String"; // Assuming empty array as array of string
             }
 
-            HashSet<string> gqlFieldType = new ();
+            HashSet<string> gqlFieldType = new();
             // Process each element of the array
             foreach (JToken obj in jsonArray)
             {
@@ -254,7 +254,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             else
             {
                 AttributeObject? attributeObject = _attrMapping[parentType].FirstOrDefault(a => a.Name == fieldName);
-                if(attributeObject is null)
+                if (attributeObject is null)
                 {
                     attributeObject = new(name: fieldName,
                         type: gqlFieldType,
@@ -265,7 +265,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
                     _attrMapping[parentType].Add(attributeObject);
                 }
-                else if(value is not null)
+                else if (value is not null)
                 {
                     attributeObject.Count++;
                 }

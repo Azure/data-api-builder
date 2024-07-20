@@ -189,7 +189,7 @@ type PlanetAgain @model {
     /// <param name="dbName">the database name</param>
     /// <param name="containerName">the container name</param>
     /// <param name="numItems">number of items to be created</param>
-    internal List<string> CreateItems(string dbName, string containerName, int numItems, string partitionKeyPath = null, int? waitInMs= null)
+    internal List<string> CreateItems(string dbName, string containerName, int numItems, string partitionKeyPath = null, int? waitInMs = null)
     {
         List<string> idList = new();
         CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();

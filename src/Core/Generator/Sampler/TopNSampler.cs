@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             {
                 daysFilterClause = $"WHERE c._ts >= {GetTimeStampThreshold()}";
             }
-            
+
             string query = string.Format(SELECT_QUERY, _numberOfRecords, daysFilterClause);
 
             return await _cosmosExecutor.ExecuteQueryAsync<JObject>(query);

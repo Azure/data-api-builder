@@ -185,6 +185,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                         name = "volcano" +  (numericVal + 1)
                     }
                 },
+
                 tags = new[] { "tag1", "tag2" }
             };
         }

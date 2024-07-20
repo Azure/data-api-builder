@@ -1,16 +1,16 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Text;
-using Azure.DataApiBuilder.Core.Generator;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using Azure.DataApiBuilder.Core.Generator;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -22,7 +22,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public void TestSchemaGenerator(string jsonFilePath, string gqlFilePath)
         {
             string json = Regex.Replace(File.ReadAllText($"{jsonFilePath}/EmulatorData.json", Encoding.UTF8), @"\s+", string.Empty);
-            List<JObject> jsonArray = new () { JsonConvert.DeserializeObject<JObject>(json) };
+            List<JObject> jsonArray = new() { JsonConvert.DeserializeObject<JObject>(json) };
 
             string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
             string expectedSchema = File.ReadAllText($"{gqlFilePath}/EmulatorData.gql");
@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema")]
         public void TestSchemaGeneratorUsingMultipleJson(string jsonFilePath, string gqlFilePath)
         {
-            List<JObject> jArray = new ();
+            List<JObject> jArray = new();
 
             string[] successPayloadFiles = Directory.GetFiles(jsonFilePath, "*.json");
             foreach (string payloadFile in successPayloadFiles)
@@ -178,7 +178,7 @@ type Dimensions {
         [TestMethod]
         public void TestEmptyJsonArray()
         {
-            List<JObject> jsonArray = new ();
+            List<JObject> jsonArray = new();
             Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
         }
 
@@ -204,9 +204,14 @@ type Dimensions {
             }";
 
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
+/* Unmerged change from project 'Azure.DataApiBuilder.Service.Tests(net6.0)'
+Before:
+        public static string RemoveSpacesAndNewLinesRegex(string input)
+After:
+        public static string RemoveSpacesAndNewLinesRegex(string input)
+*/
+
         }
-
-
 
         public static string RemoveSpacesAndNewLinesRegex(string input)
         {
@@ -215,7 +220,7 @@ type Dimensions {
 
         public static void AreEqualAfterCleanup(string actual, string expected)
         {
-           Assert.AreEqual(RemoveSpacesAndNewLinesRegex(expected), RemoveSpacesAndNewLinesRegex(actual));
+            Assert.AreEqual(RemoveSpacesAndNewLinesRegex(expected), RemoveSpacesAndNewLinesRegex(actual));
         }
     }
 }

@@ -52,7 +52,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private async Task<(long minTimestamp, long maxTimestamp)> GetHighestAndLowestTimestampsAsync()
         {
             List<long> maxTimestamp = await this._cosmosExecutor.ExecuteQueryAsync<long>(MAX_TIMESTAMP_QUERY);
-            List<long> minTimestamp = new (capacity: 1);
+            List<long> minTimestamp = new(capacity: 1);
             if (_maxDays > 0)
             {
                 // Calculate the timestamp threshold for the timespan
@@ -77,7 +77,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 long rangeStart = minTimestamp + (i * rangeSize);
                 long rangeEnd = (i == numberOfSubranges - 1) ? maxTimestamp : rangeStart + rangeSize - 1;
 
-                string query = string.Format(SELECT_TOP_QUERY, itemsPerSubrange, rangeStart, rangeEnd) ;
+                string query = string.Format(SELECT_TOP_QUERY, itemsPerSubrange, rangeStart, rangeEnd);
 
                 dataArray.AddRange(await this._cosmosExecutor.ExecuteQueryAsync<JObject>(query));
             }

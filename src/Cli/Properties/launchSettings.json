@@ -2,7 +2,7 @@
   "profiles": {
     "Cli": {
       "commandName": "Project",
-      "commandLineArgs": "export -graphql",
+      "commandLineArgs": "start",
       "httpPort": 5002
     }
   }

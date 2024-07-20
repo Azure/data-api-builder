@@ -71,7 +71,7 @@ namespace Cli
             return isSuccess ? 0 : -1;
         }
 
-        private static async Task ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem,ILogger logger)
+        private static async Task ExportGraphQL(ExportOptions options, RuntimeConfig runtimeConfig, System.IO.Abstractions.IFileSystem fileSystem, ILogger logger)
         {
             string schemaText;
             if (options.Generate)
@@ -104,10 +104,10 @@ namespace Cli
 
                 schemaText = node.ToString();
             }
-            
+
             WriteSchemaFile(options, fileSystem, schemaText);
 
-            logger.LogInformation($"Schema file exported successfully at {options.OutputDirectory}" );
+            logger.LogInformation($"Schema file exported successfully at {options.OutputDirectory}");
         }
 
         private static void WriteSchemaFile(ExportOptions options, IFileSystem fileSystem, string content)

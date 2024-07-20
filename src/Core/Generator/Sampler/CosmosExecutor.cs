@@ -25,7 +25,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 {
                     dataArray.Add(item);
 
-                    if(callback != null)
+                    if (callback != null)
                     {
                         callback(item);
                     }

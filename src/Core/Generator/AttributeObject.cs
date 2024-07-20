@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         public string Type { get; set; }
 
-        public string Parent { get; set;}
+        public string Parent { get; set; }
 
         public bool IsArray { get; set; }
 

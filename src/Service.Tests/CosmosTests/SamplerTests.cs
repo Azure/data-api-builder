@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             CreateItems(DATABASE_NAME, CONTAINER_NAME_ID_PK, 10, waitInMs: 1000);
 
             // Get to know about the timestamps generated so that it can be used in the test cases.
-            CosmosExecutor executor = new (_containerWithIdPk);
+            CosmosExecutor executor = new(_containerWithIdPk);
             await executor.ExecuteQueryAsync<JObject>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
                 (item) => _sortedTimespansIdPk.Add(item.Value<int>("_ts")));
 
@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 (item) => _sortedTimespansNamePk.Add(item.Value<int>("_ts")));
         }
 
-        [TestMethod(displayName: "TopNSampler Scenarios")] 
+        [TestMethod(displayName: "TopNSampler Scenarios")]
         [DataRow(1, 0, 1, DisplayName = "TopNSampler: Get Top 1 record, when max days are not configured.")]
         [DataRow(5, null, 5, DisplayName = "TopNSampler: Get Top 5 record, when max days are not configured.")]
         [DataRow(5, 2, 3, DisplayName = "TopNSampler: Get Top 3 record, when max days are configured as 2.")]
@@ -66,12 +66,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     .Setup<long>(x => x.GetTimeStampThreshold())
                     .Returns((long)(_sortedTimespansIdPk[0] - maxDays));
             }
-          
+
             List<JObject> result = await topNSampler.Object.GetSampleAsync();
             Assert.AreEqual(expectedCount, result.Count);
         }
 
-        [TestMethod (displayName: "PartitionBasedSampler Scenarios")]
+        [TestMethod(displayName: "PartitionBasedSampler Scenarios")]
         [DataRow("/name", 1, 0, 9, DisplayName = "PartitionBasedSampler: Get 1 record per partition, irrespective of days")]
         [DataRow("/name", 2, 0, 15, DisplayName = "PartitionBasedSampler: Get 2 record per partition, irrespective of days")]
         [DataRow("/name", 2, 1, 1, DisplayName = "PartitionBasedSampler: Get 2 record per partition, fetch only 1 day old record")]
@@ -81,7 +81,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestPartitionBasedSampler(string partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, int expectedResultCount)
         {
             Mock<PartitionBasedSampler> partitionBasedSampler
-                = new (_containerWithNamePk, partitionKeyPath, numberOfRecordsPerPartition, maxDaysPerPartition);
+                = new(_containerWithNamePk, partitionKeyPath, numberOfRecordsPerPartition, maxDaysPerPartition);
             if (maxDaysPerPartition is not null)
             {
                 partitionBasedSampler
@@ -125,7 +125,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestTimeBasedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, int expectedResultCount)
         {
             Mock<TimeBasedSampler> timeBasedSampler
-                = new (_containerWithNamePk, groupCount, numberOfRecordsPerGroup, maxDays);
+                = new(_containerWithNamePk, groupCount, numberOfRecordsPerGroup, maxDays);
             if (maxDays is not null)
             {
                 timeBasedSampler

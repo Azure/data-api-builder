@@ -53,7 +53,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         private static Container ConnectToCosmosDB(string connectionString, string database, string container)
         {
-            CosmosClient cosmosClient = new (connectionString);
+            CosmosClient cosmosClient = new(connectionString);
 
             return cosmosClient.GetContainer(database, container);
         }

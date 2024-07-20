@@ -189,13 +189,18 @@ type PlanetAgain @model {
     /// <param name="dbName">the database name</param>
     /// <param name="containerName">the container name</param>
     /// <param name="numItems">number of items to be created</param>
-    internal List<string> CreateItems(string dbName, string containerName, int numItems, string partitionKeyPath = null)
+    internal List<string> CreateItems(string dbName, string containerName, int numItems, string partitionKeyPath = null, int? waitInMs= null)
     {
         List<string> idList = new();
         CosmosClientProvider cosmosClientProvider = _application.Services.GetService<CosmosClientProvider>();
         CosmosClient cosmosClient = cosmosClientProvider.Clients[cosmosClientProvider.RuntimeConfigProvider.GetConfig().DefaultDataSourceName];
         for (int i = 0; i < numItems; i++)
         {
+            if (waitInMs is not null)
+            {
+                Task.Delay(waitInMs.Value).Wait();
+            }
+
             string uid = Guid.NewGuid().ToString();
             idList.Add(uid);
             dynamic sourceItem = CosmosTestHelper.GetItem(uid, _planets[i % _planets.Length], i);

@@ -14,7 +14,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             this._container = container;
         }
 
-        public async Task<List<T>> ExecuteQueryAsync<T>(string query)
+        public async Task<List<T>> ExecuteQueryAsync<T>(string query, Action<T>? callback = null)
         {
             List<T> dataArray = new();
 
@@ -24,6 +24,11 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 foreach (T item in await queryIterator.ReadNextAsync())
                 {
                     dataArray.Add(item);
+
+                    if(callback != null)
+                    {
+                        callback(item);
+                    }
                 }
             }
 

@@ -8,5 +8,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     public interface ISchemaGeneratorSampler
     {
         public Task<List<JObject>> GetSampleAsync();
+
+        public long GetTimeStampThreshold();
     }
 }

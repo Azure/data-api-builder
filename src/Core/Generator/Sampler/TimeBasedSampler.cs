@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
-    internal class TimeBasedSampler : ISchemaGeneratorSampler
+    public class TimeBasedSampler : ISchemaGeneratorSampler
     {
         // Default Configuration
         private const int GROUP_COUNT = 10;
@@ -14,9 +14,9 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private const int MAX_DAYS = 10;
 
         // Query
-        private const string MIN_TIMESTAMP_QUERY = "SELECT VALUE MAX(c._ts) FROM c";
-        private const string MAX_TIMESTAMP_QUERY = "SELECT VALUE MIN(c._ts) FROM c";
-        private const string SELECT_TOP_QUERY = "SELECT TOP {0} * FROM c WHERE c._ts >= {1} AND c._ts <= {2} ORDER by _ts desc";
+        private const string MIN_TIMESTAMP_QUERY = "SELECT VALUE MIN(c._ts) FROM c";
+        private const string MAX_TIMESTAMP_QUERY = "SELECT VALUE MAX(c._ts) FROM c";
+        private const string SELECT_TOP_QUERY = "SELECT TOP {0} * FROM c WHERE c._ts >= {1} AND c._ts <= {2} ORDER by c._ts desc";
 
         private int _groupCount;
         private int _numberOfRecordsPerGroup;
@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             if (_maxDays > 0)
             {
                 // Calculate the timestamp threshold for the timespan
-                minTimestamp.Add(new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDays)).ToUnixTimeSeconds());
+                minTimestamp.Add(GetTimeStampThreshold());
             }
             else
             {
@@ -83,6 +83,11 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             }
 
             return dataArray;
+        }
+
+        public virtual long GetTimeStampThreshold()
+        {
+            return new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDays)).ToUnixTimeSeconds();
         }
 
     }

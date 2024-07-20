@@ -10,7 +10,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     /// It Returns the Top N records from K days,from the Cosmos DB.
     /// If K is 0 or null, it will return the Top N records from the Cosmos DB.
     /// </summary>
-    internal class TopNSampler : ISchemaGeneratorSampler
+    public class TopNSampler : ISchemaGeneratorSampler
     {
         // Default Configuration
         public const int NUMBER_OF_RECORDS = 10;
@@ -42,14 +42,17 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
             if (_maxDays > 0)
             {
-                long timestampThreshold = new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDays)).ToUnixTimeSeconds();
-
-                daysFilterClause = $"WHERE c._ts <= {timestampThreshold}";
+                daysFilterClause = $"WHERE c._ts >= {GetTimeStampThreshold()}";
             }
             
             string query = string.Format(SELECT_QUERY, _numberOfRecords, daysFilterClause);
 
             return await _cosmosExecutor.ExecuteQueryAsync<JObject>(query);
+        }
+
+        public virtual long GetTimeStampThreshold()
+        {
+            return new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDays)).ToUnixTimeSeconds();
         }
     }
 }

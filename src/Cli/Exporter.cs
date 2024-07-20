@@ -78,7 +78,12 @@ namespace Cli
             {
                 logger.LogInformation("Generating schema from the CosmosDB database.");
 
-                schemaText = await SchemaGeneratorFactory.Create(runtimeConfig, options.Sampling, options.NumberOfRecords, options.PartitionKeyPath, options.MaxDays, options.GroupCount);
+                schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,
+                    options.Sampling,
+                    options.NumberOfRecords,
+                    options.PartitionKeyPath,
+                    options.MaxDays,
+                    options.GroupCount);
             }
             else
             {

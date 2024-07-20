@@ -206,6 +206,8 @@ type Dimensions {
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
         }
 
+
+
         public static string RemoveSpacesAndNewLinesRegex(string input)
         {
             return Regex.Replace(input, @"\s+", "");

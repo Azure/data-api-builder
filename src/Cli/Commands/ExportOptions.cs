@@ -9,8 +9,8 @@ namespace Cli.Commands
     [Verb("export", isDefault: false, HelpText = "Export the GraphQL schema as a file and save to disk", Hidden = false)]
     public class ExportOptions : Options
     {
-        public ExportOptions(bool graphql, string outputDirectory, string? config, string? graphqlSchemaFile,
-                bool? generate, string? samplingMode, int? numberOfRecords, string? partitionKeyPath, int? maxDays, int? groupCount) : base(config)
+        public ExportOptions(bool graphql, string outputDirectory, string? graphqlSchemaFile,
+                bool? generate, string? samplingMode, int? numberOfRecords, string? partitionKeyPath, int? maxDays, int? groupCount, string? config) : base(config)
         {
             GraphQL = graphql;
             OutputDirectory = outputDirectory;

@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
-    internal class PartitionBasedSampler : ISchemaGeneratorSampler
+    public class PartitionBasedSampler : ISchemaGeneratorSampler
     {
         // Default Configuration
         private const int RECORDS_PER_PARTITION = 5;
@@ -40,22 +40,14 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns></returns>
         public async Task<List<JObject>> GetSampleAsync()
         {
-            List<JObject> dataArray = new ();
+            // Get Available Partition Key Paths
+            List<string> partitionKeyPaths = await GetPartitionKeyPaths();
 
-            if (_partitionKeyPath is null)
-            {
-                _partitionKeyPath = await _cosmosExecutor.GetPartitionKeyPath();
-            }
+            // Get Unique Partition Key Values
+            List<JObject> uniquePartitionKeys = await GetUniquePartitionKeyValues(partitionKeyPaths);
 
-            // Get List of Partition Key paths
-            List<string> partitionKeyPaths = _partitionKeyPath.Split('/').Where(p => !string.IsNullOrEmpty(p)).ToList();
-            // Build the query to get unique partition key values
-            string selectClause = string.Join(", ", partitionKeyPaths.Select(path => $"c.{path}"));
-
-            string query = string.Format(DISTINCT_QUERY, selectClause);
-            List<JObject> uniquePartitionKeys = await _cosmosExecutor.ExecuteQueryAsync<JObject>(query);
-
-            // Get top latest modified items from each partition
+            List<JObject> dataArray = new();
+            // Get Data from each partition
             foreach (JObject partitionKey in uniquePartitionKeys)
             {
                 List<JObject> data = await GetData(partitionKey);
@@ -66,13 +58,35 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return dataArray;
         }
 
-        private async Task<List<JObject>> GetData(JObject partitionKey)
+        internal async Task<List<string>> GetPartitionKeyPaths()
+        {
+            if (_partitionKeyPath is null)
+            {
+                _partitionKeyPath = await _cosmosExecutor.GetPartitionKeyPath();
+            }
+
+            // Get List of Partition Key paths
+            List<string> partitionKeyPaths = _partitionKeyPath.Split('/').Where(p => !string.IsNullOrEmpty(p)).ToList();
+            // Build the query to get unique partition key values
+
+            return partitionKeyPaths;
+        }
+
+        internal async Task<List<JObject>> GetUniquePartitionKeyValues(List<string> partitionKeyPaths)
+        {
+            string selectClause = string.Join(", ", partitionKeyPaths.Select(path => $"c.{path}"));
+            string query = string.Format(DISTINCT_QUERY, selectClause);
+            List<JObject> uniquePartitionKeys = await _cosmosExecutor.ExecuteQueryAsync<JObject>(query);
+            return uniquePartitionKeys;
+        }
+
+        internal async Task<List<JObject>> GetData(JObject partitionKey)
         {
             long? timestampThreshold = null;
             if (_maxDaysPerPartition > 0)
             {
                 // Calculate the timestamp threshold for the timespan
-                timestampThreshold = new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDaysPerPartition)).ToUnixTimeSeconds();
+                timestampThreshold = GetTimeStampThreshold();
             }
 
             // Build a filter condition based on the partition key
@@ -83,6 +97,11 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
             string latestItemsQuery = string.Format(SELECT_QUERY, filterCondition, timestampThresholdCondition, limitCondition);
             return await _cosmosExecutor.ExecuteQueryAsync<JObject>(latestItemsQuery);
+        }
+
+        public virtual long GetTimeStampThreshold()
+        {
+            return new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDaysPerPartition)).ToUnixTimeSeconds();
         }
     }
 }

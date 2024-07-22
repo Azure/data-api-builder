@@ -274,12 +274,14 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                 string jsonString = array.GetString()!;
                 if (!string.IsNullOrEmpty(jsonString))
                 {
-                    JsonDocument jsonDocument = JsonDocument.Parse(jsonString);
-                    if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
+                    using (JsonDocument jsonDocument = JsonDocument.Parse(jsonString))
                     {
-                        foreach (JsonElement element in jsonDocument.RootElement.EnumerateArray())
+                        if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
                         {
-                            resolvedList.Add(element);
+                            foreach (JsonElement element in jsonDocument.RootElement.EnumerateArray())
+                            {
+                                resolvedList.Add(element.Clone());
+                            }
                         }
                     }
                 }

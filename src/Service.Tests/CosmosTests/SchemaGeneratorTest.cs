@@ -6,11 +6,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Azure.DataApiBuilder.Core.Generator;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -22,7 +21,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public void TestSchemaGenerator(string jsonFilePath, string gqlFilePath)
         {
             string json = Regex.Replace(File.ReadAllText($"{jsonFilePath}/EmulatorData.json", Encoding.UTF8), @"\s+", string.Empty);
-            List<JObject> jsonArray = new() { JsonConvert.DeserializeObject<JObject>(json) };
+            List<JsonDocument> jsonArray = new() { JsonSerializer.Deserialize<JsonDocument>(json) };
 
             string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
             string expectedSchema = File.ReadAllText($"{gqlFilePath}/EmulatorData.gql");
@@ -34,13 +33,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema")]
         public void TestSchemaGeneratorUsingMultipleJson(string jsonFilePath, string gqlFilePath)
         {
-            List<JObject> jArray = new();
+            List<JsonDocument> jArray = new();
 
             string[] successPayloadFiles = Directory.GetFiles(jsonFilePath, "*.json");
             foreach (string payloadFile in successPayloadFiles)
             {
                 string json = Regex.Replace(File.ReadAllText(payloadFile, Encoding.UTF8), @"\s+", string.Empty);
-                jArray.Add(JsonConvert.DeserializeObject<JObject>(json));
+                jArray.Add(JsonSerializer.Deserialize<JsonDocument>(json));
             }
 
             string actualSchema = SchemaGenerator.Generate(jArray, "containerName");
@@ -51,8 +50,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public void TestMixDataJsonObject()
         {
-            List<JObject> jsonArray = new() {
-                JObject.Parse(@"{
+            List<JsonDocument> jsonArray = new() {
+                JsonDocument.Parse(@"{
                   ""id"": 12345,
                   ""name"": ""Widget"",
                   ""price"": 19.99,
@@ -81,7 +80,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
   inStock : Boolean!,
   tags : [String!],
   dimensions : Dimensions!,
-  manufacturedDate : String!,
+  manufacturedDate : Date!,
   relatedProducts : [Int!]
 }
 type Dimensions {
@@ -96,8 +95,8 @@ type Dimensions {
         [TestMethod]
         public void TestComplexJsonObject()
         {
-            List<JObject> jsonArray = new() {
-                JObject.Parse(@"{
+            List<JsonDocument> jsonArray = new() {
+                JsonDocument.Parse(@"{
                   ""name"": ""John Doe"",
                   ""age"": 30,
                   ""address"": {
@@ -157,9 +156,9 @@ type Dimensions {
         [TestMethod]
         public void TestMixedJsonArray()
         {
-            List<JObject> jsonArray = new() {
-                JObject.Parse(@"{ ""name"": ""John"", ""age"": 30, ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" }"),
-                JObject.Parse(@"{ ""email"": ""john@example.com"", ""phone"": ""123-456-7890"" }")};
+            List<JsonDocument> jsonArray = new() {
+                JsonDocument.Parse(@"{ ""name"": ""John"", ""age"": 30, ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" }"),
+                JsonDocument.Parse(@"{ ""email"": ""john@example.com"", ""phone"": ""123-456-7890"" }")};
 
             string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
@@ -167,7 +166,7 @@ type Dimensions {
               name: String,
               age: Int,
               isStudent: Boolean,
-              birthDate: String,
+              birthDate: Date,
               email: String,
               phone: String
             }";
@@ -178,14 +177,14 @@ type Dimensions {
         [TestMethod]
         public void TestEmptyJsonArray()
         {
-            List<JObject> jsonArray = new();
+            List<JsonDocument> jsonArray = new();
             Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
         }
 
         [TestMethod]
         public void TestArrayContainingNullObject()
         {
-            List<JObject> jsonArray = new();
+            List<JsonDocument> jsonArray = new();
             jsonArray.Add(null);
 
             Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
@@ -194,9 +193,9 @@ type Dimensions {
         [TestMethod]
         public void TestJsonArrayWithNullElement()
         {
-            JArray jsonArray = JArray.Parse(@"[{ ""name"": ""John"", ""age"": null }]");
+            JsonDocument jsonArray = JsonDocument.Parse(@"[{ ""name"": ""John"", ""age"": null }]");
 
-            string gqlSchema = SchemaGenerator.Generate(jsonArray.Select(item => (JObject)item).ToList(), "containerName");
+            string gqlSchema = SchemaGenerator.Generate(jsonArray.RootElement.EnumerateArray().Select(item => item.Deserialize<JsonDocument>()).ToList(), "containerName");
 
             string expectedSchema = @"type ContainerName @model {
               name: String!,
@@ -204,13 +203,6 @@ type Dimensions {
             }";
 
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
-/* Unmerged change from project 'Azure.DataApiBuilder.Service.Tests(net6.0)'
-Before:
-        public static string RemoveSpacesAndNewLinesRegex(string input)
-After:
-        public static string RemoveSpacesAndNewLinesRegex(string input)
-*/
-
         }
 
         public static string RemoveSpacesAndNewLinesRegex(string input)

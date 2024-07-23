@@ -1,10 +1,12 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Globalization;
 using System.Text;
+using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Humanizer;
-using Newtonsoft.Json.Linq;
+using static System.Text.Json.JsonElement;
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
@@ -19,11 +21,11 @@ namespace Azure.DataApiBuilder.Core.Generator
         // Contains the mapping of GQL Entities and their corresponding attributes.
         private Dictionary<string, HashSet<AttributeObject>> _attrMapping = new();
 
-        private List<JObject> _data;
+        private List<JsonDocument> _data;
         private string _containerName;
         private RuntimeConfig? _config;
 
-        private SchemaGenerator(List<JObject> data, string containerName, RuntimeConfig? config)
+        private SchemaGenerator(List<JsonDocument> data, string containerName, RuntimeConfig? config)
         {
             this._data = data;
             this._containerName = containerName;
@@ -37,7 +39,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="containerName">Cosmos DB Container Name</param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException">If JsonArray or Container Name is Empty or null</exception>
-        public static string Generate(List<JObject> jsonData, string containerName, RuntimeConfig? config = null)
+        public static string Generate(List<JsonDocument> jsonData, string containerName, RuntimeConfig? config = null)
         {
             // Validating if passed inputs are not null or empty
             if (jsonData == null || jsonData.Count == 0 || string.IsNullOrEmpty(containerName))
@@ -57,9 +59,9 @@ namespace Azure.DataApiBuilder.Core.Generator
         private string ConvertJsonToGQLSchema()
         {
             // Process each JSON object in the JArray to collect GQL Entities and their attributes.
-            foreach (JToken token in _data)
+            foreach (JsonDocument token in _data)
             {
-                if (token is JObject jsonObject)
+                if (token is JsonDocument jsonObject)
                 {
                     TraverseJsonObject(jsonObject, _containerName);
                 }
@@ -113,9 +115,9 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// </summary>
         /// <param name="jsonObject"></param>
         /// <param name="parentType"></param>
-        private void TraverseJsonObject(JObject jsonObject, string parentType)
+        private void TraverseJsonObject(JsonDocument jsonObject, string parentType)
         {
-            foreach (JProperty property in jsonObject.Properties())
+            foreach (JsonProperty property in jsonObject.RootElement.EnumerateObject())
             {
                 // Skipping if the property is reserved Cosmos DB property
                 if (_cosmosDbReservedProperties.Contains(property.Name))
@@ -140,11 +142,11 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="parentType"></param>
         /// <returns></returns>
         /// <exception cref="InvalidOperationException"></exception>
-        private string ProcessJsonToken(JToken token, string fieldName, string parentType, bool isArray, int parentArrayLength = 1)
+        private string ProcessJsonToken(JsonElement token, string fieldName, string parentType, bool isArray, int parentArrayLength = 1)
         {
             parentType = parentType.Pascalize();
 
-            string gqlFieldType;
+            string gqlFieldType = "String";
             // If field name is "id" then it will be represented as ID in GQL
             if (fieldName == "id")
             {
@@ -153,9 +155,9 @@ namespace Azure.DataApiBuilder.Core.Generator
             else
             {
                 // Rest of the fields will be processed based on their type
-                switch (token.Type)
+                switch (token.ValueKind)
                 {
-                    case JTokenType.Object:
+                    case JsonValueKind.Object:
                     {
                         string objectTypeName = fieldName.Pascalize();
 
@@ -164,33 +166,43 @@ namespace Azure.DataApiBuilder.Core.Generator
                             objectTypeName = objectTypeName.Singularize();
                         }
 
-                        TraverseJsonObject((JObject)token, objectTypeName);
+                        TraverseJsonObject(JsonDocument.Parse(token.GetRawText()), objectTypeName);
 
                         gqlFieldType = objectTypeName;
                         break;
                     }
-                    case JTokenType.Array:
-                        gqlFieldType = ProcessJsonArray((JArray)token, fieldName, parentType.Singularize());
+                    case JsonValueKind.Array:
+                        gqlFieldType = ProcessJsonArray(token, fieldName, parentType.Singularize());
                         break;
 
-                    case JTokenType.Integer:
-                        gqlFieldType = "Int";
-                        break;
+                    case JsonValueKind.Number:
+                        if (token.TryGetInt32(out int _))
+                        {
+                            gqlFieldType = "Int";
+                        }
+                        else if (token.TryGetDouble(out double _))
+                        {
+                            gqlFieldType = "Float";
+                        }
 
-                    case JTokenType.Float:
-                        gqlFieldType = "Float";
                         break;
-
-                    case JTokenType.Boolean:
+                    case JsonValueKind.True:
+                    case JsonValueKind.False:
                         gqlFieldType = "Boolean";
                         break;
+                    case JsonValueKind.Null or JsonValueKind.String:
+                        if (DateTime.TryParse(token.GetString(), DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None, out DateTime _))
+                        {
+                            gqlFieldType = "Date";
+                        }
+                        else
+                        {
+                            gqlFieldType = "String";
+                        }
 
-                    case JTokenType.Date or JTokenType.Null or JTokenType.String:
-                        gqlFieldType = "String";
                         break;
-
                     default:
-                        throw new InvalidOperationException($"Unsupported JTokenType: {token.Type}");
+                        throw new InvalidOperationException($"Unsupported token.ValueKind: {token.ValueKind}");
                 }
             }
 
@@ -206,18 +218,15 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="fieldName"></param>
         /// <param name="parentType"></param>
         /// <returns></returns>
-        private string ProcessJsonArray(JArray jsonArray, string fieldName, string parentType)
+        private string ProcessJsonArray(JsonElement jsonArray, string fieldName, string parentType)
         {
-            if (jsonArray.Count == 0)
-            {
-                return "String"; // Assuming empty array as array of string
-            }
-
             HashSet<string> gqlFieldType = new();
+            ArrayEnumerator arrayEnumerator = jsonArray.EnumerateArray();
+
             // Process each element of the array
-            foreach (JToken obj in jsonArray)
+            foreach (JsonElement obj in arrayEnumerator)
             {
-                gqlFieldType.Add(ProcessJsonToken(obj, fieldName, parentType, true, jsonArray.Count));
+                gqlFieldType.Add(ProcessJsonToken(obj, fieldName, parentType, true, arrayEnumerator.Count()));
             }
 
             if (gqlFieldType.Count is not 1)
@@ -236,9 +245,8 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <param name="parentType"></param>
         /// <param name="isArray"></param>
         /// <param name="gqlFieldType"></param>
-        private void AddOrUpdateAttributeInfo(JToken token, string fieldName, string parentType, bool isArray, string gqlFieldType, int parentArrayLength)
+        private void AddOrUpdateAttributeInfo(JsonElement token, string fieldName, string parentType, bool isArray, string gqlFieldType, int parentArrayLength)
         {
-            object? value = (token is JValue jValue) ? jValue.Value : gqlFieldType;
             // Check if this attribute is already recorded for this entity
             if (!_attrMapping.ContainsKey(parentType))
             {
@@ -246,7 +254,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                         type: gqlFieldType,
                         parent: parentType,
                         isArray: isArray,
-                        value: value,
+                        value: token.ValueKind,
                         arrayLength: parentArrayLength);
 
                 _attrMapping.Add(parentType, new HashSet<AttributeObject>() { attributeObject });
@@ -260,12 +268,12 @@ namespace Azure.DataApiBuilder.Core.Generator
                         type: gqlFieldType,
                         parent: parentType,
                         isArray: isArray,
-                        value: value,
+                        value: token.ValueKind,
                         arrayLength: parentArrayLength);
 
                     _attrMapping[parentType].Add(attributeObject);
                 }
-                else if (value is not null)
+                else if (token.ValueKind is not JsonValueKind.Null)
                 {
                     attributeObject.Count++;
                 }

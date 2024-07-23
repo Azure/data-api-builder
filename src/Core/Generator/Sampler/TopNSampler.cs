@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using Microsoft.Azure.Cosmos;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// This Function return TOP N records, in the order of time, from the Cosmos DB
         /// </summary>
         /// <returns></returns>
-        public async Task<List<JObject>> GetSampleAsync()
+        public async Task<List<JsonDocument>> GetSampleAsync()
         {
             string daysFilterClause = string.Empty;
 
@@ -47,7 +47,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
             string query = string.Format(SELECT_QUERY, _numberOfRecords, daysFilterClause);
 
-            return await _cosmosExecutor.ExecuteQueryAsync<JObject>(query);
+            return await _cosmosExecutor.ExecuteQueryAsync<JsonDocument>(query);
         }
 
         public virtual long GetTimeStampThreshold()

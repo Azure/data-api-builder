@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using Microsoft.Azure.Cosmos;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
@@ -38,19 +38,19 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// 3. Fire query to get top N records in a time range (i.e. max days), in the order of time, from each partition
         /// </summary>
         /// <returns></returns>
-        public async Task<List<JObject>> GetSampleAsync()
+        public async Task<List<JsonDocument>> GetSampleAsync()
         {
             // Get Available Partition Key Paths
             List<string> partitionKeyPaths = await GetPartitionKeyPaths();
 
             // Get Unique Partition Key Values
-            List<JObject> uniquePartitionKeys = await GetUniquePartitionKeyValues(partitionKeyPaths);
+            List<JsonDocument> uniquePartitionKeys = await GetUniquePartitionKeyValues(partitionKeyPaths);
 
-            List<JObject> dataArray = new();
+            List<JsonDocument> dataArray = new();
             // Get Data from each partition
-            foreach (JObject partitionKey in uniquePartitionKeys)
+            foreach (JsonDocument partitionKey in uniquePartitionKeys)
             {
-                List<JObject> data = await GetData(partitionKey);
+                List<JsonDocument> data = await GetData(partitionKey.RootElement);
 
                 dataArray.AddRange(data);
             }
@@ -72,15 +72,16 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return partitionKeyPaths;
         }
 
-        internal async Task<List<JObject>> GetUniquePartitionKeyValues(List<string> partitionKeyPaths)
+        internal async Task<List<JsonDocument>> GetUniquePartitionKeyValues(List<string> partitionKeyPaths)
         {
+            List<JsonDocument> uniquePartitionKeyValues = new();
             string selectClause = string.Join(", ", partitionKeyPaths.Select(path => $"c.{path}"));
             string query = string.Format(DISTINCT_QUERY, selectClause);
-            List<JObject> uniquePartitionKeys = await _cosmosExecutor.ExecuteQueryAsync<JObject>(query);
-            return uniquePartitionKeys;
+
+            return await _cosmosExecutor.ExecuteQueryAsync<JsonDocument>(query);
         }
 
-        internal async Task<List<JObject>> GetData(JObject partitionKey)
+        internal async Task<List<JsonDocument>> GetData(JsonElement partitionKey)
         {
             long? timestampThreshold = null;
             if (_maxDaysPerPartition > 0)
@@ -90,13 +91,13 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             }
 
             // Build a filter condition based on the partition key
-            string filterCondition = string.Join(" AND ", partitionKey.Properties().Select(prop => $"c.{prop.Name} = '{prop.Value}'"));
+            string filterCondition = string.Join(" AND ", partitionKey.EnumerateObject().Select(prop => $"c.{prop.Name} = '{prop.Value}'"));
 
             string timestampThresholdCondition = timestampThreshold != null ? $"AND c._ts >= {timestampThreshold}" : string.Empty;
             string limitCondition = _numberOfRecordsPerPartition > 0 ? $"OFFSET 0 LIMIT {_numberOfRecordsPerPartition}" : string.Empty;
 
             string latestItemsQuery = string.Format(SELECT_QUERY, filterCondition, timestampThresholdCondition, limitCondition);
-            return await _cosmosExecutor.ExecuteQueryAsync<JObject>(latestItemsQuery);
+            return await _cosmosExecutor.ExecuteQueryAsync<JsonDocument>(latestItemsQuery);
         }
 
         public virtual long GetTimeStampThreshold()

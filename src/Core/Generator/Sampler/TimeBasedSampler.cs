@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using Microsoft.Azure.Cosmos;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
@@ -40,7 +40,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// 3) Get top N records, order by timestamp, from each subrange (or group).
         /// </summary>
         /// <returns></returns>
-        public async Task<List<JObject>> GetSampleAsync()
+        public async Task<List<JsonDocument>> GetSampleAsync()
         {
             // Get the highest and lowest timestamps
             (long minTimestamp, long maxTimestamp) = await GetHighestAndLowestTimestampsAsync();
@@ -66,9 +66,9 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return (minTimestamp[0], maxTimestamp[0]);
         }
 
-        private async Task<List<JObject>> GetDataFromSubranges(long minTimestamp, long maxTimestamp, int numberOfSubranges, int itemsPerSubrange)
+        private async Task<List<JsonDocument>> GetDataFromSubranges(long minTimestamp, long maxTimestamp, int numberOfSubranges, int itemsPerSubrange)
         {
-            List<JObject> dataArray = new();
+            List<JsonDocument> dataArray = new();
 
             long rangeSize = (maxTimestamp - minTimestamp) / numberOfSubranges;
 
@@ -79,7 +79,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
                 string query = string.Format(SELECT_TOP_QUERY, itemsPerSubrange, rangeStart, rangeEnd);
 
-                dataArray.AddRange(await this._cosmosExecutor.ExecuteQueryAsync<JObject>(query));
+                dataArray.AddRange(await this._cosmosExecutor.ExecuteQueryAsync<JsonDocument>(query));
             }
 
             return dataArray;

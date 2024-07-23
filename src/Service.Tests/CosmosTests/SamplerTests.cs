@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Core.Generator.Sampler;
 using Azure.DataApiBuilder.Core.Resolvers;
@@ -9,7 +10,6 @@ using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
@@ -41,16 +41,18 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 
             // Get to know about the timestamps generated so that it can be used in the test cases.
             CosmosExecutor executor = new(_containerWithIdPk);
-            await executor.ExecuteQueryAsync<JObject>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
-                (item) => _sortedTimespansIdPk.Add(item.Value<int>("_ts")));
+            await executor
+                    .ExecuteQueryAsync<JsonDocument>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
+                        callback: (item) => _sortedTimespansIdPk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
 
             // Wait time is required to generate _ts value different for each item which we are using to do sampling. It might slow down the test execution.
             CreateItems(DATABASE_NAME, CONTAINER_NAME_NAME_PK, 15, "/name", waitInMs: 1000);
 
             // Get to know about the timestamps generated so that it can be used in the test cases.
             executor = new(_containerWithNamePk);
-            await executor.ExecuteQueryAsync<JObject>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
-                (item) => _sortedTimespansNamePk.Add(item.Value<int>("_ts")));
+            await executor
+                    .ExecuteQueryAsync<JsonDocument>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
+                        callback: (item) => _sortedTimespansNamePk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
         }
 
         [TestMethod(displayName: "TopNSampler Scenarios")]
@@ -67,14 +69,14 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     .Returns((long)(_sortedTimespansIdPk[0] - maxDays));
             }
 
-            List<JObject> result = await topNSampler.Object.GetSampleAsync();
+            List<JsonDocument> result = await topNSampler.Object.GetSampleAsync();
             Assert.AreEqual(expectedCount, result.Count);
         }
 
         [TestMethod(displayName: "PartitionBasedSampler Scenarios")]
         [DataRow("/name", 1, 0, 9, DisplayName = "PartitionBasedSampler: Get 1 record per partition, irrespective of days")]
         [DataRow("/name", 2, 0, 15, DisplayName = "PartitionBasedSampler: Get 2 record per partition, irrespective of days")]
-        [DataRow("/name", 2, 1, 1, DisplayName = "PartitionBasedSampler: Get 2 record per partition, fetch only 1 day old record")]
+        [DataRow("/name", 2, 1, 2, DisplayName = "PartitionBasedSampler: Get 2 record per partition, fetch only 1 day old record")]
         [DataRow("/name", 0, 1, 2, DisplayName = "PartitionBasedSampler: Get 1 day old record per partition, without any count limit")]
         [DataRow("/name", null, null, 15, DisplayName = "PartitionBasedSampler: Fetch default value i.e. 5 records per partition if limit is not set")]
         [DataRow(null, 1, 0, 9, DisplayName = "PartitionBasedSampler: Get 1 record per partition, irrespective of days, even partition information is not there.")]
@@ -89,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     .Returns((long)(_sortedTimespansNamePk[0] - maxDaysPerPartition));
             }
 
-            List<JObject> result = await partitionBasedSampler.Object.GetSampleAsync();
+            List<JsonDocument> result = await partitionBasedSampler.Object.GetSampleAsync();
 
             Assert.AreEqual(expectedResultCount, result.Count);
         }
@@ -133,7 +135,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     .Returns((long)(_sortedTimespansNamePk[0] - maxDays));
             }
 
-            List<JObject> result = await timeBasedSampler.Object.GetSampleAsync();
+            List<JsonDocument> result = await timeBasedSampler.Object.GetSampleAsync();
 
             Assert.AreEqual(expectedResultCount, result.Count);
         }

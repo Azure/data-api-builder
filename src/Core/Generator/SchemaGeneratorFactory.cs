@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Generator.Sampler;
 using Microsoft.Azure.Cosmos;
-using Newtonsoft.Json.Linq;
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
@@ -45,7 +45,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             };
 
             // Get Sample Data
-            List<JObject> dataArray = await schemaGeneratorSampler.GetSampleAsync();
+            List<JsonDocument> dataArray = await schemaGeneratorSampler.GetSampleAsync();
 
             // Generate GQL Schema
             return SchemaGenerator.Generate(dataArray, container.Id, config);

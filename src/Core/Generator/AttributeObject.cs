@@ -1,11 +1,13 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
+using System.Text.Json;
+
 namespace Azure.DataApiBuilder.Core.Generator
 {
     internal class AttributeObject
     {
-        public AttributeObject(string name, string type, string parent, bool isArray, object? value = null, int arrayLength = 0)
+        public AttributeObject(string name, string type, string parent, bool isArray, JsonValueKind? value = null, int arrayLength = 0)
         {
             this.Name = name;
             this.Type = type;
@@ -13,7 +15,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             this.IsArray = isArray;
             this.ParentArrayLength = arrayLength;
 
-            if (value is not null)
+            if (value is not null && value is not JsonValueKind.Null)
             {
                 this.Count++;
             }

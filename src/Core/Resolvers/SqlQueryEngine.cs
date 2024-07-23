@@ -353,10 +353,42 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         // </summary>
         private async Task<JsonDocument?> ExecuteAsync(SqlExecuteStructure structure, string dataSourceName)
         {
+            RuntimeConfig runtimeConfig = _runtimeConfigProvider.GetConfig();
             DatabaseType databaseType = _runtimeConfigProvider.GetConfig().GetDataSourceFromDataSourceName(dataSourceName).DatabaseType;
             IQueryBuilder queryBuilder = _queryFactory.GetQueryBuilder(databaseType);
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
             string queryString = queryBuilder.Build(structure);
+
+            // Global Cache enablement check
+            if (runtimeConfig.CanUseCache())
+            {
+                // Entity level cache behavior checks
+                bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
+
+                // Database policies not considered for stored procedure execution.
+                if (entityCacheEnabled)
+                {
+                    DatabaseQueryMetadata queryMetadata = new(
+                        queryText: queryString,
+                    dataSource: dataSourceName,
+                    queryParameters: structure.Parameters);
+
+                    JsonArray? result = await _cache.GetOrSetAsync<JsonArray?>(
+                        async () => await queryExecutor.ExecuteQueryAsync(
+                            sqltext: queryString,
+                            parameters: structure.Parameters,
+                            dataReaderHandler: queryExecutor.GetJsonArrayAsync,
+                            httpContext: _httpContextAccessor.HttpContext!,
+                            args: null,
+                            dataSourceName: dataSourceName),
+                        queryMetadata,
+                        runtimeConfig.GetEntityCacheEntryTtl(entityName: structure.EntityName));
+
+                    byte[] jsonBytes = JsonSerializer.SerializeToUtf8Bytes(result);
+                    JsonDocument cacheServiceResponse = JsonDocument.Parse(jsonBytes);
+                    return cacheServiceResponse;
+                }
+            }
 
             JsonArray? resultArray =
                 await queryExecutor.ExecuteQueryAsync(

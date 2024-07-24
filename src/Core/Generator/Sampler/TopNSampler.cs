@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
@@ -21,15 +22,18 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
         private int _numberOfRecords;
         private int _maxDays;
+        private ILogger _logger;
 
         private CosmosExecutor _cosmosExecutor;
 
-        public TopNSampler(Container container, int? numberOfRecords, int? maxDays)
+        public TopNSampler(Container container, int? numberOfRecords, int? maxDays, ILogger logger)
         {
             this._numberOfRecords = numberOfRecords ?? NUMBER_OF_RECORDS;
             this._maxDays = maxDays ?? MAX_DAYS;
 
-            this._cosmosExecutor = new CosmosExecutor(container);
+            this._logger = logger;
+
+            this._cosmosExecutor = new CosmosExecutor(container, logger);
         }
 
         /// <summary>
@@ -38,6 +42,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns></returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
+            _logger.LogInformation($"Sampling Configuration is numberOfRecords: {_numberOfRecords}, maxDays: {_maxDays}");
             string daysFilterClause = string.Empty;
 
             if (_maxDays > 0)

@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
@@ -25,15 +26,19 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private int _numberOfRecordsPerGroup;
         private int _maxDays;
 
+        private ILogger _logger;
+
         private CosmosExecutor _cosmosExecutor;
 
-        public TimeBasedSampler(Container container, int? groupCount, int? numberOfRecordsPerGroup, int? maxDays)
+        public TimeBasedSampler(Container container, int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, ILogger logger)
         {
             this._groupCount = groupCount ?? GROUP_COUNT;
             this._numberOfRecordsPerGroup = numberOfRecordsPerGroup ?? RECORDS_PER_GROUP;
             this._maxDays = maxDays ?? MAX_DAYS;
 
-            this._cosmosExecutor = new CosmosExecutor(container);
+            this._logger = logger;
+
+            this._cosmosExecutor = new CosmosExecutor(container, logger);
         }
 
         /// <summary>
@@ -45,8 +50,12 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns></returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
+            _logger.LogInformation($"Sampling Configuration is numberOfRecordsPerGroup: {_numberOfRecordsPerGroup}, maxDays: {_maxDays}, groupCount: {_groupCount}");
+
             // Get the highest and lowest timestamps
             (long minTimestamp, long maxTimestamp) = await GetHighestAndLowestTimestampsAsync();
+
+            _logger.LogDebug($"Min Timestamp: {minTimestamp}, Max Timestamp: {maxTimestamp}");
 
             // Divide the range into subranges and get data
             return await GetDataFromSubranges(minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);
@@ -79,6 +88,8 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             {
                 long rangeStart = minTimestamp + (i * rangeSize);
                 long rangeEnd = (i == numberOfSubranges - 1) ? maxTimestamp : rangeStart + rangeSize - 1;
+
+                _logger.LogDebug($"Fetching data for subrange {i + 1} from {rangeStart} to {rangeEnd}");
 
                 string query = string.Format(SELECT_TOP_QUERY, itemsPerSubrange, rangeStart, rangeEnd);
 

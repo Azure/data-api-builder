@@ -33,85 +33,75 @@ public class TestBase
     // Intentionally removed name attribute from Planet model to test scenario where the 'name' attribute
     // is not explicitly added in the schema
     internal const string GRAPHQL_SCHEMA = @"
-type Character {
-    id : ID,
-    name : String,
-    type: String,
-    homePlanet: Int,
-    primaryFunction: String,
-    star: Star
-}
-
 type Planet @model(name:""PlanetAlias"") {
-    id : ID!,
-    name : String,
-    character: Character,
-    age : Float,
-    dimension : String,
-    earth: Earth,
-    tags: [String!],
-    stars: [Star],
-    additionalAttributes: [AdditionalAttribute],
-    moons: [Moon],
-    suns: [Sun]
+  id : ID!,
+  name : String,
+  dimension : String,
+  age : Int,
+  myBooleanProp : Boolean,
+  anotherPojo : AnotherPojo,
+  character : Character,
+  stars : [Star],
+  suns : [Sun],
+  moons : [Moon],
+  earth : Earth,
+  additionalAttributes : [AdditionalAttribute],
+  tags : [String]
 }
-
+type AnotherPojo {
+  anotherProp : String!,
+  anotherIntProp : Int,
+  person : Person
+}
+type Person {
+  firstName : String!,
+  lastName : String,
+  zipCode : Int
+}
+type Character {
+  id : ID!,
+  name : String,
+  type : String,
+  homePlanet : Int,
+  primaryFunction : String,
+  star : Star
+}
 type Star {
-    id : ID,
-    name : String,
-    tag: Tag
+  name : String!,
+  id : ID,
+  tag : Tag
 }
-
 type Tag {
-    id : ID,
-    name : String
+  id : ID!,
+  name : String
 }
-
-type Moon {
-    id : ID,
-    name : String,
-    details : String,
-    moonAdditionalAttributes: [MoonAdditionalAttribute]
-}
-
-type Earth {
-    id : ID,
-    name : String,
-    type: String @authorize(roles: [""authenticated""])
-}
-
 type Sun {
-    id : ID,
-    name : String
+  id : ID!,
+  name : String
 }
-
-type AdditionalAttribute {
-    id : ID,
-    name : String,
-    type: String
+type Moon {
+  id : ID!,
+  name : String,
+  details : String,
+  moonAdditionalAttributes : [MoonAdditionalAttribute]
 }
-
 type MoonAdditionalAttribute {
-    id : ID,
-    name : String,
-    moreAttributes: [MoreAttribute!]
+  id : ID!,
+  name : String,
+  moreAttributes : [MoreAttribute]
 }
-
 type MoreAttribute {
-    id : ID,
-    name : String,
-    type: String @authorize(roles: [""authenticated""])
+  id : ID!,
+  name : String
 }
-
-type InvalidAuthModel @model @authorize(policy: ""Crater"") {
-    id : ID!,
-    name : String
+type Earth {
+  id : ID!,
+  name : String,
+  type : String
 }
-
-type PlanetAgain @model {
-    id : ID,
-    name : String,
-    type: String @authorize(roles: [""authenticated""])
+type AdditionalAttribute {
+  id : ID!,
+  name : String
 }
 ";
 

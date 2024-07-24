@@ -7,7 +7,12 @@ namespace Azure.DataApiBuilder.Core.Generator
 {
     internal class AttributeObject
     {
-        public AttributeObject(string name, string type, string parent, bool isArray, JsonValueKind? value = null, int arrayLength = 0)
+        public AttributeObject(string name,
+            string type,
+            string parent,
+            bool isArray,
+            JsonValueKind? value = null,
+            int arrayLength = 0)
         {
             this.Name = name;
             this.Type = type;
@@ -21,31 +26,47 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
         }
 
-        public string Name { get; set; }
+        public string Name { get; }
 
-        public string Type { get; set; }
+        public string Type { get; }
 
-        public string Parent { get; set; }
+        public string Parent { get; }
 
-        public bool IsArray { get; set; }
+        public bool IsArray { get; }
 
         public int ParentArrayLength { get; set; }
 
         public int Count { get; set; }
 
+        /// <summary>
+        /// Returns following string format:
+        /// [Name] : [Type]! : if the attribute is not nullable and is an array
+        /// [Name] : [Type] : if the attribute is nullable and is an array
+        /// [Name] : Type! : if the attribute is not nullable
+        /// [Name] : Type : if the attribute is nullable
+        /// </summary>
+        /// <param name="totalCount"></param>
+        /// <returns></returns>
         public string? GetString(int totalCount)
         {
-            string t = $"{Type}!";
+            bool isNullable = false;
+            string t = $"{Type}";
+
             if (totalCount > 1 &&
                 (Count < totalCount ||
                     Count < ParentArrayLength))
             {
-                t = $"{Type}";
+                isNullable = true;
             }
 
             if (IsArray)
             {
-                return $"{Name} : [{t}]";
+                t = $"[{t}]";
+            }
+
+            if (!isNullable)
+            {
+                t += "!";
             }
 
             return $"{Name} : {t}";

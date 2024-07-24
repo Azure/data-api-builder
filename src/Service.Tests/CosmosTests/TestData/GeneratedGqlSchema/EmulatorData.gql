@@ -6,12 +6,12 @@ type ContainerName @model {
   myBooleanProp : Boolean!,
   anotherPojo : AnotherPojo!,
   character : Character!,
-  stars : [Star!],
-  suns : [Sun!],
-  moons : [Moon!],
+  stars : [Star]!,
+  suns : [Sun]!,
+  moons : [Moon]!,
   earth : Earth!,
-  additionalAttributes : [AdditionalAttribute!],
-  tags : [String!]
+  additionalAttributes : [AdditionalAttribute]!,
+  tags : [String]!
 }
 type AnotherPojo {
   anotherProp : String!,
@@ -48,12 +48,12 @@ type Moon {
   id : ID!,
   name : String!,
   details : String!,
-  moonAdditionalAttributes : [MoonAdditionalAttribute!]
+  moonAdditionalAttributes : [MoonAdditionalAttribute]!
 }
 type MoonAdditionalAttribute {
   id : ID!,
   name : String!,
-  moreAttributes : [MoreAttribute!]
+  moreAttributes : [MoreAttribute]!
 }
 type MoreAttribute {
   id : ID!,

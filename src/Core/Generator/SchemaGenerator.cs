@@ -23,13 +23,20 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         private List<JsonDocument> _data;
         private string _containerName;
-        private RuntimeConfig? _config;
+        private Dictionary<string, string>  _entityAndSingularNameMapping = new();
 
         private SchemaGenerator(List<JsonDocument> data, string containerName, RuntimeConfig? config)
         {
             this._data = data;
             this._containerName = containerName;
-            this._config = config;
+            if (config != null)
+            {
+                foreach (KeyValuePair<string, Entity> item in config.Entities)
+                {
+                    _entityAndSingularNameMapping.Add(item.Value.GraphQL.Singular, item.Key);
+                }
+            }
+            
         }
 
         /// <summary>
@@ -86,7 +93,19 @@ namespace Azure.DataApiBuilder.Core.Generator
             foreach (KeyValuePair<string, HashSet<AttributeObject>> entity in _attrMapping)
             {
                 bool isRoot = entity.Key == _containerName.Pascalize();
-                sb.AppendLine($"type {entity.Key} {(isRoot ? "@model " : "")}{{");
+
+                sb.Append($"type {entity.Key} ");
+
+                if (_entityAndSingularNameMapping.ContainsKey(entity.Key) && _entityAndSingularNameMapping[entity.Key] != entity.Key)
+                {
+                    sb.Append($"@model(name:\"{_entityAndSingularNameMapping[entity.Key]}\") ");
+                }
+                else if (isRoot)
+                {
+                    sb.Append("@model ");
+                }
+
+                sb.AppendLine($"{{");
 
                 int counter = 0;
                 foreach (AttributeObject field in entity.Value)
@@ -125,7 +144,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                     continue;
                 }
 
-                if (_config != null && !_config.Entities.Entities.ContainsKey(property.Name))
+                if (_entityAndSingularNameMapping.Count != 0  && !_entityAndSingularNameMapping.ContainsKey(parentType.Pascalize()))
                 {
                     continue;
                 }
@@ -144,6 +163,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <exception cref="InvalidOperationException"></exception>
         private string ProcessJsonToken(JsonElement token, string fieldName, string parentType, bool isArray, int parentArrayLength = 1)
         {
+            bool isObjectType = false;
             parentType = parentType.Pascalize();
 
             string gqlFieldType = "String";
@@ -168,6 +188,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
                         TraverseJsonObject(JsonDocument.Parse(token.GetRawText()), objectTypeName);
 
+                        isObjectType = true;
                         gqlFieldType = objectTypeName;
                         break;
                     }
@@ -206,7 +227,10 @@ namespace Azure.DataApiBuilder.Core.Generator
                 }
             }
 
-            AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType, parentArrayLength);
+            if (!(isObjectType && _entityAndSingularNameMapping.Count != 0 && !_entityAndSingularNameMapping.ContainsKey(gqlFieldType.Pascalize())))
+            {
+                AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType, parentArrayLength);
+            }
 
             return gqlFieldType;
         }

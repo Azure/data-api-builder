@@ -24,6 +24,12 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <exception cref="ArgumentException"></exception>
         public static async Task<string> Create(RuntimeConfig config, string mode, int? sampleCount, string? partitionKeyPath, int? days, int? groupCount, ILogger logger)
         {
+            if ((days.HasValue && days < 1) || (groupCount.HasValue && groupCount < 1) || (sampleCount.HasValue && sampleCount < 1))
+            {
+                logger.LogError("Invalid Configuration Found");
+                throw new ArgumentException("Invalid Configuration Found");
+            }
+
             if (config.DataSource == null)
             {
                 logger.LogError("Runtime Config file doesn't have Data Source configured");
@@ -46,7 +52,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 throw new ArgumentException("Connection String, Database and container name must be provided in the config file");
             }
 
-            logger.LogInformation("Connecting to Cosmos DB");
+            logger.LogInformation($"Connecting to Cosmos DB Database: {databaseName}, Container: {containerName}");
             Container container = ConnectToCosmosDB(connectionString, databaseName, containerName);
             SamplingModes samplingMode = (SamplingModes)Enum.Parse(typeof(SamplingModes), mode);
 

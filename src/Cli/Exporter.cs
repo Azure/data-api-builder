@@ -85,7 +85,6 @@ namespace Cli
             if (options.Generate)
             {
                 logger.LogInformation($"Generating schema from the CosmosDB database using {options.SamplingMode}");
-
                 try
                 {
                       schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,

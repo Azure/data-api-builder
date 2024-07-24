@@ -20,8 +20,8 @@ namespace Cli.Commands
             SamplingMode = samplingMode ?? SamplingModes.TopNSampler.ToString();
             NumberOfRecords = numberOfRecords;
             PartitionKeyPath = partitionKeyPath;
-            MaxDays = maxDays ?? 0;
-            GroupCount = groupCount ?? 0;
+            MaxDays = maxDays;
+            GroupCount = groupCount;
         }
 
         [Option("graphql", HelpText = "Export GraphQL schema")]
@@ -46,10 +46,10 @@ namespace Cli.Commands
         public string? PartitionKeyPath { get; }
 
         [Option("days", HelpText = "Data should be fetched for number of days, TopNSampling: filter on number of days, PartitionBasedSampler: Data fetched for a number of days from each partition, TimeBasedSampler: Decide the data range which will be divided into subranges.")]
-        public int MaxDays { get; }
+        public int? MaxDays { get; }
 
         [Option("group-count", HelpText = "Applicable only when 'TimeBasedSampler' is selected")]
-        public int GroupCount { get; }
+        public int? GroupCount { get; }
 
     }
 }

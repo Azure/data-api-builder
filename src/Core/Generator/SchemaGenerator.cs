@@ -23,7 +23,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         private List<JsonDocument> _data;
         private string _containerName;
-        private Dictionary<string, string>  _entityAndSingularNameMapping = new();
+        private Dictionary<string, string> _entityAndSingularNameMapping = new();
 
         private SchemaGenerator(List<JsonDocument> data, string containerName, RuntimeConfig? config)
         {
@@ -36,7 +36,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                     _entityAndSingularNameMapping.Add(item.Value.GraphQL.Singular, item.Key);
                 }
             }
-            
+
         }
 
         /// <summary>
@@ -144,7 +144,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                     continue;
                 }
 
-                if (_entityAndSingularNameMapping.Count != 0  && !_entityAndSingularNameMapping.ContainsKey(parentType.Pascalize()))
+                if (_entityAndSingularNameMapping.Count != 0 && !_entityAndSingularNameMapping.ContainsKey(parentType.Pascalize()))
                 {
                     continue;
                 }

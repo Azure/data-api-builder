@@ -43,7 +43,7 @@ namespace Cli
                     _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
                 }, cancellationToken);
             }
-            
+
             bool isSuccess = false;
             if (options.GraphQL)
             {

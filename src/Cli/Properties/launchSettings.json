@@ -2,7 +2,7 @@
   "profiles": {
     "Cli": {
       "commandName": "Project",
-      "commandLineArgs": "export --graphql -o ./schemas --generate true --sampling-mode TopNSampler --config C:\\Workspace\\Azure\\data-api-builder\\src\\Service.Tests\\dab-config.CosmosDb_NoSql.json",
+      "commandLineArgs": "start",
       "httpPort": 5002
     }
   }

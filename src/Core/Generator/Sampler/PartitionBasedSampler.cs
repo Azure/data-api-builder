@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
@@ -23,15 +24,19 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         private int _numberOfRecordsPerPartition;
         private int _maxDaysPerPartition;
 
+        private ILogger _logger;
+
         private CosmosExecutor _cosmosExecutor;
 
-        public PartitionBasedSampler(Container container, string? partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition)
+        public PartitionBasedSampler(Container container, string? partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, ILogger logger)
         {
             this._partitionKeyPath = partitionKeyPath;
             this._numberOfRecordsPerPartition = numberOfRecordsPerPartition ?? RECORDS_PER_PARTITION;
             this._maxDaysPerPartition = maxDaysPerPartition ?? MAX_DAYS_PER_PARTITION;
 
-            this._cosmosExecutor = new CosmosExecutor(container);
+            this._logger = logger;
+
+            this._cosmosExecutor = new CosmosExecutor(container, logger);
         }
 
         /// <summary>
@@ -43,11 +48,17 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns></returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
+            _logger.LogInformation($"Sampling Configuration is numberOfRecordsPerPartition: {_numberOfRecordsPerPartition}, maxDaysPerPartition: {_maxDaysPerPartition}, partitionKeyPath: {_partitionKeyPath}");
+
             // Get Available Partition Key Paths
             List<string> partitionKeyPaths = await GetPartitionKeyPaths();
 
+            _logger.LogDebug($"Partition Key Paths: {string.Join(',', partitionKeyPaths)}");
+
             // Get Unique Partition Key Values
             List<JsonDocument> uniquePartitionKeys = await GetUniquePartitionKeyValues(partitionKeyPaths);
+
+            _logger.LogDebug($"{uniquePartitionKeys.Count} unique partition keys found.");
 
             List<JsonDocument> dataArray = new();
             // Get Data from each partition

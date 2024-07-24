@@ -36,18 +36,23 @@ namespace Cli
                 return -1;
             }
 
+            // Do not retry if schema generation logic is running
+            int retryCount = 1;
+
             if (!options.Generate)
             {
+                // No need to start graphQL server if schema generation logic is running
                 _ = Task.Run(() =>
                 {
                     _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
                 }, cancellationToken);
+
+                retryCount = 5;
             }
 
             bool isSuccess = false;
             if (options.GraphQL)
             {
-                int retryCount = 5;
                 int tries = 0;
 
                 while (tries < retryCount)
@@ -79,14 +84,24 @@ namespace Cli
             string schemaText;
             if (options.Generate)
             {
-                logger.LogInformation("Generating schema from the CosmosDB database.");
+                logger.LogInformation($"Generating schema from the CosmosDB database using {options.SamplingMode}");
 
-                schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,
-                    options.SamplingMode,
-                    options.NumberOfRecords,
-                    options.PartitionKeyPath,
-                    options.MaxDays,
-                    options.GroupCount);
+                try
+                {
+                      schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,
+                        options.SamplingMode,
+                        options.NumberOfRecords,
+                        options.PartitionKeyPath,
+                        options.MaxDays,
+                        options.GroupCount,
+                        logger);
+                }
+                catch(Exception e)
+                {
+                    logger.LogError($"Failed to generate schema from CosmosDB database: {e.Message}");
+                    logger.LogDebug(e.StackTrace);
+                    return;
+                }
             }
             else
             {

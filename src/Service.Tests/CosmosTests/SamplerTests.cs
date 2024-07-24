@@ -8,6 +8,7 @@ using Azure.DataApiBuilder.Core.Generator.Sampler;
 using Azure.DataApiBuilder.Core.Resolvers;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
@@ -41,7 +42,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             CreateItems(DATABASE_NAME, CONTAINER_NAME_ID_PK, 10, waitInMs: 1000);
 
             // Get to know about the timestamps generated so that it can be used in the test cases.
-            CosmosExecutor executor = new(_containerWithIdPk);
+            CosmosExecutor executor = new(_containerWithIdPk, new Mock<ILogger>().Object);
             await executor
                     .ExecuteQueryAsync<JsonDocument>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
                         callback: (item) => _sortedTimespansIdPk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
@@ -51,7 +52,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             CreateItems(DATABASE_NAME, CONTAINER_NAME_NAME_PK, 15, "/name", waitInMs: 1000);
 
             // Get to know about the timestamps generated so that it can be used in the test cases.
-            executor = new(_containerWithNamePk);
+            executor = new(_containerWithNamePk, new Mock<ILogger>().Object);
             await executor
                     .ExecuteQueryAsync<JsonDocument>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
                         callback: (item) => _sortedTimespansNamePk.Add(item.RootElement.GetProperty("_ts").GetInt32()));

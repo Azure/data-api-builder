@@ -3,6 +3,7 @@
 
 using System.Text.Json;
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
@@ -12,10 +13,12 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
     internal class CosmosExecutor
     {
         private Container _container;
+        private ILogger _logger;
 
-        public CosmosExecutor(Container container)
+        public CosmosExecutor(Container container, ILogger logger)
         {
             this._container = container;
+            this._logger = logger;
         }
 
         /// <summary>
@@ -27,6 +30,8 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns></returns>
         public async Task<List<T>> ExecuteQueryAsync<T>(string query, Action<T?>? callback = null)
         {
+            _logger.LogDebug($"Executing Query: {query}");
+
             List<T> dataArray = new();
 
             FeedIterator queryIterator = _container.GetItemQueryStreamIterator(new QueryDefinition(query));
@@ -84,6 +89,8 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         public async Task<string> GetPartitionKeyPath()
         {
             ContainerProperties containerProperties = await _container.ReadContainerAsync();
+
+            _logger.LogDebug($"Partition Key Path: {containerProperties.PartitionKeyPath}");
 
             return containerProperties.PartitionKeyPath;
         }

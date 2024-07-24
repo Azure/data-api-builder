@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Azure.DataApiBuilder.Config;
+using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Generator;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -30,9 +32,24 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         }
 
         [TestMethod]
-        [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema")]
-        public void TestSchemaGeneratorUsingMultipleJson(string jsonFilePath, string gqlFilePath)
+        [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema", false)]
+        [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema", true)]
+        public void TestSchemaGeneratorUsingMultipleJson(string jsonFilePath, string gqlFilePath, bool useConfigFilePath)
         {
+            RuntimeConfig baseConfig = null;
+            string gqlFileName = "MultiItems.gql";
+            if (useConfigFilePath)
+            {
+                TestHelper.SetupDatabaseEnvironment(TestCategory.COSMOSDBNOSQL);
+                FileSystemRuntimeConfigLoader baseLoader = TestHelper.GetRuntimeConfigLoader();
+                if (!baseLoader.TryLoadKnownConfig(out baseConfig))
+                {
+                    throw new ApplicationException("Failed to load the default CosmosDB_NoSQL config and cannot continue with tests.");
+                }
+
+                gqlFileName = "MultiItemsWithConfig.gql";
+            }
+
             List<JsonDocument> jArray = new();
 
             string[] successPayloadFiles = Directory.GetFiles(jsonFilePath, "*.json");
@@ -42,11 +59,12 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 jArray.Add(JsonSerializer.Deserialize<JsonDocument>(json));
             }
 
-            string actualSchema = SchemaGenerator.Generate(jArray, "containerName");
-            string expectedSchema = File.ReadAllText($"{gqlFilePath}/MultiItems.gql");
+            string actualSchema = SchemaGenerator.Generate(jArray, "planet", baseConfig);
+            string expectedSchema = File.ReadAllText($"{gqlFilePath}/{gqlFileName}");
 
             AreEqualAfterCleanup(expectedSchema, actualSchema);
         }
+
         [TestMethod]
         public void TestMixDataJsonObject()
         {
@@ -78,10 +96,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
   name : String!,
   price : Float!,
   inStock : Boolean!,
-  tags : [String!],
+  tags : [String]!,
   dimensions : Dimensions!,
   manufacturedDate : Date!,
-  relatedProducts : [Int!]
+  relatedProducts : [Int]!
 }
 type Dimensions {
   length : Float!,
@@ -128,27 +146,27 @@ type Dimensions {
             string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
             string expectedSchema = @"type ContainerName @model {
-                                          name : String!,
-                                          age : Int!,
-                                          address : Address!,
-                                          emails : [String!],
-                                          phoneNumbers : [PhoneNumber!]
-                                        }
-                                        type Address {
-                                          street : String!,
-                                          city : String!,
-                                          state : String!,
-                                          zip : String!,
-                                          coordinates : Coordinates!
-                                        }
-                                        type Coordinates {
-                                          latitude : Float!,
-                                          longitude : Float!
-                                        }
-                                        type PhoneNumber {
-                                          type : String!,
-                                          number : String!
-                                        }";
+  name : String!,
+  age : Int!,
+  address : Address!,
+  emails : [String]!,
+  phoneNumbers : [PhoneNumber]!
+}
+type Address {
+  street : String!,
+  city : String!,
+  state : String!,
+  zip : String!,
+  coordinates : Coordinates!
+}
+type Coordinates {
+  latitude : Float!,
+  longitude : Float!
+}
+type PhoneNumber {
+  type : String!,
+  number : String!
+}";
 
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
         }
@@ -210,7 +228,7 @@ type Dimensions {
             return Regex.Replace(input, @"\s+", "");
         }
 
-        public static void AreEqualAfterCleanup(string actual, string expected)
+        public static void AreEqualAfterCleanup(string expected, string actual)
         {
             Assert.AreEqual(RemoveSpacesAndNewLinesRegex(expected), RemoveSpacesAndNewLinesRegex(actual));
         }

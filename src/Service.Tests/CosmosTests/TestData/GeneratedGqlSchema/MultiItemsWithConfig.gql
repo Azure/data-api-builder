@@ -1,10 +1,9 @@
-type Planet @model {
+type Planet @model(name:"PlanetAlias") {
   id : ID!,
   name : String,
   dimension : String,
   age : Int,
   myBooleanProp : Boolean,
-  anotherPojo : AnotherPojo,
   character : Character,
   stars : [Star],
   suns : [Sun],
@@ -12,16 +11,6 @@ type Planet @model {
   earth : Earth,
   additionalAttributes : [AdditionalAttribute],
   tags : [String]
-}
-type AnotherPojo {
-  anotherProp : String!,
-  anotherIntProp : Int,
-  person : Person
-}
-type Person {
-  firstName : String!,
-  lastName : String,
-  zipCode : Int
 }
 type Character {
   id : ID!,

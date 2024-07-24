@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
@@ -15,6 +15,7 @@
     <None Remove="CosmosTests\TestData\CosmosData\MultiItems\3.json" />
     <None Remove="CosmosTests\TestData\CosmosData\MultiItems\4.json" />
     <None Remove="CosmosTests\TestData\CosmosData\MultiItems\5.json" />
+    <None Remove="CosmosTests\TestData\GeneratedGqlSchema\MultiItemsWithConfig.gql" />
     <None Remove="dab-config.CosmosDb_NoSql.json" />
     <None Remove="dab-config.json" />
     <None Remove="dab-config.MsSql.json" />
@@ -114,10 +115,6 @@
     <None Update="MultiSourceTestSchema.gql">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="CosmosTests\TestData\GeneratedGqlSchema\" />
   </ItemGroup>
     
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>

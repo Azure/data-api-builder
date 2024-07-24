@@ -32,15 +32,18 @@ namespace Cli
                     out RuntimeConfig? runtimeConfig,
                     replaceEnvVar: true) || runtimeConfig is null)
             {
-                logger.LogError("Failed to read the config file: {runtimeConfigFile}.", runtimeConfigFile);
+                logger.LogError($"Failed to read the config file: {runtimeConfigFile}.");
                 return -1;
             }
 
-            Task server = Task.Run(() =>
+            if (!options.Generate)
             {
-                _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
-            }, cancellationToken);
-
+                _ = Task.Run(() =>
+                {
+                    _ = ConfigGenerator.TryStartEngineWithOptions(startOptions, loader, fileSystem);
+                }, cancellationToken);
+            }
+            
             bool isSuccess = false;
             if (options.GraphQL)
             {
@@ -79,7 +82,7 @@ namespace Cli
                 logger.LogInformation("Generating schema from the CosmosDB database.");
 
                 schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,
-                    options.Sampling,
+                    options.SamplingMode,
                     options.NumberOfRecords,
                     options.PartitionKeyPath,
                     options.MaxDays,

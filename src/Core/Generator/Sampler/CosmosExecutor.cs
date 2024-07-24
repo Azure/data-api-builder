@@ -56,7 +56,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 }
                 else
                 {
-                    throw new Exception($"Failed to execute query: {query} with status code {item.StatusCode}, activity id is : {item.Headers.ActivityId}");
+                    throw new Exception($"Failed to execute query: {query} with status code {item.StatusCode}, Error Message : {item.ErrorMessage}");
                 }
             }
 

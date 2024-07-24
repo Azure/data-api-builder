@@ -36,7 +36,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             _containerWithIdPk = await _database.CreateContainerIfNotExistsAsync(CONTAINER_NAME_ID_PK, "/id");
             _containerWithNamePk = await _database.CreateContainerIfNotExistsAsync(CONTAINER_NAME_NAME_PK, "/name");
 
-            // Wait time is required to generate _ts value different for each item which we are using to do sampling. It might slow down the test execution.
+            // Wait time is required to generate _ts value different for each item which we are using to do sampling.
+            // I know it will slow down the test execution a little bit.
             CreateItems(DATABASE_NAME, CONTAINER_NAME_ID_PK, 10, waitInMs: 1000);
 
             // Get to know about the timestamps generated so that it can be used in the test cases.
@@ -45,7 +46,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                     .ExecuteQueryAsync<JsonDocument>("SELECT DISTINCT c._ts FROM c ORDER BY c._ts desc",
                         callback: (item) => _sortedTimespansIdPk.Add(item.RootElement.GetProperty("_ts").GetInt32()));
 
-            // Wait time is required to generate _ts value different for each item which we are using to do sampling. It might slow down the test execution.
+            // Wait time is required to generate _ts value different for each item which we are using to do sampling.
+            // I know it will slow down the test execution.
             CreateItems(DATABASE_NAME, CONTAINER_NAME_NAME_PK, 15, "/name", waitInMs: 1000);
 
             // Get to know about the timestamps generated so that it can be used in the test cases.

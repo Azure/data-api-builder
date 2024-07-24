@@ -6,6 +6,9 @@ using Microsoft.Azure.Cosmos;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
+    /// <summary>
+    /// This Sampler divide the time range into subranges and get top N records from each subrange.
+    /// </summary>
     public class TimeBasedSampler : ISchemaGeneratorSampler
     {
         // Default Configuration

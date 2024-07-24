@@ -276,7 +276,6 @@ namespace Azure.DataApiBuilder.Core.Generator
             {
                 AttributeObject attributeObject = new(name: fieldName,
                         type: gqlFieldType,
-                        parent: parentType,
                         isArray: isArray,
                         value: token.ValueKind,
                         arrayLength: parentArrayLength);
@@ -290,7 +289,6 @@ namespace Azure.DataApiBuilder.Core.Generator
                 {
                     attributeObject = new(name: fieldName,
                         type: gqlFieldType,
-                        parent: parentType,
                         isArray: isArray,
                         value: token.ValueKind,
                         arrayLength: parentArrayLength);

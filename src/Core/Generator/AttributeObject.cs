@@ -5,18 +5,19 @@ using System.Text.Json;
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
+    /// <summary>
+    /// It holds the information related to each attribute of an entity
+    /// </summary>
     internal class AttributeObject
     {
         public AttributeObject(string name,
             string type,
-            string parent,
             bool isArray,
             JsonValueKind? value = null,
             int arrayLength = 0)
         {
             this.Name = name;
             this.Type = type;
-            this.Parent = parent;
             this.IsArray = isArray;
             this.ParentArrayLength = arrayLength;
 
@@ -26,16 +27,29 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
         }
 
+        /// <summary>
+        /// Attribute name e.g id, name
+        /// </summary>
         public string Name { get; }
 
+        /// <summary>
+        /// Attribute Type e.g string, int
+        /// </summary>
         public string Type { get; }
 
-        public string Parent { get; }
-
+        /// <summary>
+        /// Indicates if the attribute is an array
+        /// </summary>
         public bool IsArray { get; }
 
+        /// <summary>
+        /// It contains the total number of objects present in the parent array
+        /// </summary>
         public int ParentArrayLength { get; set; }
 
+        /// <summary>
+        /// Count of the attribute present in the records
+        /// </summary>
         public int Count { get; set; }
 
         /// <summary>
@@ -52,9 +66,10 @@ namespace Azure.DataApiBuilder.Core.Generator
             bool isNullable = false;
             string t = $"{Type}";
 
-            if (totalCount > 1 &&
-                (Count < totalCount ||
-                    Count < ParentArrayLength))
+            // Check if the attribute is nullable
+            if (totalCount > 1 && // If there are more than one record, if sampler returns only one record, then consider it as non-nullable
+                (Count < totalCount || // if attribute is not present in all the records, it means it is nullable
+                    Count < ParentArrayLength)) // if attribute is not present in all the records of an array, it means it is nullable
             {
                 isNullable = true;
             }

@@ -6,6 +6,9 @@ using Microsoft.Azure.Cosmos;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
+    /// <summary>
+    /// This class is responsible for interacting with CosmosDB.
+    /// </summary>
     internal class CosmosExecutor
     {
         private Container _container;
@@ -15,6 +18,13 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             this._container = container;
         }
 
+        /// <summary>
+        /// This function execute the passed query and returns the result in the given type.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="query">Cosmos DB query</param>
+        /// <param name="callback"> This callback can be used to manipulate or fetch only required information from the returned item.</param>
+        /// <returns></returns>
         public async Task<List<T>> ExecuteQueryAsync<T>(string query, Action<T?>? callback = null)
         {
             List<T> dataArray = new();
@@ -44,6 +54,10 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                         Process(callback, dataArray, root);
                     }
                 }
+                else
+                {
+                    throw new Exception($"Failed to execute query: {query} with status code {item.StatusCode}, activity id is : {item.Headers.ActivityId}");
+                }
             }
 
             return dataArray;
@@ -63,6 +77,10 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             }
         }
 
+        /// <summary>
+        /// Returns the partition key path of the container.
+        /// </summary>
+        /// <returns></returns>
         public async Task<string> GetPartitionKeyPath()
         {
             ContainerProperties containerProperties = await _container.ReadContainerAsync();

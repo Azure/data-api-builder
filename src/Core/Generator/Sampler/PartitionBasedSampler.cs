@@ -6,6 +6,9 @@ using Microsoft.Azure.Cosmos;
 
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
+    /// <summary>
+    /// This Sampler goes through each logical partition and fetches top N records in a time range.
+    /// </summary>
     public class PartitionBasedSampler : ISchemaGeneratorSampler
     {
         // Default Configuration

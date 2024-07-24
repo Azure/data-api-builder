@@ -77,7 +77,7 @@ public abstract class RuntimeConfigLoader
                 return false;
             }
 
-            // retreive current connection string from config
+            // retrieve current connection string from config
             string updatedConnectionString = config.DataSource.ConnectionString;
 
             // set dataSourceName to default if not provided

@@ -3,7 +3,7 @@
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
-    public enum SamplingMode
+    public enum SamplingModes
     {
         TopNSampler,
         PartitionBasedSampler,

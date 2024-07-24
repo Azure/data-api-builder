@@ -17,7 +17,7 @@ namespace Cli.Commands
             GraphQLSchemaFile = graphqlSchemaFile ?? "schema.graphql";
 
             Generate = generate ?? false;
-            Sampling = samplingMode ?? SamplingMode.TopNSampler.ToString();
+            SamplingMode = samplingMode ?? SamplingModes.TopNSampler.ToString();
             NumberOfRecords = numberOfRecords;
             PartitionKeyPath = partitionKeyPath;
             MaxDays = maxDays ?? 0;
@@ -30,22 +30,22 @@ namespace Cli.Commands
         [Option('o', "output", HelpText = "Directory to save to", Required = true)]
         public string OutputDirectory { get; }
 
-        [Option('g', "graphql-schema-file", HelpText = "The GraphQL schema file name (default schema.graphql)")]
+        [Option('g', "graphql-schema-file", HelpText = "The GraphQL schema file name (default schema.graphQL)")]
         public string GraphQLSchemaFile { get; }
 
-        [Option("generate", HelpText = "To generate schema file from the database")]
+        [Option("generate", HelpText = "To generate schema file from CosmosDB database")]
         public bool Generate { get; }
 
         [Option("sampling-mode", HelpText = "Sampling Modes: TopNSampler, PartitionBasedSampler, TimeBasedSampler")]
-        public string Sampling { get; } = SamplingMode.TopNSampler.ToString();
+        public string SamplingMode { get; } = SamplingModes.TopNSampler.ToString();
 
-        [Option("sampling-count", HelpText = "Sampling Count")]
+        [Option("sampling-count", HelpText = "Sampling Count, For TopNSampler: Total number of Samples, PartitionBasedSampler: Total number of Samples from each partition, TimeBasedSampler : Total number of sample in each time range group.")]
         public int? NumberOfRecords { get; }
 
         [Option("partitionKeyPath", HelpText = "Applicable only when 'PartitionBasedSampler' is selected")]
         public string? PartitionKeyPath { get; }
 
-        [Option("days", HelpText = "TopNSampling: filter on number ")]
+        [Option("days", HelpText = "Data should be fetched for number of days, TopNSampling: filter on number of days, PartitionBasedSampler: Data fetched for a number of days from each partition, TimeBasedSampler: Decide the data range which will be divided into subranges.")]
         public int MaxDays { get; }
 
         [Option("group-count", HelpText = "Applicable only when 'TimeBasedSampler' is selected")]

@@ -43,14 +43,14 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
 
             Container container = ConnectToCosmosDB(connectionString, databaseName, containerName);
-            SamplingMode samplingMode = (SamplingMode)Enum.Parse(typeof(SamplingMode), mode);
+            SamplingModes samplingMode = (SamplingModes)Enum.Parse(typeof(SamplingModes), mode);
 
             ISchemaGeneratorSampler schemaGeneratorSampler = samplingMode switch
             {
-                SamplingMode.TopNSampler => new TopNSampler(container, sampleCount, days),
-                SamplingMode.PartitionBasedSampler => new PartitionBasedSampler(container, partitionKeyPath, sampleCount, days),
-                SamplingMode.TimeBasedSampler => new TimeBasedSampler(container, groupCount, sampleCount, days),
-                _ => throw new ArgumentException($"Invalid sampling mode: {mode}")
+                SamplingModes.TopNSampler => new TopNSampler(container, sampleCount, days),
+                SamplingModes.PartitionBasedSampler => new PartitionBasedSampler(container, partitionKeyPath, sampleCount, days),
+                SamplingModes.TimeBasedSampler => new TimeBasedSampler(container, groupCount, sampleCount, days),
+                _ => throw new ArgumentException($"Invalid sampling mode: {mode}, Valid Sampling Modes are: {SamplingModes.TopNSampler}, {SamplingModes.PartitionBasedSampler}, {SamplingModes.TimeBasedSampler}")
             };
 
             // Get Sample Data

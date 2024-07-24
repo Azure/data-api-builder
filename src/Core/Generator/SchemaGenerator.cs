@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// <exception cref="InvalidOperationException">If JsonArray or Container Name is Empty or null</exception>
         public static string Generate(List<JsonDocument> jsonData, string containerName, RuntimeConfig? config = null)
         {
-            // Validating if passed inputs are not null or empty
+            // Safety Check: Validating if passed inputs are not null or empty
             if (jsonData == null || jsonData.Count == 0 || string.IsNullOrEmpty(containerName))
             {
                 throw new InvalidOperationException("JArray must contain at least one JSON object and Container Name can not be blank");

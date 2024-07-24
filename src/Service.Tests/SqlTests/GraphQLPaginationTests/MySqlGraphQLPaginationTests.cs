@@ -93,8 +93,11 @@ namespace Azure.DataApiBuilder.Service.Tests.SqlTests.GraphQLPaginationTests
         [DataTestMethod]
         [DataRow(1, DisplayName = "1 item per page")]
         [DataRow(2, DisplayName = "2 items per page")]
+        [DataRow(19, DisplayName = "19 items per page")]
         [DataRow(20, DisplayName = "20 items per page")]
+        [DataRow(37, DisplayName = "37 items per page")]
         [DataRow(50, DisplayName = "50 items per page")]
+        [DataRow(99, DisplayName = "99 items per page")]
         [DataRow(100, DisplayName = "100 items per page")]
         [DataRow(1000, DisplayName = "1000 items per page")]
         public async Task TestPaginantionForGivenPageSize(int pageSize)

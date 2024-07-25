@@ -175,9 +175,11 @@ namespace Azure.DataApiBuilder.Core.Services
                 // row["DATA_TYPE"] has value type string so a direct cast to System.Type is not supported.
                 // See https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-data-type-mappings
                 string sqlType = (string)row["DATA_TYPE"];
+                string paramName = (string)row["PARAMETER_NAME"];
                 Type systemType = SqlToCLRType(sqlType);
                 ParameterDefinition paramDefinition = new()
                 {
+                    Name = paramName,
                     SystemType = systemType,
                     DbType = TypeHelper.GetDbTypeFromSystemType(systemType)
                 };

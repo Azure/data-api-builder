@@ -19,7 +19,9 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             // HashSet of Error codes ('Number') which are to be considered as bad requests.
             BadRequestExceptionCodes.UnionWith(new List<string>
             {
-                "157", "158", "169", "404", "412", "414", "415",
+                "157", "158", "169",
+                "201", // Procedure or function '%.*ls' expects parameter '%.*ls', which was not supplied.
+                "404", "412", "414", "415",
                 "489", "513", "515", "544", "545", "547",
                 "550", "611", "681", "1060", "4005", "4006",
                 "4007", "4403", "4405", "4406", "4417", "4418", "4420",

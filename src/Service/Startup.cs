@@ -20,6 +20,7 @@ using Azure.DataApiBuilder.Core.Resolvers.Factories;
 using Azure.DataApiBuilder.Core.Services;
 using Azure.DataApiBuilder.Core.Services.Cache;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
+using Azure.DataApiBuilder.Core.Services.Middleware;
 using Azure.DataApiBuilder.Core.Services.OpenAPI;
 using Azure.DataApiBuilder.Service.Controllers;
 using Azure.DataApiBuilder.Service.Exceptions;
@@ -385,6 +386,7 @@ namespace Azure.DataApiBuilder.Service
             // When enabled, the middleware will prevent Banana Cake Pop(GraphQL client) from loading
             // without proper authorization headers.
             app.UseClientRoleHeaderAuthorizationMiddleware();
+            app.UseEtagValidationMiddleware();
 
             app.UseEndpoints(endpoints =>
             {

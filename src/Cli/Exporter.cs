@@ -87,15 +87,15 @@ namespace Cli
                 logger.LogInformation($"Generating schema from the CosmosDB database using {options.SamplingMode}");
                 try
                 {
-                      schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,
-                        options.SamplingMode,
-                        options.NumberOfRecords,
-                        options.PartitionKeyPath,
-                        options.MaxDays,
-                        options.GroupCount,
-                        logger);
+                    schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,
+                      options.SamplingMode,
+                      options.NumberOfRecords,
+                      options.PartitionKeyPath,
+                      options.MaxDays,
+                      options.GroupCount,
+                      logger);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     logger.LogError($"Failed to generate schema from CosmosDB database: {e.Message}");
                     logger.LogDebug(e.StackTrace);

@@ -48,7 +48,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns></returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
-            _logger.LogInformation($"Sampling Configuration is numberOfRecordsPerPartition: {_numberOfRecordsPerPartition}, maxDaysPerPartition: {_maxDaysPerPartition}, partitionKeyPath: {_partitionKeyPath}");
+            _logger.LogInformation($"Sampling Configuration is Count (per partition): {_numberOfRecordsPerPartition}, Days (per partition): {_maxDaysPerPartition}, Partition Key Path: {_partitionKeyPath}");
 
             // Get Available Partition Key Paths
             List<string> partitionKeyPaths = await GetPartitionKeyPaths();

@@ -7,7 +7,6 @@ using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config.NamingPolicies;
 using Azure.DataApiBuilder.Config.ObjectModel;
@@ -1081,7 +1080,7 @@ mutation ($id: ID!, $partitionKeyValue: String!, $item: PatchPlanetInput!) {
         [DataRow("en-DE")]
         public async Task CanCreateItemWithCultureInvariant(string cultureInfo)
         {
-            CultureInfo ci = new (cultureInfo);
+            CultureInfo ci = new(cultureInfo);
             CultureInfo.DefaultThreadCurrentCulture = ci;
 
             // Run mutation Add planet;

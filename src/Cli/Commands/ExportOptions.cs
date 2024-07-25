@@ -14,7 +14,7 @@ namespace Cli.Commands
         {
             GraphQL = graphql;
             OutputDirectory = outputDirectory;
-            GraphQLSchemaFile = graphqlSchemaFile ?? "schema.graphql";
+            GraphQLSchemaFile = graphqlSchemaFile ?? "schema.gql";
 
             Generate = generate ?? false;
             SamplingMode = samplingMode ?? SamplingModes.TopNSampler.ToString();

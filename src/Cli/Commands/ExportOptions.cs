@@ -39,16 +39,16 @@ namespace Cli.Commands
         [Option("sampling-mode", HelpText = "Sampling Modes: TopNSampler, PartitionBasedSampler, TimeBasedSampler")]
         public string SamplingMode { get; } = SamplingModes.TopNSampler.ToString();
 
-        [Option("sampling-count", HelpText = "Sampling Count, For TopNSampler: Total number of Samples, PartitionBasedSampler: Total number of Samples from each partition, TimeBasedSampler : Total number of sample in each time range group.")]
+        [Option('n', "sampling-count", HelpText = "Sampling Count, For TopNSampler: Total number of Samples, PartitionBasedSampler: Total number of Samples from each partition, TimeBasedSampler : Total number of sample in each time range group.")]
         public int? NumberOfRecords { get; }
 
-        [Option("partitionKeyPath", HelpText = "Applicable only when 'PartitionBasedSampler' is selected")]
+        [Option("sampling-partitionKeyPath", HelpText = "Applicable only when 'PartitionBasedSampler' is selected")]
         public string? PartitionKeyPath { get; }
 
-        [Option("days", HelpText = "Data should be fetched for number of days, TopNSampling: filter on number of days, PartitionBasedSampler: Data fetched for a number of days from each partition, TimeBasedSampler: Decide the data range which will be divided into subranges.")]
+        [Option('d', "sampling-days", HelpText = "Data should be fetched for number of days, TopNSampling: filter on number of days, PartitionBasedSampler: Data fetched for a number of days from each partition, TimeBasedSampler: Decide the data range which will be divided into subranges.")]
         public int? MaxDays { get; }
 
-        [Option("group-count", HelpText = "Applicable only when 'TimeBasedSampler' is selected")]
+        [Option("sampling-group-count", HelpText = "Applicable only when 'TimeBasedSampler' is selected")]
         public int? GroupCount { get; }
 
     }

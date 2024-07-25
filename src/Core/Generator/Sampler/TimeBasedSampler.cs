@@ -50,12 +50,12 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns></returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
-            _logger.LogInformation($"Sampling Configuration is numberOfRecordsPerGroup: {_numberOfRecordsPerGroup}, maxDays: {_maxDays}, groupCount: {_groupCount}");
+            _logger.LogInformation($"Sampling Configuration is Count(per group): {_numberOfRecordsPerGroup}, Days (records considered for grouping): {_maxDays}, Group Count: {_groupCount}");
 
             // Get the highest and lowest timestamps
             (long minTimestamp, long maxTimestamp) = await GetHighestAndLowestTimestampsAsync();
 
-            _logger.LogDebug($"Min Timestamp: {minTimestamp}, Max Timestamp: {maxTimestamp}");
+            _logger.LogDebug($"Min Timestamp(UTC): {DateTimeOffset.FromUnixTimeSeconds(minTimestamp).UtcDateTime}, Max Timestamp(UTC): {DateTimeOffset.FromUnixTimeSeconds(maxTimestamp).UtcDateTime}");
 
             // Divide the range into subranges and get data
             return await GetDataFromSubranges(minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);

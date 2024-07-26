@@ -3,7 +3,6 @@
 
 using System.Data;
 using System.Data.Common;
-using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -161,7 +160,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         // If the number of records affected by DELETE were zero,
                         if (resultProperties is not null
                             && resultProperties.TryGetValue(nameof(DbDataReader.RecordsAffected), out object? value)
-                            && Convert.ToInt32(value, CultureInfo.InvariantCulture) == 0)
+                            && Convert.ToInt32(value) == 0)
                         {
                             // the result was not null previously, it indicates this DELETE lost
                             // a concurrent request race. Hence, empty the non-null result.
@@ -506,7 +505,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     // DbDataReader.RecordsAffected contains the number of rows changed deleted. 0 if no records were deleted.
                     // When the flow reaches this code block and the number of records affected is 0, then it means that no failure occurred at the database layer
                     // and that the item identified by the specified PK was not found.
-                    if (Convert.ToInt32(value, CultureInfo.InvariantCulture) == 0)
+                    if (Convert.ToInt32(value) == 0)
                     {
                         string prettyPrintPk = "<" + string.Join(", ", context.PrimaryKeyValuePairs.Select(kv_pair => $"{kv_pair.Key}: {kv_pair.Value}")) + ">";
 

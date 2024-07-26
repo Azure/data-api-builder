@@ -307,7 +307,7 @@ namespace Azure.DataApiBuilder.Core.Services
             {
                 SyntaxKind.IntValue => Convert.ToInt32(node.Value, CultureInfo.InvariantCulture), // spec
                 SyntaxKind.FloatValue => Convert.ToDouble(node.Value, CultureInfo.InvariantCulture), // spec
-                SyntaxKind.BooleanValue => Convert.ToBoolean(node.Value, CultureInfo.InvariantCulture), // spec
+                SyntaxKind.BooleanValue => Convert.ToBoolean(node.Value), // spec
                 SyntaxKind.StringValue => Convert.ToString(node.Value, CultureInfo.InvariantCulture), // spec
                 SyntaxKind.NullValue => null, // spec
                 _ => Convert.ToString(node.Value, CultureInfo.InvariantCulture)

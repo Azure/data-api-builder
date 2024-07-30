@@ -8,7 +8,9 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
-    /// This Sampler goes through each logical partition and fetches top N records in a time range.
+    /// The PartitionBasedSampler class is designed to sample data from a Cosmos DB container 
+    /// by fetching records from each partition based on a specified partition key. 
+    /// The sampling is configurable by the number of records per partition and the time range considered.
     /// </summary>
     public class PartitionBasedSampler : ISchemaGeneratorSampler
     {
@@ -28,6 +30,14 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
         private CosmosExecutor _cosmosExecutor;
 
+        /// <summary>
+        /// Initializes a new instance of the PartitionBasedSampler class.
+        /// </summary>
+        /// <param name="container">The Cosmos DB container from which to sample data.</param>
+        /// <param name="partitionKeyPath">Optional. The path to the partition key. If null, it will be fetched from the Cosmos DB metadata.</param>
+        /// <param name="numberOfRecordsPerPartition">Optional. The number of records to retrieve per partition. Defaults to 5.</param>
+        /// <param name="maxDaysPerPartition">Optional. The maximum number of days in the past to consider per partition. Defaults to 30.</param>
+        /// <param="logger">The logger to use for logging information.</param>
         public PartitionBasedSampler(Container container, string? partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, ILogger logger)
         {
             this._partitionKeyPath = partitionKeyPath;
@@ -40,28 +50,28 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// This Function return sampled data after going through below steps
-        /// 1. If partition key path is not provided, get it from Cosmos DB
-        /// 2. Once We have list of partitions, get unique partition key values
-        /// 3. Fire query to get top N records in a time range (i.e. max days), in the order of time, from each partition
+        /// Retrieves sampled data by following these steps:
+        /// 1. Retrieves the partition key path if not provided.
+        /// 2. Retrieves unique partition key values.
+        /// 3. Fetches the top N records within a specified time range from each partition.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A list of JsonDocument objects representing the sampled data.</returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
             _logger.LogInformation($"Sampling Configuration is Count (per partition): {_numberOfRecordsPerPartition}, Days (per partition): {_maxDaysPerPartition}, Partition Key Path: {_partitionKeyPath}");
 
-            // Get Available Partition Key Paths
+            // Step 1: Get Available Partition Key Paths
             List<string> partitionKeyPaths = await GetPartitionKeyPaths();
 
             _logger.LogDebug($"Partition Key Paths: {string.Join(',', partitionKeyPaths)}");
 
-            // Get Unique Partition Key Values
+            // Step 2: Get Unique Partition Key Values
             List<JsonDocument> uniquePartitionKeys = await GetUniquePartitionKeyValues(partitionKeyPaths);
 
             _logger.LogDebug($"{uniquePartitionKeys.Count} unique partition keys found.");
 
             List<JsonDocument> dataArray = new();
-            // Get Data from each partition
+            // Step 3: Get Data from each partition
             foreach (JsonDocument partitionKey in uniquePartitionKeys)
             {
                 List<JsonDocument> data = await GetData(partitionKey.RootElement);
@@ -72,6 +82,11 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return dataArray;
         }
 
+        /// <summary>
+        /// Retrieves the partition key paths from the Cosmos DB container. 
+        /// If the partition key path is not provided, it fetches the path from the container's metadata.
+        /// </summary>
+        /// <returns>A list of partition key paths as strings.</returns>
         internal async Task<List<string>> GetPartitionKeyPaths()
         {
             if (_partitionKeyPath is null)
@@ -79,13 +94,16 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 _partitionKeyPath = await _cosmosExecutor.GetPartitionKeyPath();
             }
 
-            // Get List of Partition Key paths
+            // Splits the partition key path into individual keys
             List<string> partitionKeyPaths = _partitionKeyPath.Split('/').Where(p => !string.IsNullOrEmpty(p)).ToList();
-            // Build the query to get unique partition key values
-
             return partitionKeyPaths;
         }
 
+        /// <summary>
+        /// Retrieves unique partition key values from the Cosmos DB container.
+        /// </summary>
+        /// <param name="partitionKeyPaths">A list of partition key paths used to query for unique values.</param>
+        /// <returns>A list of JsonDocument objects representing unique partition key values.</returns>
         internal async Task<List<JsonDocument>> GetUniquePartitionKeyValues(List<string> partitionKeyPaths)
         {
             List<JsonDocument> uniquePartitionKeyValues = new();
@@ -95,6 +113,11 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return await _cosmosExecutor.ExecuteQueryAsync<JsonDocument>(query);
         }
 
+        /// <summary>
+        /// Retrieves the top N records from the specified partition based on the partition key value and the time range.
+        /// </summary>
+        /// <param name="partitionKey">A JsonElement representing the partition key value.</param>
+        /// <returns>A list of JsonDocument objects containing the data from the partition.</returns>
         internal async Task<List<JsonDocument>> GetData(JsonElement partitionKey)
         {
             long? timestampThreshold = null;
@@ -114,6 +137,10 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return await _cosmosExecutor.ExecuteQueryAsync<JsonDocument>(latestItemsQuery);
         }
 
+        /// <summary>
+        /// Calculates the timestamp threshold based on the current UTC time and the maximum number of days per partition.
+        /// </summary>
+        /// <returns>A Unix timestamp representing the earliest allowed record time.</returns>
         public virtual long GetTimeStampThreshold()
         {
             return new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDaysPerPartition)).ToUnixTimeSeconds();

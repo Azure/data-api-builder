@@ -8,7 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
-    /// This Sampler divide the time range into subranges and get top N records from each subrange.
+    /// The TimeBasedSampler class is responsible for dividing a time range into subranges 
+    /// and retrieving the top N records from each subrange based on a specified configuration.
     /// </summary>
     public class TimeBasedSampler : ISchemaGeneratorSampler
     {
@@ -30,6 +31,14 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
         private CosmosExecutor _cosmosExecutor;
 
+        /// <summary>
+        /// Initializes a new instance of the TimeBasedSampler class.
+        /// </summary>
+        /// <param name="container">The Cosmos DB container from which to retrieve data.</param>
+        /// <param name="groupCount">Optional. The number of subranges (or groups) to divide the time range into. Defaults to 10.</param>
+        /// <param name="numberOfRecordsPerGroup">Optional. The number of records to retrieve from each subrange. Defaults to 10.</param>
+        /// <param name="maxDays">Optional. The maximum number of days in the past from which to consider records. Defaults to 10.</param>
+        /// <param name="logger">The logger to use for logging information.</param>
         public TimeBasedSampler(Container container, int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, ILogger logger)
         {
             this._groupCount = groupCount ?? GROUP_COUNT;
@@ -42,25 +51,29 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// This Function return sampled data after going through below steps:
-        /// 1) Get the highest and lowest timestamps.
-        /// 2) Divide this time range into subranges (or groups).
-        /// 3) Get top N records, order by timestamp, from each subrange (or group).
+        /// Retrieves sampled data by performing the following steps:
+        /// 1. Obtains the highest and lowest timestamps from the data.
+        /// 2. Divides the entire time range into a specified number of subranges (or groups).
+        /// 3. Fetches the top N records from each subrange, ordered by timestamp.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A list of JsonDocument objects representing the sampled data.</returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
             _logger.LogInformation($"Sampling Configuration is Count(per group): {_numberOfRecordsPerGroup}, Days (records considered for grouping): {_maxDays}, Group Count: {_groupCount}");
 
-            // Get the highest and lowest timestamps
+            // Step 1: Get the highest and lowest timestamps
             (long minTimestamp, long maxTimestamp) = await GetHighestAndLowestTimestampsAsync();
 
             _logger.LogDebug($"Min Timestamp(UTC): {DateTimeOffset.FromUnixTimeSeconds(minTimestamp).UtcDateTime}, Max Timestamp(UTC): {DateTimeOffset.FromUnixTimeSeconds(maxTimestamp).UtcDateTime}");
 
-            // Divide the range into subranges and get data
+            // Step 2 & 3: Divide the range into subranges and get data
             return await GetDataFromSubranges(minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);
         }
 
+        /// <summary>
+        /// Fetches the minimum and maximum timestamps from the data within the specified time range.
+        /// </summary>
+        /// <returns>A tuple containing the minimum and maximum timestamps.</returns>
         private async Task<(long minTimestamp, long maxTimestamp)> GetHighestAndLowestTimestampsAsync()
         {
             List<long> maxTimestamp = await this._cosmosExecutor.ExecuteQueryAsync<long>(MAX_TIMESTAMP_QUERY);
@@ -78,6 +91,15 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return (minTimestamp[0], maxTimestamp[0]);
         }
 
+        /// <summary>
+        /// Divides the time range between the minimum and maximum timestamps into the specified number of subranges,
+        /// and retrieves the top N records from each subrange.
+        /// </summary>
+        /// <param name="minTimestamp">The minimum timestamp for the range.</param>
+        /// <param name="maxTimestamp">The maximum timestamp for the range.</param>
+        /// <param name="numberOfSubranges">The number of subranges to divide the time range into.</param>
+        /// <param name="itemsPerSubrange">The number of items to retrieve from each subrange.</param>
+        /// <returns>A list of JsonDocument objects representing the data retrieved from each subrange.</returns>
         private async Task<List<JsonDocument>> GetDataFromSubranges(long minTimestamp, long maxTimestamp, int numberOfSubranges, int itemsPerSubrange)
         {
             List<JsonDocument> dataArray = new();
@@ -99,6 +121,10 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return dataArray;
         }
 
+        /// <summary>
+        /// Calculates the timestamp threshold for the maximum number of days specified.
+        /// </summary>
+        /// <returns>A Unix timestamp representing the earliest allowed record time.</returns>
         public virtual long GetTimeStampThreshold()
         {
             return new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDays)).ToUnixTimeSeconds();

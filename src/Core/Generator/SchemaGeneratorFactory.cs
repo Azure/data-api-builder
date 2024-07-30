@@ -9,21 +9,34 @@ using Microsoft.Extensions.Logging;
 
 namespace Azure.DataApiBuilder.Core.Generator
 {
+    /// <summary>
+    /// The <c>SchemaGeneratorFactory</c> class provides functionality to connect to a Cosmos DB account, sample data from a specified container, 
+    /// and generate a GraphQL (GQL) schema based on the sampled data. It uses various sampling strategies to collect representative data 
+    /// and create a schema that reflects the structure of that data.
+    /// </summary>
+    /// <remarks>
+    /// This class is designed to simplify the process of generating GQL schemas for data stored in Cosmos DB. It abstracts away the details
+    /// of connecting to Cosmos DB, sampling data using different strategies, and converting that data into a GQL schema. It is particularly 
+    /// useful in scenarios where the schema needs to be dynamically created based on actual data rather than being predefined.
+    /// </remarks>
     public static class SchemaGeneratorFactory
     {
         /// <summary>
-        /// Factory which takes all the configuration, Connect to the cosmosDB account and get the sample data and then generate GQL schema using that.
+        /// Creates a GraphQL schema by connecting to Cosmos DB, sampling data based on the provided configuration, 
+        /// and generating the schema from the sampled data.
         /// </summary>
-        /// <param name="config"></param>
-        /// <param name="mode"></param>
-        /// <param name="sampleCount"></param>
-        /// <param name="partitionKeyPath"></param>
-        /// <param name="days"></param>
-        /// <param name="groupCount"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
+        /// <param name="config">The runtime configuration containing details about the data source and connection information for Cosmos DB.</param>
+        /// <param name="mode">The sampling mode to use when collecting sample data. This should be one of the defined sampling modes (e.g., TopNSampler, PartitionBasedSampler, TimeBasedSampler).</param>
+        /// <param name="sampleCount">The number of samples to collect. This must be greater than zero if specified.</param>
+        /// <param name="partitionKeyPath">The path of the partition key for partition-based sampling. This parameter is optional and used only for partition-based sampling.</param>
+        /// <param name="days">The number of days to use for time-based sampling. This parameter is optional and should be greater than zero if specified.</param>
+        /// <param name="groupCount">The number of groups to use for time-based sampling. This parameter is optional and should be greater than zero if specified.</param>
+        /// <param name="logger">An instance of <see cref="ILogger"/> used to log information and errors throughout the process.</param>
+        /// <returns>A <see cref="Task{TResult}"/> representing the asynchronous operation. The result is a string containing the generated GraphQL schema.</returns>
+        /// <exception cref="ArgumentException">Thrown when the configuration parameters are invalid or incomplete, or if the data source is not properly configured.</exception>
         public static async Task<string> Create(RuntimeConfig config, string mode, int? sampleCount, string? partitionKeyPath, int? days, int? groupCount, ILogger logger)
         {
+            // Validate the configuration parameters.
             if ((days.HasValue && days < 1) || (groupCount.HasValue && groupCount < 1) || (sampleCount.HasValue && sampleCount < 1))
             {
                 logger.LogError("Invalid Configuration Found");
@@ -53,9 +66,12 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
 
             logger.LogInformation($"Connecting to Cosmos DB Database: {databaseName}, Container: {containerName}");
+
+            // Connect to the Cosmos DB container.
             Container container = ConnectToCosmosDB(connectionString, databaseName, containerName);
             SamplingModes samplingMode = (SamplingModes)Enum.Parse(typeof(SamplingModes), mode);
 
+            // Determine the appropriate sampler based on the sampling mode.
             ISchemaGeneratorSampler schemaGeneratorSampler = samplingMode switch
             {
                 SamplingModes.TopNSampler => new TopNSampler(container, sampleCount, days, logger),
@@ -66,7 +82,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             logger.LogInformation($"Sampling Started using {schemaGeneratorSampler.GetType().Name}");
 
-            // Get Sample Data
+            // Get sample data from the selected sampler.
             List<JsonDocument> dataArray = await schemaGeneratorSampler.GetSampleAsync();
 
             logger.LogInformation($"{dataArray.Count} records collected as Sample");
@@ -77,10 +93,18 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
 
             logger.LogInformation($"Generating Schema Started");
-            // Generate GQL Schema
+
+            // Generate and return the GraphQL schema based on the sampled data.
             return SchemaGenerator.Generate(dataArray, container.Id, config);
         }
 
+        /// <summary>
+        /// Establishes a connection to a Cosmos DB container using the provided connection string, database name, and container name.
+        /// </summary>
+        /// <param name="connectionString">The connection string for the Cosmos DB account.</param>
+        /// <param name="database">The name of the database to connect to.</param>
+        /// <param name="container">The name of the container to connect to.</param>
+        /// <returns>A <see cref="Container"/> object representing the connected Cosmos DB container.</returns>
         private static Container ConnectToCosmosDB(string connectionString, string database, string container)
         {
             CosmosClient cosmosClient = new(connectionString);

@@ -8,13 +8,20 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
-    /// This class is responsible for interacting with CosmosDB.
+    /// The CosmosExecutor class provides methods for interacting with a Cosmos DB container,
+    /// including executing queries and retrieving metadata such as partition key paths.
+    /// It acts as a utility for data retrieval operations, handling query execution and result processing.
     /// </summary>
     internal class CosmosExecutor
     {
         private Container _container;
         private ILogger _logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CosmosExecutor"/> class.
+        /// </summary>
+        /// <param name="container">The Cosmos DB container instance to interact with.</param>
+        /// <param name="logger">The logger instance used for logging information and debugging messages.</param>
         public CosmosExecutor(Container container, ILogger logger)
         {
             this._container = container;
@@ -22,12 +29,13 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// This function execute the passed query and returns the result in the given type.
+        /// Executes the specified query on the Cosmos DB container and returns the results as a list of the specified type.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="query">Cosmos DB query</param>
-        /// <param name="callback"> This callback can be used to manipulate or fetch only required information from the returned item.</param>
-        /// <returns></returns>
+        /// <typeparam name="T">The type to which the query results should be deserialized.</typeparam>
+        /// <param name="query">The SQL-like query string to execute against the Cosmos DB container.</param>
+        /// <param name="callback">Optional. A callback function that can be used to manipulate or process each retrieved item.</param>
+        /// <returns>A task representing the asynchronous operation, containing a list of results of type <typeparamref name="T"/>.</returns>
+        /// <exception cref="Exception">Thrown when the query execution fails with an error message and status code.</exception>
         public async Task<List<T>> ExecuteQueryAsync<T>(string query, Action<T?>? callback = null)
         {
             _logger.LogDebug($"Executing Query: {query}");
@@ -68,6 +76,14 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return dataArray;
         }
 
+        /// <summary>
+        /// Deserializes a JSON element to the specified type and adds it to the data array.
+        /// Optionally, invokes a callback function on each deserialized item.
+        /// </summary>
+        /// <typeparam name="T">The type to which the JSON element should be deserialized.</typeparam>
+        /// <param name="callback">Optional. A callback function to process each deserialized item.</param>
+        /// <param name="dataArray">The list to which the deserialized item is added.</param>
+        /// <param name="element">The JSON element representing a data item.</param>
         private static void Process<T>(Action<T?>? callback, List<T> dataArray, JsonElement element)
         {
             T? document = JsonSerializer.Deserialize<T>(element.GetRawText());
@@ -83,9 +99,9 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// Returns the partition key path of the container.
+        /// Retrieves the partition key path of the Cosmos DB container.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A task representing the asynchronous operation, containing the partition key path as a string.</returns>
         public async Task<string> GetPartitionKeyPath()
         {
             ContainerProperties containerProperties = await _container.ReadContainerAsync();

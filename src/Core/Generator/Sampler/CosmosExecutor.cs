@@ -38,7 +38,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <exception cref="Exception">Thrown when the query execution fails with an error message and status code.</exception>
         public async Task<List<T>> ExecuteQueryAsync<T>(string query, Action<T?>? callback = null)
         {
-            _logger.LogDebug($"Executing Query: {query}");
+            _logger.LogDebug("Executing Query: {0}", query);
 
             List<T> dataArray = new();
 
@@ -69,7 +69,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 }
                 else
                 {
-                    throw new Exception($"Failed to execute query: {query} with status code {item.StatusCode}, Error Message : {item.ErrorMessage}");
+                    throw new Exception(string.Format("Failed to execute query: {0} with status code {1}, Error Message : {2}", query, item.StatusCode, item.ErrorMessage));
                 }
             }
 
@@ -106,7 +106,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         {
             ContainerProperties containerProperties = await _container.ReadContainerAsync();
 
-            _logger.LogDebug($"Partition Key Path: {containerProperties.PartitionKeyPath}");
+            _logger.LogDebug("Partition Key Path: {0}", containerProperties.PartitionKeyPath);
 
             return containerProperties.PartitionKeyPath;
         }

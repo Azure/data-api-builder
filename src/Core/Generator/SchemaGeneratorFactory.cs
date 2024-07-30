@@ -51,7 +51,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             if (config.DataSource.DatabaseType != DatabaseType.CosmosDB_NoSQL)
             {
-                logger.LogError($"Config file passed is not compatible with this feature. Please make sure datasource type is configured as  {DatabaseType.CosmosDB_NoSQL}");
+                logger.LogError("Config file passed is not compatible with this feature. Please make sure datasource type is configured as  {0}", DatabaseType.CosmosDB_NoSQL);
                 throw new ArgumentException($"Config file passed is not compatible with this feature. Please make sure datasource type is configured as {DatabaseType.CosmosDB_NoSQL}");
             }
 
@@ -65,7 +65,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 throw new ArgumentException("Connection String, Database and container name must be provided in the config file");
             }
 
-            logger.LogInformation($"Connecting to Cosmos DB Database: {databaseName}, Container: {containerName}");
+            logger.LogInformation("Connecting to Cosmos DB Database: {0}, Container: {1}", databaseName, containerName);
 
             // Connect to the Cosmos DB container.
             Container container = ConnectToCosmosDB(connectionString, databaseName, containerName);
@@ -80,19 +80,19 @@ namespace Azure.DataApiBuilder.Core.Generator
                 _ => throw new ArgumentException($"Invalid sampling mode: {mode}, Valid Sampling Modes are: {SamplingModes.TopNSampler}, {SamplingModes.PartitionBasedSampler}, {SamplingModes.TimeBasedSampler}")
             };
 
-            logger.LogInformation($"Sampling Started using {schemaGeneratorSampler.GetType().Name}");
+            logger.LogInformation("Sampling Started using {0}", schemaGeneratorSampler.GetType().Name);
 
             // Get sample data from the selected sampler.
             List<JsonDocument> dataArray = await schemaGeneratorSampler.GetSampleAsync();
 
-            logger.LogInformation($"{dataArray.Count} records collected as Sample");
+            logger.LogInformation("{0} records collected as Sample", dataArray.Count);
             if (dataArray.Count == 0)
             {
                 logger.LogError("No data got sampled out. Please try different sampling Mode or Sampling configuration");
                 throw new ArgumentException("No data got sampled out. Please try different sampling Mode or Sampling configuration");
             }
 
-            logger.LogInformation($"Generating Schema Started");
+            logger.LogInformation("Generating Schema Started");
 
             // Generate and return the GraphQL schema based on the sampled data.
             return SchemaGenerator.Generate(dataArray, container.Id, config);

@@ -50,7 +50,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns>A list of JsonDocument objects representing the retrieved records.</returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
-            _logger.LogInformation($"Sampling Configuration is Count: {_numberOfRecords}, Days: {_maxDays}");
+            _logger.LogInformation("Sampling Configuration is Count: {0}, Days: {1}", _numberOfRecords, _maxDays);
             string daysFilterClause = string.Empty;
 
             if (_maxDays > 0)

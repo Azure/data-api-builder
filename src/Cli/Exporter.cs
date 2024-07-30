@@ -45,7 +45,7 @@ namespace Cli
                     out RuntimeConfig? runtimeConfig,
                     replaceEnvVar: true) || runtimeConfig is null)
             {
-                logger.LogError($"Failed to read the config file: {runtimeConfigFile}.");
+                logger.LogError("Failed to read the config file: {0}.", runtimeConfigFile);
                 return -1;
             }
 
@@ -106,7 +106,7 @@ namespace Cli
             if (options.Generate)
             {
                 // Generate the schema from CosmosDB database
-                logger.LogInformation($"Generating schema from the CosmosDB database using {options.SamplingMode}");
+                logger.LogInformation("Generating schema from the CosmosDB database using {0}", options.SamplingMode);
                 try
                 {
                     schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,
@@ -119,7 +119,7 @@ namespace Cli
                 }
                 catch (Exception e)
                 {
-                    logger.LogError($"Failed to generate schema from CosmosDB database: {e.Message}");
+                    logger.LogError("Failed to generate schema from CosmosDB database: {0}", e.Message);
                     logger.LogDebug(e.StackTrace);
                     return;
                 }
@@ -148,7 +148,7 @@ namespace Cli
             // Write the schema content to a file
             WriteSchemaFile(options, fileSystem, schemaText);
 
-            logger.LogInformation($"Schema file exported successfully at {options.OutputDirectory}");
+            logger.LogInformation("Schema file exported successfully at {0}", options.OutputDirectory);
         }
 
         /// <summary>

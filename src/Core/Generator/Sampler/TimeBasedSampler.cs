@@ -59,12 +59,12 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns>A list of JsonDocument objects representing the sampled data.</returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
-            _logger.LogInformation($"Sampling Configuration is Count(per group): {_numberOfRecordsPerGroup}, Days (records considered for grouping): {_maxDays}, Group Count: {_groupCount}");
+            _logger.LogInformation("Sampling Configuration is Count(per group): {0}, Days (records considered for grouping): {1}, Group Count: {2}", _numberOfRecordsPerGroup, _maxDays, _groupCount);
 
             // Step 1: Get the highest and lowest timestamps
             (long minTimestamp, long maxTimestamp) = await GetHighestAndLowestTimestampsAsync();
 
-            _logger.LogDebug($"Min Timestamp(UTC): {DateTimeOffset.FromUnixTimeSeconds(minTimestamp).UtcDateTime}, Max Timestamp(UTC): {DateTimeOffset.FromUnixTimeSeconds(maxTimestamp).UtcDateTime}");
+            _logger.LogDebug("Min Timestamp(UTC): {0}, Max Timestamp(UTC): {1}", DateTimeOffset.FromUnixTimeSeconds(minTimestamp).UtcDateTime, DateTimeOffset.FromUnixTimeSeconds(maxTimestamp).UtcDateTime);
 
             // Step 2 & 3: Divide the range into subranges and get data
             return await GetDataFromSubranges(minTimestamp, maxTimestamp, _groupCount, _numberOfRecordsPerGroup);
@@ -111,7 +111,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
                 long rangeStart = minTimestamp + (i * rangeSize);
                 long rangeEnd = (i == numberOfSubranges - 1) ? maxTimestamp : rangeStart + rangeSize - 1;
 
-                _logger.LogDebug($"Fetching data for subrange {i + 1} from {rangeStart} to {rangeEnd}");
+                _logger.LogDebug("Fetching data for subrange {0} from {1} to {2}", i + 1, rangeStart, rangeEnd);
 
                 string query = string.Format(SELECT_TOP_QUERY, itemsPerSubrange, rangeStart, rangeEnd);
 

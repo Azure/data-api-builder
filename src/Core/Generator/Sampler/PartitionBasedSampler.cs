@@ -58,17 +58,17 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns>A list of JsonDocument objects representing the sampled data.</returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
-            _logger.LogInformation($"Sampling Configuration is Count (per partition): {_numberOfRecordsPerPartition}, Days (per partition): {_maxDaysPerPartition}, Partition Key Path: {_partitionKeyPath}");
+            _logger.LogInformation("Sampling Configuration is Count (per partition): {0}, Days (per partition): {1}, Partition Key Path: {2}", _numberOfRecordsPerPartition, _maxDaysPerPartition, _partitionKeyPath);
 
             // Step 1: Get Available Partition Key Paths
             List<string> partitionKeyPaths = await GetPartitionKeyPaths();
 
-            _logger.LogDebug($"Partition Key Paths: {string.Join(',', partitionKeyPaths)}");
+            _logger.LogDebug("Partition Key Paths: {0}", string.Join(',', partitionKeyPaths));
 
             // Step 2: Get Unique Partition Key Values
             List<JsonDocument> uniquePartitionKeys = await GetUniquePartitionKeyValues(partitionKeyPaths);
 
-            _logger.LogDebug($"{uniquePartitionKeys.Count} unique partition keys found.");
+            _logger.LogDebug("{0} unique partition keys found.", uniquePartitionKeys.Count);
 
             List<JsonDocument> dataArray = new();
             // Step 3: Get Data from each partition

@@ -11,26 +11,37 @@ using static System.Text.Json.JsonElement;
 namespace Azure.DataApiBuilder.Core.Generator
 {
     /// <summary>
-    /// This Class takes a JArray of JSON objects and generates a GraphQL schema.
+    /// The <see cref="SchemaGenerator"/> class generates a GraphQL schema from a collection of JSON objects. 
+    /// It processes the JSON data, maps attributes to GraphQL types, and creates a schema definition.
     /// </summary>
     internal class SchemaGenerator
     {
         // Cosmos DB reserved properties, these properties will be ignored in the schema generation as they are not user-defined properties.
         private readonly List<string> _cosmosDbReservedProperties = new() { "_ts", "_etag", "_rid", "_self", "_attachments" };
 
-        // Contains the mapping of GQL Entities and their corresponding attributes.
+        // Maps GraphQL entities to their corresponding attributes.
         private Dictionary<string, HashSet<AttributeObject>> _attrMapping = new();
 
+        // List of JSON documents to process.
         private List<JsonDocument> _data;
+        // Name of the Cosmos DB container from which the JSON data is obtained.
         private string _containerName;
+        // Dictionary mapping plural entity names to singular names based on the provided configuration.
         private Dictionary<string, string> _entityAndSingularNameMapping = new();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SchemaGenerator"/> class.
+        /// </summary>
+        /// <param name="data">A list of JSON documents to be used to generate the schema.</param>
+        /// <param name="containerName">The name of the Cosmos DB container which is used to generate the GraphQL schema.</param>
+        /// <param name="config">Optional configuration that maps GraphQL entity names to their singular forms.</param>
         private SchemaGenerator(List<JsonDocument> data, string containerName, RuntimeConfig? config)
         {
             this._data = data;
             this._containerName = containerName;
             if (config != null)
             {
+                // Populate entity and singular name mapping if configuration is provided.
                 foreach (KeyValuePair<string, Entity> item in config.Entities)
                 {
                     _entityAndSingularNameMapping.Add(item.Value.GraphQL.Singular, item.Key);
@@ -40,62 +51,67 @@ namespace Azure.DataApiBuilder.Core.Generator
         }
 
         /// <summary>
-        /// Processes a JArray of JSON objects and generates a GraphQL schema.
+        /// Generates a GraphQL schema from the provided JSON data and container name.
         /// </summary>
-        /// <param name="jsonData">Sampled JSON Data</param>
-        /// <param name="containerName">Cosmos DB Container Name</param>
-        /// <returns></returns>
-        /// <exception cref="InvalidOperationException">If JsonArray or Container Name is Empty or null</exception>
+        /// <param name="jsonData">A list of JSON documents to generate the schema from.</param>
+        /// <param name="containerName">The name of the Cosmos DB container.</param>
+        /// <param name="config">Optional configuration that maps GraphQL entity names to their singular forms.</param>
+        /// <returns>A string representing the generated GraphQL schema.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the JSON data is empty or the container name is null or empty.</exception>
         public static string Generate(List<JsonDocument> jsonData, string containerName, RuntimeConfig? config = null)
         {
-            // Safety Check: Validating if passed inputs are not null or empty
+            // Validate input parameters.
             if (jsonData == null || jsonData.Count == 0 || string.IsNullOrEmpty(containerName))
             {
                 throw new InvalidOperationException("JArray must contain at least one JSON object and Container Name can not be blank");
             }
 
+            // Create an instance of SchemaGenerator and generate the schema.
             return new SchemaGenerator(jsonData, containerName, config)
                         .ConvertJsonToGQLSchema();
         }
 
         /// <summary>
-        /// This method takes data and container name, from which GQL Schema needs to be fetched.
+        /// Converts the JSON data into a GraphQL schema string.
         /// </summary>
-        /// <returns></returns>
-        /// <exception cref="InvalidOperationException">If JArray doesn't contains JObject</exception>
+        /// <returns>A string representing the GraphQL schema.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the JSON data contains non-object elements.</exception>
         private string ConvertJsonToGQLSchema()
         {
-            // Process each JSON object in the JArray to collect GQL Entities and their attributes.
+            // Process each JSON document to build the GraphQL schema.
             foreach (JsonDocument token in _data)
             {
-                if (token is JsonDocument jsonObject)
+                if (token is JsonDocument jsonToken)
                 {
-                    TraverseJsonObject(jsonObject, _containerName);
+                    TraverseJsonObject(jsonToken, _containerName);
                 }
                 else
                 {
-                    throw new InvalidOperationException("JArray must contain JSON objects only.");
+                    throw new InvalidOperationException("Invalid JsonDocument found.");
                 }
             }
 
-            // Generate string out of the traversed information
+            // Generate the GraphQL schema string from the collected entity information.
             return GenerateGQLSchema();
         }
 
         /// <summary>
-        /// Take Traversed information and convert that to GQL string
+        /// Generates a GraphQL schema string from the collected attributes and entities.
         /// </summary>
-        /// <param name="containerName"></param>
-        /// <returns></returns>
+        /// <returns>A string representing the GraphQL schema.</returns>
         private string GenerateGQLSchema()
         {
             StringBuilder sb = new();
+
+            // Iterate through the collected entities and their attributes to build the schema.
             foreach (KeyValuePair<string, HashSet<AttributeObject>> entity in _attrMapping)
             {
+                // Determine if the entity is the root entity.
                 bool isRoot = entity.Key == _containerName.Pascalize();
 
                 sb.Append($"type {entity.Key} ");
 
+                // Append model directive if applicable.
                 if (_entityAndSingularNameMapping.ContainsKey(entity.Key) && _entityAndSingularNameMapping[entity.Key] != entity.Key)
                 {
                     sb.Append($"@model(name:\"{_entityAndSingularNameMapping[entity.Key]}\") ");
@@ -107,11 +123,13 @@ namespace Azure.DataApiBuilder.Core.Generator
 
                 sb.AppendLine($"{{");
 
+                // Append fields and their types.
                 int counter = 0;
                 foreach (AttributeObject field in entity.Value)
                 {
                     sb.Append($"  {field.GetString(_data.Count)}");
 
+                    // Add comma if it's not the last field.
                     if (counter != entity.Value.Count - 1)
                     {
                         sb.AppendLine(",");
@@ -130,37 +148,42 @@ namespace Azure.DataApiBuilder.Core.Generator
         }
 
         /// <summary>
-        /// This function takes the JSON Object and Traverse through it to collect all the GQL Entities which corresponding schema
+        /// Traverses a JSON object and collects GraphQL entity and attribute information.
         /// </summary>
-        /// <param name="jsonObject"></param>
-        /// <param name="parentType"></param>
+        /// <param name="jsonObject">The JSON object to traverse.</param>
+        /// <param name="parentType">The name of the parent type or entity.</param>
         private void TraverseJsonObject(JsonDocument jsonObject, string parentType)
         {
             foreach (JsonProperty property in jsonObject.RootElement.EnumerateObject())
             {
-                // Skipping if the property is reserved Cosmos DB property
+                // Skip reserved Cosmos DB properties.
                 if (_cosmosDbReservedProperties.Contains(property.Name))
                 {
                     continue;
                 }
 
+                // Check if the parent type is in the entity mapping.
                 if (_entityAndSingularNameMapping.Count != 0 && !_entityAndSingularNameMapping.ContainsKey(parentType.Pascalize()))
                 {
                     continue;
                 }
 
+                // Process each property token to determine its GraphQL type.
                 ProcessJsonToken(property.Value, property.Name, parentType, false);
             }
         }
 
         /// <summary>
-        /// Traverse through the JSON Token and generate the GQL Field, it runs the same logic recursively also, for nested objects.
+        /// Processes a JSON token and determines its GraphQL field type. Handles nested objects and arrays.
         /// </summary>
-        /// <param name="token"></param>
-        /// <param name="fieldName"></param>
-        /// <param name="parentType"></param>
-        /// <returns></returns>
-        /// <exception cref="InvalidOperationException"></exception>
+        /// <param name="token">The JSON token to process.</param>
+        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="parentType">The name of the parent type.</param>
+        /// <param name="isArray">Indicates whether the field is part of an array.</param>
+        /// <param name="parentArrayLength">The length of the parent array if applicable.</param>
+        /// <returns>The GraphQL type of the field.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the JSON token type is unsupported or if an array contains mixed types.</exception>
+
         private string ProcessJsonToken(JsonElement token, string fieldName, string parentType, bool isArray, int parentArrayLength = 1)
         {
             bool isObjectType = false;
@@ -186,6 +209,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                             objectTypeName = objectTypeName.Singularize();
                         }
 
+                        // Recursively traverse nested objects.
                         TraverseJsonObject(JsonDocument.Parse(token.GetRawText()), objectTypeName);
 
                         isObjectType = true;
@@ -227,6 +251,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 }
             }
 
+            // Add or update attribute information in the entity mapping.
             if (!(isObjectType && _entityAndSingularNameMapping.Count != 0 && !_entityAndSingularNameMapping.ContainsKey(gqlFieldType.Pascalize())))
             {
                 AddOrUpdateAttributeInfo(token, fieldName, parentType, isArray, gqlFieldType, parentArrayLength);
@@ -236,23 +261,25 @@ namespace Azure.DataApiBuilder.Core.Generator
         }
 
         /// <summary>
-        /// Process first element of the JSON Array and generate the GQL Field, if array is empty consider it array of string
+        /// Processes a JSON array to determine the GraphQL field type for array elements.
         /// </summary>
-        /// <param name="jsonArray"></param>
-        /// <param name="fieldName"></param>
-        /// <param name="parentType"></param>
-        /// <returns></returns>
+        /// <param name="jsonArray">The JSON array to process.</param>
+        /// <param name="fieldName">The name of the field representing the array.</param>
+        /// <param name="parentType">The name of the parent type.</param>
+        /// <returns>The GraphQL type of the array elements.</returns>
+        /// <exception cref="InvalidOperationException">Thrown if the array contains elements of multiple types.</exception>
         private string ProcessJsonArray(JsonElement jsonArray, string fieldName, string parentType)
         {
             HashSet<string> gqlFieldType = new();
             ArrayEnumerator arrayEnumerator = jsonArray.EnumerateArray();
 
-            // Process each element of the array
+            // Process each element of the array to determine its GraphQL type.
             foreach (JsonElement obj in arrayEnumerator)
             {
                 gqlFieldType.Add(ProcessJsonToken(obj, fieldName, parentType, true, arrayEnumerator.Count()));
             }
 
+            // Check if all elements in the array are of the same type.
             if (gqlFieldType.Count is not 1)
             {
                 throw new InvalidOperationException($"Same attributes {parentType} contains multiple types of elements.");
@@ -262,16 +289,17 @@ namespace Azure.DataApiBuilder.Core.Generator
         }
 
         /// <summary>
-        /// Add or Update the Attribute Information in the Entity Map
+        /// Adds or updates the attribute information in the entity map.
         /// </summary>
-        /// <param name="token"></param>
-        /// <param name="fieldName"></param>
-        /// <param name="parentType"></param>
-        /// <param name="isArray"></param>
-        /// <param name="gqlFieldType"></param>
+        /// <param name="token">The JSON token representing the attribute.</param>
+        /// <param name="fieldName">The name of the field.</param>
+        /// <param name="parentType">The name of the parent type.</param>
+        /// <param name="isArray">Indicates whether the attribute is part of an array.</param>
+        /// <param name="gqlFieldType">The GraphQL type of the attribute.</param>
+        /// <param name="parentArrayLength">The length of the parent array if applicable.</param>
         private void AddOrUpdateAttributeInfo(JsonElement token, string fieldName, string parentType, bool isArray, string gqlFieldType, int parentArrayLength)
         {
-            // Check if this attribute is already recorded for this entity
+            // Add a new attribute if it does not already exist for the entity.
             if (!_attrMapping.ContainsKey(parentType))
             {
                 AttributeObject attributeObject = new(name: fieldName,
@@ -284,6 +312,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             }
             else
             {
+                // Update existing attribute information if the attribute already exists.
                 AttributeObject? attributeObject = _attrMapping[parentType].FirstOrDefault(a => a.Name == fieldName);
                 if (attributeObject is null)
                 {

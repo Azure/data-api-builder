@@ -8,8 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
-    /// It Returns the Top N records from K days,from the Cosmos DB.
-    /// If K is 0 or null, it will return the Top N records from the Cosmos DB.
+    /// The TopNSampler class is responsible for retrieving a specified number of recent records 
+    /// from a Cosmos DB container, optionally filtering by a maximum number of days.
     /// </summary>
     public class TopNSampler : ISchemaGeneratorSampler
     {
@@ -26,6 +26,13 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 
         private CosmosExecutor _cosmosExecutor;
 
+        /// <summary>
+        /// Initializes a new instance of the TopNSampler class.
+        /// </summary>
+        /// <param name="container">The Cosmos DB container from which to retrieve data.</param>
+        /// <param name="numberOfRecords">Optional. The number of records to retrieve. Defaults to 10.</param>
+        /// <param name="maxDays">Optional. The maximum number of days in the past from which to retrieve data. Defaults to 0 (no limit).</param>
+        /// <param name="logger">The logger to use for logging information.</param>
         public TopNSampler(Container container, int? numberOfRecords, int? maxDays, ILogger logger)
         {
             this._numberOfRecords = numberOfRecords ?? NUMBER_OF_RECORDS;
@@ -37,9 +44,10 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// This Function return TOP N records, in the order of time, from the Cosmos DB
+        /// Retrieves the top N records from the Cosmos DB container, ordered by timestamp.
+        /// If a maximum number of days is specified, only records within that timeframe are included.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A list of JsonDocument objects representing the retrieved records.</returns>
         public async Task<List<JsonDocument>> GetSampleAsync()
         {
             _logger.LogInformation($"Sampling Configuration is Count: {_numberOfRecords}, Days: {_maxDays}");
@@ -55,6 +63,10 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
             return await _cosmosExecutor.ExecuteQueryAsync<JsonDocument>(query);
         }
 
+        /// <summary>
+        /// Calculates the timestamp threshold based on the current UTC time and the maximum number of days.
+        /// </summary>
+        /// <returns>A Unix timestamp representing the earliest allowed record time.</returns>
         public virtual long GetTimeStampThreshold()
         {
             return new DateTimeOffset(DateTime.UtcNow.AddDays(-_maxDays)).ToUnixTimeSeconds();

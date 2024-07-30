@@ -15,9 +15,20 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
 {
+    /// <summary>
+    /// Contains unit tests for the <see cref="SchemaGenerator"/> class to verify its schema generation capabilities 
+    /// based on various JSON data inputs. This class ensures that the schema generation logic is accurate and 
+    /// robust for different data structures and configurations.
+    /// </summary>
     [TestClass, TestCategory(TestCategory.COSMOSDBNOSQL)]
     public class SchemaGeneratorTest
     {
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method using a single JSON file to generate a GraphQL schema.
+        /// Verifies that the generated schema matches the expected schema output.
+        /// </summary>
+        /// <param name="jsonFilePath">Path to the directory containing the input JSON file.</param>
+        /// <param name="gqlFilePath">Path to the directory containing the expected GraphQL schema file.</param>
         [TestMethod]
         [DataRow("CosmosTests/TestData/CosmosData", "CosmosTests/TestData/GeneratedGqlSchema")]
         public void TestSchemaGenerator(string jsonFilePath, string gqlFilePath)
@@ -31,6 +42,13 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             AreEqualAfterCleanup(expectedSchema, actualSchema);
         }
 
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method using multiple JSON files to generate a GraphQL schema.
+        /// The test can optionally use a runtime configuration file for schema generation.
+        /// </summary>
+        /// <param name="jsonFilePath">Path to the directory containing multiple JSON files for input.</param>
+        /// <param name="gqlFilePath">Path to the directory containing the expected GraphQL schema file.</param>
+        /// <param name="useConfigFilePath">Boolean flag indicating whether to use a runtime configuration file.</param>
         [TestMethod]
         [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema", false)]
         [DataRow("CosmosTests/TestData/CosmosData/MultiItems", "CosmosTests/TestData/GeneratedGqlSchema", true)]
@@ -65,6 +83,10 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             AreEqualAfterCleanup(expectedSchema, actualSchema);
         }
 
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method with a JSON object containing mixed data types.
+        /// Verifies that the generated GraphQL schema correctly represents the structure and types of the input data.
+        /// </summary>
         [TestMethod]
         public void TestMixDataJsonObject()
         {
@@ -110,6 +132,10 @@ type Dimensions {
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
         }
 
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method with a complex JSON object containing nested objects and arrays.
+        /// Ensures that the generated GraphQL schema accurately represents the nested structure and data types.
+        /// </summary>
         [TestMethod]
         public void TestComplexJsonObject()
         {
@@ -171,6 +197,10 @@ type PhoneNumber {
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
         }
 
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method with a JSON array containing mixed data types.
+        /// Verifies that the generated GraphQL schema includes all possible fields and types present in the input data.
+        /// </summary>
         [TestMethod]
         public void TestMixedJsonArray()
         {
@@ -192,6 +222,10 @@ type PhoneNumber {
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
         }
 
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method with an empty JSON array.
+        /// Ensures that the method correctly handles an empty input by throwing an appropriate exception.
+        /// </summary>
         [TestMethod]
         public void TestEmptyJsonArray()
         {
@@ -199,6 +233,10 @@ type PhoneNumber {
             Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
         }
 
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method with a JSON array containing a null object.
+        /// Ensures that the method handles null objects gracefully and throws an appropriate exception.
+        /// </summary>
         [TestMethod]
         public void TestArrayContainingNullObject()
         {
@@ -208,6 +246,10 @@ type PhoneNumber {
             Assert.ThrowsException<InvalidOperationException>(() => SchemaGenerator.Generate(jsonArray, "containerName"));
         }
 
+        /// <summary>
+        /// Tests the <see cref="SchemaGenerator.Generate"/> method with a JSON array where some elements are null.
+        /// Verifies that the generated GraphQL schema represents fields with null values as nullable types.
+        /// </summary>
         [TestMethod]
         public void TestJsonArrayWithNullElement()
         {
@@ -223,11 +265,21 @@ type PhoneNumber {
             AreEqualAfterCleanup(expectedSchema, gqlSchema);
         }
 
+        /// <summary>
+        /// Removes all spaces and newline characters from the input string using a regular expression.
+        /// </summary>
+        /// <param name="input">The input string to clean up.</param>
+        /// <returns>The cleaned string with spaces and newline characters removed.</returns>
         public static string RemoveSpacesAndNewLinesRegex(string input)
         {
             return Regex.Replace(input, @"\s+", "");
         }
 
+        /// <summary>
+        /// Compares two strings after removing spaces and newline characters to determine if they are equal.
+        /// </summary>
+        /// <param name="expected">The expected string value.</param>
+        /// <param name="actual">The actual string value to compare against the expected value.</param>
         public static void AreEqualAfterCleanup(string expected, string actual)
         {
             Assert.AreEqual(RemoveSpacesAndNewLinesRegex(expected), RemoveSpacesAndNewLinesRegex(actual));

@@ -39,8 +39,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using ZiggyCreatures.Caching.Fusion;
 using CorsOptions = Azure.DataApiBuilder.Config.ObjectModel.CorsOptions;
 
@@ -399,6 +401,12 @@ namespace Azure.DataApiBuilder.Service
                     }
                 });
 
+                endpoints.MapGet("/debug-config", ctx =>
+                {
+                    string? config = (Configuration as IConfigurationRoot)?.GetDebugView();
+                    return ctx.Response.WriteAsync(config ?? string.Empty);
+                });
+
                 // In development mode, BCP is enabled at /graphql endpoint by default.
                 // Need to disable mapping BCP explicitly as well to avoid ability to query
                 // at an additional endpoint: /graphql/ui.
@@ -472,6 +480,7 @@ namespace Azure.DataApiBuilder.Service
                 HostMode mode = runtimeConfig.Runtime.Host.Mode;
                 if (!authOptions.IsAuthenticationSimulatorEnabled() && !authOptions.IsEasyAuthAuthenticationProvider())
                 {
+                    
                     services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     .AddJwtBearer(options =>
                     {
@@ -485,6 +494,15 @@ namespace Azure.DataApiBuilder.Service
                             RoleClaimType = AuthenticationOptions.ROLE_CLAIM_TYPE
                         };
                     });
+                    services.TryAddEnumerable(ServiceDescriptor.Singleton<IPostConfigureOptions<JwtBearerOptions>, JwtBearerPostConfigureOptions>());
+                    //services.ConfigureOptions<ConfigureJwtBearerOptions>();
+
+                    //services.AddSingleton<IConfigureOptions<JwtBearerOptions>, ConfigureJwtBearerOptions>();
+                    /*services.AddSingleton<IOptionsChangeTokenSource<JwtBearerOptions>>(
+                        new ConfigurationChangeTokenSource<JwtBearerOptions>(
+                            name: JwtBearerDefaults.AuthenticationScheme,
+                            config: Configuration));*/
+
                 }
                 else if (authOptions.IsEasyAuthAuthenticationProvider())
                 {

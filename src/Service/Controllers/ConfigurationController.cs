@@ -2,12 +2,19 @@
 // Licensed under the MIT License.
 
 using System;
+using System.Configuration;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 
 namespace Azure.DataApiBuilder.Service.Controllers
 {
@@ -17,11 +24,71 @@ namespace Azure.DataApiBuilder.Service.Controllers
     {
         RuntimeConfigProvider _configurationProvider;
         private readonly ILogger<ConfigurationController> _logger;
+        private readonly IAuthenticationSchemeProvider _schemeProvider;
+        private readonly IOptionsMonitor<JwtBearerOptions> _bearerOptionsMonitor;
+        private readonly IOptionsMonitorCache<JwtBearerOptions> _bearerOptionsMonitorCache;
+        private readonly IConfiguration _configuration;
+        private readonly IPostConfigureOptions<JwtBearerOptions> _jwtPostConfigureOptions;
+        //private readonly IOptionsChangeTokenSource<JwtBearerOptions> _tokenSource;
 
-        public ConfigurationController(RuntimeConfigProvider configurationProvider, ILogger<ConfigurationController> logger)
+        public ConfigurationController(
+            IAuthenticationSchemeProvider schemeProvider,
+            RuntimeConfigProvider configurationProvider,
+            ILogger<ConfigurationController> logger,
+            IOptionsMonitor<JwtBearerOptions> bearerOptionsMonitor,
+            IOptionsMonitorCache<JwtBearerOptions> bearerOptionsMonitorCache,
+            IConfiguration configuration,
+            IPostConfigureOptions<JwtBearerOptions> jwtPostConfigureOptions)
+            //IOptionsChangeTokenSource<JwtBearerOptions> tokenSource)
         {
             _configurationProvider = configurationProvider;
             _logger = logger;
+            _schemeProvider = schemeProvider;
+            _bearerOptionsMonitor = bearerOptionsMonitor;
+            _bearerOptionsMonitorCache = bearerOptionsMonitorCache;
+            _configuration = configuration;
+            _jwtPostConfigureOptions = jwtPostConfigureOptions;
+            //_tokenSource = tokenSource;
+        }
+
+        [HttpPost("changeJwtProvider")]
+        public ActionResult ChangeJwtProvider([FromBody] JwtConfigPostParameters jwtConfig)
+        {
+            try
+            {
+                JwtBearerOptions jwtOptions = _bearerOptionsMonitor.Get(JwtBearerDefaults.AuthenticationScheme);
+
+                Console.WriteLine("Old Audience: " + jwtOptions.Audience);
+                //Console.WriteLine("Current options: " + jwtOptions.Audience);
+                if (_bearerOptionsMonitorCache.TryRemove(JwtBearerDefaults.AuthenticationScheme))
+                {
+                    jwtOptions.Audience = jwtConfig.Audience;
+                    jwtOptions.TokenValidationParameters.ValidAudience = jwtConfig.Audience;
+                    jwtOptions.Authority = jwtConfig.Authority;
+                    _jwtPostConfigureOptions.PostConfigure(JwtBearerDefaults.AuthenticationScheme, jwtOptions);
+
+                    _bearerOptionsMonitorCache.GetOrAdd(JwtBearerDefaults.AuthenticationScheme, () => jwtOptions);
+                    Console.WriteLine("New Audience: " + _bearerOptionsMonitor.Get(JwtBearerDefaults.AuthenticationScheme).Audience);
+                    return Ok();
+                }
+                else
+                {
+                    _logger.LogError(                        
+                        message: "{correlationId} Failed to swap out jwtbeareroptions in ioptionsmonitorcache",
+                        HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
+                    return BadRequest();
+                }
+
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(
+                    exception: e,
+                    message: "{correlationId} Exception during configuration initialization.",
+                    HttpContextExtensions.GetLoggerCorrelationId(HttpContext));
+            }
+
+            return BadRequest();
         }
 
         /// <summary>
@@ -143,5 +210,11 @@ namespace Azure.DataApiBuilder.Service.Controllers
         string ConfigurationOverrides,
         string? Schema,
         string? AccessToken)
+    { }
+
+    public record class JwtConfigPostParameters(
+        string SchemeName,
+        string Audience,
+        string Authority)
     { }
 }

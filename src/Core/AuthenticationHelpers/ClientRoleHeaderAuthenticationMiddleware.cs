@@ -7,9 +7,11 @@ using Azure.DataApiBuilder.Core.Authorization;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using AuthenticationOptions = Azure.DataApiBuilder.Config.ObjectModel.AuthenticationOptions;
 
 namespace Azure.DataApiBuilder.Core.AuthenticationHelpers;
@@ -26,6 +28,7 @@ public class ClientRoleHeaderAuthenticationMiddleware
     private readonly RequestDelegate _nextMiddleware;
 
     private ILogger<ClientRoleHeaderAuthenticationMiddleware> _logger;
+    private readonly IOptionsMonitor<JwtBearerOptions> _jwtBearerOptions;
 
     private bool _isLateConfigured;
 
@@ -34,11 +37,13 @@ public class ClientRoleHeaderAuthenticationMiddleware
 
     public ClientRoleHeaderAuthenticationMiddleware(RequestDelegate next,
         ILogger<ClientRoleHeaderAuthenticationMiddleware> logger,
-        RuntimeConfigProvider runtimeConfigProvider)
+        RuntimeConfigProvider runtimeConfigProvider,
+        IOptionsMonitor<JwtBearerOptions> jwtBearerOptions)
     {
         _nextMiddleware = next;
         _logger = logger;
         _isLateConfigured = runtimeConfigProvider.IsLateConfigured;
+        _jwtBearerOptions = jwtBearerOptions;
     }
 
     /// <summary>

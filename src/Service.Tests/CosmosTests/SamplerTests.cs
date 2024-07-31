@@ -34,6 +34,8 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         private List<int> _sortedTimespansIdPk = new();
         private List<int> _sortedTimespansNamePk = new();
 
+        private Mock<ILogger<SamplerTests>> _mockLogger = new();
+
         private const string CONTAINER_NAME_ID_PK = "containerWithIdPk";
         private const string CONTAINER_NAME_NAME_PK = "containerWithNamePk";
 
@@ -89,7 +91,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [DataRow(5, 2, 3, DisplayName = "TopNSampler: Retrieve 3 records with max days configured as 2.")]
         public async Task TestTopNSampler(int count, int? maxDays, int expectedCount)
         {
-            Mock<TopNSampler> topNSampler = new(_containerWithIdPk, count, maxDays);
+            Mock<TopNSampler> topNSampler = new(_containerWithIdPk, count, maxDays, _mockLogger.Object);
             if (maxDays is not null)
             {
                 topNSampler
@@ -122,7 +124,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestPartitionBasedSampler(string partitionKeyPath, int? numberOfRecordsPerPartition, int? maxDaysPerPartition, int expectedResultCount)
         {
             Mock<PartitionBasedSampler> partitionBasedSampler
-                = new(_containerWithNamePk, partitionKeyPath, numberOfRecordsPerPartition, maxDaysPerPartition);
+                = new(_containerWithNamePk, partitionKeyPath, numberOfRecordsPerPartition, maxDaysPerPartition, _mockLogger.Object);
             if (maxDaysPerPartition is not null)
             {
                 partitionBasedSampler
@@ -145,18 +147,17 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         [TestMethod]
         public async Task TestGetPartitionInfoInPartitionBasedSampler()
         {
-
-            Mock<PartitionBasedSampler> partitionBasedSampler = new(_containerWithNamePk, null, 1, 1);
+            Mock<PartitionBasedSampler> partitionBasedSampler = new(_containerWithNamePk, null, 1, 1, _mockLogger.Object);
             List<string> result = await partitionBasedSampler.Object.GetPartitionKeyPaths();
             Assert.AreEqual("name", result[0]);
 
-            partitionBasedSampler = new(_containerWithIdPk, null, 1, 1);
+            partitionBasedSampler = new(_containerWithIdPk, null, 1, 1, _mockLogger.Object);
             result = await partitionBasedSampler.Object.GetPartitionKeyPaths();
             Assert.AreEqual("id", result[0]);
 
             // Check if partition key path is getting fetched correctly if customer has multiple partitions
             Container _containerWithHPk = await _database.CreateContainerIfNotExistsAsync("newcontainerwithhpk", "/anotherPojo/anotherProp");
-            partitionBasedSampler = new(_containerWithHPk, null, 1, 1);
+            partitionBasedSampler = new(_containerWithHPk, null, 1, 1, _mockLogger.Object);
             result = await partitionBasedSampler.Object.GetPartitionKeyPaths();
             Assert.AreEqual("anotherPojo", result[0]);
             Assert.AreEqual("anotherProp", result[1]);
@@ -185,7 +186,7 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         public async Task TestTimeBasedSampler(int? groupCount, int? numberOfRecordsPerGroup, int? maxDays, int expectedResultCount)
         {
             Mock<TimeBasedSampler> timeBasedSampler
-                = new(_containerWithNamePk, groupCount, numberOfRecordsPerGroup, maxDays);
+                = new(_containerWithNamePk, groupCount, numberOfRecordsPerGroup, maxDays, _mockLogger.Object);
             if (maxDays is not null)
             {
                 timeBasedSampler

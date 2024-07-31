@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Auth;
@@ -246,7 +245,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
         /// JsonValueKind.String -> "[ { "field1": "field1Value" }, { "field2": "field2Value" }, { ... } ]"
         /// - Input JsonElement is JsonValueKind.String because the array and enclosed objects haven't been deserialized yet.
         /// - This method deserializes the JSON string (representing a JSON array) and collects each element (Json object) within the
-        /// list of json elements returned by this method.</param>
+        /// list of JsonElements returned by this method.</param>
         /// <param name="fieldSchema">Definition of field being resolved. For lists: [/]items:[entity!]!]</param>
         /// <param name="metadata">PaginationMetadata of the parent field of the currently processed field in HC middlewarecontext.</param>
         /// <returns>List of JsonElements parsed from the provided JSON array.</returns>
@@ -272,17 +271,19 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             }
             else if (array.ValueKind is JsonValueKind.String)
             {
-                using ArrayPoolWriter buffer = new();
-
-                string text = array.GetString()!;
-                int neededCapacity = Encoding.UTF8.GetMaxByteCount(text.Length);
-                int written = Encoding.UTF8.GetBytes(text, buffer.GetSpan(neededCapacity));
-                buffer.Advance(written);
-
-                Utf8JsonReader reader = new(buffer.GetWrittenSpan());
-                foreach (JsonElement element in JsonElement.ParseValue(ref reader).EnumerateArray())
+                string jsonString = array.GetString()!;
+                if (!string.IsNullOrEmpty(jsonString))
                 {
-                    resolvedList.Add(element);
+                    using (JsonDocument jsonDocument = JsonDocument.Parse(jsonString))
+                    {
+                        if (jsonDocument.RootElement.ValueKind == JsonValueKind.Array)
+                        {
+                            foreach (JsonElement element in jsonDocument.RootElement.EnumerateArray())
+                            {
+                                resolvedList.Add(element.Clone());
+                            }
+                        }
+                    }
                 }
             }
 

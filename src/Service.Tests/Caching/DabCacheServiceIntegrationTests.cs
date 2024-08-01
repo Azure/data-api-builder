@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.DataApiBuilder.Core.Models;
@@ -250,6 +251,90 @@ namespace Azure.DataApiBuilder.Service.Tests.Caching
             await Assert.ThrowsExceptionAsync<DataApiBuilderException>(
                 async () => await dabCache.GetOrSetAsync<JsonElement?>(queryExecutor: mockQueryExecutor.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl),
                 message: "Expected an exception to be thrown.");
+        }
+
+        /// <summary>
+        /// Tests DAB's cache service invocation when the type is JsonArray.
+        /// JsonArray aligns with the type used for executing stored procedures against
+        /// MSSQL databases.
+        /// This test validates that the cache service returns the expected a database response
+        /// because the cache is empty and the factory method is expected to be called.
+        /// </summary>
+        [TestMethod]
+        public async Task JsonArray_CacheServiceInvokation_CacheEmpty_ReturnsFactoryResult()
+        {
+            // Arrange
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
+            JsonArray? expectedDatabaseResponse = new()
+            {
+                JsonNode.Parse(@"{""key"": ""value""}"),
+                JsonNode.Parse(@"{""key"": ""value2""}")
+            };
+
+            Mock<Func<Task<JsonArray>>> mockExecuteQuery = new();
+            mockExecuteQuery.Setup(e => e.Invoke()).Returns(Task.FromResult(expectedDatabaseResponse));
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                {"param1", new DbConnectionParam(value: "param1Value") }
+            };
+
+            DatabaseQueryMetadata queryMetadata = new(queryText: "select c.name from c", dataSource: "dataSource1", queryParameters: parameters);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+
+            // Act
+            int cacheEntryTtl = 1;
+            JsonArray? result = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+
+            // Assert
+            Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
+
+            // Validates that the expected database response is returned by the cache service.
+            Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
+        }
+
+        /// <summary>
+        /// Tests DAB's cache service invocation when the type is JsonArray.
+        /// JsonArray aligns with the type used for executing stored procedures against
+        /// MSSQL databases.
+        /// This test validates that a cache hit occurs when the same request
+        /// is submitted before the cache entry expires. Validates that
+        /// DabCacheService.CreateCacheKey(..) outputs the same key given constant input.
+        /// </summary>
+        [TestMethod]
+        public async Task JsonArray_CacheServiceInvocation_CacheHit_NoFactoryInvocation()
+        {
+            // Arrange
+            using FusionCache cache = CreateFusionCache(sizeLimit: 1000, defaultEntryTtlSeconds: 1);
+            JsonArray? expectedDatabaseResponse = new()
+            {
+                JsonNode.Parse(@"{""key"": ""value""}"),
+                JsonNode.Parse(@"{""key"": ""value2""}")
+            };
+
+            Mock<Func<Task<JsonArray>>> mockExecuteQuery = new();
+            mockExecuteQuery.Setup(e => e.Invoke()).Returns(Task.FromResult(expectedDatabaseResponse));
+
+            Dictionary<string, DbConnectionParam> parameters = new()
+            {
+                {"param1", new DbConnectionParam(value: "param1Value") }
+            };
+
+            DatabaseQueryMetadata queryMetadata = new(queryText: "select c.name from c", dataSource: "dataSource1", queryParameters: parameters);
+            DabCacheService dabCache = CreateDabCacheService(cache);
+
+            int cacheEntryTtl = 1;
+            // First call. Cache miss
+            _ = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+
+            // Act
+            JsonArray? result = await dabCache.GetOrSetAsync<JsonArray>(executeQueryAsync: mockExecuteQuery.Object, queryMetadata: queryMetadata, cacheEntryTtl: cacheEntryTtl);
+
+            // Assert
+            Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
+            Assert.IsFalse(mockExecuteQuery.Invocations.Count > 1, message: "Expected a cache hit, but observed cache misses.");
+            Assert.AreEqual(expected: true, actual: mockExecuteQuery.Invocations.Count is 1, message: ERROR_UNEXPECTED_INVOCATIONS);
+            Assert.AreEqual(expected: expectedDatabaseResponse, actual: result, message: ERROR_UNEXPECTED_RESULT);
         }
 
         /// <summary>

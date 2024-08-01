@@ -359,13 +359,18 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             IQueryExecutor queryExecutor = _queryFactory.GetQueryExecutor(databaseType);
             string queryString = queryBuilder.Build(structure);
 
-            // Global Cache enablement check
+            // Only proceed to use caching code when
+            // RuntimeConfig.Cache.Enabled is true
+            // RuntimeConfig.DataSource.Options.SetSessionContext is false
             if (runtimeConfig.CanUseCache())
             {
                 // Entity level cache behavior checks
                 bool entityCacheEnabled = runtimeConfig.Entities[structure.EntityName].IsCachingEnabled;
 
-                // Database policies not considered for stored procedure execution.
+                // Stored procedures do not support nor honor runtime config defined
+                // authorization policies. Here, DAB only checks that the entity has
+                // caching enabled and doesn't check for database policies. This explicitly
+                // differs from how the cache works for non-stored procedure requests.
                 if (entityCacheEnabled)
                 {
                     DatabaseQueryMetadata queryMetadata = new(

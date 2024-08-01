@@ -57,9 +57,12 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         public const string DOCUMENT_CREATION_FAILED_ERROR = "OpenAPI description document creation failed";
 
-        public void HandleEvent(object? sender, CustomEventArgs args)
+        public void Documentor_ConfigChangeEventReceived(object? sender, CustomEventArgs args)
         {
-            CreateDocument();
+            Console.BackgroundColor = ConsoleColor.Yellow;
+            Console.WriteLine($"[OpenApiDocumentor]: Received event with message: {args.Message}");
+            Console.ResetColor();
+            CreateDocumentInternal(); //Skips checks that fail regeneration if doc already created or when rest endpoint is disabled.
         }
 
         /// <summary>
@@ -69,7 +72,7 @@ namespace Azure.DataApiBuilder.Core.Services
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
         public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, EventHanderPOC<CustomEventArgs> handler)
         {
-            handler.Subscribe(HandleEvent);
+            handler.Subscribe(Documentor_ConfigChangeEventReceived);
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();
@@ -125,6 +128,15 @@ namespace Azure.DataApiBuilder.Core.Services
                     subStatusCode: DataApiBuilderException.SubStatusCodes.GlobalRestEndpointDisabled);
             }
 
+            CreateDocumentInternal();
+        }
+
+        /// <summary>
+        /// Added to avoid changing the openapidocumentor interface which would be a breaking change.
+        /// </summary>
+        /// <exception cref="DataApiBuilderException"></exception>
+        private void CreateDocumentInternal()
+        {
             try
             {
                 string restEndpointPath = _runtimeConfig.RestPath;

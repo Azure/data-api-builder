@@ -26,10 +26,20 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 public class RuntimeConfigProvider
 {
     public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
-    public EventHanderPOC<CustomEventArgs> Handler { get; set; }
+    public EventHanderPOC<CustomEventArgs> Handler;
 
     public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
 
+    protected virtual void OnEventOccurred(CustomEventArgs args)
+    {
+        Handler?.OnEventOccurred(this, args);
+    }
+
+    public void SendEventNotification(string message = "")
+    {
+        CustomEventArgs args = new(message);
+        OnEventOccurred(args);
+    }
     /// <summary>
     /// Indicates whether the config was loaded after the runtime was initialized.
     /// </summary>
@@ -155,6 +165,7 @@ public class RuntimeConfigProvider
     {
         // _runtimeconfig can not be null in a hot reload scenario
         ConfigLoader.TryLoadKnownConfig(out _runtimeConfig, replaceEnvVar: true, _runtimeConfig!.DefaultDataSourceName);
+        SendEventNotification("RuntimeConfigProvider speaking, Hot Reloaded Config!");
     }
 
     /// <summary>

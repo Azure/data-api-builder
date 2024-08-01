@@ -53,6 +53,11 @@ namespace Azure.DataApiBuilder.Core.Services
             _requestValidator = requestValidator;
         }
 
+        public void SignalChange()
+        {
+            _runtimeConfigProvider.SendEventNotification("This is a message from RestService, do you read me?");
+        }
+
         /// <summary>
         /// Invokes the request parser to identify major components of the RestRequestContext
         /// and executes the given operation.

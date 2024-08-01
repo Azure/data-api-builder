@@ -185,6 +185,12 @@ namespace Azure.DataApiBuilder.Service.Controllers
             string route,
             EntityActionOperation operationType)
         {
+            // Hotreload has not been built in everywhere yet, so this signal is placed here
+            // to mitigate errors in authorization and routing calculation due to internals not
+            // all updating with latest config. To repro: change permisssions on a stored procedure entity:
+            // toggle between Authenticated and Anonymous
+            _restService.SignalChange();
+
             try
             {
                 if (route.Equals(REDIRECTED_ROUTE))

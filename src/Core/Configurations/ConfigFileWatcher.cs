@@ -29,6 +29,9 @@ public class ConfigFileWatcher
     /// <param name="e"></param>
     private void OnConfigFileChange(object sender, FileSystemEventArgs e)
     {
+        Console.BackgroundColor = ConsoleColor.DarkMagenta;
+        Console.WriteLine($"Changed: {e.FullPath}");
+        Console.ResetColor();
         try
         {
             if (_configProvider is null)

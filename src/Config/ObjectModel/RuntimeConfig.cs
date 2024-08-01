@@ -464,7 +464,7 @@ public record RuntimeConfig
     public static bool IsHotReloadable()
     {
         // always return false while hot reload is not an available feature.
-        return false;
+        return true;
     }
 
     /// <summary>

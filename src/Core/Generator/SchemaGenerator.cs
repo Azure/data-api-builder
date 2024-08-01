@@ -16,7 +16,7 @@ namespace Azure.DataApiBuilder.Core.Generator
     /// </summary>
     internal class SchemaGenerator
     {
-        // Cosmos DB reserved properties, these properties will be ignored in the schema generation as they are not user-defined properties.
+        // Azure Cosmos DB reserved properties, these properties will be ignored in the schema generation as they are not user-defined properties.
         private readonly List<string> _cosmosDbReservedProperties = new() { "_ts", "_etag", "_rid", "_self", "_attachments" };
 
         // Maps GraphQL entities to their corresponding attributes.
@@ -24,7 +24,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
         // List of JSON documents to process.
         private List<JsonDocument> _data;
-        // Name of the Cosmos DB container from which the JSON data is obtained.
+        // Name of the Azure Cosmos DB container from which the JSON data is obtained.
         private string _containerName;
         // Dictionary mapping plural entity names to singular names based on the provided configuration.
         private Dictionary<string, string> _entityAndSingularNameMapping = new();
@@ -33,7 +33,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// Initializes a new instance of the <see cref="SchemaGenerator"/> class.
         /// </summary>
         /// <param name="data">A list of JSON documents to be used to generate the schema.</param>
-        /// <param name="containerName">The name of the Cosmos DB container which is used to generate the GraphQL schema.</param>
+        /// <param name="containerName">The name of the Azure Cosmos DB container which is used to generate the GraphQL schema.</param>
         /// <param name="config">Optional configuration that maps GraphQL entity names to their singular forms.</param>
         private SchemaGenerator(List<JsonDocument> data, string containerName, RuntimeConfig? config)
         {
@@ -54,7 +54,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         /// Generates a GraphQL schema from the provided JSON data and container name.
         /// </summary>
         /// <param name="jsonData">A list of JSON documents to generate the schema from.</param>
-        /// <param name="containerName">The name of the Cosmos DB container.</param>
+        /// <param name="containerName">The name of the Azure Cosmos DB container.</param>
         /// <param name="config">Optional configuration that maps GraphQL entity names to their singular forms.</param>
         /// <returns>A string representing the generated GraphQL schema.</returns>
         /// <exception cref="InvalidOperationException">Thrown if the JSON data is empty or the container name is null or empty.</exception>
@@ -156,7 +156,7 @@ namespace Azure.DataApiBuilder.Core.Generator
         {
             foreach (JsonProperty property in jsonObject.RootElement.EnumerateObject())
             {
-                // Skip reserved Cosmos DB properties.
+                // Skip reserved Azure Cosmos DB properties.
                 if (_cosmosDbReservedProperties.Contains(property.Name))
                 {
                     continue;

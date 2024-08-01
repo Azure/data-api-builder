@@ -20,7 +20,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <summary>
         /// Initializes a new instance of the <see cref="CosmosExecutor"/> class.
         /// </summary>
-        /// <param name="container">The Cosmos DB container instance to interact with.</param>
+        /// <param name="container">The Azure Cosmos DB container instance to interact with.</param>
         /// <param name="logger">The logger instance used for logging information and debugging messages.</param>
         public CosmosExecutor(Container container, ILogger logger)
         {
@@ -29,10 +29,10 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// Executes the specified query on the Cosmos DB container and returns the results as a list of the specified type.
+        /// Executes the specified query on the Azure Cosmos DB container and returns the results as a list of the specified type.
         /// </summary>
         /// <typeparam name="T">The type to which the query results should be deserialized.</typeparam>
-        /// <param name="query">The SQL-like query string to execute against the Cosmos DB container.</param>
+        /// <param name="query">The SQL-like query string to execute against the Azure Cosmos DB container.</param>
         /// <param name="callback">Optional. A callback function that can be used to manipulate or process each retrieved item.</param>
         /// <returns>A task representing the asynchronous operation, containing a list of results of type <typeparamref name="T"/>.</returns>
         /// <exception cref="Exception">Thrown when the query execution fails with an error message and status code.</exception>
@@ -99,7 +99,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// Retrieves the partition key path of the Cosmos DB container.
+        /// Retrieves the partition key path of the Azure Cosmos DB container.
         /// </summary>
         /// <returns>A task representing the asynchronous operation, containing the partition key path as a string.</returns>
         public async Task<string> GetPartitionKeyPath()

@@ -9,7 +9,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
     /// The TopNSampler class is responsible for retrieving a specified number of recent records 
-    /// from a Cosmos DB container, optionally filtering by a maximum number of days.
+    /// from an Azure Cosmos DB container, optionally filtering by a maximum number of days.
     /// </summary>
     public class TopNSampler : ISchemaGeneratorSampler
     {
@@ -29,7 +29,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <summary>
         /// Initializes a new instance of the TopNSampler class.
         /// </summary>
-        /// <param name="container">The Cosmos DB container from which to retrieve data.</param>
+        /// <param name="container">The Azure Cosmos DB container from which to retrieve data.</param>
         /// <param name="numberOfRecords">Optional. The number of records to retrieve. Defaults to 10.</param>
         /// <param name="maxDays">Optional. The maximum number of days in the past from which to retrieve data. Defaults to 0 (no limit).</param>
         /// <param name="logger">The logger to use for logging information.</param>
@@ -44,7 +44,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// Retrieves the top N records from the Cosmos DB container, ordered by timestamp.
+        /// Retrieves the top N records from the Azure Cosmos DB container, ordered by timestamp.
         /// If a maximum number of days is specified, only records within that timeframe are included.
         /// </summary>
         /// <returns>A list of JsonDocument objects representing the retrieved records.</returns>

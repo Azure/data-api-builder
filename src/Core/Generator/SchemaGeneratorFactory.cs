@@ -10,22 +10,22 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator
 {
     /// <summary>
-    /// The <c>SchemaGeneratorFactory</c> class provides functionality to connect to a Cosmos DB account, sample data from a specified container, 
+    /// The <c>SchemaGeneratorFactory</c> class provides functionality to connect to an Azure Cosmos DB account, sample data from a specified container, 
     /// and generate a GraphQL (GQL) schema based on the sampled data. It uses various sampling strategies to collect representative data 
     /// and create a schema that reflects the structure of that data.
     /// </summary>
     /// <remarks>
-    /// This class is designed to simplify the process of generating GQL schemas for data stored in Cosmos DB. It abstracts away the details
-    /// of connecting to Cosmos DB, sampling data using different strategies, and converting that data into a GQL schema. It is particularly 
+    /// This class is designed to simplify the process of generating GQL schemas for data stored in Azure Cosmos DB. It abstracts away the details
+    /// of connecting to Azure Cosmos DB, sampling data using different strategies, and converting that data into a GQL schema. It is particularly 
     /// useful in scenarios where the schema needs to be dynamically created based on actual data rather than being predefined.
     /// </remarks>
     public static class SchemaGeneratorFactory
     {
         /// <summary>
-        /// Creates a GraphQL schema by connecting to Cosmos DB, sampling data based on the provided configuration, 
+        /// Creates a GraphQL schema by connecting to Azure Cosmos DB, sampling data based on the provided configuration, 
         /// and generating the schema from the sampled data.
         /// </summary>
-        /// <param name="config">The runtime configuration containing details about the data source and connection information for Cosmos DB.</param>
+        /// <param name="config">The runtime configuration containing details about the data source and connection information for Azure Cosmos DB.</param>
         /// <param name="mode">The sampling mode to use when collecting sample data. This should be one of the defined sampling modes (e.g., TopNSampler, PartitionBasedSampler, TimeBasedSampler).</param>
         /// <param name="sampleCount">The number of samples to collect. This must be greater than zero if specified.</param>
         /// <param name="partitionKeyPath">The path of the partition key for partition-based sampling. This parameter is optional and used only for partition-based sampling.</param>
@@ -67,7 +67,7 @@ namespace Azure.DataApiBuilder.Core.Generator
 
             logger.LogInformation("Connecting to Cosmos DB Database: {0}, Container: {1}", databaseName, containerName);
 
-            // Connect to the Cosmos DB container.
+            // Connect to the Azure Cosmos DB container.
             Container container = ConnectToCosmosDB(connectionString, databaseName, containerName);
             SamplingModes samplingMode = (SamplingModes)Enum.Parse(typeof(SamplingModes), mode);
 
@@ -99,12 +99,12 @@ namespace Azure.DataApiBuilder.Core.Generator
         }
 
         /// <summary>
-        /// Establishes a connection to a Cosmos DB container using the provided connection string, database name, and container name.
+        /// Establishes a connection to an Azure Cosmos DB container using the provided connection string, database name, and container name.
         /// </summary>
-        /// <param name="connectionString">The connection string for the Cosmos DB account.</param>
+        /// <param name="connectionString">The connection string for the Azure Cosmos DB account.</param>
         /// <param name="database">The name of the database to connect to.</param>
         /// <param name="container">The name of the container to connect to.</param>
-        /// <returns>A <see cref="Container"/> object representing the connected Cosmos DB container.</returns>
+        /// <returns>A <see cref="Container"/> object representing the connected Azure Cosmos DB container.</returns>
         private static Container ConnectToCosmosDB(string connectionString, string database, string container)
         {
             CosmosClient cosmosClient = new(connectionString);

@@ -9,6 +9,7 @@ using System.Text;
 using Azure.DataApiBuilder.Config.DatabasePrimitives;
 using Azure.DataApiBuilder.Config.ObjectModel;
 using Azure.DataApiBuilder.Core.Authorization;
+using Azure.DataApiBuilder.Config;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Parsers;
 using Azure.DataApiBuilder.Core.Services.MetadataProviders;
@@ -56,13 +57,19 @@ namespace Azure.DataApiBuilder.Core.Services
         public const string DOCUMENT_CREATION_UNSUPPORTED_ERROR = "OpenAPI description document can't be created when the REST endpoint is disabled globally.";
         public const string DOCUMENT_CREATION_FAILED_ERROR = "OpenAPI description document creation failed";
 
+        public void HandleEvent(object? sender, CustomEventArgs args)
+        {
+            CreateDocument();
+        }
+
         /// <summary>
         /// Constructor denotes required services whose metadata is used to generate the OpenAPI description document.
         /// </summary>
         /// <param name="sqlMetadataProvider">Provides database object metadata.</param>
         /// <param name="runtimeConfigProvider">Provides entity/REST path metadata.</param>
-        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider)
+        public OpenApiDocumentor(IMetadataProviderFactory metadataProviderFactory, RuntimeConfigProvider runtimeConfigProvider, EventHanderPOC<CustomEventArgs> handler)
         {
+            handler.Subscribe(HandleEvent);
             _metadataProviderFactory = metadataProviderFactory;
             _runtimeConfig = runtimeConfigProvider.GetConfig();
             _defaultOpenApiResponses = CreateDefaultOpenApiResponses();

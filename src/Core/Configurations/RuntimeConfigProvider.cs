@@ -26,6 +26,7 @@ namespace Azure.DataApiBuilder.Core.Configurations;
 public class RuntimeConfigProvider
 {
     public delegate Task<bool> RuntimeConfigLoadedHandler(RuntimeConfigProvider sender, RuntimeConfig config);
+    public EventHanderPOC<CustomEventArgs> Handler { get; set; }
 
     public List<RuntimeConfigLoadedHandler> RuntimeConfigLoadedHandlers { get; } = new List<RuntimeConfigLoadedHandler>();
 
@@ -47,8 +48,9 @@ public class RuntimeConfigProvider
 
     private RuntimeConfig? _runtimeConfig;
 
-    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader)
+    public RuntimeConfigProvider(RuntimeConfigLoader runtimeConfigLoader, EventHanderPOC<CustomEventArgs> handler)
     {
+        Handler = handler;
         ConfigLoader = runtimeConfigLoader;
     }
 

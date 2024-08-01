@@ -77,13 +77,15 @@ namespace Azure.DataApiBuilder.Service
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            EventHanderPOC<CustomEventArgs> eventHandler = new();
+            services.AddSingleton(eventHandler);  // maybe we don't register as service
             string configFileName = Configuration.GetValue<string>("ConfigFileName") ?? FileSystemRuntimeConfigLoader.DEFAULT_CONFIG_FILE_NAME;
             string? connectionString = Configuration.GetValue<string?>(
                 FileSystemRuntimeConfigLoader.RUNTIME_ENV_CONNECTION_STRING.Replace(FileSystemRuntimeConfigLoader.ENVIRONMENT_PREFIX, ""),
                 null);
             IFileSystem fileSystem = new FileSystem();
             FileSystemRuntimeConfigLoader configLoader = new(fileSystem, configFileName, connectionString);
-            RuntimeConfigProvider configProvider = new(configLoader);
+            RuntimeConfigProvider configProvider = new(configLoader, eventHandler); // use Change tokens instead to remove dependency?
 
             services.AddSingleton(fileSystem);
             services.AddSingleton(configProvider);

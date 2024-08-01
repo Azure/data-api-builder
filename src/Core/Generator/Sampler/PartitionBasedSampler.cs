@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 namespace Azure.DataApiBuilder.Core.Generator.Sampler
 {
     /// <summary>
-    /// The PartitionBasedSampler class is designed to sample data from a Cosmos DB container 
+    /// The PartitionBasedSampler class is designed to sample data from an Azure Cosmos DB container 
     /// by fetching records from each partition based on a specified partition key. 
     /// The sampling is configurable by the number of records per partition and the time range considered.
     /// </summary>
@@ -33,8 +33,8 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <summary>
         /// Initializes a new instance of the PartitionBasedSampler class.
         /// </summary>
-        /// <param name="container">The Cosmos DB container from which to sample data.</param>
-        /// <param name="partitionKeyPath">Optional. The path to the partition key. If null, it will be fetched from the Cosmos DB metadata.</param>
+        /// <param name="container">The Azure Cosmos DB container from which to sample data.</param>
+        /// <param name="partitionKeyPath">Optional. The path to the partition key. If null, it will be fetched from the Azure Cosmos DB metadata.</param>
         /// <param name="numberOfRecordsPerPartition">Optional. The number of records to retrieve per partition. Defaults to 5.</param>
         /// <param name="maxDaysPerPartition">Optional. The maximum number of days in the past to consider per partition. Defaults to 30.</param>
         /// <param="logger">The logger to use for logging information.</param>
@@ -83,7 +83,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// Retrieves the partition key paths from the Cosmos DB container. 
+        /// Retrieves the partition key paths from the Azure Cosmos DB container. 
         /// If the partition key path is not provided, it fetches the path from the container's metadata.
         /// </summary>
         /// <returns>A list of partition key paths as strings.</returns>
@@ -100,7 +100,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         }
 
         /// <summary>
-        /// Retrieves unique partition key values from the Cosmos DB container.
+        /// Retrieves unique partition key values from the Azure Cosmos DB container.
         /// </summary>
         /// <param name="partitionKeyPaths">A list of partition key paths used to query for unique values.</param>
         /// <returns>A list of JsonDocument objects representing unique partition key values.</returns>

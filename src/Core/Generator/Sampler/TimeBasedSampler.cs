@@ -34,7 +34,7 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <summary>
         /// Initializes a new instance of the TimeBasedSampler class.
         /// </summary>
-        /// <param name="container">The Cosmos DB container from which to retrieve data.</param>
+        /// <param name="container">The Azure Cosmos DB container from which to retrieve data.</param>
         /// <param name="groupCount">Optional. The number of subranges (or groups) to divide the time range into. Defaults to 10.</param>
         /// <param name="numberOfRecordsPerGroup">Optional. The number of records to retrieve from each subrange. Defaults to 10.</param>
         /// <param name="maxDays">Optional. The maximum number of days in the past from which to consider records. Defaults to 10.</param>

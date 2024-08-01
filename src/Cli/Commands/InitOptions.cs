@@ -70,10 +70,10 @@ namespace Cli.Commands
         [Option("connection-string", Required = false, HelpText = "(Default: '') Connection details to connect to the database.")]
         public string? ConnectionString { get; }
 
-        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Cosmos DB for NoSql.")]
+        [Option("cosmosdb_nosql-database", Required = false, HelpText = "Database name for Azure Cosmos DB for NoSql.")]
         public string? CosmosNoSqlDatabase { get; }
 
-        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Cosmos DB for NoSql.")]
+        [Option("cosmosdb_nosql-container", Required = false, HelpText = "Container name for Azure Cosmos DB for NoSql.")]
         public string? CosmosNoSqlContainer { get; }
 
         [Option("graphql-schema", Required = false, HelpText = "GraphQL schema Path.")]

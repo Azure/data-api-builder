@@ -119,7 +119,7 @@ type PlanetAgain @model {
 
     private HttpClient _client;
     internal WebApplicationFactory<Startup> _application;
-    internal string _containerName = "planet";
+    internal string _containerName = Guid.NewGuid().ToString();
 
     [TestInitialize]
     public void Init()

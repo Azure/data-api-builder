@@ -13,7 +13,7 @@ using static Cli.Utils;
 namespace Cli
 {
     /// <summary>
-    /// Provides functionality for exporting GraphQL schemas, either by generating from a CosmosDB database or fetching from a GraphQL API.
+    /// Provides functionality for exporting GraphQL schemas, either by generating from a Azure Cosmos DB database or fetching from a GraphQL API.
     /// </summary>
     internal static class Exporter
     {
@@ -93,7 +93,7 @@ namespace Cli
         }
 
         /// <summary>
-        /// Exports the GraphQL schema either by generating it from a CosmosDB database or fetching it from a GraphQL API.
+        /// Exports the GraphQL schema either by generating it from a Azure Cosmos DB database or fetching it from a GraphQL API.
         /// </summary>
         /// <param name="options">The options for exporting, including sampling mode and schema file name.</param>
         /// <param name="runtimeConfig">The runtime configuration for the export process.</param>
@@ -105,8 +105,8 @@ namespace Cli
             string schemaText;
             if (options.Generate)
             {
-                // Generate the schema from CosmosDB database
-                logger.LogInformation("Generating schema from the CosmosDB database using {0}", options.SamplingMode);
+                // Generate the schema from Azure Cosmos DB database
+                logger.LogInformation("Generating schema from the Azure Cosmos DB database using {0}", options.SamplingMode);
                 try
                 {
                     schemaText = await SchemaGeneratorFactory.Create(runtimeConfig,
@@ -119,7 +119,7 @@ namespace Cli
                 }
                 catch (Exception e)
                 {
-                    logger.LogError("Failed to generate schema from CosmosDB database: {0}", e.Message);
+                    logger.LogError("Failed to generate schema from Azure Cosmos DB database: {0}", e.Message);
                     logger.LogDebug(e.StackTrace);
                     return;
                 }

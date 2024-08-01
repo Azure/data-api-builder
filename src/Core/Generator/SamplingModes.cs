@@ -4,7 +4,7 @@
 namespace Azure.DataApiBuilder.Core.Generator
 {
     /// <summary>
-    /// Defines the different modes of sampling data from CosmosDB database.
+    /// Defines the different modes of sampling data from Azure Cosmos DB database.
     /// </summary>
     public enum SamplingModes
     {

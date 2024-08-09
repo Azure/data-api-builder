@@ -35,7 +35,7 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             string dataSourceName,
             HttpContext? httpContext = null,
             List<string>? args = null,
-            IMiddlewareContext? middlewareContext =  null);
+            IMiddlewareContext? middlewareContext = null);
 
         /// <summary>
         /// Executes sql text with the given parameters and

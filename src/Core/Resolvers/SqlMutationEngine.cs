@@ -155,7 +155,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                             await PerformDeleteOperation(
                                 entityName,
                                 parameters,
-                                sqlMetadataProvider);
+                                sqlMetadataProvider,
+                                context);
 
                         // If the number of records affected by DELETE were zero,
                         if (resultProperties is not null
@@ -944,7 +945,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         queryExecutor.ExtractResultSetFromDbDataReaderAsync,
                         dataSourceName,
                         GetHttpContext(),
-                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey);
+                        primaryKeyExposedColumnNames.Count > 0 ? primaryKeyExposedColumnNames : sourceDefinition.PrimaryKey,
+                        context);
 
                 dbResultSetRow = dbResultSet is not null ?
                     (dbResultSet.Rows.FirstOrDefault() ?? new DbResultSetRow()) : null;
@@ -987,7 +989,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                         parameters: queryParameters,
                         dataReaderHandler: queryExecutor.ExtractResultSetFromDbDataReaderAsync,
                         httpContext: GetHttpContext(),
-                        dataSourceName: dataSourceName);
+                        dataSourceName: dataSourceName,
+                        middlewareContext: context);
                 dbResultSetRow = dbResultSet is not null ? (dbResultSet.Rows.FirstOrDefault() ?? new()) : null;
             }
 
@@ -1893,7 +1896,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             PerformDeleteOperation(
                 string entityName,
                 IDictionary<string, object?> parameters,
-                ISqlMetadataProvider sqlMetadataProvider)
+                ISqlMetadataProvider sqlMetadataProvider,
+                IMiddlewareContext? context = null)
         {
             IQueryBuilder queryBuilder = _queryManagerFactory.GetQueryBuilder(sqlMetadataProvider.GetDatabaseType());
             IQueryExecutor queryExecutor = _queryManagerFactory.GetQueryExecutor(sqlMetadataProvider.GetDatabaseType());
@@ -1916,7 +1920,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     parameters: queryParameters,
                     dataReaderHandler: queryExecutor.GetResultPropertiesAsync,
                     httpContext: GetHttpContext(),
-                    dataSourceName: dataSourceName);
+                    dataSourceName: dataSourceName,
+                    middlewareContext: context);
 
             return resultProperties;
         }

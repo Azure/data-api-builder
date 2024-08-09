@@ -3,6 +3,7 @@
 
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -10,6 +11,7 @@ using System.Text.Json.Nodes;
 using Azure.DataApiBuilder.Core.Configurations;
 using Azure.DataApiBuilder.Core.Models;
 using Azure.DataApiBuilder.Service.Exceptions;
+using HotChocolate.Resolvers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Polly;
@@ -23,6 +25,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
     public class QueryExecutor<TConnection> : IQueryExecutor
         where TConnection : DbConnection, new()
     {
+        private const string TOTALDBXEXECUTIONTIME = "TotalDbExecutionTime";
+
         protected DbExceptionParser DbExceptionParser { get; }
         protected ILogger<IQueryExecutor> QueryExecutorLogger { get; }
         protected RuntimeConfigProvider ConfigProvider { get; }
@@ -158,7 +162,8 @@ namespace Azure.DataApiBuilder.Core.Resolvers
             Func<DbDataReader, List<string>?, Task<TResult>>? dataReaderHandler,
             string dataSourceName,
             HttpContext? httpContext = null,
-            List<string>? args = null)
+            List<string>? args = null,
+            IMiddlewareContext? middlewareContext = null)
         {
             if (string.IsNullOrEmpty(dataSourceName))
             {
@@ -178,7 +183,10 @@ namespace Azure.DataApiBuilder.Core.Resolvers
 
             await SetManagedIdentityAccessTokenIfAnyAsync(conn, dataSourceName);
 
-            return await _retryPolicyAsync.ExecuteAsync(async () =>
+            Stopwatch queryExecutionTimer = new();
+            queryExecutionTimer.Start();
+
+            TResult? result = await _retryPolicyAsync.ExecuteAsync(async () =>
             {
                 retryAttempt++;
                 try
@@ -221,6 +229,15 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     }
                 }
             });
+
+            queryExecutionTimer.Stop();
+
+            if (middlewareContext is not null)
+            {
+                AddDbExecutionTimeToMiddlewareContext(middlewareContext, queryExecutionTimer.ElapsedMilliseconds);
+            }
+
+            return result;
         }
 
         /// <summary>
@@ -804,6 +821,17 @@ namespace Azure.DataApiBuilder.Core.Resolvers
                     statusCode: HttpStatusCode.RequestEntityTooLarge,
                     subStatusCode: DataApiBuilderException.SubStatusCodes.ErrorProcessingData);
             }
+        }
+
+        private static void AddDbExecutionTimeToMiddlewareContext(IMiddlewareContext middlewareContext, long time)
+        {
+            if (!middlewareContext.ContextData.ContainsKey(TOTALDBXEXECUTIONTIME))
+            {
+                middlewareContext.ContextData[TOTALDBXEXECUTIONTIME] = (long)0;
+            }
+
+            long currentTime = (long)middlewareContext.ContextData[TOTALDBXEXECUTIONTIME]!;
+            middlewareContext.ContextData[TOTALDBXEXECUTIONTIME] = currentTime + time;
         }
     }
 }

@@ -63,7 +63,7 @@ namespace Azure.DataApiBuilder.Core.Generator
             // Validate input parameters.
             if (jsonData == null || jsonData.Count == 0 || string.IsNullOrEmpty(containerName))
             {
-                throw new InvalidOperationException("JArray must contain at least one JSON object and Container Name can not be blank");
+                throw new InvalidOperationException("There must be at least one JSON object and Container Name can not be blank");
             }
 
             // Create an instance of SchemaGenerator and generate the schema.
@@ -118,7 +118,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 }
                 else if (isRoot)
                 {
-                    sb.Append("@model ");
+                    sb.Append($"@model(name: \"{entity.Key}\") ");
                 }
 
                 sb.AppendLine($"{{");
@@ -242,6 +242,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                         }
                         else
                         {
+                            // Assuming string if attribute is NULL or not a date
                             gqlFieldType = "String";
                         }
 

@@ -106,7 +106,6 @@ namespace Azure.DataApiBuilder.Core.Generator.Sampler
         /// <returns>A list of JsonDocument objects representing unique partition key values.</returns>
         internal async Task<List<JsonDocument>> GetUniquePartitionKeyValues(List<string> partitionKeyPaths)
         {
-            List<JsonDocument> uniquePartitionKeyValues = new();
             string selectClause = string.Join(", ", partitionKeyPaths.Select(path => $"c.{path}"));
             string query = string.Format(DISTINCT_QUERY, selectClause);
 

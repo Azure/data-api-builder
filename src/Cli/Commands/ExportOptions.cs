@@ -36,10 +36,10 @@ namespace Cli.Commands
         [Option("generate", HelpText = "Generates a schema file from the specified Azure Cosmos DB database.")]
         public bool Generate { get; }
 
-        [Option('m', "sampling-mode", HelpText = "Specifies the sampling mode to use. Available modes include: " +
-                                                 "- TopNSampler: It retrieves a specified number of recent records from an Azure Cosmos DB container, optionally filtering by a maximum number of days." +
-                                                 "- PartitionBasedSampler: It retrieves a specified number of records from an Azure Cosmos DB container by fetching records from each partition using a given partition key.The number of records per partition and the time range are configurable." +
-                                                 "- TimeBasedSampler:.It retrieves a specified number of records by dividing the container data and time range into subranges, then selecting the top N records from each subrange based on a given configuration.")]
+        [Option('m', "sampling-mode", HelpText = "Specifies the sampling mode to use. Available modes include:\n" +
+                                                 "- TopNSampler: It retrieves a specified number of recent records from an Azure Cosmos DB container, optionally filtering by a maximum number of days.\n" +
+                                                 "- PartitionBasedSampler: It retrieves a specified number of records from an Azure Cosmos DB container by fetching records from each partition using a given partition key.The number of records per partition and the time range are configurable.\n" +
+                                                 "- TimeBasedSampler:.It retrieves a specified number of records by dividing the container data and time range into subranges, then selecting the top N records from each subrange based on a given configuration.\n")]
         public string SamplingMode { get; } = SamplingModes.TopNSampler.ToString();
 
         [Option('n', "sampling-count", HelpText = "Specify the total number of samples to retrieve for each sampling modes:\n" +
@@ -52,7 +52,7 @@ namespace Cli.Commands
         public string? PartitionKeyPath { get; }
 
         [Option('d', "sampling-days", HelpText = "Specify the number of days to fetch data. Sampling modes include: \n" +
-                                                 "- TopNSampling: .Limits records to the most recent days.\n" +
+                                                 "- TopNSampler: Limits records to the most recent days.\n" +
                                                  "- PartitionBasedSampler: Limits records from each partition to the specified number of days.\n" +
                                                  "- TimeBasedSampler: Gathers data over the specified number of days and divides it into subranges.")]
         public int? MaxDays { get; }

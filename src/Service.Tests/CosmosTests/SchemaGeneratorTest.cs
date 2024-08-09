@@ -37,9 +37,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             List<JsonDocument> jsonArray = new() { JsonSerializer.Deserialize<JsonDocument>(json) };
 
             string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
-            string expectedSchema = File.ReadAllText($"{gqlFilePath}/EmulatorData.gql");
+            string expectedSchema = File.ReadAllText($"{gqlFilePath}/EmulatorData.gql").Trim();
 
-            AreEqualAfterCleanup(expectedSchema, actualSchema);
+            Assert.AreEqual(expectedSchema, actualSchema);
         }
 
         /// <summary>
@@ -78,9 +78,9 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
             }
 
             string actualSchema = SchemaGenerator.Generate(jArray, "planet", baseConfig);
-            string expectedSchema = File.ReadAllText($"{gqlFilePath}/{gqlFileName}");
+            string expectedSchema = File.ReadAllText($"{gqlFilePath}/{gqlFileName}").Trim();
 
-            AreEqualAfterCleanup(expectedSchema, actualSchema);
+            Assert.AreEqual(expectedSchema, actualSchema);
         }
 
         /// <summary>
@@ -111,25 +111,25 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
                 }
                 ")};
 
-            string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
+            string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
-            string expectedSchema = @"type ContainerName @model {
-  id : ID!,
-  name : String!,
-  price : Float!,
-  inStock : Boolean!,
-  tags : [String]!,
-  dimensions : Dimensions!,
-  manufacturedDate : Date!,
-  relatedProducts : [Int]!
+            string expectedSchema = @"type ContainerName @model(name: ""ContainerName"") {
+  id: ID!,
+  name: String!,
+  price: Float!,
+  inStock: Boolean!,
+  tags: [String]!,
+  dimensions: Dimensions!,
+  manufacturedDate: Date!,
+  relatedProducts: [Int]!
 }
 type Dimensions {
-  length : Float!,
-  width : Float!,
-  height : Float!
+  length: Float!,
+  width: Float!,
+  height: Float!
 }";
 
-            AreEqualAfterCleanup(expectedSchema, gqlSchema);
+            Assert.AreEqual(expectedSchema, actualSchema);
         }
 
         /// <summary>
@@ -169,32 +169,32 @@ type Dimensions {
                   ]
                 }")};
 
-            string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
+            string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
-            string expectedSchema = @"type ContainerName @model {
-  name : String!,
-  age : Int!,
-  address : Address!,
-  emails : [String]!,
-  phoneNumbers : [PhoneNumber]!
+            string expectedSchema = @"type ContainerName @model(name: ""ContainerName"") {
+  name: String!,
+  age: Int!,
+  address: Address!,
+  emails: [String]!,
+  phoneNumbers: [PhoneNumber]!
 }
 type Address {
-  street : String!,
-  city : String!,
-  state : String!,
-  zip : String!,
-  coordinates : Coordinates!
+  street: String!,
+  city: String!,
+  state: String!,
+  zip: String!,
+  coordinates: Coordinates!
 }
 type Coordinates {
-  latitude : Float!,
-  longitude : Float!
+  latitude: Float!,
+  longitude: Float!
 }
 type PhoneNumber {
-  type : String!,
-  number : String!
+  type: String!,
+  number: String!
 }";
 
-            AreEqualAfterCleanup(expectedSchema, gqlSchema);
+            Assert.AreEqual(expectedSchema, actualSchema);
         }
 
         /// <summary>
@@ -208,18 +208,18 @@ type PhoneNumber {
                 JsonDocument.Parse(@"{ ""name"": ""John"", ""age"": 30, ""isStudent"": false, ""birthDate"": ""1980-01-01T00:00:00Z"" }"),
                 JsonDocument.Parse(@"{ ""email"": ""john@example.com"", ""phone"": ""123-456-7890"" }")};
 
-            string gqlSchema = SchemaGenerator.Generate(jsonArray, "containerName");
+            string actualSchema = SchemaGenerator.Generate(jsonArray, "containerName");
 
-            string expectedSchema = @"type ContainerName @model {
-              name: String,
-              age: Int,
-              isStudent: Boolean,
-              birthDate: Date,
-              email: String,
-              phone: String
-            }";
+            string expectedSchema = @"type ContainerName @model(name: ""ContainerName"") {
+  name: String,
+  age: Int,
+  isStudent: Boolean,
+  birthDate: Date,
+  email: String,
+  phone: String
+}";
 
-            AreEqualAfterCleanup(expectedSchema, gqlSchema);
+            Assert.AreEqual(expectedSchema, actualSchema);
         }
 
         /// <summary>
@@ -255,34 +255,14 @@ type PhoneNumber {
         {
             JsonDocument jsonArray = JsonDocument.Parse(@"[{ ""name"": ""John"", ""age"": null }]");
 
-            string gqlSchema = SchemaGenerator.Generate(jsonArray.RootElement.EnumerateArray().Select(item => item.Deserialize<JsonDocument>()).ToList(), "containerName");
+            string actualSchema = SchemaGenerator.Generate(jsonArray.RootElement.EnumerateArray().Select(item => item.Deserialize<JsonDocument>()).ToList(), "containerName");
 
-            string expectedSchema = @"type ContainerName @model {
-              name: String!,
-              age: String!
-            }";
+            string expectedSchema = @"type ContainerName @model(name: ""ContainerName"") {
+  name: String!,
+  age: String!
+}";
 
-            AreEqualAfterCleanup(expectedSchema, gqlSchema);
-        }
-
-        /// <summary>
-        /// Removes all spaces and newline characters from the input string using a regular expression.
-        /// </summary>
-        /// <param name="input">The input string to clean up.</param>
-        /// <returns>The cleaned string with spaces and newline characters removed.</returns>
-        public static string RemoveSpacesAndNewLinesRegex(string input)
-        {
-            return Regex.Replace(input, @"\s+", "");
-        }
-
-        /// <summary>
-        /// Compares two strings after removing spaces and newline characters to determine if they are equal.
-        /// </summary>
-        /// <param name="expected">The expected string value.</param>
-        /// <param name="actual">The actual string value to compare against the expected value.</param>
-        public static void AreEqualAfterCleanup(string expected, string actual)
-        {
-            Assert.AreEqual(RemoveSpacesAndNewLinesRegex(expected), RemoveSpacesAndNewLinesRegex(actual));
+            Assert.AreEqual(expectedSchema, actualSchema);
         }
     }
 }

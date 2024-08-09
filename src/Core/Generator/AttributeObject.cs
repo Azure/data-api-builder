@@ -112,7 +112,7 @@ namespace Azure.DataApiBuilder.Core.Generator
                 t += "!"; // Mark as non-nullable if applicable
             }
 
-            return $"{Name} : {t}";
+            return $"{Name}: {t}";
         }
     }
 }

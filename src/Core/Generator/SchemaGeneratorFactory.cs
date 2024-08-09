@@ -88,11 +88,11 @@ namespace Azure.DataApiBuilder.Core.Generator
             logger.LogInformation("{0} records collected as Sample", dataArray.Count);
             if (dataArray.Count == 0)
             {
-                logger.LogError("No data got sampled out. Please try different sampling Mode or Sampling configuration");
-                throw new ArgumentException("No data got sampled out. Please try different sampling Mode or Sampling configuration");
+                logger.LogError("No data was sampled. Please try a different sampling mode or provide different sampling options.");
+                throw new ArgumentException("No data was sampled. Please try a different sampling mode or provide different sampling options.");
             }
 
-            logger.LogInformation("Generating Schema Started");
+            logger.LogInformation("GraphQL schema generation started.");
 
             // Generate and return the GraphQL schema based on the sampled data.
             return SchemaGenerator.Generate(dataArray, container.Id, config);

@@ -145,24 +145,27 @@ namespace Azure.DataApiBuilder.Service.Tests.CosmosTests
         /// It includes cases where containers have single and multiple partition key paths to validate correct functionality.
         /// </remarks>
         [TestMethod]
-        public async Task TestGetPartitionInfoInPartitionBasedSampler()
+        [DataRow("name", DisplayName = "When Container is partitioned by name")]
+        [DataRow("id", DisplayName = "When Container is partitioned by id")]
+        [DataRow("anotherPojo/anotherProp", DisplayName = "Hierarchy Partition Key: When Container is partitioned by multi-level partition key")]
+        public async Task TestGetPartitionInfoInPartitionBasedSampler(string partitionKeyPath)
         {
-            Mock<PartitionBasedSampler> partitionBasedSampler = new(_containerWithNamePk, null, 1, 1, _mockLogger.Object);
+            Container container = await _database.CreateContainerIfNotExistsAsync("myTestContainer", $"/{partitionKeyPath}");
+
+            Mock<PartitionBasedSampler> partitionBasedSampler = new(container, null, 1, 1, _mockLogger.Object);
             List<string> result = await partitionBasedSampler.Object.GetPartitionKeyPaths();
-            Assert.AreEqual("name", result[0]);
 
-            partitionBasedSampler = new(_containerWithIdPk, null, 1, 1, _mockLogger.Object);
-            result = await partitionBasedSampler.Object.GetPartitionKeyPaths();
-            Assert.AreEqual("id", result[0]);
+            if (partitionKeyPath == "anotherPojo/anotherProp")
+            {
+                Assert.AreEqual("anotherPojo", result[0]);
+                Assert.AreEqual("anotherProp", result[1]);
+            }
+            else
+            {
+                Assert.AreEqual(partitionKeyPath, result[0]);
+            }
 
-            // Check if partition key path is getting fetched correctly if customer has multiple partitions
-            Container _containerWithHPk = await _database.CreateContainerIfNotExistsAsync("newcontainerwithhpk", "/anotherPojo/anotherProp");
-            partitionBasedSampler = new(_containerWithHPk, null, 1, 1, _mockLogger.Object);
-            result = await partitionBasedSampler.Object.GetPartitionKeyPaths();
-            Assert.AreEqual("anotherPojo", result[0]);
-            Assert.AreEqual("anotherProp", result[1]);
-
-            await _containerWithHPk.DeleteContainerAsync();
+            await container.DeleteContainerAsync();
         }
 
         /// <summary>

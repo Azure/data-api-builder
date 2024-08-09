@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>net8.0;net6.0</TargetFrameworks>
@@ -51,7 +51,7 @@
     <PackageReference Include="Verify.MSTest" />
     <PackageReference Include="Verify.DiffPlex" />
   </ItemGroup>
-    
+
   <ItemGroup>
     <Content Include="CosmosTests\TestData\**">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -116,7 +116,7 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-    
+
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
 </Project>
